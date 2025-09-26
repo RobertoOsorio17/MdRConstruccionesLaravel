@@ -45,13 +45,18 @@ Route::middleware(['auth', 'auth.enhanced'])->prefix('debug')->name('debug.')->g
 
 // Machine Learning API Routes
 Route::prefix('api/ml')->name('ml.')->group(function () {
+    // Public routes (no authentication required)
     Route::get('/recommendations', [MLController::class, 'getRecommendations'])->name('recommendations');
-    Route::post('/interaction', [MLController::class, 'logInteraction'])->name('interaction');
-    Route::get('/insights', [MLController::class, 'getUserInsights'])->name('insights');
-    Route::get('/metrics', [MLController::class, 'getMetrics'])->name('metrics');
+
+    // User routes (require authentication and ban check)
+    Route::middleware(['auth', 'auth.enhanced'])->group(function () {
+        Route::post('/interaction', [MLController::class, 'logInteraction'])->name('interaction');
+        Route::get('/insights', [MLController::class, 'getUserInsights'])->name('insights');
+        Route::get('/metrics', [MLController::class, 'getMetrics'])->name('metrics');
+    });
 
     // Admin only routes
-    Route::middleware(['auth', 'auth.enhanced'])->group(function () {
+    Route::middleware(['auth', 'auth.enhanced', 'role:admin'])->group(function () {
         Route::post('/train', [MLController::class, 'trainModels'])->name('train');
     });
 });
@@ -69,8 +74,8 @@ Route::prefix('api/services')->name('api.services.')->group(function () {
 // Post Interaction Status (available for all users)
 Route::get('/posts/{post}/interaction-status', [App\Http\Controllers\UserInteractionController::class, 'getInteractionStatus'])->name('posts.interaction-status');
 
-// Comment Routes (with rate limiting)
-Route::middleware(['throttle:10,1'])->group(function () {
+// Comment Routes (with rate limiting and IP ban protection)
+Route::middleware(['throttle:10,1', 'check.ip.ban'])->group(function () {
     Route::post('/blog/{post:slug}/comments', [App\Http\Controllers\CommentController::class, 'store'])->name('comments.store');
     Route::get('/blog/{post:slug}/comments', [App\Http\Controllers\CommentController::class, 'getComments'])->name('comments.get');
 });

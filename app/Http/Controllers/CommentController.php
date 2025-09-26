@@ -38,16 +38,62 @@ class CommentController extends Controller
 
         // Validation rules differ for guests vs authenticated users
         if (Auth::check()) {
+            // Check if authenticated user is banned
+            $user = Auth::user();
+            if ($user->isBanned()) {
+                $banStatus = $user->getBanStatus();
+
+                // Log the banned user's attempt to comment
+                \Log::warning('Banned user attempted to comment', [
+                    'user_id' => $user->id,
+                    'user_email' => $user->email,
+                    'post_id' => $post->id,
+                    'ban_reason' => $banStatus['reason'],
+                    'ip' => $request->ip(),
+                    'timestamp' => now()->toISOString()
+                ]);
+
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Tu cuenta ha sido suspendida y no puedes crear comentarios.',
+                    'error' => 'USER_BANNED'
+                ], 403);
+            }
+
             // Authenticated user validation
             $validated = $request->validate([
                 'body' => 'required|string|min:10|max:2000',
                 'parent_id' => 'nullable|exists:comments,id'
             ]);
-            
+
             $validated['user_id'] = Auth::id();
             $validated['author_name'] = null;
             $validated['author_email'] = null;
         } else {
+            // Guest user - check IP comment limit (max 2 comments per IP per post)
+            $guestCommentsCount = Comment::where('post_id', $post->id)
+                ->where('ip_address', $request->ip())
+                ->whereNull('user_id') // Only count guest comments
+                ->count();
+
+            if ($guestCommentsCount >= 2) {
+                // Log the guest comment limit reached
+                \Log::info('Guest user reached comment limit', [
+                    'ip' => $request->ip(),
+                    'post_id' => $post->id,
+                    'post_title' => $post->title,
+                    'existing_comments' => $guestCommentsCount,
+                    'user_agent' => $request->userAgent(),
+                    'timestamp' => now()->toISOString()
+                ]);
+
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Has alcanzado el límite máximo de 2 comentarios por artículo como usuario invitado. Regístrate para comentar sin límites.',
+                    'error' => 'GUEST_COMMENT_LIMIT_REACHED'
+                ], 429);
+            }
+
             // Guest user validation
             $validated = $request->validate([
                 'body' => 'required|string|min:10|max:2000',
@@ -55,7 +101,7 @@ class CommentController extends Controller
                 'author_email' => 'required|email|max:255',
                 'parent_id' => 'nullable|exists:comments,id'
             ]);
-            
+
             $validated['user_id'] = null;
         }
 

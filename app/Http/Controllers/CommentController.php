@@ -115,9 +115,17 @@ class CommentController extends Controller
 
         // Set additional fields
         $validated['post_id'] = $post->id;
-        $validated['status'] = 'pending'; // All comments start as pending for moderation
         $validated['ip_address'] = $request->ip();
         $validated['user_agent'] = $request->userAgent();
+
+        // Set status based on user type
+        if (Auth::check()) {
+            // Authenticated users get auto-approved comments
+            $validated['status'] = 'approved';
+        } else {
+            // Guest comments start as pending for moderation
+            $validated['status'] = 'pending';
+        }
 
         // Basic spam detection
         $spamScore = $this->calculateSpamScore($validated['body'], $validated['author_name'] ?? null);
@@ -133,9 +141,7 @@ class CommentController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => $validated['status'] === 'spam' 
-                ? 'Tu comentario ha sido marcado para revisión.' 
-                : 'Tu comentario ha sido enviado y está pendiente de moderación.',
+            'message' => $this->getCommentStatusMessage($comment),
             'comment' => [
                 'id' => $comment->id,
                 'body' => $comment->body,
@@ -198,42 +204,94 @@ class CommentController extends Controller
     }
 
     /**
+     * Get appropriate message based on comment status and user type
+     */
+    private function getCommentStatusMessage($comment)
+    {
+        if ($comment->status === 'spam') {
+            return 'Tu comentario ha sido marcado para revisión debido a posible contenido spam.';
+        }
+
+        if (Auth::check()) {
+            return 'Tu comentario ha sido publicado exitosamente.';
+        } else {
+            return 'Tu comentario ha sido enviado y aparecerá aquí mientras espera moderación. Una vez aprobado, será visible para todos los visitantes.';
+        }
+    }
+
+    /**
      * Get comments for a specific post (public API)
      */
-    public function getComments(Post $post)
+    public function getComments(Request $request, Post $post)
     {
-        $comments = Comment::where('post_id', $post->id)
-            ->approved()
-            ->topLevel()
-            ->with(['user:id,name', 'replies' => function ($query) {
-                $query->approved()->with('user:id,name')->orderBy('created_at', 'asc');
-            }])
-            ->orderBy('created_at', 'desc')
-            ->get()
-            ->map(function ($comment) {
-                return [
-                    'id' => $comment->id,
-                    'body' => $comment->body,
-                    'author_name' => $comment->user ? $comment->user->name : $comment->author_name,
-                    'created_at' => $comment->created_at->format('d/m/Y H:i'),
-                    'user' => $comment->user,
-                    'is_guest' => $comment->isGuest(),
-                    'replies' => $comment->replies->map(function ($reply) {
-                        return [
-                            'id' => $reply->id,
-                            'body' => $reply->body,
-                            'author_name' => $reply->user ? $reply->user->name : $reply->author_name,
-                            'created_at' => $reply->created_at->format('d/m/Y H:i'),
-                            'user' => $reply->user,
-                            'is_guest' => $reply->isGuest(),
-                        ];
-                    })
-                ];
-            });
+        $userIp = $request->ip();
+
+        // Build the main query based on user type
+        if (!Auth::check()) {
+            // For guests, show approved comments + their own pending comments (by IP)
+            $comments = Comment::where('post_id', $post->id)
+                ->topLevel()
+                ->where(function ($query) use ($userIp) {
+                    $query->where('status', 'approved')
+                          ->orWhere(function ($subQuery) use ($userIp) {
+                              $subQuery->where('status', 'pending')
+                                       ->where('ip_address', $userIp)
+                                       ->whereNull('user_id');
+                          });
+                })
+                ->with(['user:id,name,is_verified', 'replies' => function ($query) use ($userIp) {
+                    // For replies, also include guest's pending replies
+                    $query->where(function ($q) use ($userIp) {
+                        $q->where('status', 'approved')
+                          ->orWhere(function ($subQ) use ($userIp) {
+                              $subQ->where('status', 'pending')
+                                   ->where('ip_address', $userIp)
+                                   ->whereNull('user_id');
+                          });
+                    })->with('user:id,name,is_verified')->orderBy('created_at', 'asc');
+                }])
+                ->orderBy('created_at', 'desc')
+                ->get();
+        } else {
+            // For authenticated users, only show approved comments
+            $comments = Comment::where('post_id', $post->id)
+                ->approved()
+                ->topLevel()
+                ->with(['user:id,name,is_verified', 'replies' => function ($query) {
+                    $query->approved()->with('user:id,name,is_verified')->orderBy('created_at', 'asc');
+                }])
+                ->orderBy('created_at', 'desc')
+                ->get();
+        }
+
+        $formattedComments = $comments->map(function ($comment) use ($userIp) {
+            return [
+                'id' => $comment->id,
+                'body' => $comment->body,
+                'author_name' => $comment->user ? $comment->user->name : $comment->author_name,
+                'created_at' => $comment->created_at->format('d/m/Y H:i'),
+                'status' => $comment->status,
+                'user' => $comment->user,
+                'is_guest' => $comment->isGuest(),
+                'is_own_pending' => !Auth::check() && $comment->status === 'pending' && $comment->ip_address === $userIp,
+                'replies' => $comment->replies->map(function ($reply) use ($userIp) {
+                    return [
+                        'id' => $reply->id,
+                        'body' => $reply->body,
+                        'author_name' => $reply->user ? $reply->user->name : $reply->author_name,
+                        'created_at' => $reply->created_at->format('d/m/Y H:i'),
+                        'status' => $reply->status,
+                        'user' => $reply->user,
+                        'is_guest' => $reply->isGuest(),
+                        'is_own_pending' => !Auth::check() && $reply->status === 'pending' && $reply->ip_address === $userIp,
+                    ];
+                })
+            ];
+        });
 
         return response()->json([
-            'comments' => $comments,
-            'count' => $comments->count()
+            'comments' => $formattedComments,
+            'count' => $formattedComments->count()
         ]);
     }
 }

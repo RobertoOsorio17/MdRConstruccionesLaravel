@@ -37,6 +37,10 @@ class User extends Authenticatable
         'profile_visibility',
         'show_email',
         'profile_updated_at',
+        'is_verified',
+        'verified_at',
+        'verification_notes',
+        'verified_by',
     ];
 
     /**
@@ -65,6 +69,8 @@ class User extends Authenticatable
             'profile_visibility' => 'boolean',
             'show_email' => 'boolean',
             'password' => 'hashed',
+            'is_verified' => 'boolean',
+            'verified_at' => 'datetime',
         ];
     }
 
@@ -210,7 +216,7 @@ class User extends Authenticatable
     public function likedPosts()
     {
         return $this->morphedByMany(Post::class, 'interactable', 'user_interactions')
-                    ->wherePivot('type', UserInteraction::TYPE_LIKE);
+                    ->wherePivot('type', '=', 'like');
     }
     
     /**
@@ -219,7 +225,7 @@ class User extends Authenticatable
     public function bookmarkedPosts()
     {
         return $this->morphedByMany(Post::class, 'interactable', 'user_interactions')
-                    ->wherePivot('type', UserInteraction::TYPE_BOOKMARK)
+                    ->wherePivot('type', '=', 'bookmark')
                     ->withPivot('created_at', 'updated_at');
     }
     
@@ -578,7 +584,70 @@ class User extends Authenticatable
     {
         $this->update(['profile_updated_at' => now()]);
     }
-    
+
+    /**
+     * Get the user who verified this user.
+     */
+    public function verifiedBy()
+    {
+        return $this->belongsTo(User::class, 'verified_by');
+    }
+
+    /**
+     * Get users verified by this user.
+     */
+    public function verifiedUsers()
+    {
+        return $this->hasMany(User::class, 'verified_by');
+    }
+
+    /**
+     * Check if the user is verified.
+     */
+    public function isVerified(): bool
+    {
+        return $this->is_verified === true;
+    }
+
+    /**
+     * Verify the user.
+     */
+    public function verify(User $verifier, string $notes = null): bool
+    {
+        return $this->update([
+            'is_verified' => true,
+            'verified_at' => now(),
+            'verified_by' => $verifier->id,
+            'verification_notes' => $notes,
+        ]);
+    }
+
+    /**
+     * Unverify the user.
+     */
+    public function unverify(User $verifier, string $notes = null): bool
+    {
+        return $this->update([
+            'is_verified' => false,
+            'verified_at' => null,
+            'verified_by' => $verifier->id,
+            'verification_notes' => $notes,
+        ]);
+    }
+
+    /**
+     * Get verification status with details.
+     */
+    public function getVerificationStatus(): array
+    {
+        return [
+            'is_verified' => $this->is_verified,
+            'verified_at' => $this->verified_at,
+            'verified_by' => $this->verifiedBy,
+            'verification_notes' => $this->verification_notes,
+        ];
+    }
+
     /**
      * Send the password reset notification.
      */

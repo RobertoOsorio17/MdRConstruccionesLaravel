@@ -309,6 +309,126 @@ class ProjectManagementController extends Controller
     }
 
     /**
+     * Display the specified project.
+     */
+    public function show(Project $project)
+    {
+        // Get project timeline/milestones (mock data for now)
+        $timeline = [
+            [
+                'title' => 'Proyecto Iniciado',
+                'description' => 'El proyecto ha sido creado y planificado',
+                'date' => $project->created_at,
+                'type' => 'milestone'
+            ],
+        ];
+
+        if ($project->start_date) {
+            $timeline[] = [
+                'title' => 'Inicio de Desarrollo',
+                'description' => 'Comenzó la fase de desarrollo del proyecto',
+                'date' => $project->start_date,
+                'type' => 'milestone'
+            ];
+        }
+
+        if ($project->status === 'completed' && $project->end_date) {
+            $timeline[] = [
+                'title' => 'Proyecto Completado',
+                'description' => 'El proyecto ha sido finalizado exitosamente',
+                'date' => $project->end_date,
+                'type' => 'milestone'
+            ];
+        }
+
+        return Inertia::render('Admin/Projects/Show', [
+            'project' => [
+                'id' => $project->id,
+                'title' => $project->title,
+                'summary' => $project->summary,
+                'description' => $project->description,
+                'location' => $project->location,
+                'budget' => $project->budget,
+                'status' => $project->status,
+                'featured' => $project->featured,
+                'start_date' => $project->start_date,
+                'end_date' => $project->end_date,
+                'expected_end_date' => $project->expected_end_date,
+                'images' => $project->images ? json_decode($project->images, true) : [],
+                'technologies' => $project->technologies ? json_decode($project->technologies, true) : [],
+                'created_at' => $project->created_at,
+                'updated_at' => $project->updated_at,
+            ],
+            'timeline' => $timeline,
+        ]);
+    }
+
+    /**
+     * Show project analytics
+     */
+    public function analytics(Request $request)
+    {
+        $period = $request->get('period', 30);
+        $startDate = now()->subDays($period);
+
+        // Get analytics data
+        $analyticsData = [
+            'timeline_analysis' => [
+                'total_projects' => Project::where('created_at', '>=', $startDate)->count(),
+                'avg_duration_days' => Project::where('created_at', '>=', $startDate)
+                    ->whereNotNull('start_date')
+                    ->whereNotNull('end_date')
+                    ->selectRaw('AVG(DATEDIFF(COALESCE(end_date, NOW()), start_date)) as avg_duration')
+                    ->value('avg_duration') ?? 0,
+            ],
+            'status_distribution' => Project::where('created_at', '>=', $startDate)
+                ->selectRaw('status, COUNT(*) as count')
+                ->groupBy('status')
+                ->get()
+                ->mapWithKeys(function ($item) {
+                    return [$item->status => $item->count];
+                }),
+            'performance_metrics' => [
+                'total_completed' => Project::where('status', 'completed')
+                    ->where('end_date', '>=', $startDate)
+                    ->count(),
+                'completed_on_time' => Project::where('status', 'completed')
+                    ->where('end_date', '>=', $startDate)
+                    ->whereRaw('end_date <= expected_end_date')
+                    ->count(),
+                'on_time_completion_rate' => 0, // Will be calculated below
+            ],
+            'completion_trends' => Project::where('status', 'completed')
+                ->where('end_date', '>=', now()->subMonths(6))
+                ->selectRaw('YEAR(end_date) as year, MONTH(end_date) as month, COUNT(*) as completions')
+                ->groupBy('year', 'month')
+                ->orderBy('year')
+                ->orderBy('month')
+                ->get()
+                ->map(function ($item) {
+                    return [
+                        'month' => \Carbon\Carbon::createFromDate($item->year, $item->month, 1)->format('M Y'),
+                        'completions' => $item->completions,
+                    ];
+                }),
+            'budget_total' => Project::where('created_at', '>=', $startDate)
+                ->whereNotNull('budget')
+                ->sum('budget'),
+        ];
+
+        // Calculate on-time completion rate
+        if ($analyticsData['performance_metrics']['total_completed'] > 0) {
+            $analyticsData['performance_metrics']['on_time_completion_rate'] =
+                ($analyticsData['performance_metrics']['completed_on_time'] /
+                 $analyticsData['performance_metrics']['total_completed']) * 100;
+        }
+
+        return Inertia::render('Admin/Projects/Analytics', [
+            'initialData' => $analyticsData,
+        ]);
+    }
+
+    /**
      * Get status label for display.
      */
     private function getStatusLabel($status)

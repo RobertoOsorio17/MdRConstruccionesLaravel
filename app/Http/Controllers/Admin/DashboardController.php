@@ -124,7 +124,7 @@ class DashboardController extends Controller
                 ];
             });
 
-        // Monthly post stats (last 6 months)
+        // Enhanced monthly stats (last 6 months)
         $monthlyStats = [];
         for ($i = 5; $i >= 0; $i--) {
             $date = Carbon::now()->subMonths($i);
@@ -140,21 +140,136 @@ class DashboardController extends Controller
                 'comments' => Comment::whereYear('created_at', $date->year)
                     ->whereMonth('created_at', $date->month)
                     ->count(),
+                'users' => User::whereYear('created_at', $date->year)
+                    ->whereMonth('created_at', $date->month)
+                    ->count(),
+                'projects' => Project::whereYear('created_at', $date->year)
+                    ->whereMonth('created_at', $date->month)
+                    ->count(),
+                'services' => Service::whereYear('created_at', $date->year)
+                    ->whereMonth('created_at', $date->month)
+                    ->count(),
             ];
         }
 
-        // Category distribution
-        $categoryStats = Category::withCount('posts')
+        // User growth trends
+        $userGrowthStats = [];
+        for ($i = 29; $i >= 0; $i--) {
+            $date = Carbon::now()->subDays($i);
+            $userGrowthStats[] = [
+                'date' => $date->format('Y-m-d'),
+                'new_users' => User::whereDate('created_at', $date)->count(),
+                'active_users' => User::whereDate('last_login_at', $date)->count(),
+            ];
+        }
+
+        // Service performance metrics
+        $serviceStats = Service::select('id', 'title', 'views_count', 'is_featured', 'created_at')
+            ->withCount('favorites')
+            ->orderBy('views_count', 'desc')
+            ->limit(10)
+            ->get()
+            ->map(function ($service) {
+                return [
+                    'id' => $service->id,
+                    'title' => $service->title,
+                    'views' => $service->views_count,
+                    'favorites' => $service->favorites_count,
+                    'is_featured' => $service->is_featured,
+                    'created_at' => $service->created_at->format('d/m/Y'),
+                ];
+            });
+
+        // Project completion rates
+        $projectStats = [
+            'completion_rate' => Project::where('status', 'completed')->count() / max(Project::count(), 1) * 100,
+            'by_status' => Project::select('status', DB::raw('count(*) as count'))
+                ->groupBy('status')
+                ->get()
+                ->mapWithKeys(function ($item) {
+                    return [$item->status => $item->count];
+                }),
+            'monthly_completions' => Project::where('status', 'completed')
+                ->where('end_date', '>=', Carbon::now()->subMonths(6))
+                ->selectRaw('YEAR(end_date) as year, MONTH(end_date) as month, COUNT(*) as count')
+                ->groupBy('year', 'month')
+                ->orderBy('year')
+                ->orderBy('month')
+                ->get()
+                ->map(function ($item) {
+                    return [
+                        'month' => Carbon::createFromDate($item->year, $item->month, 1)->format('M Y'),
+                        'completions' => $item->count,
+                    ];
+                }),
+        ];
+
+        // Enhanced category distribution with engagement metrics
+        $categoryStats = Category::withCount(['posts', 'posts as published_posts_count' => function ($query) {
+                $query->where('status', 'published');
+            }])
+            ->with(['posts' => function ($query) {
+                $query->select('category_id', DB::raw('SUM(views_count) as total_views'))
+                      ->groupBy('category_id');
+            }])
             ->orderBy('posts_count', 'desc')
-            ->limit(5)
+            ->limit(8)
             ->get()
             ->map(function ($category) {
+                $totalViews = $category->posts->sum('views_count') ?? 0;
                 return [
+                    'id' => $category->id,
                     'name' => $category->name,
                     'posts_count' => $category->posts_count,
+                    'published_posts_count' => $category->published_posts_count,
+                    'total_views' => $totalViews,
+                    'avg_views_per_post' => $category->posts_count > 0 ? round($totalViews / $category->posts_count) : 0,
                     'color' => $category->color,
                 ];
             });
+
+        // Content engagement metrics
+        $engagementStats = [
+            'top_posts_by_views' => Post::published()
+                ->orderBy('views_count', 'desc')
+                ->limit(5)
+                ->get(['id', 'title', 'slug', 'views_count', 'published_at'])
+                ->map(function ($post) {
+                    return [
+                        'id' => $post->id,
+                        'title' => $post->title,
+                        'slug' => $post->slug,
+                        'views' => $post->views_count,
+                        'published_at' => $post->published_at->format('d/m/Y'),
+                    ];
+                }),
+            'most_commented_posts' => Post::published()
+                ->withCount('comments')
+                ->orderBy('comments_count', 'desc')
+                ->limit(5)
+                ->get(['id', 'title', 'slug', 'published_at'])
+                ->map(function ($post) {
+                    return [
+                        'id' => $post->id,
+                        'title' => $post->title,
+                        'slug' => $post->slug,
+                        'comments_count' => $post->comments_count,
+                        'published_at' => $post->published_at->format('d/m/Y'),
+                    ];
+                }),
+            'comment_approval_rate' => Comment::count() > 0
+                ? round((Comment::where('status', 'approved')->count() / Comment::count()) * 100, 1)
+                : 0,
+        ];
+
+        // System performance metrics
+        $performanceStats = [
+            'avg_page_load_time' => $this->getAveragePageLoadTime(),
+            'database_queries_per_request' => $this->getAverageQueriesPerRequest(),
+            'cache_hit_rate' => $this->getCacheHitRate(),
+            'storage_usage' => $this->getStorageUsage(),
+            'memory_usage' => $this->getMemoryUsage(),
+        ];
 
         // Recent activity (posts, comments, etc.)
         $recentActivity = collect();
@@ -212,7 +327,7 @@ class DashboardController extends Controller
                 'title' => 'Nuevo Post',
                 'description' => 'Crear un nuevo artículo',
                 'icon' => 'article',
-                'url' => route('admin.admin.posts.create'),
+                'url' => route('admin.posts.create'),
                 'color' => 'primary',
             ];
         }
@@ -222,7 +337,7 @@ class DashboardController extends Controller
                 'title' => 'Nueva Categoría',
                 'description' => 'Agregar categoría',
                 'icon' => 'category',
-                'url' => route('admin.admin.categories.create'),
+                'url' => route('admin.categories.create'),
                 'color' => 'secondary',
             ];
         }
@@ -232,7 +347,7 @@ class DashboardController extends Controller
                 'title' => 'Moderar Comentarios',
                 'description' => 'Revisar comentarios pendientes',
                 'icon' => 'comment',
-                'url' => route('admin.admin.comment-management.index') . '?status=pending',
+                'url' => route('admin.comment-management.index') . '?status=pending',
                 'color' => 'warning',
                 'badge' => $stats['comments']['pending'],
             ];
@@ -316,12 +431,98 @@ class DashboardController extends Controller
             'recentComments' => $recentComments,
             'popularPosts' => $popularPosts,
             'monthlyStats' => $monthlyStats,
+            'userGrowthStats' => $userGrowthStats,
+            'serviceStats' => $serviceStats,
+            'projectStats' => $projectStats,
             'categoryStats' => $categoryStats,
+            'engagementStats' => $engagementStats,
+            'performanceStats' => $performanceStats,
             'recentActivity' => $recentActivity,
             'quickActions' => $quickActions,
             'notifications' => $notifications,
             'auditLogs' => $auditLogs,
             'widgets' => $widgets,
         ]);
+    }
+
+    /**
+     * Get average page load time (mock implementation)
+     */
+    private function getAveragePageLoadTime()
+    {
+        // In a real implementation, this would come from application performance monitoring
+        return rand(150, 300) . 'ms';
+    }
+
+    /**
+     * Get average database queries per request (mock implementation)
+     */
+    private function getAverageQueriesPerRequest()
+    {
+        // In a real implementation, this would come from query logging
+        return rand(8, 15);
+    }
+
+    /**
+     * Get cache hit rate (mock implementation)
+     */
+    private function getCacheHitRate()
+    {
+        // In a real implementation, this would come from cache statistics
+        return rand(85, 98) . '%';
+    }
+
+    /**
+     * Get storage usage information
+     */
+    private function getStorageUsage()
+    {
+        try {
+            $totalSpace = disk_total_space(storage_path());
+            $freeSpace = disk_free_space(storage_path());
+            $usedSpace = $totalSpace - $freeSpace;
+            $usagePercentage = round(($usedSpace / $totalSpace) * 100, 1);
+
+            return [
+                'used' => $this->formatBytes($usedSpace),
+                'total' => $this->formatBytes($totalSpace),
+                'percentage' => $usagePercentage,
+            ];
+        } catch (\Exception $e) {
+            return [
+                'used' => 'Unknown',
+                'total' => 'Unknown',
+                'percentage' => 0,
+            ];
+        }
+    }
+
+    /**
+     * Get memory usage information
+     */
+    private function getMemoryUsage()
+    {
+        $memoryUsage = memory_get_usage(true);
+        $peakMemoryUsage = memory_get_peak_usage(true);
+
+        return [
+            'current' => $this->formatBytes($memoryUsage),
+            'peak' => $this->formatBytes($peakMemoryUsage),
+            'limit' => ini_get('memory_limit'),
+        ];
+    }
+
+    /**
+     * Format bytes to human readable format
+     */
+    private function formatBytes($bytes, $precision = 2)
+    {
+        $units = ['B', 'KB', 'MB', 'GB', 'TB'];
+
+        for ($i = 0; $bytes > 1024 && $i < count($units) - 1; $i++) {
+            $bytes /= 1024;
+        }
+
+        return round($bytes, $precision) . ' ' . $units[$i];
     }
 }

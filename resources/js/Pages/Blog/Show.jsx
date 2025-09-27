@@ -27,10 +27,7 @@ import {
     ListItem,
     ListItemText,
     ListItemIcon,
-    Fab,
-    SpeedDial,
-    SpeedDialAction,
-    SpeedDialIcon
+    Fab
 } from '@mui/material';
 import {
     Home as HomeIcon,
@@ -54,9 +51,9 @@ import {
     BookmarkBorder as BookmarkBorderIcon,
     Favorite as FavoriteIcon,
     FavoriteBorder as FavoriteBorderIcon,
-    Login as LoginIcon,
-    PersonAdd as RegisterIcon,
-    Check as CheckIcon
+    Check as CheckIcon,
+    Verified as VerifiedIcon,
+    PersonAdd as RegisterIcon
 } from '@mui/icons-material';
 import { motion, AnimatePresence } from 'framer-motion';
 import MainLayout from '@/Layouts/MainLayout';
@@ -83,6 +80,7 @@ const BlogShow = ({ post, suggestedPosts, seo }) => {
     const [likesCount, setLikesCount] = useState(post.likes_count || 0);
     const [personalizedSuggestions, setPersonalizedSuggestions] = useState([]);
     const [loadingPersonalized, setLoadingPersonalized] = useState(false);
+    const [showMobileTOC, setShowMobileTOC] = useState(false);
     const [notification, setNotification] = useState({
         open: false,
         message: '',
@@ -500,8 +498,16 @@ const BlogShow = ({ post, suggestedPosts, seo }) => {
                                 sx={{ width: 48, height: 48 }}
                             />
                             <Box>
-                                <Typography variant="h6" sx={{ color: 'white', fontWeight: 600 }}>
+                                <Typography variant="h6" sx={{ color: 'white', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
                                     {post.author?.name}
+                                    {post.author?.is_verified && (
+                                        <VerifiedIcon
+                                            sx={{
+                                                color: '#1976d2',
+                                                fontSize: '1.2rem'
+                                            }}
+                                        />
+                                    )}
                                 </Typography>
                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, color: alpha(theme.palette.common.white, 0.8) }}>
                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
@@ -530,18 +536,39 @@ const BlogShow = ({ post, suggestedPosts, seo }) => {
             </Box>
 
             {/* Contenido principal */}
-            <Container maxWidth="lg" sx={{ py: { xs: 8, md: 12 } }}>
-                <Grid container spacing={4}>
+            <Container
+                maxWidth="lg"
+                sx={{
+                    py: { xs: 4, sm: 6, md: 8, lg: 10 },
+                    px: { xs: 2, sm: 3, md: 4 }
+                }}
+            >
+                <Grid container spacing={{ xs: 2, sm: 3, md: 4, lg: 5 }}>
                     {/* Contenido del artículo */}
-                    <Grid item xs={12} lg={8}>
+                    <Grid size={{ xs: 12, lg: 8 }}>
                         <AnimatedSection>
                             <Paper
                                 elevation={0}
                                 sx={{
-                                    p: { xs: 3, md: 5 },
-                                    borderRadius: 4,
+                                    p: { xs: 2.5, sm: 3, md: 4, lg: 5 },
+                                    borderRadius: { xs: 2, md: 3 },
                                     background: 'white',
-                                    boxShadow: '0 4px 20px rgba(0,0,0,0.08)'
+                                    boxShadow: '0 8px 32px rgba(0,0,0,0.06)',
+                                    border: '1px solid rgba(255,255,255,0.2)',
+                                    backdropFilter: 'blur(10px)',
+                                    position: 'relative',
+                                    overflow: 'hidden',
+                                    mb: { xs: 2, md: 3 },
+                                    '&::before': {
+                                        content: '""',
+                                        position: 'absolute',
+                                        top: 0,
+                                        left: 0,
+                                        right: 0,
+                                        height: '4px',
+                                        background: 'linear-gradient(90deg, #2563eb, #3b82f6, #60a5fa)',
+                                        borderRadius: '3px 3px 0 0'
+                                    }
                                 }}
                             >
                                 {/* Categorías y etiquetas */}
@@ -842,22 +869,73 @@ const BlogShow = ({ post, suggestedPosts, seo }) => {
                         </Box>
                     </Grid>
 
-                    {/* Sidebar */}
-                    <Grid item xs={12} lg={4}>
-                        <Box sx={{ position: 'sticky', top: 100 }}>
+                    {/* Sidebar responsive */}
+                    <Grid size={{ xs: 12, lg: 4 }}>
+                        <Box
+                            sx={{
+                                position: { xs: 'static', lg: 'sticky' },
+                                top: { lg: 100 },
+                                height: 'fit-content',
+                                maxHeight: { lg: 'calc(100vh - 120px)' },
+                                overflowY: { lg: 'auto' },
+                                width: '100%',
+                                maxWidth: '100%',
+                                mt: { xs: 3, lg: 0 },
+                                '&::-webkit-scrollbar': {
+                                    width: '4px',
+                                },
+                                '&::-webkit-scrollbar-track': {
+                                    background: 'rgba(0,0,0,0.1)',
+                                    borderRadius: '2px',
+                                },
+                                '&::-webkit-scrollbar-thumb': {
+                                    background: 'rgba(37, 99, 235, 0.3)',
+                                    borderRadius: '2px',
+                                    '&:hover': {
+                                        background: 'rgba(37, 99, 235, 0.5)',
+                                    }
+                                }
+                            }}
+                        >
                             {/* Tabla de contenidos */}
                             {tableOfContents.length > 0 && (
-                                <Paper
-                                    elevation={0}
-                                    sx={{
-                                        display: { xs: 'none', lg: 'block' },
-                                        p: 3,
-                                        mb: 4,
-                                        borderRadius: 4,
-                                        backgroundColor: alpha(theme.palette.primary.main, 0.02),
-                                        border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`
-                                    }}
+                                <motion.div
+                                    initial={{ opacity: 0, y: 20 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ duration: 0.5, delay: 0.2 }}
                                 >
+                                    <Paper
+                                        elevation={0}
+                                        sx={{
+                                            display: { xs: 'block', lg: 'block' },
+                                            p: { xs: 2.5, md: 3 },
+                                            mb: { xs: 2.5, md: 3 },
+                                            borderRadius: { xs: 2, md: 3 },
+                                            background: 'rgba(255, 255, 255, 0.95)',
+                                            backdropFilter: 'blur(15px)',
+                                            border: '1px solid rgba(37, 99, 235, 0.1)',
+                                            boxShadow: '0 8px 32px rgba(37, 99, 235, 0.08)',
+                                            position: 'relative',
+                                            overflow: 'hidden',
+                                            width: '100%',
+                                            maxWidth: '100%',
+                                            boxSizing: 'border-box',
+                                            transition: 'all 0.3s ease',
+                                            '&:hover': {
+                                                transform: 'translateY(-2px)',
+                                                boxShadow: '0 12px 40px rgba(37, 99, 235, 0.12)',
+                                            },
+                                            '&::before': {
+                                                content: '""',
+                                                position: 'absolute',
+                                                top: 0,
+                                                left: 0,
+                                                width: '4px',
+                                                height: '100%',
+                                                background: 'linear-gradient(180deg, #2563eb, #3b82f6)',
+                                            }
+                                        }}
+                                    >
                                     <Typography
                                         variant="h6"
                                         sx={{
@@ -903,18 +981,44 @@ const BlogShow = ({ post, suggestedPosts, seo }) => {
                                         ))}
                                     </List>
                                 </Paper>
+                                </motion.div>
                             )}
 
                             {/* Posts sugeridos inteligentes */}
                             {(personalizedSuggestions.length > 0 || suggestedPosts.length > 0) && (
-                                <AnimatedSection>
+                                <motion.div
+                                    initial={{ opacity: 0, y: 20 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ duration: 0.5, delay: 0.4 }}
+                                >
                                     <Paper
                                         elevation={0}
                                         sx={{
-                                            p: 3,
-                                            borderRadius: 4,
-                                            backgroundColor: 'white',
-                                            boxShadow: '0 4px 20px rgba(0,0,0,0.08)'
+                                            p: { xs: 2.5, md: 3 },
+                                            borderRadius: { xs: 2, md: 3 },
+                                            background: 'rgba(255, 255, 255, 0.95)',
+                                            backdropFilter: 'blur(15px)',
+                                            border: '1px solid rgba(5, 150, 105, 0.1)',
+                                            boxShadow: '0 8px 32px rgba(5, 150, 105, 0.08)',
+                                            position: 'relative',
+                                            overflow: 'hidden',
+                                            width: '100%',
+                                            maxWidth: '100%',
+                                            boxSizing: 'border-box',
+                                            transition: 'all 0.3s ease',
+                                            '&:hover': {
+                                                transform: 'translateY(-2px)',
+                                                boxShadow: '0 12px 40px rgba(5, 150, 105, 0.12)',
+                                            },
+                                            '&::before': {
+                                                content: '""',
+                                                position: 'absolute',
+                                                top: 0,
+                                                left: 0,
+                                                width: '4px',
+                                                height: '100%',
+                                                background: 'linear-gradient(180deg, #059669, #10b981)',
+                                            }
                                         }}
                                     >
                                         <Typography
@@ -1127,146 +1231,59 @@ const BlogShow = ({ post, suggestedPosts, seo }) => {
                                             </Button>
                                         </Box>
                                     </Paper>
-                                </AnimatedSection>
+                                </motion.div>
                             )}
                         </Box>
                     </Grid>
                 </Grid>
             </Container>
 
-            {/* Botón scroll to top */}
+            {/* Botón scroll to top mejorado */}
             <AnimatePresence>
                 {showScrollTop && (
                     <motion.div
-                        initial={{ opacity: 0, scale: 0.8 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.8 }}
-                        transition={{ duration: 0.2 }}
+                        initial={{ opacity: 0, scale: 0.8, y: 20 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.8, y: 20 }}
+                        transition={{ duration: 0.3, ease: "easeOut" }}
                         style={{
                             position: 'fixed',
-                            bottom: 24,
-                            right: 24,
-                            zIndex: 1000
+                            bottom: 32,
+                            right: 32,
+                            zIndex: 1100
                         }}
                     >
                         <Fab
                             color="primary"
                             onClick={scrollToTop}
+                            aria-label="Volver arriba"
                             sx={{
-                                boxShadow: theme.shadows[8],
+                                width: 56,
+                                height: 56,
+                                background: 'linear-gradient(45deg, #2563eb, #3b82f6)',
+                                boxShadow: '0 8px 32px rgba(37, 99, 235, 0.3)',
+                                backdropFilter: 'blur(10px)',
+                                border: '1px solid rgba(255, 255, 255, 0.2)',
                                 '&:hover': {
-                                    transform: 'scale(1.1)',
-                                    boxShadow: theme.shadows[12]
-                                }
+                                    transform: 'scale(1.1) translateY(-2px)',
+                                    boxShadow: '0 12px 40px rgba(37, 99, 235, 0.4)',
+                                    background: 'linear-gradient(45deg, #1d4ed8, #2563eb)',
+                                },
+                                '&:active': {
+                                    transform: 'scale(0.95)',
+                                },
+                                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
                             }}
                         >
-                            <ScrollTopIcon />
+                            <ScrollTopIcon sx={{ fontSize: 24 }} />
                         </Fab>
                     </motion.div>
                 )}
             </AnimatePresence>
 
-            {/* Botón flotante para comentarios */}
-            <Fab
-                color="secondary"
-                onClick={scrollToComments}
-                sx={{
-                    position: 'fixed',
-                    bottom: 24,
-                    left: 24,
-                    display: { xs: 'flex', lg: 'none' },
-                    boxShadow: theme.shadows[8],
-                    '&:hover': {
-                        transform: 'scale(1.1)',
-                        boxShadow: theme.shadows[12]
-                    }
-                }}
-            >
-                <CommentIcon />
-            </Fab>
 
-            {/* SpeedDial para acciones rápidas */}
-            <AuthSwitch
-                authenticated={
-                    <SpeedDial
-                        ariaLabel="Acciones rápidas"
-                        sx={{
-                            position: 'fixed',
-                            bottom: 80,
-                            right: 24,
-                            display: { xs: 'none', md: 'block' }
-                        }}
-                        icon={<SpeedDialIcon />}
-                        FabProps={{
-                            sx: {
-                                bgcolor: theme.palette.success.main,
-                                '&:hover': {
-                                    bgcolor: theme.palette.success.dark,
-                                }
-                            }
-                        }}
-                    >
-                        <SpeedDialAction
-                            icon={isLiked ? <FavoriteIcon /> : <FavoriteBorderIcon />}
-                            tooltipTitle={isLiked ? "Ya no me gusta" : "Me gusta"}
-                            onClick={handleLike}
-                            FabProps={{
-                                sx: {
-                                    bgcolor: isLiked ? theme.palette.error.main : theme.palette.grey[100],
-                                    color: isLiked ? 'white' : theme.palette.text.primary
-                                }
-                            }}
-                        />
-                        <SpeedDialAction
-                            icon={isBookmarked ? <BookmarkIcon /> : <BookmarkBorderIcon />}
-                            tooltipTitle={isBookmarked ? "Quitar de guardados" : "Guardar"}
-                            onClick={handleBookmark}
-                            FabProps={{
-                                sx: {
-                                    bgcolor: isBookmarked ? theme.palette.warning.main : theme.palette.grey[100],
-                                    color: isBookmarked ? 'white' : theme.palette.text.primary
-                                }
-                            }}
-                        />
-                        <SpeedDialAction
-                            icon={<PersonIcon />}
-                            tooltipTitle="Seguir autor"
-                            onClick={handleFollowAuthor}
-                        />
-                    </SpeedDial>
-                }
-                guest={
-                    <SpeedDial
-                        ariaLabel="Acciones rápidas"
-                        sx={{
-                            position: 'fixed',
-                            bottom: 80,
-                            right: 24,
-                            display: { xs: 'none', md: 'block' }
-                        }}
-                        icon={<SpeedDialIcon />}
-                        FabProps={{
-                            sx: {
-                                bgcolor: theme.palette.primary.main,
-                                '&:hover': {
-                                    bgcolor: theme.palette.primary.dark,
-                                }
-                            }
-                        }}
-                    >
-                        <SpeedDialAction
-                            icon={<LoginIcon />}
-                            tooltipTitle="Iniciar sesión"
-                            onClick={() => setShowLoginModal(true)}
-                        />
-                        <SpeedDialAction
-                            icon={<RegisterIcon />}
-                            tooltipTitle="Crear cuenta"
-                            onClick={() => setShowLoginModal(true)}
-                        />
-                    </SpeedDial>
-                }
-            />
+
+
 
             {/* Modal de Login */}
             <LoginModal

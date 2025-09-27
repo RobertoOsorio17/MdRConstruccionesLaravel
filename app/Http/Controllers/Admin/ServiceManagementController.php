@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Service;
+use App\Models\ServiceFavorite;
 use App\Models\Category;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -164,7 +165,13 @@ class ServiceManagementController extends Controller
     {
         $service->load(['category']);
 
-        return Inertia::render('Admin/ServiceDetail', [
+        // Get service analytics (last 30 days)
+        $analytics = [
+            'monthly_views' => $service->views_count ?? 0, // In a real app, this would be calculated from analytics data
+            'monthly_favorites' => $service->favorites()->where('created_at', '>=', now()->subDays(30))->count(),
+        ];
+
+        return Inertia::render('Admin/Services/Show', [
             'service' => [
                 'id' => $service->id,
                 'title' => $service->title,
@@ -176,16 +183,19 @@ class ServiceManagementController extends Controller
                 'duration' => $service->duration,
                 'is_active' => $service->is_active,
                 'is_featured' => $service->is_featured,
-                'image_url' => $service->image ? Storage::url($service->image) : null,
+                'image' => $service->image ? Storage::url($service->image) : null,
+                'features' => $service->features ? json_decode($service->features, true) : [],
                 'category' => $service->category ? [
                     'id' => $service->category->id,
                     'name' => $service->category->name,
                     'slug' => $service->category->slug,
                 ] : null,
                 'views_count' => $service->views_count ?? 0,
+                'favorites_count' => $service->favorites()->count(),
                 'created_at' => $service->created_at,
                 'updated_at' => $service->updated_at,
             ],
+            'analytics' => $analytics,
         ]);
     }
 
@@ -409,5 +419,47 @@ class ServiceManagementController extends Controller
         };
 
         return response()->stream($callback, 200, $headers);
+    }
+
+    /**
+     * Show service analytics
+     */
+    public function analytics(Request $request)
+    {
+        $period = $request->get('period', 30);
+        $startDate = now()->subDays($period);
+
+        // Get analytics data
+        $analyticsData = [
+            'performance' => [
+                'total_views' => Service::sum('views_count'),
+                'avg_views' => Service::avg('views_count'),
+                'max_views' => Service::max('views_count'),
+                'total_services' => Service::count(),
+            ],
+            'favorites' => ServiceFavorite::join('services', 'service_favorites.service_id', '=', 'services.id')
+                ->where('service_favorites.created_at', '>=', $startDate)
+                ->selectRaw('services.title, COUNT(*) as favorite_count')
+                ->groupBy('services.id', 'services.title')
+                ->orderBy('favorite_count', 'desc')
+                ->limit(10)
+                ->get(),
+            'views' => Service::where('updated_at', '>=', $startDate)
+                ->selectRaw('title, views_count as total_views, is_featured')
+                ->orderBy('views_count', 'desc')
+                ->limit(10)
+                ->get(),
+            'conversion' => [
+                'total_views' => Service::sum('views_count'),
+                'total_favorites' => ServiceFavorite::where('created_at', '>=', $startDate)->count(),
+                'conversion_rate' => Service::sum('views_count') > 0
+                    ? (ServiceFavorite::where('created_at', '>=', $startDate)->count() / Service::sum('views_count')) * 100
+                    : 0,
+            ],
+        ];
+
+        return Inertia::render('Admin/Services/Analytics', [
+            'initialData' => $analyticsData,
+        ]);
     }
 }

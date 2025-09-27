@@ -126,7 +126,7 @@ const UserManagement = () => {
     // Debounced search function
     const debouncedSearch = useCallback(
         debounce((value) => {
-            router.get(route('admin.admin.users.index'), {
+            router.get(route('admin.users.index'), {
                 ...filters,
                 search: value,
             }, {
@@ -164,7 +164,7 @@ const UserManagement = () => {
         if (filterType === 'role') setRoleFilter(value);
         if (filterType === 'ban_status') setBanFilter(value);
         
-        router.get(route('admin.admin.users.index'), newFilters, {
+        router.get(route('admin.users.index'), newFilters, {
             preserveState: true,
             replace: true,
         });
@@ -309,7 +309,7 @@ const UserManagement = () => {
 
     const confirmDelete = () => {
         if (userToDelete) {
-            router.delete(route('admin.admin.users.destroy', userToDelete.id), {
+            router.delete(route('admin.users.destroy', userToDelete.id), {
                 onSuccess: () => {
                     setDeleteDialog(false);
                     setUserToDelete(null);
@@ -325,7 +325,7 @@ const UserManagement = () => {
     };
 
     const executeBulkAction = () => {
-        router.post(route('admin.admin.users.bulk-action'), {
+        router.post(route('admin.users.bulk-action'), {
             action: bulkAction,
             user_ids: selectedUsers,
         }, {
@@ -394,7 +394,7 @@ const UserManagement = () => {
                             <Button
                                 variant="contained"
                                 startIcon={<PersonAddIcon />}
-                                onClick={() => router.visit(route('admin.admin.users.create'))}
+                                onClick={() => router.visit(route('admin.users.create'))}
                                 sx={{
                                     borderRadius: '12px',
                                     textTransform: 'none',
@@ -753,14 +753,14 @@ const UserManagement = () => {
                             count={users.total}
                             page={users.current_page - 1}
                             onPageChange={(e, page) => {
-                                router.get(route('admin.admin.users.index'), {
+                                router.get(route('admin.users.index'), {
                                     ...filters,
                                     page: page + 1,
                                 });
                             }}
                             rowsPerPage={users.per_page}
                             onRowsPerPageChange={(e) => {
-                                router.get(route('admin.admin.users.index'), {
+                                router.get(route('admin.users.index'), {
                                     ...filters,
                                     per_page: e.target.value,
                                 });

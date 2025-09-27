@@ -131,6 +131,7 @@ class PostController extends Controller
 
         // Transform posts data (optimized - no content loading)
         $posts->getCollection()->transform(function ($post) {
+            $user = Auth::user();
             return [
                 'id' => $post->id,
                 'title' => $post->title,
@@ -144,9 +145,11 @@ class PostController extends Controller
                 'categories' => $post->categories,
                 'tags' => $post->tags,
                 'reading_time' => $post->reading_time ?? 5, // Default fallback
-                // Remove expensive counts for list view
-                'likes_count' => 0, // Will be loaded on demand
-                'bookmarks_count' => 0, // Will be loaded on demand
+                // User interaction status
+                'is_liked' => $user ? $post->isLikedBy($user) : false,
+                'is_bookmarked' => $user ? $post->isBookmarkedBy($user) : false,
+                'likes_count' => $post->likes()->count(),
+                'bookmarks_count' => $post->bookmarks()->count(),
                 'comments_count' => 0, // Will be loaded on demand
             ];
         });
@@ -157,11 +160,12 @@ class PostController extends Controller
             $featuredPosts = Post::published()
                 ->select(['id', 'title', 'slug', 'excerpt', 'cover_image', 'published_at', 'views_count', 'user_id'])
                 ->where('featured', true)
-                ->with(['author:id,name,avatar', 'categories:id,name,slug,color', 'tags:id,name,slug,color'])
+                ->with(['author:id,name,avatar,is_verified', 'categories:id,name,slug,color', 'tags:id,name,slug,color'])
                 ->orderBy('published_at', 'desc')
                 ->limit(4) // Increased for trending section
                 ->get()
                 ->map(function ($post) {
+                    $user = Auth::user();
                     return [
                         'id' => $post->id,
                         'title' => $post->title,
@@ -174,6 +178,11 @@ class PostController extends Controller
                         'categories' => $post->categories,
                         'tags' => $post->tags,
                         'reading_time' => 5, // Default for featured posts
+                        // User interaction status
+                        'is_liked' => $user ? $post->isLikedBy($user) : false,
+                        'is_bookmarked' => $user ? $post->isBookmarkedBy($user) : false,
+                        'likes_count' => $post->likes()->count(),
+                        'bookmarks_count' => $post->bookmarks()->count(),
                     ];
                 });
         }
@@ -222,7 +231,7 @@ class PostController extends Controller
             
             // Return basic posts in case of error
             $basicPosts = Post::published()
-                ->with(['author:id,name,avatar', 'categories:id,name,slug,color'])
+                ->with(['author:id,name,avatar,is_verified', 'categories:id,name,slug,color'])
                 ->latest()
                 ->paginate(12);
                 
@@ -243,7 +252,7 @@ class PostController extends Controller
     public function index(Request $request)
     {
         $query = Post::published()
-            ->with(['author:id,name', 'categories:id,name,slug,color']);
+            ->with(['author:id,name,is_verified', 'categories:id,name,slug,color']);
 
         // Filter by tag
         if ($request->has('tag') && !empty($request->tag)) {
@@ -287,7 +296,7 @@ class PostController extends Controller
         // Get featured posts for hero section
         $featuredPosts = Post::published()
             ->featured()
-            ->with(['author:id,name,avatar', 'categories:id,name,slug,color', 'tags:id,name,slug,color'])
+            ->with(['author:id,name,avatar,is_verified', 'categories:id,name,slug,color', 'tags:id,name,slug,color'])
             ->withCount(['likes', 'bookmarks', 'approvedComments'])
             ->limit(3)
             ->get()
@@ -352,15 +361,15 @@ class PostController extends Controller
 
         // Load relationships
         $post->load([
-            'author:id,name,avatar,bio,profession',
+            'author:id,name,avatar,bio,profession,is_verified',
             'categories:id,name,slug,color',
             'tags:id,name,slug,color',
             'comments' => function ($query) {
                 $query->approved()
                       ->topLevel()
-                      ->with('user:id,name,avatar')
+                      ->with('user:id,name,avatar,is_verified')
                       ->with(['replies' => function ($q) {
-                          $q->approved()->with('user:id,name,avatar');
+                          $q->approved()->with('user:id,name,avatar,is_verified');
                       }])
                       ->orderBy('created_at', 'desc');
             }
@@ -512,7 +521,7 @@ class PostController extends Controller
         // Construir query excluyendo posts leídos en primera instancia
         $query = Post::published()
             ->whereNotIn('id', $readPostIds)
-            ->with(['author:id,name,avatar', 'categories:id,name,slug', 'tags:id,name,slug,color'])
+            ->with(['author:id,name,avatar,is_verified', 'categories:id,name,slug', 'tags:id,name,slug,color'])
             ->withCount(['likes', 'bookmarks', 'approvedComments']);
 
         $unreadPosts = $query->get();
@@ -533,7 +542,7 @@ class PostController extends Controller
             if (!empty($interestingReadIds)) {
                 $readPosts = Post::published()
                     ->whereIn('id', $interestingReadIds)
-                    ->with(['author:id,name,avatar', 'categories:id,name,slug', 'tags:id,name,slug,color'])
+                    ->with(['author:id,name,avatar,is_verified', 'categories:id,name,slug', 'tags:id,name,slug,color'])
                     ->withCount(['likes', 'bookmarks', 'approvedComments'])
                     ->limit($remainingLimit)
                     ->get();

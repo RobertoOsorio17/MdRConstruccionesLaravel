@@ -292,6 +292,62 @@ class UserDashboardController extends Controller
     }
 
     /**
+     * Display user's liked posts
+     */
+    public function likedPosts(Request $request): Response
+    {
+        $perPage = $request->get('per_page', 12);
+        $category = $request->get('category');
+        $search = $request->get('search');
+
+        $likedPostsQuery = Auth::user()->likedPosts()
+            ->with(['author:id,name,avatar', 'categories:id,name,slug'])
+            ->orderByPivot('created_at', 'desc');
+
+        if ($category) {
+            $likedPostsQuery->whereHas('categories', function ($query) use ($category) {
+                $query->where('slug', $category);
+            });
+        }
+
+        if ($search) {
+            $likedPostsQuery->where(function ($query) use ($search) {
+                $query->where('title', 'like', "%{$search}%")
+                      ->orWhere('excerpt', 'like', "%{$search}%");
+            });
+        }
+
+        $likedPosts = $likedPostsQuery->paginate($perPage);
+
+        // Get available categories from liked posts
+        $categories = Auth::user()->likedPosts()
+            ->with('categories:id,name,slug')
+            ->get()
+            ->pluck('categories')
+            ->flatten()
+            ->unique('id')
+            ->values();
+
+        return Inertia::render('User/LikedPosts', [
+            'likedPosts' => $likedPosts,
+            'categories' => $categories,
+            'filters' => [
+                'category' => $category,
+                'search' => $search,
+                'per_page' => $perPage,
+            ],
+        ]);
+    }
+
+    /**
+     * Display user's bookmarks (alias for saved posts)
+     */
+    public function bookmarks(Request $request): Response
+    {
+        return $this->savedPosts($request);
+    }
+
+    /**
      * Remove a saved post
      */
     public function removeSavedPost(Post $post)

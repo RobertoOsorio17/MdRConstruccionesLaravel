@@ -126,6 +126,26 @@ class PostController extends Controller
             'seo_description' => 'nullable|string|max:255',
         ]);
 
+        // Auto-generate slug if not provided
+        if (empty($validated['slug'])) {
+            $validated['slug'] = Str::slug($validated['title']);
+        }
+
+        // Set author to current user if not specified
+        if (empty($validated['user_id'])) {
+            $validated['user_id'] = auth()->id();
+        }
+
+        // Handle scheduled posts
+        if ($validated['status'] === 'scheduled' && !$validated['published_at']) {
+            $validated['published_at'] = now()->addHour();
+        }
+
+        // Set published_at for published posts
+        if ($validated['status'] === 'published' && !$validated['published_at']) {
+            $validated['published_at'] = now();
+        }
+
         // Generate slug if not provided
         if (empty($validated['slug'])) {
             $validated['slug'] = Str::slug($validated['title']);
@@ -357,5 +377,166 @@ class PostController extends Controller
 
         return redirect()->route('admin.posts.edit', $newPost)
             ->with('success', 'Post duplicado exitosamente.');
+    }
+
+    /**
+     * Bulk actions for posts.
+     */
+    public function bulkAction(Request $request)
+    {
+        $request->validate([
+            'action' => 'required|in:delete,publish,draft,feature,unfeature',
+            'posts' => 'required|array',
+            'posts.*' => 'exists:posts,id'
+        ]);
+
+        try {
+            $posts = Post::whereIn('id', $request->posts);
+            $count = $posts->count();
+
+            switch ($request->action) {
+                case 'delete':
+                    $posts->delete();
+                    $message = "{$count} posts eliminados exitosamente.";
+                    break;
+                case 'publish':
+                    $posts->update([
+                        'status' => 'published',
+                        'published_at' => now()
+                    ]);
+                    $message = "{$count} posts publicados exitosamente.";
+                    break;
+                case 'draft':
+                    $posts->update(['status' => 'draft']);
+                    $message = "{$count} posts marcados como borrador.";
+                    break;
+                case 'feature':
+                    $posts->update(['featured' => true]);
+                    $message = "{$count} posts marcados como destacados.";
+                    break;
+                case 'unfeature':
+                    $posts->update(['featured' => false]);
+                    $message = "{$count} posts desmarcados como destacados.";
+                    break;
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => $message
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error en la acción masiva: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Get post analytics.
+     */
+    public function analytics()
+    {
+        try {
+            $stats = [
+                'total_posts' => Post::count(),
+                'published_posts' => Post::where('status', 'published')->count(),
+                'draft_posts' => Post::where('status', 'draft')->count(),
+                'scheduled_posts' => Post::where('status', 'scheduled')->count(),
+                'featured_posts' => Post::where('featured', true)->count(),
+                'total_views' => Post::sum('views_count'),
+                'avg_views_per_post' => round(Post::avg('views_count'), 2),
+                'posts_this_month' => Post::whereMonth('created_at', now()->month)->count(),
+                'posts_last_month' => Post::whereMonth('created_at', now()->subMonth()->month)->count(),
+            ];
+
+            $topPosts = Post::orderBy('views_count', 'desc')
+                ->limit(10)
+                ->get(['id', 'title', 'views_count', 'published_at']);
+
+            $recentPosts = Post::orderBy('created_at', 'desc')
+                ->limit(10)
+                ->with(['author:id,name'])
+                ->get(['id', 'title', 'status', 'created_at', 'user_id']);
+
+            $categoryStats = Category::withCount('posts')
+                ->orderBy('posts_count', 'desc')
+                ->limit(10)
+                ->get(['id', 'name', 'posts_count']);
+
+            return response()->json([
+                'stats' => $stats,
+                'top_posts' => $topPosts,
+                'recent_posts' => $recentPosts,
+                'category_stats' => $categoryStats
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al obtener analíticas: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Export posts to CSV.
+     */
+    public function export(Request $request)
+    {
+        try {
+            $query = Post::with(['author:id,name', 'categories:id,name', 'tags:id,name']);
+
+            // Apply filters
+            if ($request->has('status') && !empty($request->status)) {
+                $query->where('status', $request->status);
+            }
+
+            if ($request->has('category') && !empty($request->category)) {
+                $query->whereHas('categories', function ($q) use ($request) {
+                    $q->where('id', $request->category);
+                });
+            }
+
+            if ($request->has('search') && !empty($request->search)) {
+                $query->where(function ($q) use ($request) {
+                    $q->where('title', 'like', '%' . $request->search . '%')
+                      ->orWhere('content', 'like', '%' . $request->search . '%');
+                });
+            }
+
+            $posts = $query->get();
+
+            $csvData = [];
+            $csvData[] = ['ID', 'Título', 'Slug', 'Estado', 'Destacado', 'Autor', 'Categorías', 'Etiquetas', 'Vistas', 'Fecha Publicación', 'Fecha Creación'];
+
+            foreach ($posts as $post) {
+                $csvData[] = [
+                    $post->id,
+                    $post->title,
+                    $post->slug,
+                    $post->status,
+                    $post->featured ? 'Sí' : 'No',
+                    $post->author->name ?? 'N/A',
+                    $post->categories->pluck('name')->join(', '),
+                    $post->tags->pluck('name')->join(', '),
+                    $post->views_count,
+                    $post->published_at ? $post->published_at->format('d/m/Y H:i') : 'N/A',
+                    $post->created_at->format('d/m/Y H:i')
+                ];
+            }
+
+            $filename = 'posts_export_' . now()->format('Y-m-d_H-i-s') . '.csv';
+
+            return response()->json([
+                'success' => true,
+                'data' => $csvData,
+                'filename' => $filename
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al exportar posts: ' . $e->getMessage()
+            ], 500);
+        }
     }
 }

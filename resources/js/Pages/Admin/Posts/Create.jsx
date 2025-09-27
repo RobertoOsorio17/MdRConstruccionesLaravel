@@ -264,21 +264,63 @@ const PostForm = ({ post, categories, tags, authors, isEdit = false }) => {
                                 {/* Content */}
                                 <Card>
                                     <CardContent sx={{ p: 4 }}>
-                                        <Typography variant="h6" fontWeight="bold" gutterBottom>
-                                            Contenido
-                                        </Typography>
+                                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+                                            <Typography variant="h6" fontWeight="bold">
+                                                Contenido
+                                            </Typography>
+                                            <Stack direction="row" spacing={1}>
+                                                <Button
+                                                    size="small"
+                                                    variant="outlined"
+                                                    onClick={() => setPreviewMode(!previewMode)}
+                                                    startIcon={<PreviewIcon />}
+                                                >
+                                                    {previewMode ? 'Editor' : 'Vista Previa'}
+                                                </Button>
+                                                <Button
+                                                    size="small"
+                                                    variant="outlined"
+                                                    href="/admin/media"
+                                                    target="_blank"
+                                                    startIcon={<ImageIcon />}
+                                                >
+                                                    Medios
+                                                </Button>
+                                            </Stack>
+                                        </Box>
 
-                                        <TextField
-                                            fullWidth
-                                            label="Contenido *"
-                                            value={data.content}
-                                            onChange={(e) => setData('content', e.target.value)}
-                                            error={!!errors.content}
-                                            helperText={errors.content || 'Puedes usar HTML para formatear el contenido'}
-                                            multiline
-                                            rows={15}
-                                            variant="outlined"
-                                        />
+                                        {previewMode ? (
+                                            <Paper
+                                                sx={{
+                                                    p: 3,
+                                                    minHeight: 400,
+                                                    backgroundColor: alpha(theme.palette.background.paper, 0.5),
+                                                    border: `1px solid ${alpha(theme.palette.divider, 0.2)}`
+                                                }}
+                                            >
+                                                <Typography variant="body1" component="div">
+                                                    <div dangerouslySetInnerHTML={{ __html: data.content || '<p>Escribe contenido para ver la vista previa...</p>' }} />
+                                                </Typography>
+                                            </Paper>
+                                        ) : (
+                                            <TextField
+                                                fullWidth
+                                                label="Contenido *"
+                                                value={data.content}
+                                                onChange={(e) => setData('content', e.target.value)}
+                                                error={!!errors.content}
+                                                helperText={errors.content || 'Puedes usar HTML para formatear el contenido. Usa el botón "Medios" para insertar imágenes.'}
+                                                multiline
+                                                rows={15}
+                                                variant="outlined"
+                                                sx={{
+                                                    '& .MuiInputBase-root': {
+                                                        fontFamily: 'monospace',
+                                                        fontSize: '14px'
+                                                    }
+                                                }}
+                                            />
+                                        )}
                                     </CardContent>
                                 </Card>
 

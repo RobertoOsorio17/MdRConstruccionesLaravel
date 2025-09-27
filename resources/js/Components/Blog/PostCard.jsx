@@ -1,9 +1,15 @@
 import React, { memo, useState } from 'react';
-import { Card, CardMedia, CardContent, Box, Typography, Stack, Chip, Avatar, Skeleton } from '@mui/material';
-import { Link } from '@inertiajs/react';
+import { Card, CardMedia, CardContent, Box, Typography, Stack, Chip, Avatar, Skeleton, IconButton, Tooltip } from '@mui/material';
+import { Link, usePage } from '@inertiajs/react';
 import ScheduleIcon from '@mui/icons-material/Schedule';
 import ImageIcon from '@mui/icons-material/Image';
 import BrokenImageIcon from '@mui/icons-material/BrokenImage';
+import VerifiedIcon from '@mui/icons-material/Verified';
+import FavoriteIcon from '@mui/icons-material/Favorite';
+import FavoriteBorderIcon from '@mui/icons-material/FavoriteBorder';
+import BookmarkIcon from '@mui/icons-material/Bookmark';
+import BookmarkBorderIcon from '@mui/icons-material/BookmarkBorder';
+import axios from 'axios';
 
 // Premium design system with advanced color palette and typography
 const THEME = {
@@ -245,6 +251,13 @@ const PostCardImage = ({ post, getPostImage }) => {
 
 const PostCard = memo(({ post, getPostImage }) => {
   const firstCategory = (post.categories || [])[0];
+  const [isLiked, setIsLiked] = useState(post.is_liked || false);
+  const [isBookmarked, setIsBookmarked] = useState(post.is_bookmarked || false);
+  const [likesCount, setLikesCount] = useState(post.likes_count || 0);
+  const [bookmarksCount, setBookmarksCount] = useState(post.bookmarks_count || 0);
+  const [loadingInteraction, setLoadingInteraction] = useState(false);
+
+  const { auth } = usePage().props;
 
   // Memoize expensive calculations
   const readingTime = React.useMemo(() => {
@@ -263,6 +276,58 @@ const PostCard = memo(({ post, getPostImage }) => {
     if (diffDays < 30) return `Hace ${Math.ceil(diffDays / 7)} semanas`;
     return `Hace ${Math.ceil(diffDays / 30)} meses`;
   }, [post.created_at]);
+
+  // Handle like functionality
+  const handleLike = async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!auth.user) {
+      window.location.href = '/login';
+      return;
+    }
+
+    if (loadingInteraction) return;
+
+    setLoadingInteraction(true);
+    try {
+      const response = await axios.post(`/posts/${post.slug}/like`);
+      if (response.data.success) {
+        setIsLiked(response.data.isLiked);
+        setLikesCount(response.data.likesCount);
+      }
+    } catch (error) {
+      console.error('Error toggling like:', error);
+    } finally {
+      setLoadingInteraction(false);
+    }
+  };
+
+  // Handle bookmark functionality
+  const handleBookmark = async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!auth.user) {
+      window.location.href = '/login';
+      return;
+    }
+
+    if (loadingInteraction) return;
+
+    setLoadingInteraction(true);
+    try {
+      const response = await axios.post(`/posts/${post.slug}/bookmark`);
+      if (response.data.success) {
+        setIsBookmarked(response.data.isBookmarked);
+        setBookmarksCount(response.data.bookmarksCount);
+      }
+    } catch (error) {
+      console.error('Error toggling bookmark:', error);
+    } finally {
+      setLoadingInteraction(false);
+    }
+  };
 
   return (
     <Card
@@ -485,11 +550,21 @@ const PostCard = memo(({ post, getPostImage }) => {
                     color: THEME.text.secondary,
                     fontWeight: THEME.typography.fontWeight.semibold,
                     fontSize: THEME.typography.fontSize.xs,
-                    display: 'block',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 0.5,
                     lineHeight: 1.2
                   }}
                 >
                   {post.author?.name || 'Admin MDR'}
+                  {post.author?.is_verified && (
+                    <VerifiedIcon
+                      sx={{
+                        color: '#1976d2',
+                        fontSize: '0.75rem'
+                      }}
+                    />
+                  )}
                 </Typography>
                 <Typography
                   variant="caption"
@@ -518,6 +593,67 @@ const PostCard = memo(({ post, getPostImage }) => {
               </Typography>
             </Stack>
           </Stack>
+
+          {/* Interaction buttons */}
+          {auth.user && (
+            <Box sx={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              mt: 2,
+              pt: 2,
+              borderTop: `1px solid ${THEME.border.light}`
+            }}>
+              <Box sx={{ display: 'flex', gap: 1 }}>
+                <Tooltip title={isLiked ? "Quitar me gusta" : "Me gusta"}>
+                  <IconButton
+                    onClick={handleLike}
+                    disabled={loadingInteraction}
+                    size="small"
+                    sx={{
+                      color: isLiked ? THEME.accent.rose : THEME.text.muted,
+                      '&:hover': {
+                        color: THEME.accent.rose,
+                        backgroundColor: `${THEME.accent.rose}15`
+                      }
+                    }}
+                  >
+                    {isLiked ? <FavoriteIcon fontSize="small" /> : <FavoriteBorderIcon fontSize="small" />}
+                  </IconButton>
+                </Tooltip>
+
+                <Tooltip title={isBookmarked ? "Quitar de guardados" : "Guardar"}>
+                  <IconButton
+                    onClick={handleBookmark}
+                    disabled={loadingInteraction}
+                    size="small"
+                    sx={{
+                      color: isBookmarked ? THEME.primary[600] : THEME.text.muted,
+                      '&:hover': {
+                        color: THEME.primary[600],
+                        backgroundColor: `${THEME.primary[600]}15`
+                      }
+                    }}
+                  >
+                    {isBookmarked ? <BookmarkIcon fontSize="small" /> : <BookmarkBorderIcon fontSize="small" />}
+                  </IconButton>
+                </Tooltip>
+              </Box>
+
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                {likesCount > 0 && (
+                  <Typography variant="caption" sx={{ color: THEME.text.muted, fontSize: '0.7rem' }}>
+                    {likesCount} {likesCount === 1 ? 'me gusta' : 'me gusta'}
+                  </Typography>
+                )}
+                {bookmarksCount > 0 && (
+                  <Typography variant="caption" sx={{ color: THEME.text.muted, fontSize: '0.7rem' }}>
+                    {bookmarksCount} guardado{bookmarksCount !== 1 ? 's' : ''}
+                  </Typography>
+                )}
+              </Box>
+            </Box>
+          )}
         </Box>
       </CardContent>
     </Card>

@@ -140,6 +140,14 @@ class Service extends Model
     }
 
     /**
+     * Alias for serviceFavorites for easier access.
+     */
+    public function favorites()
+    {
+        return $this->hasMany(ServiceFavorite::class);
+    }
+
+    /**
      * Get the count of users who have favorited this service.
      */
     public function getFavoritesCountAttribute()

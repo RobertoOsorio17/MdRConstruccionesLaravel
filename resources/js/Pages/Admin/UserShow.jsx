@@ -34,12 +34,16 @@ import {
     Security as SecurityIcon,
     History as HistoryIcon,
     Comment as CommentIcon,
+    Verified as VerifiedIcon,
+    VerifiedUser as VerifiedUserIcon,
+    PersonOff as PersonOffIcon,
 } from '@mui/icons-material';
 import AdminLayoutNew from '@/Layouts/AdminLayoutNew';
 import UserCommentsTab from '@/Components/Admin/UserCommentsTab';
 
 const UserShow = ({ user, recentActivity = [], commentStats = {} }) => {
     const [activeTab, setActiveTab] = useState(0);
+    const [verificationLoading, setVerificationLoading] = useState(false);
     // Glassmorphism styles
     const glassmorphismCard = {
         background: 'rgba(255, 255, 255, 0.25)',
@@ -114,6 +118,30 @@ const UserShow = ({ user, recentActivity = [], commentStats = {} }) => {
         });
     };
 
+    const handleVerifyUser = () => {
+        const notes = prompt('Notas de verificación (opcional):');
+        if (notes === null) return; // User cancelled
+
+        setVerificationLoading(true);
+        router.post(route('admin.users.verify', user.id), {
+            verification_notes: notes
+        }, {
+            onFinish: () => setVerificationLoading(false)
+        });
+    };
+
+    const handleUnverifyUser = () => {
+        const notes = prompt('Notas de desverificación (opcional):');
+        if (notes === null) return; // User cancelled
+
+        setVerificationLoading(true);
+        router.post(route('admin.users.unverify', user.id), {
+            verification_notes: notes
+        }, {
+            onFinish: () => setVerificationLoading(false)
+        });
+    };
+
     return (
         <AdminLayoutNew>
             <Head title={`Usuario: ${user.name}`} />
@@ -151,7 +179,7 @@ const UserShow = ({ user, recentActivity = [], commentStats = {} }) => {
                                 </Typography>
                             </Box>
                         </Box>
-                        <Box sx={{ display: 'flex', gap: 2 }}>
+                        <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
                             <Button
                                 variant="outlined"
                                 startIcon={<EditIcon />}
@@ -163,6 +191,37 @@ const UserShow = ({ user, recentActivity = [], commentStats = {} }) => {
                             >
                                 Editar
                             </Button>
+
+                            {user.is_verified ? (
+                                <Button
+                                    variant="outlined"
+                                    color="warning"
+                                    startIcon={<PersonOffIcon />}
+                                    onClick={handleUnverifyUser}
+                                    disabled={verificationLoading}
+                                    sx={{
+                                        textTransform: 'none',
+                                        borderRadius: '8px',
+                                    }}
+                                >
+                                    Desverificar
+                                </Button>
+                            ) : (
+                                <Button
+                                    variant="outlined"
+                                    color="primary"
+                                    startIcon={<VerifiedUserIcon />}
+                                    onClick={handleVerifyUser}
+                                    disabled={verificationLoading}
+                                    sx={{
+                                        textTransform: 'none',
+                                        borderRadius: '8px',
+                                    }}
+                                >
+                                    Verificar
+                                </Button>
+                            )}
+
                             <Button
                                 variant="outlined"
                                 color="error"
@@ -199,9 +258,14 @@ const UserShow = ({ user, recentActivity = [], commentStats = {} }) => {
                                         {user.name.charAt(0).toUpperCase()}
                                     </Avatar>
                                     
-                                    <Typography variant="h5" sx={{ fontWeight: 600, color: '#2D3748', mb: 1 }}>
-                                        {user.name}
-                                    </Typography>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1, mb: 1 }}>
+                                        <Typography variant="h5" sx={{ fontWeight: 600, color: '#2D3748' }}>
+                                            {user.name}
+                                        </Typography>
+                                        {user.is_verified && (
+                                            <VerifiedIcon sx={{ color: '#1976d2', fontSize: '1.5rem' }} />
+                                        )}
+                                    </Box>
                                     
                                     <Typography variant="body1" sx={{ color: '#718096', mb: 3 }}>
                                         {user.email}
@@ -221,6 +285,12 @@ const UserShow = ({ user, recentActivity = [], commentStats = {} }) => {
                                             icon={!user.is_banned ? <CheckCircleIcon /> : <CancelIcon />}
                                             label={!user.is_banned ? 'Activo' : 'Suspendido'}
                                             color={!user.is_banned ? 'success' : 'error'}
+                                            variant="outlined"
+                                        />
+                                        <Chip
+                                            icon={user.is_verified ? <VerifiedUserIcon /> : <PersonOffIcon />}
+                                            label={user.is_verified ? 'Verificado' : 'No Verificado'}
+                                            color={user.is_verified ? 'primary' : 'default'}
                                             variant="outlined"
                                         />
                                     </Box>
@@ -253,6 +323,19 @@ const UserShow = ({ user, recentActivity = [], commentStats = {} }) => {
                                             <ListItemText
                                                 primary="Email Verificado"
                                                 secondary={user.email_verified_at ? 'Sí' : 'No'}
+                                            />
+                                        </ListItem>
+                                        <ListItem>
+                                            <ListItemIcon>
+                                                <VerifiedUserIcon sx={{ color: user.is_verified ? '#1976d2' : '#9e9e9e' }} />
+                                            </ListItemIcon>
+                                            <ListItemText
+                                                primary="Usuario Verificado"
+                                                secondary={
+                                                    user.is_verified
+                                                        ? `Sí - ${formatDate(user.verified_at)}`
+                                                        : 'No'
+                                                }
                                             />
                                         </ListItem>
                                     </List>
@@ -337,6 +420,61 @@ const UserShow = ({ user, recentActivity = [], commentStats = {} }) => {
                                                 </Typography>
                                             </Box>
                                         </Grid>
+
+                                        <Grid size={{ xs: 12, sm: 6 }}>
+                                            <Box sx={{ mb: 3 }}>
+                                                <Typography variant="subtitle2" sx={{ color: '#718096', mb: 1 }}>
+                                                    Estado de Verificación
+                                                </Typography>
+                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                    <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                                                        {user.is_verified ? 'Verificado' : 'No Verificado'}
+                                                    </Typography>
+                                                    {user.is_verified && (
+                                                        <VerifiedIcon sx={{ color: '#1976d2', fontSize: '1.2rem' }} />
+                                                    )}
+                                                </Box>
+                                            </Box>
+                                        </Grid>
+
+                                        {user.is_verified && (
+                                            <>
+                                                <Grid size={{ xs: 12, sm: 6 }}>
+                                                    <Box sx={{ mb: 3 }}>
+                                                        <Typography variant="subtitle2" sx={{ color: '#718096', mb: 1 }}>
+                                                            Verificado el
+                                                        </Typography>
+                                                        <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                                                            {formatDate(user.verified_at)}
+                                                        </Typography>
+                                                    </Box>
+                                                </Grid>
+
+                                                <Grid size={{ xs: 12, sm: 6 }}>
+                                                    <Box sx={{ mb: 3 }}>
+                                                        <Typography variant="subtitle2" sx={{ color: '#718096', mb: 1 }}>
+                                                            Verificado por
+                                                        </Typography>
+                                                        <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                                                            {user.verified_by?.name || 'Sistema'}
+                                                        </Typography>
+                                                    </Box>
+                                                </Grid>
+
+                                                {user.verification_notes && (
+                                                    <Grid size={{ xs: 12 }}>
+                                                        <Box sx={{ mb: 3 }}>
+                                                            <Typography variant="subtitle2" sx={{ color: '#718096', mb: 1 }}>
+                                                                Notas de Verificación
+                                                            </Typography>
+                                                            <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                                                                {user.verification_notes}
+                                                            </Typography>
+                                                        </Box>
+                                                    </Grid>
+                                                )}
+                                            </>
+                                        )}
                                     </Grid>
                                 </CardContent>
                             </Card>

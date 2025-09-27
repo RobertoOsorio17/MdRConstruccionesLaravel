@@ -54,6 +54,10 @@ Route::middleware(['auth', 'verified', 'auth.enhanced', 'role:admin,editor', 'ad
     Route::delete('/users/{user}/comments/{comment}', [App\Http\Controllers\Admin\UserManagementController::class, 'deleteComment'])->name('users.comments.delete');
     Route::post('/users/{user}/comments/bulk-actions', [App\Http\Controllers\Admin\UserManagementController::class, 'bulkCommentActions'])->name('users.comments.bulk');
 
+    // User Verification Management
+    Route::post('/users/{user}/verify', [App\Http\Controllers\Admin\UserManagementController::class, 'verifyUser'])->name('users.verify');
+    Route::post('/users/{user}/unverify', [App\Http\Controllers\Admin\UserManagementController::class, 'unverifyUser'])->name('users.unverify');
+
     // Service Management
     Route::resource('services', App\Http\Controllers\Admin\ServiceManagementController::class)
         ->names([
@@ -66,6 +70,7 @@ Route::middleware(['auth', 'verified', 'auth.enhanced', 'role:admin,editor', 'ad
             'destroy' => 'services.destroy',
         ]);
     Route::post('/services/bulk-action', [App\Http\Controllers\Admin\ServiceManagementController::class, 'bulkAction'])->name('services.bulk-action');
+    Route::get('/services/analytics', [App\Http\Controllers\Admin\ServiceManagementController::class, 'analytics'])->name('services.analytics');
     Route::get('/services/export', [App\Http\Controllers\Admin\ServiceManagementController::class, 'export'])->name('services.export');
 
     // Project Management
@@ -80,6 +85,7 @@ Route::middleware(['auth', 'verified', 'auth.enhanced', 'role:admin,editor', 'ad
             'destroy' => 'projects.destroy',
         ]);
     Route::post('/projects/bulk-action', [App\Http\Controllers\Admin\ProjectManagementController::class, 'bulkAction'])->name('projects.bulk-action');
+    Route::get('/projects/analytics', [App\Http\Controllers\Admin\ProjectManagementController::class, 'analytics'])->name('projects.analytics');
     Route::get('/projects/export', [App\Http\Controllers\Admin\ProjectManagementController::class, 'export'])->name('projects.export');
 
     // Posts Management
@@ -101,6 +107,12 @@ Route::middleware(['auth', 'verified', 'auth.enhanced', 'role:admin,editor', 'ad
         ->name('admin.posts.change-status');
     Route::post('posts/{post}/duplicate', [App\Http\Controllers\Admin\PostController::class, 'duplicate'])
         ->name('admin.posts.duplicate');
+    Route::post('posts/bulk-action', [App\Http\Controllers\Admin\PostController::class, 'bulkAction'])
+        ->name('admin.posts.bulk-action');
+    Route::get('posts/analytics', [App\Http\Controllers\Admin\PostController::class, 'analytics'])
+        ->name('admin.posts.analytics');
+    Route::get('posts/export', [App\Http\Controllers\Admin\PostController::class, 'export'])
+        ->name('admin.posts.export');
     
     // Categories Management
     Route::resource('categories', App\Http\Controllers\Admin\CategoryController::class)
@@ -218,13 +230,15 @@ Route::middleware(['auth', 'verified', 'auth.enhanced', 'role:admin,editor', 'ad
         ->name('admin.settings.update');
     */
     
-    // Media Management (TODO: Create MediaController)
-    /*
+    // Media Management
+    Route::get('/media', [App\Http\Controllers\Admin\MediaController::class, 'index'])
+        ->name('admin.media.index');
     Route::post('/media/upload', [App\Http\Controllers\Admin\MediaController::class, 'upload'])
         ->name('admin.media.upload');
-    Route::delete('/media/{id}', [App\Http\Controllers\Admin\MediaController::class, 'destroy'])
+    Route::delete('/media/delete', [App\Http\Controllers\Admin\MediaController::class, 'destroy'])
         ->name('admin.media.destroy');
-    */
+    Route::delete('/media/bulk-delete', [App\Http\Controllers\Admin\MediaController::class, 'bulkDelete'])
+        ->name('admin.media.bulk-delete');
 });
 
 // Admin only routes (restricted to admin role) with enhanced security
@@ -244,11 +258,27 @@ Route::middleware(['auth', 'verified', 'auth.enhanced', 'role:admin', 'admin.sec
         ]);
     */
     
-    // System Settings (TODO: Create SystemController)
-    /*
-    Route::get('/system', [App\Http\Controllers\Admin\SystemController::class, 'index'])
-        ->name('admin.system.index');
-    Route::post('/system/cache-clear', [App\Http\Controllers\Admin\SystemController::class, 'clearCache'])
-        ->name('admin.system.cache-clear');
-    */
+    // System Management & Utilities
+    Route::get('/system/stats', [App\Http\Controllers\Admin\AdminController::class, 'getSystemStats'])
+        ->name('system.stats');
+    Route::get('/system/activity', [App\Http\Controllers\Admin\AdminController::class, 'getRecentActivity'])
+        ->name('system.activity');
+    Route::get('/system/health', [App\Http\Controllers\Admin\AdminController::class, 'getSystemHealth'])
+        ->name('system.health');
+    Route::post('/system/cache-clear', [App\Http\Controllers\Admin\AdminController::class, 'clearCaches'])
+        ->name('system.cache-clear');
+
+    // Analytics & Reporting
+    Route::prefix('analytics')->name('analytics.')->group(function () {
+        Route::get('/users', [App\Http\Controllers\Admin\AnalyticsController::class, 'getUserAnalytics'])
+            ->name('users');
+        Route::get('/content', [App\Http\Controllers\Admin\AnalyticsController::class, 'getContentAnalytics'])
+            ->name('content');
+        Route::get('/services', [App\Http\Controllers\Admin\AnalyticsController::class, 'getServiceAnalytics'])
+            ->name('services');
+        Route::get('/projects', [App\Http\Controllers\Admin\AnalyticsController::class, 'getProjectAnalytics'])
+            ->name('projects');
+        Route::get('/system', [App\Http\Controllers\Admin\AnalyticsController::class, 'getSystemAnalytics'])
+            ->name('system');
+    });
 });

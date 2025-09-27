@@ -206,6 +206,14 @@ const CommentItem = ({ comment, onReply, level = 0 }) => {
                                 }}
                             >
                                 {comment.author_name}
+                                {comment.user?.is_verified && (
+                                    <VerifiedIcon
+                                        sx={{
+                                            color: '#1976d2',
+                                            fontSize: '1rem'
+                                        }}
+                                    />
+                                )}
                                 {comment.is_guest && (
                                     <Typography
                                         component="span"
@@ -220,6 +228,18 @@ const CommentItem = ({ comment, onReply, level = 0 }) => {
                                     >
                                         Invitado
                                     </Typography>
+                                )}
+                                {comment.is_own_pending && (
+                                    <Chip
+                                        label="Pendiente de moderación"
+                                        size="small"
+                                        color="warning"
+                                        variant="outlined"
+                                        sx={{
+                                            fontSize: '0.7rem',
+                                            height: 20
+                                        }}
+                                    />
                                 )}
                             </Typography>
                             <Typography variant="caption" color="text.secondary">
@@ -505,13 +525,13 @@ const CommentForm = ({
                 <Box sx={{ display: 'flex', gap: 2, justifyContent: 'space-between', alignItems: 'center' }}>
                     <AuthSwitch
                         authenticated={
-                            <Typography variant="caption" color="text.secondary">
-                                Tu comentario se publicará inmediatamente
+                            <Typography variant="caption" color="success.main">
+                                ✓ Tu comentario se publicará inmediatamente
                             </Typography>
                         }
                         guest={
                             <Typography variant="caption" color="warning.main">
-                                Comentario sujeto a moderación
+                                ⏳ Tu comentario aparecerá aquí mientras espera moderación
                             </Typography>
                         }
                     />
@@ -627,17 +647,12 @@ const CommentsSection = ({ postId, postSlug, comments: initialComments = [] }) =
     const submitComment = async (commentData) => {
         try {
             const response = await axios.post(`/blog/${postSlug}/comments`, commentData);
-            
-            showAlert(
-                auth.isAuthenticated 
-                    ? response.data.message 
-                    : 'Tu comentario ha sido enviado y estará visible tras su revisión.',
-                'success'
-            );
-            
+
+            showAlert(response.data.message, 'success');
+
             // Recargar comentarios para mostrar la actualización
             await loadComments();
-            
+
             return response.data;
         } catch (error) {
             throw error;

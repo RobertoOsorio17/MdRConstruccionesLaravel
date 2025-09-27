@@ -34,6 +34,8 @@ import {
     Instagram as InstagramIcon,
     GitHub as GitHubIcon,
     FavoriteBorder as FavoriteBorderIcon,
+    Favorite as FavoriteIcon,
+    Bookmark as BookmarkIcon,
     Search as SearchIcon,
     Star as StarIcon,
     TrendingUp as TrendingIcon,
@@ -110,6 +112,13 @@ const THEME = {
         700: '#b91c1c',
         800: '#991b1b',
         900: '#7f1d1d'
+    },
+    accent: {
+        orange: '#f97316',
+        emerald: '#10b981',
+        purple: '#8b5cf6',
+        rose: '#f43f5e',
+        amber: '#f59e0b'
     }
 };
 
@@ -613,6 +622,16 @@ const UserProfile = ({ profileUser, stats, isFollowing, isOwnProfile, favoriteSe
                                         iconPosition="start"
                                     />
                                     <Tab
+                                        label="Posts que Me Gustan"
+                                        icon={<FavoriteIcon />}
+                                        iconPosition="start"
+                                    />
+                                    <Tab
+                                        label="Posts Guardados"
+                                        icon={<BookmarkIcon />}
+                                        iconPosition="start"
+                                    />
+                                    <Tab
                                         label="Actividad Reciente"
                                         icon={<TrendingIcon />}
                                         iconPosition="start"
@@ -807,9 +826,85 @@ const UserProfile = ({ profileUser, stats, isFollowing, isOwnProfile, favoriteSe
                                         </Fade>
                                     )}
 
-                                    {/* Activity Tab */}
+                                    {/* Liked Posts Tab */}
                                     {activeTab === 1 && (
                                         <Fade in={activeTab === 1}>
+                                            <Box textAlign="center" py={6}>
+                                                <FavoriteIcon
+                                                    sx={{
+                                                        fontSize: 64,
+                                                        color: THEME.accent.rose,
+                                                        mb: 2
+                                                    }}
+                                                />
+                                                <Typography variant="h6" color="text.secondary" gutterBottom>
+                                                    Posts que te gustan
+                                                </Typography>
+                                                <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                                                    Aquí aparecerán todos los artículos que has marcado como me gusta
+                                                </Typography>
+                                                <Button
+                                                    component={Link}
+                                                    href="/my/liked-posts"
+                                                    variant="contained"
+                                                    startIcon={<FavoriteIcon />}
+                                                    sx={{
+                                                        borderRadius: 3,
+                                                        px: 4,
+                                                        py: 1.5,
+                                                        background: `linear-gradient(45deg, ${THEME.accent.rose}, ${THEME.accent.purple})`,
+                                                        '&:hover': {
+                                                            background: `linear-gradient(45deg, ${THEME.accent.purple}, ${THEME.accent.rose})`,
+                                                        }
+                                                    }}
+                                                >
+                                                    Ver Posts que Me Gustan
+                                                </Button>
+                                            </Box>
+                                        </Fade>
+                                    )}
+
+                                    {/* Saved Posts Tab */}
+                                    {activeTab === 2 && (
+                                        <Fade in={activeTab === 2}>
+                                            <Box textAlign="center" py={6}>
+                                                <BookmarkIcon
+                                                    sx={{
+                                                        fontSize: 64,
+                                                        color: THEME.primary[600],
+                                                        mb: 2
+                                                    }}
+                                                />
+                                                <Typography variant="h6" color="text.secondary" gutterBottom>
+                                                    Posts guardados
+                                                </Typography>
+                                                <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                                                    Aquí aparecerán todos los artículos que has guardado para leer más tarde
+                                                </Typography>
+                                                <Button
+                                                    component={Link}
+                                                    href="/my/saved-posts"
+                                                    variant="contained"
+                                                    startIcon={<BookmarkIcon />}
+                                                    sx={{
+                                                        borderRadius: 3,
+                                                        px: 4,
+                                                        py: 1.5,
+                                                        background: `linear-gradient(45deg, ${THEME.primary[600]}, ${THEME.accent.emerald})`,
+                                                        '&:hover': {
+                                                            background: `linear-gradient(45deg, ${THEME.accent.emerald}, ${THEME.primary[600]})`,
+                                                        }
+                                                    }}
+                                                >
+                                                    Ver Posts Guardados
+                                                </Button>
+                                            </Box>
+                                        </Fade>
+                                    )}
+
+                                    {/* Activity Tab */}
+                                    {activeTab === 3 && (
+                                        <Fade in={activeTab === 3}>
                                             <Box textAlign="center" py={6}>
                                                 <TrendingIcon
                                                     sx={{
@@ -829,8 +924,8 @@ const UserProfile = ({ profileUser, stats, isFollowing, isOwnProfile, favoriteSe
                                     )}
 
                                     {/* Settings Tab */}
-                                    {activeTab === 2 && (
-                                        <Fade in={activeTab === 2}>
+                                    {activeTab === 4 && (
+                                        <Fade in={activeTab === 4}>
                                             <Box textAlign="center" py={6}>
                                                 <SettingsIcon
                                                     sx={{

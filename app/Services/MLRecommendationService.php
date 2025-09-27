@@ -765,4 +765,151 @@ class MLRecommendationService
             ]);
         }
     }
+
+    /**
+     * Obtiene recomendaciones basadas en contenido mejoradas
+     */
+    private function getEnhancedContentBasedRecommendations(int $currentPostId, Collection $candidates, int $limit): array
+    {
+        $currentPost = Post::find($currentPostId);
+        if (!$currentPost) {
+            return [];
+        }
+
+        $currentVector = MLPostVector::where('post_id', $currentPostId)->first();
+        if (!$currentVector) {
+            $currentVector = $this->contentAnalysis->analyzePost($currentPost);
+        }
+
+        $recommendations = [];
+
+        foreach ($candidates as $candidate) {
+            $candidateVector = MLPostVector::where('post_id', $candidate->id)->first();
+
+            if (!$candidateVector) {
+                $candidateVector = $this->contentAnalysis->analyzePost($candidate);
+            }
+
+            // Similitud de contenido mejorada con múltiples factores
+            $contentSimilarity = MLPostVector::cosineSimilarity(
+                $currentVector->content_vector ?? [],
+                $candidateVector->content_vector ?? []
+            );
+
+            $categorySimilarity = MLPostVector::cosineSimilarity(
+                $currentVector->category_vector ?? [],
+                $candidateVector->category_vector ?? []
+            );
+
+            $tagSimilarity = MLPostVector::cosineSimilarity(
+                $currentVector->tag_vector ?? [],
+                $candidateVector->tag_vector ?? []
+            );
+
+            // Similitud de autor (si es el mismo autor, boost)
+            $authorBoost = $currentPost->author_id === $candidate->author_id ? 0.2 : 0;
+
+            // Similitud temporal (posts más recientes tienen ligero boost)
+            $daysDiff = $currentPost->published_at->diffInDays($candidate->published_at);
+            $temporalBoost = max(0, (30 - $daysDiff) / 30) * 0.1;
+
+            // Score combinado mejorado
+            $score = ($contentSimilarity * 0.4) +
+                    ($categorySimilarity * 0.25) +
+                    ($tagSimilarity * 0.2) +
+                    $authorBoost +
+                    $temporalBoost;
+
+            if ($score > 0.15) { // Threshold más selectivo
+                $recommendations[] = [
+                    'post' => $candidate,
+                    'score' => $score,
+                    'source' => 'enhanced_content_based',
+                    'reason' => $this->generateEnhancedContentReason($contentSimilarity, $categorySimilarity, $tagSimilarity, $authorBoost),
+                    'metadata' => [
+                        'content_similarity' => $contentSimilarity,
+                        'category_similarity' => $categorySimilarity,
+                        'tag_similarity' => $tagSimilarity,
+                        'author_boost' => $authorBoost,
+                        'temporal_boost' => $temporalBoost
+                    ]
+                ];
+            }
+        }
+
+        usort($recommendations, fn($a, $b) => $b['score'] <=> $a['score']);
+        return array_slice($recommendations, 0, $limit);
+    }
+
+    /**
+     * Obtiene recomendaciones trending en tiempo real
+     */
+    private function getRealTimeTrendingRecommendations(Collection $candidates, int $limit): array
+    {
+        $recommendations = [];
+
+        foreach ($candidates as $candidate) {
+            // Engagement reciente (últimas 24 horas)
+            $recentEngagement = MLInteractionLog::where('post_id', $candidate->id)
+                ->where('created_at', '>', now()->subDay())
+                ->whereIn('interaction_type', ['like', 'share', 'comment', 'bookmark'])
+                ->count();
+
+            // Engagement por hora para detectar tendencias
+            $hourlyEngagement = MLInteractionLog::where('post_id', $candidate->id)
+                ->where('created_at', '>', now()->subHour())
+                ->count();
+
+            // Score basado en velocidad de engagement
+            $engagementVelocity = $hourlyEngagement > 0 ? ($recentEngagement / 24) * $hourlyEngagement : 0;
+
+            // Métricas generales con peso temporal
+            $ageInDays = $candidate->published_at->diffInDays(now());
+            $agePenalty = $ageInDays > 7 ? 0.5 : 1.0; // Penalizar posts muy antiguos
+
+            $viewsScore = min(($candidate->views_count ?? 0) / 1000, 1.0) * $agePenalty;
+            $likesScore = min(($candidate->likes_count ?? 0) / 100, 1.0) * $agePenalty;
+            $commentsScore = min(($candidate->comments_count ?? 0) / 50, 1.0) * $agePenalty;
+
+            $score = ($engagementVelocity * 0.5) + ($viewsScore * 0.2) + ($likesScore * 0.2) + ($commentsScore * 0.1);
+
+            if ($score > 0.1) {
+                $recommendations[] = [
+                    'post' => $candidate,
+                    'score' => $score,
+                    'source' => 'realtime_trending',
+                    'reason' => "Trending ahora - Alto engagement reciente",
+                    'metadata' => [
+                        'recent_engagement' => $recentEngagement,
+                        'hourly_engagement' => $hourlyEngagement,
+                        'engagement_velocity' => $engagementVelocity,
+                        'age_penalty' => $agePenalty
+                    ]
+                ];
+            }
+        }
+
+        usort($recommendations, fn($a, $b) => $b['score'] <=> $a['score']);
+        return array_slice($recommendations, 0, $limit);
+    }
+
+    /**
+     * Genera razón mejorada para recomendaciones de contenido
+     */
+    private function generateEnhancedContentReason(float $content, float $category, float $tag, float $author): string
+    {
+        $reasons = [];
+
+        if ($content > 0.7) $reasons[] = "Contenido muy similar";
+        elseif ($content > 0.4) $reasons[] = "Contenido relacionado";
+
+        if ($category > 0.8) $reasons[] = "Misma categoría";
+        elseif ($category > 0.5) $reasons[] = "Categoría relacionada";
+
+        if ($tag > 0.6) $reasons[] = "Tags similares";
+
+        if ($author > 0) $reasons[] = "Mismo autor";
+
+        return implode(', ', $reasons) ?: "Contenido relacionado";
+    }
 }

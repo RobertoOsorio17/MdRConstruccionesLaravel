@@ -58,6 +58,9 @@ const PostsIndex = ({ posts, categories, tags, filters, stats }) => {
     const [selectedPost, setSelectedPost] = useState(null);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [postToDelete, setPostToDelete] = useState(null);
+    const [selectedPosts, setSelectedPosts] = useState([]);
+    const [bulkActionDialogOpen, setBulkActionDialogOpen] = useState(false);
+    const [bulkAction, setBulkAction] = useState('');
 
     const handleSearch = () => {
         router.get('/admin/posts', {
@@ -136,6 +139,49 @@ const PostsIndex = ({ posts, categories, tags, filters, stats }) => {
         }
         setDeleteDialogOpen(false);
         setPostToDelete(null);
+    };
+
+    const handlePostSelect = (postId) => {
+        setSelectedPosts(prev => {
+            if (prev.includes(postId)) {
+                return prev.filter(id => id !== postId);
+            } else {
+                return [...prev, postId];
+            }
+        });
+    };
+
+    const handleSelectAll = () => {
+        if (selectedPosts.length === posts.data.length) {
+            setSelectedPosts([]);
+        } else {
+            setSelectedPosts(posts.data.map(post => post.id));
+        }
+    };
+
+    const handleBulkAction = async () => {
+        if (!bulkAction || selectedPosts.length === 0) return;
+
+        try {
+            await fetch('/admin/posts/bulk-action', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                },
+                body: JSON.stringify({
+                    action: bulkAction,
+                    posts: selectedPosts
+                }),
+            });
+
+            router.reload({ only: ['posts', 'stats'] });
+            setSelectedPosts([]);
+            setBulkActionDialogOpen(false);
+            setBulkAction('');
+        } catch (error) {
+            console.error('Error in bulk action:', error);
+        }
     };
 
     const getStatusColor = (status) => {

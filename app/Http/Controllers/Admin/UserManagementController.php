@@ -221,7 +221,7 @@ class UserManagementController extends Controller
      */
     public function show(User $user)
     {
-        $user->load(['roles']);
+        $user->load(['roles', 'verifiedBy:id,name']);
 
         // Get user statistics
         $userStats = [
@@ -266,6 +266,10 @@ class UserManagementController extends Controller
                 'last_login_at' => $user->last_login_at,
                 'created_at' => $user->created_at,
                 'updated_at' => $user->updated_at,
+                'is_verified' => $user->is_verified,
+                'verified_at' => $user->verified_at,
+                'verification_notes' => $user->verification_notes,
+                'verified_by' => $user->verifiedBy,
             ],
             'stats' => $userStats,
             'commentStats' => $commentStats,
@@ -909,5 +913,99 @@ class UserManagementController extends Controller
         ]);
 
         return response()->noContent();
+    }
+
+    /**
+     * Verify a user
+     */
+    public function verifyUser(Request $request, User $user)
+    {
+        // Check if current user is admin
+        if (!auth()->user()->hasRole('admin')) {
+            return back()->withErrors(['error' => 'No tienes permisos para verificar usuarios.']);
+        }
+
+        // Prevent self-verification
+        if ($user->id === auth()->id()) {
+            return back()->withErrors(['error' => 'No puedes verificarte a ti mismo.']);
+        }
+
+        $request->validate([
+            'verification_notes' => 'nullable|string|max:1000',
+        ]);
+
+        try {
+            $success = $user->verify(auth()->user(), $request->verification_notes);
+
+            if ($success) {
+                // Log the verification action
+                \Log::info('User verified', [
+                    'user_id' => $user->id,
+                    'user_email' => $user->email,
+                    'verified_by' => auth()->id(),
+                    'verification_notes' => $request->verification_notes,
+                    'timestamp' => now()->toISOString()
+                ]);
+
+                return back()->with('success', "Usuario {$user->name} verificado exitosamente.");
+            } else {
+                return back()->withErrors(['error' => 'Error al verificar el usuario. Inténtalo de nuevo.']);
+            }
+        } catch (\Exception $e) {
+            \Log::error('Error verifying user', [
+                'user_id' => $user->id,
+                'error' => $e->getMessage(),
+                'verified_by' => auth()->id()
+            ]);
+
+            return back()->withErrors(['error' => 'Error al verificar el usuario. Inténtalo de nuevo.']);
+        }
+    }
+
+    /**
+     * Unverify a user
+     */
+    public function unverifyUser(Request $request, User $user)
+    {
+        // Check if current user is admin
+        if (!auth()->user()->hasRole('admin')) {
+            return back()->withErrors(['error' => 'No tienes permisos para desverificar usuarios.']);
+        }
+
+        // Prevent self-unverification
+        if ($user->id === auth()->id()) {
+            return back()->withErrors(['error' => 'No puedes desverificarte a ti mismo.']);
+        }
+
+        $request->validate([
+            'verification_notes' => 'nullable|string|max:1000',
+        ]);
+
+        try {
+            $success = $user->unverify(auth()->user(), $request->verification_notes);
+
+            if ($success) {
+                // Log the unverification action
+                \Log::info('User unverified', [
+                    'user_id' => $user->id,
+                    'user_email' => $user->email,
+                    'unverified_by' => auth()->id(),
+                    'verification_notes' => $request->verification_notes,
+                    'timestamp' => now()->toISOString()
+                ]);
+
+                return back()->with('success', "Verificación de {$user->name} removida exitosamente.");
+            } else {
+                return back()->withErrors(['error' => 'Error al desverificar el usuario. Inténtalo de nuevo.']);
+            }
+        } catch (\Exception $e) {
+            \Log::error('Error unverifying user', [
+                'user_id' => $user->id,
+                'error' => $e->getMessage(),
+                'unverified_by' => auth()->id()
+            ]);
+
+            return back()->withErrors(['error' => 'Error al desverificar el usuario. Inténtalo de nuevo.']);
+        }
     }
 }

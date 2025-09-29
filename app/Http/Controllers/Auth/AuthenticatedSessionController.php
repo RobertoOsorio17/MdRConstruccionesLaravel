@@ -93,16 +93,28 @@ class AuthenticatedSessionController extends Controller
                 'timestamp' => now()->toISOString()
             ]);
 
+            // Enhanced session security: regenerate session ID and token
+            $oldSessionId = session()->getId();
             $request->session()->regenerate();
+            $request->session()->regenerateToken();
 
-            // Update last_login_at immediately upon successful login
-            $user->forceFill(['last_login_at' => now()])->save();
+            // Initialize session activity tracking
+            session(['last_activity' => time()]);
 
-            Log::debug('Session regenerated after login', [
+            // Update last_login_at and IP immediately upon successful login
+            $user->forceFill([
+                'last_login_at' => now(),
+                'last_login_ip' => $request->ip()
+            ])->save();
+
+            Log::info('Secure session regenerated after login', [
                 'user_id' => Auth::id(),
-                'old_session_id' => session()->getId(),
+                'user_email' => $user->email,
+                'old_session_id' => $oldSessionId,
                 'new_session_id' => session()->getId(),
                 'last_login_updated' => now()->toISOString(),
+                'login_ip' => $request->ip(),
+                'user_agent' => $request->userAgent(),
                 'timestamp' => now()->toISOString()
             ]);
 

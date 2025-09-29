@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -10,17 +11,24 @@ use Illuminate\Support\Str;
 
 class Post extends Model
 {
+    use HasFactory;
     protected $fillable = [
-        'user_id',
         'title',
         'slug',
         'excerpt',
         'content',
         'cover_image',
-        'status',
         'published_at',
         'seo_title',
         'seo_description',
+    ];
+
+    /**
+     * Fields that should only be updated by administrators or the system
+     */
+    protected $adminOnlyFields = [
+        'user_id',
+        'status',
         'views_count',
         'featured',
     ];
@@ -262,24 +270,29 @@ class Post extends Model
                 ->get();
         }
         
-        // Construir la query de relevancia de forma segura
-        $categoryQuery = $categoryIds->isNotEmpty() 
-            ? "(SELECT COUNT(*) FROM post_category pc WHERE pc.post_id = posts.id AND pc.category_id IN (" . $categoryIds->implode(',') . ")) * 3" 
-            : "0";
-            
-        $tagQuery = $tagIds->isNotEmpty() 
-            ? "(SELECT COUNT(*) FROM post_tag pt WHERE pt.post_id = posts.id AND pt.tag_id IN (" . $tagIds->implode(',') . ")) * 2" 
-            : "0";
-        
-        $posts = static::published()
+        // Construir la query de relevancia de forma segura usando parámetros
+        $query = static::published()
             ->where('id', '!=', $this->id)
-            ->select('posts.*')
-            ->selectRaw("(
-                {$categoryQuery} +
-                {$tagQuery} +
-                (posts.views_count / 100) +
-                (posts.featured * 1)
-            ) as relevance_score")
+            ->select('posts.*');
+
+        // Construir la query de relevancia usando parámetros seguros
+        $relevanceQuery = '(posts.views_count / 100) + (posts.featured * 1)';
+        $bindings = [];
+
+        if ($categoryIds->isNotEmpty()) {
+            $categoryPlaceholders = str_repeat('?,', count($categoryIds) - 1) . '?';
+            $relevanceQuery .= " + (SELECT COUNT(*) FROM post_category pc WHERE pc.post_id = posts.id AND pc.category_id IN ({$categoryPlaceholders})) * 3";
+            $bindings = array_merge($bindings, $categoryIds->toArray());
+        }
+
+        if ($tagIds->isNotEmpty()) {
+            $tagPlaceholders = str_repeat('?,', count($tagIds) - 1) . '?';
+            $relevanceQuery .= " + (SELECT COUNT(*) FROM post_tag pt WHERE pt.post_id = posts.id AND pt.tag_id IN ({$tagPlaceholders})) * 2";
+            $bindings = array_merge($bindings, $tagIds->toArray());
+        }
+
+        $posts = $query
+            ->selectRaw("({$relevanceQuery}) as relevance_score", $bindings)
             ->having('relevance_score', '>', 0)
             ->with(['author:id,name,avatar', 'categories:id,name,slug', 'tags:id,name,slug,color'])
             ->withCount(['likes', 'bookmarks', 'approvedComments'])
@@ -316,7 +329,50 @@ class Post extends Model
         if ($this->excerpt) {
             return $this->excerpt;
         }
-        
+
         return Str::limit(strip_tags($this->content), 150);
     }
+
+    /**
+     * Administrative method to set post author
+     */
+    public function setAuthor(User $author, User $admin): bool
+    {
+        if (!$admin->hasRole('admin') && !$admin->hasRole('editor')) {
+            throw new \Exception('Only administrators and editors can set post authors.');
+        }
+
+        return $this->update(['user_id' => $author->id]);
+    }
+
+    /**
+     * Administrative method to update post status
+     */
+    public function updateStatus(string $status, User $admin): bool
+    {
+        if (!$admin->hasRole('admin') && !$admin->hasRole('editor')) {
+            throw new \Exception('Only administrators and editors can update post status.');
+        }
+
+        $validStatuses = ['draft', 'published', 'archived'];
+        if (!in_array($status, $validStatuses)) {
+            throw new \Exception('Invalid post status.');
+        }
+
+        return $this->update(['status' => $status]);
+    }
+
+    /**
+     * Administrative method to feature/unfeature post
+     */
+    public function toggleFeatured(User $admin): bool
+    {
+        if (!$admin->hasRole('admin') && !$admin->hasRole('editor')) {
+            throw new \Exception('Only administrators and editors can feature posts.');
+        }
+
+        return $this->update(['featured' => !$this->featured]);
+    }
+
+
 }

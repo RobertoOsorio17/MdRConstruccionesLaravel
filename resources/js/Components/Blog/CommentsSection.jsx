@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link } from '@inertiajs/react';
 import {
     Box,
@@ -178,13 +178,15 @@ const CommentItem = ({ comment, onReply, onDelete, level = 0 }) => {
 
     return (
         <Box
+            id={`comment-${comment.id}`}
             component={motion.div}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             sx={{
                 ml: level * 4,
                 mb: 3,
-                maxWidth: level > 0 ? 'calc(100% - 32px)' : '100%'
+                maxWidth: level > 0 ? 'calc(100% - 32px)' : '100%',
+                scrollMarginTop: '100px' // Add scroll margin for better anchor positioning
             }}
         >
             <Paper
@@ -196,6 +198,11 @@ const CommentItem = ({ comment, onReply, onDelete, level = 0 }) => {
                     backgroundColor: level > 0 ? alpha(theme.palette.grey[50], 0.5) : 'white',
                     '&:hover': {
                         boxShadow: '0 2px 8px rgba(0,0,0,0.05)'
+                    },
+                    '&:target': {
+                        backgroundColor: alpha(theme.palette.primary.main, 0.1),
+                        border: `2px solid ${theme.palette.primary.main}`,
+                        animation: 'highlight 2s ease-in-out'
                     }
                 }}
             >
@@ -718,12 +725,58 @@ const CommentsSection = ({ postId, postSlug, comments: initialComments = [] }) =
     const [comments, setComments] = useState(initialComments);
     const [commentsCount, setCommentsCount] = useState(initialComments.length);
     const [alert, setAlert] = useState(null);
+    const commentsRef = useRef(null);
     const [showLoginPrompt, setShowLoginPrompt] = useState(false);
 
     const showAlert = (message, severity = 'success') => {
         setAlert({ message, severity });
         setTimeout(() => setAlert(null), 5000);
     };
+
+    // Effect to handle anchor navigation to specific comments
+    useEffect(() => {
+        const handleAnchorNavigation = () => {
+            const hash = window.location.hash;
+            if (hash && hash.startsWith('#comment-')) {
+                const commentId = hash.replace('#comment-', '');
+
+                // Wait for comments to be rendered
+                setTimeout(() => {
+                    const commentElement = document.getElementById(`comment-${commentId}`);
+                    if (commentElement) {
+                        commentElement.scrollIntoView({
+                            behavior: 'smooth',
+                            block: 'center',
+                            inline: 'nearest'
+                        });
+
+                        // Add highlight effect
+                        commentElement.style.backgroundColor = 'rgba(37, 99, 235, 0.1)';
+                        commentElement.style.border = '2px solid #2563eb';
+                        commentElement.style.borderRadius = '8px';
+                        commentElement.style.transition = 'all 0.3s ease';
+
+                        // Remove highlight after 3 seconds
+                        setTimeout(() => {
+                            commentElement.style.backgroundColor = '';
+                            commentElement.style.border = '';
+                            commentElement.style.borderRadius = '';
+                        }, 3000);
+                    }
+                }, 1000); // Wait for animations to complete
+            }
+        };
+
+        // Handle initial load
+        handleAnchorNavigation();
+
+        // Handle hash changes (if user navigates with browser back/forward)
+        window.addEventListener('hashchange', handleAnchorNavigation);
+
+        return () => {
+            window.removeEventListener('hashchange', handleAnchorNavigation);
+        };
+    }, [comments]); // Re-run when comments change
 
     const submitComment = async (commentData) => {
         try {
@@ -971,4 +1024,27 @@ const CommentsSection = ({ postId, postSlug, comments: initialComments = [] }) =
     );
 };
 
-export default CommentsSection;
+// Add CSS animation for comment highlighting
+const commentHighlightStyles = (
+    <style>
+        {`
+            @keyframes highlight {
+                0% { background-color: rgba(37, 99, 235, 0.2); }
+                50% { background-color: rgba(37, 99, 235, 0.1); }
+                100% { background-color: transparent; }
+            }
+        `}
+    </style>
+);
+
+// Enhanced CommentsSection with highlight animation
+const EnhancedCommentsSection = (props) => {
+    return (
+        <>
+            {commentHighlightStyles}
+            <CommentsSection {...props} />
+        </>
+    );
+};
+
+export default EnhancedCommentsSection;

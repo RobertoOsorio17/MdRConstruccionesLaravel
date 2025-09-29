@@ -202,6 +202,8 @@ const UserProfile = ({
                         currentUser={auth.user}
                         onLikeComment={handleLikeComment}
                         onDislikeComment={handleDislikeComment}
+                        profileUserId={profileUser.id}
+                        isOwnProfile={isOwnProfile}
                     />
                 );
             case 'services':

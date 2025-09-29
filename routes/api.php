@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\SearchController;
+use App\Http\Controllers\UserProfileController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -17,6 +18,20 @@ use Illuminate\Support\Facades\Route;
 
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
+});
+
+/*
+|--------------------------------------------------------------------------
+| User Profile API Routes
+|--------------------------------------------------------------------------
+*/
+
+Route::middleware('auth:sanctum')->group(function () {
+    // Get current user's comments with pagination
+    Route::get('/user/comments', [UserProfileController::class, 'getUserComments'])->name('api.user.comments');
+
+    // Get specific user's comments with pagination (public profiles only)
+    Route::get('/user/{userId}/comments', [UserProfileController::class, 'getUserComments'])->name('api.user.comments.public');
 });
 
 /*

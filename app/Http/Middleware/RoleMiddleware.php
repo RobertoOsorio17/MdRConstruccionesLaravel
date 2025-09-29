@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpFoundation\Response;
 
 class RoleMiddleware
@@ -24,29 +25,30 @@ class RoleMiddleware
 
         $user = $request->user();
 
-        // Get user roles (handle both simple role field and complex roles relationship)
-        $userRoles = [];
+        // Use the User model's hasAnyRole method for consistent role checking
+        // This method properly handles both the role field and roles relationship
+        $hasRequiredRole = false;
 
-        // Check simple role field first
-        if ($user->role) {
-            $userRoles[] = $user->role;
+        // Check each required role using the model's secure method
+        foreach ($roles as $role) {
+            if ($user->hasRole($role)) {
+                $hasRequiredRole = true;
+                break;
+            }
         }
 
-        // Also check roles relationship if it exists
-        if ($user->roles && $user->roles->count() > 0) {
-            $userRoles = array_merge($userRoles, $user->roles->pluck('name')->toArray());
-        }
+        if (!$hasRequiredRole) {
+            // Get user roles for logging (using secure method)
+            $userRoles = $this->getUserRoles($user);
 
-        $userRoles = array_unique($userRoles);
-
-        // Check if user has any of the required roles
-        if (!array_intersect($userRoles, $roles)) {
-            \Log::warning('Access denied - insufficient role', [
+            Log::warning('Access denied - insufficient role', [
                 'user_id' => $user->id,
                 'user_roles' => $userRoles,
                 'required_roles' => $roles,
                 'url' => $request->fullUrl(),
-                'ip' => $request->ip()
+                'ip' => $request->ip(),
+                'user_agent' => $request->userAgent(),
+                'timestamp' => now()->toISOString()
             ]);
 
             if ($request->expectsJson()) {
@@ -60,13 +62,36 @@ class RoleMiddleware
         }
 
         // Log successful access for audit trail
-        \Log::info('Role-based access granted', [
+        Log::info('Role-based access granted', [
             'user_id' => $user->id,
-            'user_roles' => $userRoles,
+            'user_roles' => $this->getUserRoles($user),
             'required_roles' => $roles,
-            'url' => $request->fullUrl()
+            'url' => $request->fullUrl(),
+            'ip' => $request->ip(),
+            'timestamp' => now()->toISOString()
         ]);
 
         return $next($request);
+    }
+
+    /**
+     * Get user roles in a secure, consistent manner
+     * Prioritizes roles relationship over simple role field
+     */
+    private function getUserRoles($user): array
+    {
+        $userRoles = [];
+
+        // First priority: roles relationship (more secure and flexible)
+        if (method_exists($user, 'roles') && $user->roles()->exists()) {
+            $userRoles = $user->roles->pluck('name')->toArray();
+        }
+
+        // Fallback: simple role field (only if no roles relationship exists)
+        if (empty($userRoles) && !empty($user->role)) {
+            $userRoles = [$user->role];
+        }
+
+        return array_unique($userRoles);
     }
 }

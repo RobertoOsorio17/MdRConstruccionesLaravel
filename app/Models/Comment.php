@@ -2,20 +2,28 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Comment extends Model
 {
+    use HasFactory;
     protected $fillable = [
         'post_id',
-        'user_id',
         'parent_id',
         'body',
-        'status',
         'author_name',
         'author_email',
+    ];
+
+    /**
+     * Fields that should only be updated by administrators or the system
+     */
+    protected $adminOnlyFields = [
+        'user_id',
+        'status',
         'ip_address',
         'user_agent',
     ];
@@ -179,5 +187,46 @@ class Comment extends Model
                     ->where('user_id', $user->id)
                     ->where('type', 'dislike')
                     ->exists();
+    }
+
+    /**
+     * Administrative method to set comment author
+     */
+    public function setAuthor(User $author, User $admin): bool
+    {
+        if (!$admin->hasRole('admin') && !$admin->hasRole('moderator')) {
+            throw new \Exception('Only administrators and moderators can set comment authors.');
+        }
+
+        return $this->update(['user_id' => $author->id]);
+    }
+
+    /**
+     * Administrative method to moderate comment
+     */
+    public function moderate(string $status, User $admin): bool
+    {
+        if (!$admin->hasRole('admin') && !$admin->hasRole('moderator')) {
+            throw new \Exception('Only administrators and moderators can moderate comments.');
+        }
+
+        $validStatuses = ['pending', 'approved', 'rejected', 'spam'];
+        if (!in_array($status, $validStatuses)) {
+            throw new \Exception('Invalid comment status.');
+        }
+
+        $this->status = $status;
+        return $this->save();
+    }
+
+    /**
+     * System method to set tracking information
+     */
+    public function setTrackingInfo(string $ipAddress, string $userAgent): bool
+    {
+        return $this->update([
+            'ip_address' => $ipAddress,
+            'user_agent' => $userAgent,
+        ]);
     }
 }

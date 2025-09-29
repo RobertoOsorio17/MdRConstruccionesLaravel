@@ -133,8 +133,11 @@ class CommentController extends Controller
             $validated['status'] = 'spam';
         }
 
-        // Create the comment
-        $comment = Comment::create($validated);
+        // Create the comment with all validated data including tracking info
+        $comment = Comment::create(array_merge($validated, [
+            'ip_address' => $request->ip(),
+            'user_agent' => $request->userAgent(),
+        ]));
 
         // Load relationships for response
         $comment->load(['user:id,name', 'parent:id,author_name']);

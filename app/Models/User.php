@@ -23,9 +23,7 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
-        'role',
         'avatar',
-        'last_login_at',
         'bio',
         'website',
         'location',
@@ -37,10 +35,18 @@ class User extends Authenticatable
         'profile_visibility',
         'show_email',
         'profile_updated_at',
+    ];
+
+    /**
+     * Fields that should only be updated by administrators
+     */
+    protected $adminOnlyFields = [
+        'role',
         'is_verified',
         'verified_at',
         'verification_notes',
         'verified_by',
+        'last_login_at',
     ];
 
     /**
@@ -665,5 +671,60 @@ class User extends Authenticatable
     public function sendPasswordResetNotification($token): void
     {
         $this->notify(new ResetPasswordNotification($token));
+    }
+
+    /**
+     * Administrative method to update user role
+     */
+    public function updateRole(string $role, User $admin): bool
+    {
+        if (!$admin->hasRole('admin')) {
+            throw new \Exception('Only administrators can update user roles.');
+        }
+
+        $this->role = $role;
+        return $this->save();
+    }
+
+    /**
+     * Administrative method to verify user
+     */
+    public function verifyUser(User $admin, string $notes = null): bool
+    {
+        if (!$admin->hasRole('admin')) {
+            throw new \Exception('Only administrators can verify users.');
+        }
+
+        $this->is_verified = true;
+        $this->verified_at = now();
+        $this->verified_by = $admin->id;
+        $this->verification_notes = $notes;
+
+        return $this->save();
+    }
+
+    /**
+     * Administrative method to unverify user
+     */
+    public function unverifyUser(User $admin, string $notes = null): bool
+    {
+        if (!$admin->hasRole('admin')) {
+            throw new \Exception('Only administrators can unverify users.');
+        }
+
+        return $this->update([
+            'is_verified' => false,
+            'verified_at' => null,
+            'verified_by' => null,
+            'verification_notes' => $notes,
+        ]);
+    }
+
+    /**
+     * Administrative method to update last login time
+     */
+    public function updateLastLogin(): bool
+    {
+        return $this->update(['last_login_at' => now()]);
     }
 }

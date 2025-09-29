@@ -199,14 +199,14 @@ class UserProfileController extends Controller
             ->get();
         }
 
-        // 4. Cargar comentarios del usuario con información del post
+        // 4. Cargar comentarios del usuario con información del post (solo primeros 10 para la vista inicial)
         $userComments = Comment::where('user_id', $user->id)
             ->where('status', 'approved')
             ->with(['post' => function ($query) {
                 $query->select('id', 'title', 'slug', 'status', 'published_at');
             }])
             ->orderBy('created_at', 'desc')
-            ->limit(50)
+            ->limit(10)
             ->get();
 
         // Agregar información de interacciones para todos los posts
@@ -280,7 +280,51 @@ class UserProfileController extends Controller
             ]
         ]);
     }
-    
+
+    /**
+     * Get paginated comments for a user (API endpoint)
+     */
+    public function getUserComments(Request $request, $userId = null)
+    {
+        $user = $userId ? User::findOrFail($userId) : $request->user();
+        $currentUser = $request->user();
+
+        // Security check: only allow viewing own comments or public profiles
+        if ($userId && $userId != $currentUser?->id) {
+            // Check if profile is public or if user has permission
+            if (!$user || $user->profile_visibility === 'private') {
+                return response()->json(['error' => 'Unauthorized'], 403);
+            }
+        }
+
+        $perPage = min($request->get('per_page', 10), 50); // Limit to max 50 per page
+        $search = $request->get('search', '');
+
+        $query = Comment::where('user_id', $user->id)
+            ->where('status', 'approved')
+            ->with(['post' => function ($query) {
+                $query->select('id', 'title', 'slug', 'status', 'published_at');
+            }]);
+
+        // Apply search filter
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('body', 'like', "%{$search}%")
+                  ->orWhereHas('post', function ($postQuery) use ($search) {
+                      $postQuery->where('title', 'like', "%{$search}%");
+                  });
+            });
+        }
+
+        $comments = $query->orderBy('created_at', 'desc')
+            ->paginate($perPage);
+
+        return response()->json([
+            'success' => true,
+            'comments' => $comments
+        ]);
+    }
+
     /**
      * Mostrar formulario de edición del perfil
      */

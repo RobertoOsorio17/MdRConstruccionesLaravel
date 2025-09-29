@@ -294,4 +294,53 @@ class CommentController extends Controller
             'count' => $formattedComments->count()
         ]);
     }
+
+    /**
+     * Delete a comment (admin only).
+     */
+    public function destroy(Comment $comment)
+    {
+        // Check if user is authenticated
+        if (!Auth::check()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No tienes permisos para realizar esta acción.'
+            ], 403);
+        }
+
+        $user = Auth::user();
+
+        // Check if user is admin
+        if (!$user->hasRole('admin')) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No tienes permisos para eliminar comentarios.'
+            ], 403);
+        }
+
+        try {
+            // Store comment info for response
+            $commentAuthor = $comment->user ? $comment->user->name : $comment->author_name;
+
+            // Delete the comment (this will also delete replies due to cascade)
+            $comment->delete();
+
+            return response()->json([
+                'success' => true,
+                'message' => "Comentario de {$commentAuthor} eliminado correctamente."
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Error deleting comment', [
+                'comment_id' => $comment->id,
+                'admin_user_id' => $user->id,
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al eliminar el comentario. Inténtalo de nuevo.'
+            ], 500);
+        }
+    }
 }

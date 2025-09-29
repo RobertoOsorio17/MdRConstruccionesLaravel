@@ -68,8 +68,20 @@ class AuthenticatedSessionController extends Controller
                 $request->session()->invalidate();
                 $request->session()->regenerateToken();
 
-                // Redirect to banned page
-                return redirect()->route('banned')->with('ban_info', $banStatus);
+                // Redirect back to login with error message
+                $errorMessage = 'Tu cuenta ha sido suspendida.';
+                if ($banStatus['reason']) {
+                    $errorMessage .= ' Motivo: ' . $banStatus['reason'];
+                }
+                if ($banStatus['expires_at']) {
+                    $errorMessage .= ' La suspensión expira el: ' . $banStatus['expires_at'];
+                } else {
+                    $errorMessage .= ' Esta suspensión es permanente.';
+                }
+
+                return redirect()->route('login')->withErrors([
+                    'email' => $errorMessage
+                ]);
             }
 
             Log::info('Authentication successful', [

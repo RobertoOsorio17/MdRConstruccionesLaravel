@@ -164,7 +164,7 @@ class DashboardController extends Controller
         }
 
         // Service performance metrics
-        $serviceStats = Service::select('id', 'title', 'views_count', 'is_featured', 'created_at')
+        $serviceStats = Service::select('id', 'title', 'views_count', 'featured', 'created_at')
             ->withCount('favorites')
             ->orderBy('views_count', 'desc')
             ->limit(10)
@@ -209,8 +209,7 @@ class DashboardController extends Controller
                 $query->where('status', 'published');
             }])
             ->with(['posts' => function ($query) {
-                $query->select('category_id', DB::raw('SUM(views_count) as total_views'))
-                      ->groupBy('category_id');
+                $query->select('posts.id', 'views_count');
             }])
             ->orderBy('posts_count', 'desc')
             ->limit(8)

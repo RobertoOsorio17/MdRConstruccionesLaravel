@@ -138,4 +138,46 @@ class Comment extends Model
     {
         return $this->interactions()->where('type', 'dislike')->count();
     }
+
+    /**
+     * Get likes for this comment.
+     */
+    public function likes()
+    {
+        return $this->interactions()->where('type', 'like');
+    }
+
+    /**
+     * Get dislikes for this comment.
+     */
+    public function dislikes()
+    {
+        return $this->interactions()->where('type', 'dislike');
+    }
+
+    /**
+     * Check if a user has liked this comment.
+     */
+    public function isLikedBy($user)
+    {
+        if (!$user) return false;
+
+        return $this->interactions()
+                    ->where('user_id', $user->id)
+                    ->where('type', 'like')
+                    ->exists();
+    }
+
+    /**
+     * Check if a user has disliked this comment.
+     */
+    public function isDislikedBy($user)
+    {
+        if (!$user) return false;
+
+        return $this->interactions()
+                    ->where('user_id', $user->id)
+                    ->where('type', 'dislike')
+                    ->exists();
+    }
 }

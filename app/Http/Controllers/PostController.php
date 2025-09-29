@@ -407,7 +407,7 @@ class PostController extends Controller
                 'content' => $post->content,
                 'excerpt' => $post->excerpt,
                 'cover_image' => $post->cover_image,
-                'published_at' => $post->published_at->format('d M Y'),
+                'published_at' => $post->published_at ? $post->published_at->format('d M Y') : null,
                 'views_count' => $post->views_count,
                 'author' => $post->author,
                 'categories' => $post->categories,

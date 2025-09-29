@@ -181,11 +181,11 @@ class UserDashboardController extends Controller
         $search = $request->get('search');
 
         $savedPostsQuery = Auth::user()->savedPosts()
-            ->with(['author:id,name,avatar', 'category:id,name,slug'])
+            ->with(['author:id,name,avatar', 'categories:id,name,slug'])
             ->orderByPivot('created_at', 'desc');
 
         if ($category) {
-            $savedPostsQuery->whereHas('category', function ($query) use ($category) {
+            $savedPostsQuery->whereHas('categories', function ($query) use ($category) {
                 $query->where('slug', $category);
             });
         }
@@ -201,9 +201,10 @@ class UserDashboardController extends Controller
 
         // Get available categories from saved posts
         $categories = Auth::user()->savedPosts()
-            ->with('category:id,name,slug')
+            ->with('categories:id,name,slug')
             ->get()
-            ->pluck('category')
+            ->pluck('categories')
+            ->flatten()
             ->unique('id')
             ->values();
 
@@ -345,6 +346,38 @@ class UserDashboardController extends Controller
     public function bookmarks(Request $request): Response
     {
         return $this->savedPosts($request);
+    }
+
+    /**
+     * Display user's liked comments
+     */
+    public function likedComments(Request $request): Response
+    {
+        $perPage = $request->get('per_page', 12);
+        $search = $request->get('search');
+
+        $likedCommentsQuery = Auth::user()->likedComments()
+            ->with([
+                'post:id,title,slug,excerpt,cover_image',
+                'user:id,name,avatar',
+                'parent:id,body,user_id',
+                'parent.user:id,name'
+            ])
+            ->where('status', 'approved'); // Only show approved comments
+
+        if ($search) {
+            $likedCommentsQuery->where('body', 'like', "%{$search}%");
+        }
+
+        $likedComments = $likedCommentsQuery->paginate($perPage);
+
+        return Inertia::render('User/LikedComments', [
+            'likedComments' => $likedComments,
+            'filters' => [
+                'search' => $search,
+                'per_page' => $perPage,
+            ],
+        ]);
     }
 
     /**

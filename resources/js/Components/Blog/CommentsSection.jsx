@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from '@inertiajs/react';
 import {
     Box,
     Typography,
@@ -33,10 +34,11 @@ import {
     Verified as VerifiedIcon,
     Star as PremiumIcon,
     Favorite as LikeIcon,
-    FavoriteBorder as LikeOutlineIcon
+    FavoriteBorder as LikeOutlineIcon,
+    Delete as DeleteIcon
 } from '@mui/icons-material';
 import { motion, AnimatePresence } from 'framer-motion';
-import { router, usePage, Link } from '@inertiajs/react';
+import { router, usePage } from '@inertiajs/react';
 import axios from 'axios';
 import { useAuth, AuthGuard, AuthSwitch } from '@/Components/AuthGuard';
 import CommentInteractions from '@/Components/Blog/CommentInteractions';
@@ -141,9 +143,11 @@ const LoginPrompt = ({ onClose }) => {
     );
 };
 
-const CommentItem = ({ comment, onReply, level = 0 }) => {
+const CommentItem = ({ comment, onReply, onDelete, level = 0 }) => {
     const theme = useTheme();
+    const { auth } = usePage().props;
     const [showReplyForm, setShowReplyForm] = useState(false);
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     
     const handleReply = () => {
         setShowReplyForm(true);
@@ -153,6 +157,24 @@ const CommentItem = ({ comment, onReply, level = 0 }) => {
         onReply(comment.id, replyData);
         setShowReplyForm(false);
     };
+
+    const handleDeleteClick = () => {
+        setDeleteDialogOpen(true);
+    };
+
+    const handleDeleteConfirm = async () => {
+        if (onDelete) {
+            await onDelete(comment.id);
+        }
+        setDeleteDialogOpen(false);
+    };
+
+    const handleDeleteCancel = () => {
+        setDeleteDialogOpen(false);
+    };
+
+    // Verificar si el usuario es administrador
+    const isAdmin = auth?.user?.role === 'admin';
 
     return (
         <Box
@@ -195,14 +217,21 @@ const CommentItem = ({ comment, onReply, level = 0 }) => {
                             )}
                         </Avatar>
                         <Box>
-                            <Typography 
-                                variant="subtitle2" 
+                            <Typography
+                                component={comment.user?.id ? Link : 'span'}
+                                href={comment.user?.id ? `/user/${comment.user.id}` : undefined}
+                                variant="subtitle2"
                                 fontWeight="bold"
-                                sx={{ 
+                                sx={{
                                     color: comment.user ? 'primary.main' : 'text.primary',
                                     display: 'flex',
                                     alignItems: 'center',
-                                    gap: 1
+                                    gap: 1,
+                                    textDecoration: 'none',
+                                    cursor: comment.user?.id ? 'pointer' : 'default',
+                                    '&:hover': comment.user?.id ? {
+                                        textDecoration: 'underline'
+                                    } : {}
                                 }}
                             >
                                 {comment.author_name}
@@ -248,18 +277,32 @@ const CommentItem = ({ comment, onReply, level = 0 }) => {
                         </Box>
                     </Box>
                     
-                    {level < 2 && (
-                        <IconButton
-                            onClick={handleReply}
-                            size="small"
-                            sx={{ 
-                                color: 'text.secondary',
-                                '&:hover': { color: 'primary.main' }
-                            }}
-                        >
-                            <ReplyIcon fontSize="small" />
-                        </IconButton>
-                    )}
+                    <Box sx={{ display: 'flex', gap: 1 }}>
+                        {level < 2 && (
+                            <IconButton
+                                onClick={handleReply}
+                                size="small"
+                                sx={{
+                                    color: 'text.secondary',
+                                    '&:hover': { color: 'primary.main' }
+                                }}
+                            >
+                                <ReplyIcon fontSize="small" />
+                            </IconButton>
+                        )}
+                        {isAdmin && (
+                            <IconButton
+                                onClick={handleDeleteClick}
+                                size="small"
+                                sx={{
+                                    color: 'text.secondary',
+                                    '&:hover': { color: 'error.main' }
+                                }}
+                            >
+                                <DeleteIcon fontSize="small" />
+                            </IconButton>
+                        )}
+                    </Box>
                 </Box>
 
                 {/* Contenido del comentario */}
@@ -305,11 +348,49 @@ const CommentItem = ({ comment, onReply, level = 0 }) => {
                             key={reply.id}
                             comment={reply}
                             onReply={onReply}
+                            onDelete={onDelete}
                             level={level + 1}
                         />
                     ))}
                 </Box>
             )}
+
+            {/* Diálogo de confirmación de eliminación */}
+            <Dialog
+                open={deleteDialogOpen}
+                onClose={handleDeleteCancel}
+                maxWidth="sm"
+                fullWidth
+            >
+                <DialogTitle>
+                    Confirmar eliminación
+                </DialogTitle>
+                <DialogContent>
+                    <Typography>
+                        ¿Estás seguro de que quieres eliminar este comentario? Esta acción no se puede deshacer.
+                    </Typography>
+                    <Box sx={{ mt: 2, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
+                        <Typography variant="body2" color="text.secondary">
+                            Comentario de: <strong>{comment.author_name}</strong>
+                        </Typography>
+                        <Typography variant="body2" sx={{ mt: 1 }}>
+                            "{comment.body.length > 100 ? comment.body.substring(0, 100) + '...' : comment.body}"
+                        </Typography>
+                    </Box>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={handleDeleteCancel}>
+                        Cancelar
+                    </Button>
+                    <Button
+                        onClick={handleDeleteConfirm}
+                        color="error"
+                        variant="contained"
+                    >
+                        Eliminar
+                    </Button>
+                </DialogActions>
+            </Dialog>
         </Box>
     );
 };
@@ -673,6 +754,23 @@ const CommentsSection = ({ postId, postSlug, comments: initialComments = [] }) =
         return await submitComment({ ...replyData, parent_id: parentId });
     };
 
+    const handleDeleteComment = async (commentId) => {
+        try {
+            const response = await axios.delete(`/comments/${commentId}`);
+
+            if (response.data.success) {
+                showAlert(response.data.message, 'success');
+                // Recargar comentarios para mostrar la actualización
+                await loadComments();
+            } else {
+                showAlert(response.data.message || 'Error al eliminar comentario', 'error');
+            }
+        } catch (error) {
+            console.error('Error deleting comment:', error);
+            showAlert('Error al eliminar comentario', 'error');
+        }
+    };
+
     // Auto-mostrar LoginPrompt para invitados después de un tiempo
     React.useEffect(() => {
         if (auth.isGuest) {
@@ -847,6 +945,7 @@ const CommentsSection = ({ postId, postSlug, comments: initialComments = [] }) =
                                 key={comment.id}
                                 comment={comment}
                                 onReply={handleReply}
+                                onDelete={handleDeleteComment}
                             />
                         ))}
                     </AnimatePresence>

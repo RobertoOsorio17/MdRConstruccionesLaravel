@@ -3,6 +3,9 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import DOMPurify from 'dompurify';
 
+// Import TinyMCE content styles
+import '../../../css/tinymce-content.css';
+
 import {
     Box,
     Container,
@@ -498,7 +501,23 @@ const BlogShow = ({ post, suggestedPosts, seo }) => {
                                 sx={{ width: 48, height: 48 }}
                             />
                             <Box>
-                                <Typography variant="h6" sx={{ color: 'white', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <Typography
+                                    component={post.author?.id ? Link : 'span'}
+                                    href={post.author?.id ? `/user/${post.author.id}` : undefined}
+                                    variant="h6"
+                                    sx={{
+                                        color: 'white',
+                                        fontWeight: 600,
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: 1,
+                                        textDecoration: 'none',
+                                        cursor: post.author?.id ? 'pointer' : 'default',
+                                        '&:hover': post.author?.id ? {
+                                            textDecoration: 'underline'
+                                        } : {}
+                                    }}
+                                >
                                     {post.author?.name}
                                     {post.author?.is_verified && (
                                         <VerifiedIcon
@@ -811,49 +830,7 @@ const BlogShow = ({ post, suggestedPosts, seo }) => {
 
                                 {/* Contenido del artículo */}
                                 <Box
-                                    className="blog-content"
-                                    sx={{
-                                        '& img': {
-                                            maxWidth: '100%',
-                                            height: 'auto',
-                                            borderRadius: 2,
-                                            boxShadow: theme.shadows[4],
-                                            my: 3
-                                        },
-                                        '& h2, & h3, & h4': {
-                                            color: theme.palette.text.primary,
-                                            fontWeight: 700,
-                                            mt: 4,
-                                            mb: 2
-                                        },
-                                        '& h2': { fontSize: '2.2rem' },
-                                        '& h3': { fontSize: '1.8rem' },
-                                        '& h4': { fontSize: '1.4rem' },
-                                        '& p': {
-                                            fontSize: '1.1rem',
-                                            lineHeight: 1.8,
-                                            mb: 2,
-                                            color: theme.palette.text.secondary
-                                        },
-                                        '& blockquote': {
-                                            borderLeft: `4px solid ${theme.palette.primary.main}`,
-                                            pl: 3,
-                                            py: 2,
-                                            backgroundColor: alpha(theme.palette.primary.main, 0.05),
-                                            borderRadius: '0 8px 8px 0',
-                                            fontStyle: 'italic',
-                                            fontSize: '1.2rem',
-                                            my: 3
-                                        },
-                                        '& ul, & ol': {
-                                            pl: 3,
-                                            '& li': {
-                                                fontSize: '1.1rem',
-                                                lineHeight: 1.8,
-                                                mb: 1
-                                            }
-                                        }
-                                    }}
+                                    className="blog-content tinymce-content"
                                     dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(post.content) }}
                                 />
                             </Paper>

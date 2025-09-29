@@ -129,6 +129,11 @@ Route::middleware(['auth', 'auth.enhanced'])->group(function () {
     // Comment Interactions (only for authenticated users)
     Route::post('/comments/{comment}/like', [App\Http\Controllers\CommentInteractionController::class, 'like'])->name('comments.like');
     Route::post('/comments/{comment}/dislike', [App\Http\Controllers\CommentInteractionController::class, 'dislike'])->name('comments.dislike');
+
+    // Admin Comment Management
+    Route::delete('/comments/{comment}', [App\Http\Controllers\CommentController::class, 'destroy'])
+        ->middleware('admin.only')
+        ->name('comments.destroy');
     
     // User Dashboard Routes (alternatives with user prefix)
     Route::get('/user/dashboard', [App\Http\Controllers\UserProfileController::class, 'dashboard'])->name('user.dashboard');
@@ -146,17 +151,11 @@ Route::middleware(['auth', 'auth.enhanced'])->group(function () {
     // Old Dashboard Routes (keeping for compatibility)
     Route::get('/my/bookmarks', [App\Http\Controllers\UserDashboardController::class, 'bookmarks'])->name('user.bookmarks');
     Route::get('/my/liked-posts', [App\Http\Controllers\UserDashboardController::class, 'likedPosts'])->name('user.liked-posts');
+    Route::get('/my/liked-comments', [App\Http\Controllers\UserDashboardController::class, 'likedComments'])->name('user.liked-comments');
 });
 
 // Public User Profiles
 Route::get('/user/{user}', [App\Http\Controllers\UserProfileController::class, 'show'])->name('user.profile.show');
-
-// Banned User Page (accessible without authentication)
-Route::get('/banned', function () {
-    return Inertia::render('Auth/Banned', [
-        'ban_info' => session('ban_info', [])
-    ]);
-})->name('banned');
 
 // Auth Routes
 require __DIR__.'/auth.php';

@@ -40,6 +40,9 @@ import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import dayjs from 'dayjs';
 import 'dayjs/locale/es';
 import AdminLayout from '@/Layouts/AdminLayout';
+import TinyMCEProfessional from '@/Components/Admin/TinyMCEProfessional';
+import ContentScheduler from '@/Components/Admin/ContentScheduler';
+import SEOOptimizer from '@/Components/Admin/SEOOptimizer';
 
 const PostForm = ({ post, categories, tags, authors, isEdit = false }) => {
     const theme = useTheme();
@@ -47,6 +50,7 @@ const PostForm = ({ post, categories, tags, authors, isEdit = false }) => {
     const [selectedTags, setSelectedTags] = useState([]);
     const [selectedCategories, setSelectedCategories] = useState([]);
     const [coverImagePreview, setCoverImagePreview] = useState(post?.cover_image || '');
+    const [mediaFiles, setMediaFiles] = useState([]);
 
     const { data, setData, post: submitPost, processing, errors, reset } = useForm({
         title: post?.title || '',
@@ -76,6 +80,23 @@ const PostForm = ({ post, categories, tags, authors, isEdit = false }) => {
             setData('slug', slug);
         }
     }, [data.title]);
+
+    // Cargar archivos de medios
+    useEffect(() => {
+        const fetchMediaFiles = async () => {
+            try {
+                const response = await fetch('/admin/media');
+                const data = await response.json();
+                if (data.files) {
+                    setMediaFiles(data.files);
+                }
+            } catch (error) {
+                console.error('Error loading media files:', error);
+            }
+        };
+
+        fetchMediaFiles();
+    }, []);
 
     // Update selected arrays when form data changes
     useEffect(() => {
@@ -214,10 +235,10 @@ const PostForm = ({ post, categories, tags, authors, isEdit = false }) => {
                         </Stack>
                     </Box>
 
-                    <Grid container spacing={4}>
-                        {/* Main Content */}
-                        <Grid size={{ xs: 12, lg: 8 }}>
-                            <Stack spacing={4}>
+                    <Grid container spacing={3}>
+                        {/* Main Content - Editor Focus */}
+                        <Grid size={{ xs: 12, lg: 9 }}>
+                            <Stack spacing={3}>
                                 {/* Basic Info */}
                                 <Card>
                                     <CardContent sx={{ p: 4 }}>
@@ -261,13 +282,44 @@ const PostForm = ({ post, categories, tags, authors, isEdit = false }) => {
                                     </CardContent>
                                 </Card>
 
-                                {/* Content */}
-                                <Card>
-                                    <CardContent sx={{ p: 4 }}>
-                                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-                                            <Typography variant="h6" fontWeight="bold">
-                                                Contenido
-                                            </Typography>
+                                {/* Content - Editor Principal */}
+                                <Card
+                                    elevation={0}
+                                    sx={{
+                                        background: `linear-gradient(135deg, ${alpha(theme.palette.background.paper, 0.9)} 0%, ${alpha(theme.palette.background.paper, 0.7)} 100%)`,
+                                        backdropFilter: 'blur(20px)',
+                                        border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+                                        borderRadius: 4,
+                                        overflow: 'visible',
+                                        position: 'relative',
+                                        '&::before': {
+                                            content: '""',
+                                            position: 'absolute',
+                                            top: 0,
+                                            left: 0,
+                                            right: 0,
+                                            height: '4px',
+                                            background: `linear-gradient(90deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+                                            borderRadius: '16px 16px 0 0',
+                                        }
+                                    }}
+                                >
+                                    <CardContent sx={{ p: 5 }}>
+                                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
+                                            <Box>
+                                                <Typography variant="h5" fontWeight="bold" sx={{
+                                                    background: `linear-gradient(45deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+                                                    backgroundClip: 'text',
+                                                    WebkitBackgroundClip: 'text',
+                                                    WebkitTextFillColor: 'transparent',
+                                                    mb: 0.5
+                                                }}>
+                                                    Editor de Contenido
+                                                </Typography>
+                                                <Typography variant="body2" color="text.secondary">
+                                                    Crea contenido profesional con nuestro editor avanzado
+                                                </Typography>
+                                            </Box>
                                             <Stack direction="row" spacing={1}>
                                                 <Button
                                                     size="small"
@@ -295,7 +347,20 @@ const PostForm = ({ post, categories, tags, authors, isEdit = false }) => {
                                                     p: 3,
                                                     minHeight: 400,
                                                     backgroundColor: alpha(theme.palette.background.paper, 0.5),
-                                                    border: `1px solid ${alpha(theme.palette.divider, 0.2)}`
+                                                    border: `1px solid ${alpha(theme.palette.divider, 0.2)}`,
+                                                    borderRadius: 2,
+                                                    '& img': {
+                                                        maxWidth: '100%',
+                                                        height: 'auto',
+                                                        borderRadius: 1
+                                                    },
+                                                    '& blockquote': {
+                                                        borderLeft: `4px solid ${theme.palette.primary.main}`,
+                                                        pl: 2,
+                                                        ml: 0,
+                                                        fontStyle: 'italic',
+                                                        color: theme.palette.text.secondary
+                                                    }
                                                 }}
                                             >
                                                 <Typography variant="body1" component="div">
@@ -303,20 +368,35 @@ const PostForm = ({ post, categories, tags, authors, isEdit = false }) => {
                                                 </Typography>
                                             </Paper>
                                         ) : (
-                                            <TextField
-                                                fullWidth
-                                                label="Contenido *"
+                                            <TinyMCEProfessional
                                                 value={data.content}
-                                                onChange={(e) => setData('content', e.target.value)}
-                                                error={!!errors.content}
-                                                helperText={errors.content || 'Puedes usar HTML para formatear el contenido. Usa el botón "Medios" para insertar imágenes.'}
-                                                multiline
-                                                rows={15}
-                                                variant="outlined"
-                                                sx={{
-                                                    '& .MuiInputBase-root': {
-                                                        fontFamily: 'monospace',
-                                                        fontSize: '14px'
+                                                onChange={(value) => setData('content', value)}
+                                                placeholder="Escribe el contenido de tu post aquí... Usa la barra de herramientas profesional para formatear texto, insertar imágenes, videos, tablas y más."
+                                                height={700}
+                                                error={errors.content}
+                                                helperText={errors.content || 'Editor TinyMCE profesional con todas las funciones premium: formato avanzado, tablas mejoradas, inserción de medios, plantillas, auto-guardado y más. Arrastra y suelta imágenes para subirlas automáticamente.'}
+                                                autoSave={true}
+                                                showWordCount={true}
+                                                allowFullscreen={true}
+                                                onSave={async (content) => {
+                                                    // Auto-save functionality
+                                                    if (isEdit && post?.id) {
+                                                        try {
+                                                            await fetch(route('admin.posts.update', post.id), {
+                                                                method: 'PUT',
+                                                                headers: {
+                                                                    'Content-Type': 'application/json',
+                                                                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                                                                },
+                                                                body: JSON.stringify({
+                                                                    ...data,
+                                                                    content,
+                                                                    status: 'draft'
+                                                                })
+                                                            });
+                                                        } catch (error) {
+                                                            console.error('Auto-save failed:', error);
+                                                        }
                                                     }
                                                 }}
                                             />
@@ -448,52 +528,17 @@ const PostForm = ({ post, categories, tags, authors, isEdit = false }) => {
                         </Grid>
 
                         {/* Sidebar */}
-                        <Grid size={{ xs: 12, lg: 4 }}>
-                            <Stack spacing={4}>
-                                {/* Status */}
-                                <Card>
-                                    <CardContent sx={{ p: 3 }}>
-                                        <Typography variant="h6" fontWeight="bold" gutterBottom>
-                                            Estado del Post
-                                        </Typography>
-
-                                        <Stack spacing={3}>
-                                            <FormControl fullWidth>
-                                                <InputLabel>Estado</InputLabel>
-                                                <Select
-                                                    value={data.status}
-                                                    label="Estado"
-                                                    onChange={(e) => setData('status', e.target.value)}
-                                                >
-                                                    <MenuItem value="draft">Borrador</MenuItem>
-                                                    <MenuItem value="published">Publicado</MenuItem>
-                                                    <MenuItem value="scheduled">Programado</MenuItem>
-                                                </Select>
-                                            </FormControl>
-
-                                            {data.status === 'scheduled' && (
-                                                <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="es">
-                                                    <DateTimePicker
-                                                        label="Fecha de Publicación"
-                                                        value={data.published_at}
-                                                        onChange={(newValue) => setData('published_at', newValue)}
-                                                        renderInput={(params) => <TextField {...params} fullWidth />}
-                                                    />
-                                                </LocalizationProvider>
-                                            )}
-
-                                            <FormControlLabel
-                                                control={
-                                                    <Switch
-                                                        checked={data.featured}
-                                                        onChange={(e) => setData('featured', e.target.checked)}
-                                                    />
-                                                }
-                                                label="Post Destacado"
-                                            />
-                                        </Stack>
-                                    </CardContent>
-                                </Card>
+                        <Grid size={{ xs: 12, lg: 3 }}>
+                            <Stack spacing={3}>
+                                {/* Content Scheduler */}
+                                <ContentScheduler
+                                    publishedAt={data.published_at}
+                                    onPublishedAtChange={(value) => setData('published_at', value)}
+                                    status={data.status}
+                                    onStatusChange={(value) => setData('status', value)}
+                                    featured={data.featured}
+                                    onFeaturedChange={(value) => setData('featured', value)}
+                                />
 
                                 {/* Author */}
                                 <Card>
@@ -608,6 +653,18 @@ const PostForm = ({ post, categories, tags, authors, isEdit = false }) => {
                                         />
                                     </CardContent>
                                 </Card>
+
+                                {/* SEO Optimizer */}
+                                <SEOOptimizer
+                                    title={data.title}
+                                    excerpt={data.excerpt}
+                                    content={data.content}
+                                    seoTitle={data.seo_title}
+                                    onSeoTitleChange={(value) => setData('seo_title', value)}
+                                    seoDescription={data.seo_description}
+                                    onSeoDescriptionChange={(value) => setData('seo_description', value)}
+                                    slug={data.slug}
+                                />
                             </Stack>
                         </Grid>
                     </Grid>

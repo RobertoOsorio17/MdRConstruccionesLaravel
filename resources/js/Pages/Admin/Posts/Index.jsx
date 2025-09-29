@@ -234,12 +234,12 @@ const PostsIndex = ({ posts, categories, tags, filters, stats }) => {
                 {/* Stats Cards */}
                 <Grid container spacing={3} sx={{ mb: 4 }}>
                     <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                        <Paper 
-                            sx={{ 
-                                p: 3, 
+                        <Paper
+                            sx={{
+                                p: 3,
                                 textAlign: 'center',
                                 background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${alpha(theme.palette.primary.main, 0.8)} 100%)`,
-                                color: 'white'
+                                color: '#ffffff'
                             }}
                         >
                             <Typography variant="h3" fontWeight="bold">
@@ -251,12 +251,12 @@ const PostsIndex = ({ posts, categories, tags, filters, stats }) => {
                         </Paper>
                     </Grid>
                     <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                        <Paper 
-                            sx={{ 
-                                p: 3, 
+                        <Paper
+                            sx={{
+                                p: 3,
                                 textAlign: 'center',
                                 background: `linear-gradient(135deg, ${theme.palette.success.main} 0%, ${alpha(theme.palette.success.main, 0.8)} 100%)`,
-                                color: 'white'
+                                color: '#ffffff'
                             }}
                         >
                             <Typography variant="h3" fontWeight="bold">
@@ -268,12 +268,12 @@ const PostsIndex = ({ posts, categories, tags, filters, stats }) => {
                         </Paper>
                     </Grid>
                     <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                        <Paper 
-                            sx={{ 
-                                p: 3, 
+                        <Paper
+                            sx={{
+                                p: 3,
                                 textAlign: 'center',
                                 background: `linear-gradient(135deg, ${theme.palette.warning.main} 0%, ${alpha(theme.palette.warning.main, 0.8)} 100%)`,
-                                color: 'white'
+                                color: '#ffffff'
                             }}
                         >
                             <Typography variant="h3" fontWeight="bold">
@@ -285,12 +285,12 @@ const PostsIndex = ({ posts, categories, tags, filters, stats }) => {
                         </Paper>
                     </Grid>
                     <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                        <Paper 
-                            sx={{ 
-                                p: 3, 
+                        <Paper
+                            sx={{
+                                p: 3,
                                 textAlign: 'center',
                                 background: `linear-gradient(135deg, ${theme.palette.info.main} 0%, ${alpha(theme.palette.info.main, 0.8)} 100%)`,
-                                color: 'white'
+                                color: '#ffffff'
                             }}
                         >
                             <Typography variant="h3" fontWeight="bold">
@@ -412,8 +412,8 @@ const PostsIndex = ({ posts, categories, tags, filters, stats }) => {
                                         top: 8,
                                         right: 8,
                                         zIndex: 2,
-                                        bgcolor: alpha('white', 0.9),
-                                        '&:hover': { bgcolor: 'white' }
+                                        bgcolor: alpha('#ffffff', 0.9),
+                                        '&:hover': { bgcolor: '#ffffff' }
                                     }}
                                     onClick={(e) => handleMenuOpen(e, post)}
                                 >

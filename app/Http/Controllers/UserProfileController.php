@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\User;
+use App\Models\Comment;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
@@ -32,15 +33,95 @@ class UserProfileController extends Controller
             $query->latest('user_service_favorites.created_at')->limit(12);
         }]);
 
+        // 1. Cargar posts del usuario (solo sus propios posts)
+        $userPosts = $user->posts()
+            ->with([
+                'author:id,name,avatar,bio,profession,is_verified',
+                'categories:id,name,slug,color',
+                'tags:id,name,slug,color'
+            ])
+            ->withCount(['likes', 'bookmarks', 'approvedComments'])
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        // 2. Cargar posts que le gustan al usuario (de otros autores)
+        $likedPosts = \App\Models\Post::whereHas('likes', function($query) use ($user) {
+            $query->where('user_id', $user->id);
+        })
+        ->where('user_id', '!=', $user->id) // Excluir sus propios posts
+        ->published()
+        ->with([
+            'author:id,name,avatar,bio,profession,is_verified',
+            'categories:id,name,slug,color',
+            'tags:id,name,slug,color'
+        ])
+        ->withCount(['likes', 'bookmarks', 'approvedComments'])
+        ->orderBy('published_at', 'desc')
+        ->get();
+
+        // 3. Cargar posts guardados por el usuario
+        $savedPosts = \App\Models\Post::whereHas('bookmarks', function($query) use ($user) {
+            $query->where('user_id', $user->id);
+        })
+        ->published()
+        ->with([
+            'author:id,name,avatar,bio,profession,is_verified',
+            'categories:id,name,slug,color',
+            'tags:id,name,slug,color'
+        ])
+        ->withCount(['likes', 'bookmarks', 'approvedComments'])
+        ->orderBy('published_at', 'desc')
+        ->get();
+
+        // 4. Cargar comentarios del usuario con información del post
+        $userComments = $user->comments()
+            ->approved()
+            ->with([
+                'post:id,title,slug,user_id',
+                'post.author:id,name,avatar,is_verified',
+                'user:id,name,avatar,is_verified'
+            ])
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        // Agregar información de interacciones para todos los posts
+        $allPosts = collect([$userPosts, $likedPosts, $savedPosts])->flatten();
+
+        foreach ($allPosts as $post) {
+            $post->user_liked = $post->isLikedBy($user);
+            $post->user_bookmarked = $post->isBookmarkedBy($user);
+        }
+
+        // Agregar información de interacciones para comentarios
+        foreach ($userComments as $comment) {
+            $comment->user_liked = $comment->isLikedBy($user);
+            $comment->user_disliked = $comment->isDislikedBy($user);
+            $comment->likes_count = $comment->likes()->count();
+            $comment->dislikes_count = $comment->dislikes()->count();
+        }
+
+        // Estadísticas mejoradas
         $stats = [
             'favoriteServicesCount' => $user->favoriteServices()->count(),
+            'postsCount' => $userPosts->count(),
+            'likedPostsCount' => $likedPosts->count(),
+            'savedPostsCount' => $savedPosts->count(),
+            'commentsCount' => $userComments->count(),
+            'totalLikes' => $userPosts->sum('likes_count'),
+            'totalComments' => $userPosts->sum('approved_comments_count'),
             'joinedDate' => $user->created_at->format('Y-m-d'),
             'profileCompleteness' => $user->profile_completeness ?? 0,
             'lastActivity' => $user->updated_at->format('Y-m-d'),
+            'followersCount' => $user->followers()->count(),
+            'followingCount' => $user->following()->count(),
         ];
 
         return Inertia::render('User/Profile', [
             'profileUser' => $user,
+            'userPosts' => $userPosts,
+            'likedPosts' => $likedPosts,
+            'savedPosts' => $savedPosts,
+            'userComments' => $userComments,
             'stats' => $stats,
             'isFollowing' => false, // Not applicable for own profile
             'isOwnProfile' => true, // Always true for dashboard
@@ -56,34 +137,146 @@ class UserProfileController extends Controller
      */
     public function show(User $user): Response
     {
+        \Log::info('UserProfileController::show called for user ' . $user->id);
+
         // Verificar si el perfil es visible o si es el propio usuario
         if (!$user->profile_visibility && Auth::id() !== $user->id) {
             abort(404, 'Perfil no encontrado');
         }
+
+        $currentUser = Auth::user();
+        $isOwnProfile = $currentUser && $currentUser->id === $user->id;
 
         // Cargar servicios favoritos del usuario
         $user->load(['favoriteServices' => function($query) {
             $query->latest('user_service_favorites.created_at')->limit(12);
         }]);
 
+        // 1. Cargar posts del usuario (solo sus propios posts)
+        $userPosts = $user->posts()
+            ->published()
+            ->with([
+                'author:id,name,avatar,bio,profession,is_verified',
+                'categories:id,name,slug,color',
+                'tags:id,name,slug,color'
+            ])
+            ->withCount(['likes', 'bookmarks', 'approvedComments'])
+            ->orderBy('published_at', 'desc')
+            ->get();
+
+        // 2. Cargar posts que le gustan al usuario (de otros autores)
+        $likedPosts = collect();
+        if ($currentUser) {
+            $likedPosts = \App\Models\Post::whereHas('likes', function($query) use ($user) {
+                $query->where('user_id', $user->id);
+            })
+            ->where('user_id', '!=', $user->id) // Excluir sus propios posts
+            ->published()
+            ->with([
+                'author:id,name,avatar,bio,profession,is_verified',
+                'categories:id,name,slug,color',
+                'tags:id,name,slug,color'
+            ])
+            ->withCount(['likes', 'bookmarks', 'approvedComments'])
+            ->orderBy('published_at', 'desc')
+            ->get();
+        }
+
+        // 3. Cargar posts guardados por el usuario
+        $savedPosts = collect();
+        if ($currentUser) {
+            $savedPosts = \App\Models\Post::whereHas('bookmarks', function($query) use ($user) {
+                $query->where('user_id', $user->id);
+            })
+            ->published()
+            ->with([
+                'author:id,name,avatar,bio,profession,is_verified',
+                'categories:id,name,slug,color',
+                'tags:id,name,slug,color'
+            ])
+            ->withCount(['likes', 'bookmarks', 'approvedComments'])
+            ->orderBy('published_at', 'desc')
+            ->get();
+        }
+
+        // 4. Cargar comentarios del usuario con información del post
+        $userComments = Comment::where('user_id', $user->id)
+            ->where('status', 'approved')
+            ->with(['post' => function ($query) {
+                $query->select('id', 'title', 'slug', 'status', 'published_at');
+            }])
+            ->orderBy('created_at', 'desc')
+            ->limit(50)
+            ->get();
+
+        // Agregar información de interacciones para todos los posts
+        $allPosts = collect([$userPosts, $likedPosts, $savedPosts])->flatten();
+
+        if ($currentUser) {
+            foreach ($allPosts as $post) {
+                $post->user_liked = $post->isLikedBy($currentUser);
+                $post->user_bookmarked = $post->isBookmarkedBy($currentUser);
+            }
+
+            // Agregar información de interacciones para comentarios
+            foreach ($userComments as $comment) {
+                // Verificar si el usuario actual ha dado like/dislike al comentario
+                $comment->user_liked = $comment->interactions()
+                    ->where('user_id', $currentUser->id)
+                    ->where('type', 'like')
+                    ->exists();
+
+                $comment->user_disliked = $comment->interactions()
+                    ->where('user_id', $currentUser->id)
+                    ->where('type', 'dislike')
+                    ->exists();
+
+                // Contar likes y dislikes
+                $comment->likes_count = $comment->interactions()
+                    ->where('type', 'like')
+                    ->count();
+
+                $comment->dislikes_count = $comment->interactions()
+                    ->where('type', 'dislike')
+                    ->count();
+            }
+        }
+
+        // Estadísticas mejoradas
         $stats = [
             'favoriteServicesCount' => $user->favoriteServices()->count(),
+            'postsCount' => $userPosts->count(),
+            'likedPostsCount' => $likedPosts->count(),
+            'savedPostsCount' => $savedPosts->count(),
+            'commentsCount' => $userComments->count(),
+            'totalLikes' => $userPosts->sum('likes_count'),
+            'totalComments' => $userPosts->sum('approved_comments_count'),
             'joinedDate' => $user->created_at->format('Y-m-d'),
             'profileCompleteness' => $user->profile_completeness ?? 0,
             'lastActivity' => $user->updated_at->format('Y-m-d'),
         ];
 
-        // TODO: Implementar verificación de following cuando el modelo esté listo
-        $isFollowing = false;
+        // Verificar si el usuario actual sigue al usuario del perfil
+        $isFollowing = $currentUser ? $currentUser->isFollowing($user) : false;
+
+        // Agregar contadores de seguidores y seguidos
+        $stats['followersCount'] = $user->followers()->count();
+        $stats['followingCount'] = $user->following()->count();
+
+        \Log::info('About to render profile with userComments count: ' . $userComments->count());
 
         return Inertia::render('User/Profile', [
             'profileUser' => $user,
+            'userPosts' => $userPosts,
+            'likedPosts' => $likedPosts,
+            'savedPosts' => $savedPosts,
+            'userComments' => $userComments,
             'stats' => $stats,
             'isFollowing' => $isFollowing,
-            'isOwnProfile' => Auth::id() === $user->id,
+            'isOwnProfile' => $isOwnProfile,
             'favoriteServices' => $user->favoriteServices,
             'auth' => [
-                'user' => Auth::user()
+                'user' => $currentUser
             ]
         ]);
     }

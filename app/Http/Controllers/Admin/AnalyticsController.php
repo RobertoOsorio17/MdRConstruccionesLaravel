@@ -14,9 +14,21 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
 use Carbon\Carbon;
+use Inertia\Inertia;
 
 class AnalyticsController extends Controller
 {
+    /**
+     * Display the analytics dashboard
+     */
+    public function index()
+    {
+        return Inertia::render('Admin/Analytics/Index', [
+            'title' => 'Analytics & Reporting',
+            'description' => 'Análisis detallado de rendimiento y métricas del sistema'
+        ]);
+    }
+
     /**
      * Get user analytics data
      */
@@ -144,16 +156,20 @@ class AnalyticsController extends Controller
 
     private function getUserEngagement($startDate)
     {
+        $commentsPerUser = Comment::where('created_at', '>=', $startDate)
+            ->whereNotNull('user_id')
+            ->selectRaw('user_id, COUNT(*) as comment_count')
+            ->groupBy('user_id')
+            ->get();
+
+        $favoritesPerUser = ServiceFavorite::where('created_at', '>=', $startDate)
+            ->selectRaw('user_id, COUNT(*) as favorite_count')
+            ->groupBy('user_id')
+            ->get();
+
         return [
-            'comments_per_user' => Comment::where('created_at', '>=', $startDate)
-                ->whereNotNull('user_id')
-                ->selectRaw('user_id, COUNT(*) as comment_count')
-                ->groupBy('user_id')
-                ->avg('comment_count') ?? 0,
-            'favorites_per_user' => ServiceFavorite::where('created_at', '>=', $startDate)
-                ->selectRaw('user_id, COUNT(*) as favorite_count')
-                ->groupBy('user_id')
-                ->avg('favorite_count') ?? 0,
+            'comments_per_user' => $commentsPerUser->avg('comment_count') ?? 0,
+            'favorites_per_user' => $favoritesPerUser->avg('favorite_count') ?? 0,
         ];
     }
 
@@ -217,6 +233,7 @@ class AnalyticsController extends Controller
                 ->where('posts.created_at', '>=', $startDate)
                 ->groupBy('post_id')
                 ->selectRaw('COUNT(*) as comment_count')
+                ->get()
                 ->avg('comment_count') ?? 0,
         ];
     }

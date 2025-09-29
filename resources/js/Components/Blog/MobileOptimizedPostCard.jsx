@@ -344,11 +344,19 @@ const MobileOptimizedPostCard = memo(({ post, getPostImage, onSwipeAction }) => 
                                 {post.author?.name?.charAt(0)}
                             </Avatar>
                             <Typography
+                                component={post.author?.id ? Link : 'span'}
+                                href={post.author?.id ? `/user/${post.author.id}` : undefined}
                                 variant="caption"
                                 sx={{
                                     ...MOBILE_THEME.typography.mobile.meta,
                                     color: 'text.secondary',
                                     fontWeight: 500,
+                                    textDecoration: 'none',
+                                    cursor: post.author?.id ? 'pointer' : 'default',
+                                    '&:hover': post.author?.id ? {
+                                        color: 'primary.main',
+                                        textDecoration: 'underline'
+                                    } : {}
                                 }}
                             >
                                 {post.author?.name}

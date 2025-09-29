@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { 
-  Box, 
-  Paper, 
-  Typography, 
+import { Link } from '@inertiajs/react';
+import {
+  Box,
+  Paper,
+  Typography,
   Button,
   Stack,
   Avatar,
@@ -12,7 +13,7 @@ import {
   Card,
   CardContent
 } from '@mui/material';
-import { 
+import {
   Share as ShareIcon,
   Bookmark as BookmarkIcon,
   BookmarkBorder as BookmarkBorderIcon,
@@ -202,7 +203,20 @@ export const GlassPopularPostCard = ({ post, index = 0 }) => {
                   >
                     {(post.author?.name || 'A')[0]}
                   </Avatar>
-                  <Typography variant="caption" sx={{ color: 'rgba(100, 116, 139, 0.8)' }}>
+                  <Typography
+                    component={post.author?.id ? Link : 'span'}
+                    href={post.author?.id ? `/user/${post.author.id}` : undefined}
+                    variant="caption"
+                    sx={{
+                      color: 'rgba(100, 116, 139, 0.8)',
+                      textDecoration: 'none',
+                      cursor: post.author?.id ? 'pointer' : 'default',
+                      '&:hover': post.author?.id ? {
+                        color: 'rgba(59, 130, 246, 0.8)',
+                        textDecoration: 'underline'
+                      } : {}
+                    }}
+                  >
                     {post.author?.name || 'Admin'}
                   </Typography>
                 </Stack>

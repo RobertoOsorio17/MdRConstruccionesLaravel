@@ -41,7 +41,7 @@ import {
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { useNotification } from '@/Context/NotificationContext';
+// import { useNotification } from '@/Context/NotificationContext';
 
 const PostCard = ({ post, onRemove }) => {
     const [removeDialogOpen, setRemoveDialogOpen] = useState(false);
@@ -301,7 +301,7 @@ const FilterBar = ({ filters, categories, onFiltersChange }) => {
 };
 
 export default function SavedPosts({ savedPosts, categories, filters }) {
-    const { showNotification } = useNotification();
+    // const { showNotification } = useNotification();
 
     const handleFiltersChange = (newFilters) => {
         const params = { ...newFilters };
@@ -329,13 +329,13 @@ export default function SavedPosts({ savedPosts, categories, filters }) {
             const data = await response.json();
             
             if (data.success) {
-                showNotification(data.message, 'success');
+                // showNotification(data.message, 'success');
                 router.reload({ only: ['savedPosts'] });
             } else {
-                showNotification(data.message || 'Error al quitar post', 'error');
+                // showNotification(data.message || 'Error al quitar post', 'error');
             }
         } catch (error) {
-            showNotification('Error al quitar post', 'error');
+            // showNotification('Error al quitar post', 'error');
         }
     };
 

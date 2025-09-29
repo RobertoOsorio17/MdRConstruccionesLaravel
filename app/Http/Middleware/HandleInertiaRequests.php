@@ -66,13 +66,32 @@ class HandleInertiaRequests extends Middleware
                         ->with('permissions')
                         ->get()
                         ->flatMap(function ($role) {
-                            return $role->permissions->pluck('name');
+                            return $role->permissions->map(function ($permission) {
+                                return [
+                                    'id' => $permission->id,
+                                    'name' => $permission->name,
+                                    'module' => $permission->module,
+                                    'action' => $permission->action,
+                                    'display_name' => $permission->display_name
+                                ];
+                            });
                         })
-                        ->unique()
+                        ->unique('name')
                         ->values()
                         ->toArray();
-                        
+
                     $authData['user']['permissions'] = $permissions;
+
+                    // También agregar roles
+                    $authData['user']['roles'] = $auth->roles()->get()->map(function ($role) {
+                        return [
+                            'id' => $role->id,
+                            'name' => $role->name,
+                            'display_name' => $role->display_name,
+                            'color' => $role->color,
+                            'level' => $role->level
+                        ];
+                    })->toArray();
                 }
             } catch (\Exception $e) {
                 // En caso de error, usar valores por defecto

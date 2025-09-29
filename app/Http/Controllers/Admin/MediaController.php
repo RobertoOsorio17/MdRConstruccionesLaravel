@@ -89,6 +89,8 @@ class MediaController extends Controller
         $validator = Validator::make($request->all(), [
             'file' => 'required|file|max:10240', // 10MB max
             'folder' => 'nullable|string|max:255',
+            'alt_text' => 'nullable|string|max:255',
+            'caption' => 'nullable|string|max:500',
         ]);
 
         if ($validator->fails()) {
@@ -102,10 +104,19 @@ class MediaController extends Controller
         try {
             $file = $request->file('file');
             $folder = $request->get('folder', 'uploads');
-            
+
+            // Validate file type
+            $allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml', 'video/mp4', 'video/webm', 'application/pdf'];
+            if (!in_array($file->getMimeType(), $allowedTypes)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Tipo de archivo no permitido'
+                ], 422);
+            }
+
             // Generate unique filename
             $filename = time() . '_' . Str::slug(pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME)) . '.' . $file->getClientOriginalExtension();
-            
+
             // Store file
             $path = $file->storeAs($folder, $filename, 'public');
             $url = Storage::disk('public')->url($path);
@@ -115,12 +126,16 @@ class MediaController extends Controller
                 'message' => 'Archivo subido exitosamente',
                 'file' => [
                     'name' => $filename,
+                    'original_name' => $file->getClientOriginalName(),
                     'path' => $path,
                     'url' => $url,
                     'size' => $file->getSize(),
                     'type' => $this->getFileType($path),
                     'mime_type' => $file->getMimeType(),
                     'formatted_size' => $this->formatBytes($file->getSize()),
+                    'alt_text' => $request->get('alt_text', ''),
+                    'caption' => $request->get('caption', ''),
+                    'uploaded_at' => now()->toISOString(),
                 ]
             ]);
         } catch (\Exception $e) {
@@ -128,6 +143,37 @@ class MediaController extends Controller
                 'success' => false,
                 'message' => 'Error al subir el archivo: ' . $e->getMessage()
             ], 500);
+        }
+    }
+
+    /**
+     * Get media list for TinyMCE
+     */
+    public function list(Request $request)
+    {
+        try {
+            // Get only image files
+            $files = collect(Storage::disk('public')->allFiles('uploads'))
+                ->map(function ($file) {
+                    $fullPath = Storage::disk('public')->path($file);
+                    $url = Storage::disk('public')->url($file);
+                    $type = $this->getFileType($file);
+
+                    return [
+                        'title' => basename($file),
+                        'value' => $url,
+                        'type' => $type,
+                    ];
+                })
+                ->filter(function ($file) {
+                    return $file['type'] === 'image';
+                })
+                ->values()
+                ->toArray();
+
+            return response()->json($files);
+        } catch (\Exception $e) {
+            return response()->json([]);
         }
     }
 

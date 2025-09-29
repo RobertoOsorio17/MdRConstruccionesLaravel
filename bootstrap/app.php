@@ -37,6 +37,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'admin.audit' => \App\Http\Middleware\AdminAuditMiddleware::class,
             'admin.security' => \App\Http\Middleware\AdminSecurityHeaders::class,
             'admin.timeout' => \App\Http\Middleware\AdminSessionTimeout::class,
+            'admin.only' => \App\Http\Middleware\AdminOnly::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

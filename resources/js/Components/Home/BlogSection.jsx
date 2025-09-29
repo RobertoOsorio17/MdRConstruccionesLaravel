@@ -184,10 +184,20 @@ const BlogCard = ({ post, index, prefersReducedMotion }) => {
                   alt={post.author.name}
                   sx={{ width: 32, height: 32 }}
                 />
-                <Typography 
-                  variant="caption" 
+                <Typography
+                  component={post.author?.id ? Link : 'span'}
+                  href={post.author?.id ? `/user/${post.author.id}` : undefined}
+                  variant="caption"
                   color="text.secondary"
-                  sx={{ fontWeight: 500 }}
+                  sx={{
+                    fontWeight: 500,
+                    textDecoration: 'none',
+                    cursor: post.author?.id ? 'pointer' : 'default',
+                    '&:hover': post.author?.id ? {
+                      color: 'primary.main',
+                      textDecoration: 'underline'
+                    } : {}
+                  }}
                 >
                   {post.author.name}
                 </Typography>

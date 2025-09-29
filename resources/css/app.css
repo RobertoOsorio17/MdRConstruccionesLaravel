@@ -1,3 +1,6 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* TinyMCE Content Styling for Frontend */
+@import './tinymce-content.css';

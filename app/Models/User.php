@@ -268,6 +268,17 @@ class User extends Authenticatable
                     ->where('type', UserInteraction::TYPE_LIKE)
                     ->exists();
     }
+
+    /**
+     * Comentarios que le gustan al usuario
+     */
+    public function likedComments()
+    {
+        return $this->belongsToMany(Comment::class, 'comment_interactions')
+                    ->where('type', 'like')
+                    ->withTimestamps()
+                    ->orderByPivot('created_at', 'desc');
+    }
     
     /**
      * Verificar si este usuario tiene guardado un post específico

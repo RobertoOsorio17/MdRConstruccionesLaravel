@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Head, Link, usePage, router } from '@inertiajs/react';
+import { NotificationProvider } from '@/Contexts/NotificationContext';
+import NotificationSystem from '@/Components/Admin/NotificationSystem';
+import SessionManager from '@/Components/Admin/SessionManager';
 import {
     AppBar,
     Box,
@@ -305,7 +308,8 @@ const AdminLayout = ({ children, title = 'Dashboard Admin' }) => {
     );
 
     return (
-        <Box sx={{ display: 'flex' }}>
+        <NotificationProvider>
+            <Box sx={{ display: 'flex' }}>
             <Head title={title} />
             <CssBaseline />
             
@@ -343,7 +347,14 @@ const AdminLayout = ({ children, title = 'Dashboard Admin' }) => {
                             size="small"
                             variant="outlined"
                         />
-                        
+
+                        <NotificationSystem
+                            notifications={[]}
+                            onMarkAsRead={() => {}}
+                            onMarkAllAsRead={() => {}}
+                            onDeleteNotification={() => {}}
+                        />
+
                         <IconButton
                             size="large"
                             edge="end"
@@ -458,7 +469,11 @@ const AdminLayout = ({ children, title = 'Dashboard Admin' }) => {
                     {flash?.success || flash?.error}
                 </Alert>
             </Snackbar>
-        </Box>
+
+            {/* Session Manager */}
+            <SessionManager user={auth.user} />
+            </Box>
+        </NotificationProvider>
     );
 };
 

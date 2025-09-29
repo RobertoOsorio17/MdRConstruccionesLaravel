@@ -545,6 +545,8 @@ const PostCard = memo(({ post, getPostImage }) => {
               </Avatar>
               <Box>
                 <Typography
+                  component={post.author?.id ? Link : 'span'}
+                  href={post.author?.id ? `/user/${post.author.id}` : undefined}
                   variant="caption"
                   sx={{
                     color: THEME.text.secondary,
@@ -553,7 +555,13 @@ const PostCard = memo(({ post, getPostImage }) => {
                     display: 'flex',
                     alignItems: 'center',
                     gap: 0.5,
-                    lineHeight: 1.2
+                    lineHeight: 1.2,
+                    textDecoration: 'none',
+                    cursor: post.author?.id ? 'pointer' : 'default',
+                    '&:hover': post.author?.id ? {
+                      color: THEME.primary[600],
+                      textDecoration: 'underline'
+                    } : {}
                   }}
                 >
                   {post.author?.name || 'Admin MDR'}

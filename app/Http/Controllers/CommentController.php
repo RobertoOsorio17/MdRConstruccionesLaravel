@@ -16,17 +16,17 @@ class CommentController extends Controller
      */
     public function store(Request $request, Post $post)
     {
-        // Check if post allows comments
+        // Check if post allows comments.
         if ($post->status !== 'published') {
             abort(404);
         }
 
-        // Rate limiting: max 3 comments per minute per IP
+        // Rate limiting: max 3 comments per minute per IP.
         $executed = RateLimiter::attempt(
             'comments:' . $request->ip(),
             $perMinute = 3,
             function () {
-                // Empty callback
+                // Empty callback.
             }
         );
 
@@ -36,14 +36,14 @@ class CommentController extends Controller
             ]);
         }
 
-        // Validation rules differ for guests vs authenticated users
+        // Validation rules differ for guests vs authenticated users.
         if (Auth::check()) {
-            // Check if authenticated user is banned
+            // Check if authenticated user is banned.
             $user = Auth::user();
             if ($user->isBanned()) {
                 $banStatus = $user->getBanStatus();
 
-                // Log the banned user's attempt to comment
+                // Log the banned user's attempt to comment.
                 \Log::warning('Banned user attempted to comment', [
                     'user_id' => $user->id,
                     'user_email' => $user->email,
@@ -60,7 +60,7 @@ class CommentController extends Controller
                 ], 403);
             }
 
-            // Authenticated user validation
+            // Authenticated user validation.
             $validated = $request->validate([
                 'body' => 'required|string|min:10|max:2000',
                 'parent_id' => 'nullable|exists:comments,id'
@@ -70,14 +70,14 @@ class CommentController extends Controller
             $validated['author_name'] = null;
             $validated['author_email'] = null;
         } else {
-            // Guest user - check IP comment limit (max 2 comments per IP per post)
+            // Guest user - check IP comment limit (max 2 comments per IP per post).
             $guestCommentsCount = Comment::where('post_id', $post->id)
                 ->where('ip_address', $request->ip())
-                ->whereNull('user_id') // Only count guest comments
+                ->whereNull('user_id') // Only count guest comments.
                 ->count();
 
             if ($guestCommentsCount >= 2) {
-                // Log the guest comment limit reached
+                // Log the guest comment limit reached.
                 \Log::info('Guest user reached comment limit', [
                     'ip' => $request->ip(),
                     'post_id' => $post->id,
@@ -94,7 +94,7 @@ class CommentController extends Controller
                 ], 429);
             }
 
-            // Guest user validation
+            // Guest user validation.
             $validated = $request->validate([
                 'body' => 'required|string|min:10|max:2000',
                 'author_name' => 'required|string|min:2|max:100',
@@ -105,7 +105,7 @@ class CommentController extends Controller
             $validated['user_id'] = null;
         }
 
-        // If replying to a comment, ensure it belongs to this post
+        // If replying to a comment, ensure it belongs to this post.
         if (!empty($validated['parent_id'])) {
             $parentComment = Comment::find($validated['parent_id']);
             if (!$parentComment || $parentComment->post_id !== $post->id) {
@@ -113,33 +113,33 @@ class CommentController extends Controller
             }
         }
 
-        // Set additional fields
+        // Set additional fields.
         $validated['post_id'] = $post->id;
         $validated['ip_address'] = $request->ip();
         $validated['user_agent'] = $request->userAgent();
 
-        // Set status based on user type
+        // Set status based on user type.
         if (Auth::check()) {
-            // Authenticated users get auto-approved comments
+            // Authenticated users get auto-approved comments.
             $validated['status'] = 'approved';
         } else {
-            // Guest comments start as pending for moderation
+            // Guest comments start as pending for moderation.
             $validated['status'] = 'pending';
         }
 
-        // Basic spam detection
+        // Basic spam detection.
         $spamScore = $this->calculateSpamScore($validated['body'], $validated['author_name'] ?? null);
         if ($spamScore > 7) {
             $validated['status'] = 'spam';
         }
 
-        // Create the comment with all validated data including tracking info
+        // Create the comment with all validated data including tracking info.
         $comment = Comment::create(array_merge($validated, [
             'ip_address' => $request->ip(),
             'user_agent' => $request->userAgent(),
         ]));
 
-        // Load relationships for response
+        // Load relationships for response.
         $comment->load(['user:id,name', 'parent:id,author_name']);
 
         return response()->json([
@@ -159,7 +159,7 @@ class CommentController extends Controller
     }
 
     /**
-     * Basic spam score calculation
+     * Calculate a basic spam score for a comment body.
      */
     private function calculateSpamScore($body, $authorName = null)
     {
@@ -167,7 +167,7 @@ class CommentController extends Controller
         $originalBody = $body ?? '';
         $lowerBody = strtolower($originalBody);
 
-        // Common spam patterns
+        // Common spam patterns.
         $spamKeywords = [
             'viagra', 'casino', 'lottery', 'winner', 'click here', 'free money',
             'make money', 'work from home', 'lose weight', 'single women',
@@ -180,25 +180,25 @@ class CommentController extends Controller
             }
         }
 
-        // Too many links
+        // Too many links.
         $linkCount = substr_count($lowerBody, 'http');
         if ($linkCount > 2) {
             $score += $linkCount * 2;
         }
 
-        // Too many capital letters (measure on original text, excluding spaces)
+        // Too many capital letters (measure on original text, excluding spaces).
         $nonSpaceLength = strlen(preg_replace('/\s+/', '', $originalBody));
         $upperCount = preg_match_all('/[A-Z]/', $originalBody);
         if ($nonSpaceLength > 0 && $upperCount > $nonSpaceLength * 0.5) {
             $score += 3;
         }
 
-        // Repetitive content
+        // Repetitive content.
         if (preg_match('/(.{10,})\1{2,}/', $lowerBody)) {
             $score += 4;
         }
 
-        // Very short comments from guests only
+        // Very short comments from guests only.
         if ($authorName && strlen(trim($originalBody)) < 20) {
             $score += 2;
         }
@@ -207,7 +207,7 @@ class CommentController extends Controller
     }
 
     /**
-     * Get appropriate message based on comment status and user type
+     * Get the appropriate message based on comment status and user type.
      */
     private function getCommentStatusMessage($comment)
     {
@@ -229,9 +229,9 @@ class CommentController extends Controller
     {
         $userIp = $request->ip();
 
-        // Build the main query based on user type
+        // Build the main query based on user type.
         if (!Auth::check()) {
-            // For guests, show approved comments + their own pending comments (by IP)
+            // For guests, show approved comments plus their own pending comments (by IP).
             $comments = Comment::where('post_id', $post->id)
                 ->topLevel()
                 ->where(function ($query) use ($userIp) {
@@ -243,7 +243,7 @@ class CommentController extends Controller
                           });
                 })
                 ->with(['user:id,name,is_verified', 'replies' => function ($query) use ($userIp) {
-                    // For replies, also include guest's pending replies
+                    // For replies, also include the guest's pending replies.
                     $query->where(function ($q) use ($userIp) {
                         $q->where('status', 'approved')
                           ->orWhere(function ($subQ) use ($userIp) {
@@ -256,7 +256,7 @@ class CommentController extends Controller
                 ->orderBy('created_at', 'desc')
                 ->get();
         } else {
-            // For authenticated users, only show approved comments
+            // For authenticated users, only show approved comments.
             $comments = Comment::where('post_id', $post->id)
                 ->approved()
                 ->topLevel()
@@ -303,7 +303,7 @@ class CommentController extends Controller
      */
     public function destroy(Comment $comment)
     {
-        // Check if user is authenticated
+        // Check if user is authenticated.
         if (!Auth::check()) {
             return response()->json([
                 'success' => false,
@@ -313,7 +313,7 @@ class CommentController extends Controller
 
         $user = Auth::user();
 
-        // Check if user is admin
+        // Check if user is admin.
         if (!$user->hasRole('admin')) {
             return response()->json([
                 'success' => false,
@@ -322,10 +322,10 @@ class CommentController extends Controller
         }
 
         try {
-            // Store comment info for response
+            // Store comment info for response.
             $commentAuthor = $comment->user ? $comment->user->name : $comment->author_name;
 
-            // Delete the comment (this will also delete replies due to cascade)
+            // Delete the comment (this will also delete replies due to cascade).
             $comment->delete();
 
             return response()->json([

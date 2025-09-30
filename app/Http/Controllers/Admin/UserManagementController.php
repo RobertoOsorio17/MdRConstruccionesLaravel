@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 
 namespace App\Http\Controllers\Admin;
 
@@ -17,7 +17,10 @@ use Carbon\Carbon;
 class UserManagementController extends Controller
 {
     /**
-     * Display a listing of users with filtering and search
+     * Display a filtered and paginated list of users for the admin panel.
+     *
+     * Supports keyword search, role constraints, ban status filtering, date ranges,
+     * and configurable sorting so administrators can audit user activity efficiently.
      */
     public function index(Request $request)
     {
@@ -25,7 +28,7 @@ class UserManagementController extends Controller
             $q->active()->with('bannedBy:id,name');
         }]);
 
-        // Search functionality
+        // Apply basic search matching against name and email fields.
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
@@ -34,7 +37,7 @@ class UserManagementController extends Controller
             });
         }
 
-        // Role filter
+        // Filter by a primary role slug or ensure any custom role assignments.
         if ($request->filled('role')) {
             if ($request->role === 'simple_role') {
                 $query->where('role', '!=', null);
@@ -45,7 +48,7 @@ class UserManagementController extends Controller
             }
         }
 
-        // Ban status filter
+        // Filter the set based on current ban status requirements.
         if ($request->filled('ban_status')) {
             if ($request->ban_status === 'active') {
                 $query->whereDoesntHave('bans', function ($q) {
@@ -58,7 +61,7 @@ class UserManagementController extends Controller
             }
         }
 
-        // Legacy status filter (for email verification)
+        // Filter users by legacy email verification status.
         if ($request->filled('status')) {
             if ($request->status === 'active') {
                 $query->whereNotNull('email_verified_at');
@@ -67,7 +70,7 @@ class UserManagementController extends Controller
             }
         }
 
-        // Date range filter
+        // Constrain results by creation date where a range is supplied.
         if ($request->filled('date_from')) {
             $query->whereDate('created_at', '>=', $request->date_from);
         }
@@ -76,7 +79,7 @@ class UserManagementController extends Controller
             $query->whereDate('created_at', '<=', $request->date_to);
         }
 
-        // Sorting
+        // Apply configurable sorting while guarding against unsupported fields.
         $sortField = $request->get('sort', 'created_at');
         $sortDirection = $request->get('direction', 'desc');
 
@@ -85,15 +88,15 @@ class UserManagementController extends Controller
             $query->orderBy($sortField, $sortDirection);
         }
 
-        // Pagination
+        // Resolve the pagination size, enforcing the supported page sizes.
         $perPage = $request->get('per_page', 15);
         $perPage = in_array($perPage, [10, 15, 25, 50]) ? $perPage : 15;
         $users = $query->paginate($perPage)->withQueryString();
 
-        // Transform users data
+        // Map the paginated collection into a transport-friendly structure.
         $users->getCollection()->transform(function ($user) {
             $banStatus = $user->getBanStatus();
-            $activeBan = $user->bans->first(); // Get the active ban (already filtered by the query)
+            $activeBan = $user->bans->first(); // Get the active ban (already filtered by the query).
 
             return [
                 'id' => $user->id,
@@ -121,7 +124,7 @@ class UserManagementController extends Controller
             ];
         });
 
-        // Get statistics
+        // Gather high-level statistics for dashboard summary cards.
         $stats = [
             'total' => User::count(),
             'active' => User::whereDoesntHave('bans', function ($q) {
@@ -136,7 +139,7 @@ class UserManagementController extends Controller
             'new_this_month' => User::whereMonth('created_at', now()->month)->count(),
         ];
 
-        // Get available roles
+        // Include the available roles so admins can filter or assign them.
         $roles = Role::all(['id', 'name', 'display_name']);
 
         return Inertia::render('Admin/UserManagement', [
@@ -148,7 +151,7 @@ class UserManagementController extends Controller
     }
 
     /**
-     * Show the form for creating a new user
+     * Show the form for creating a new user within the admin area.
      */
     public function create()
     {
@@ -160,11 +163,11 @@ class UserManagementController extends Controller
     }
 
     /**
-     * Store a newly created user
+     * Store a newly created user account and optional role assignments.
      */
     public function store(Request $request)
     {
-        // Security: Only admin can create admin users
+        // Security check: stop non-admins from creating administrative accounts.
         if ($request->role === 'admin' && !auth()->user()->hasRole('admin')) {
             abort(403, 'No tienes permisos para crear usuarios administradores.');
         }
@@ -201,17 +204,17 @@ class UserManagementController extends Controller
             'bio' => $request->bio,
             'website' => $request->website,
             'location' => $request->location,
-            'email_verified_at' => now(), // Auto-verify admin created users
+            'email_verified_at' => now(), // Auto-verify admin-created users.
         ]);
 
-        // Assign roles if provided
+        // Assign any selected roles once the account has been created.
         if ($request->filled('roles')) {
             $user->roles()->sync($request->roles);
         }
 
-        // Send welcome email if requested
+        // Send a welcome email when requested (queued for future implementation).
         if ($request->send_welcome_email) {
-            // TODO: Implement welcome email
+            // TODO: Implement welcome email.
         }
 
         return redirect()->route('admin.users.index')
@@ -219,13 +222,13 @@ class UserManagementController extends Controller
     }
 
     /**
-     * Display the specified user
+     * Display the specified user together with engagement metrics.
      */
     public function show(User $user)
     {
         $user->load(['roles', 'verifiedBy:id,name']);
 
-        // Get user statistics
+        // Compile key metrics that describe the user's activity.
         $userStats = [
             'posts_count' => $user->posts()->count(),
             'comments_count' => $user->comments()->count(),
@@ -235,7 +238,7 @@ class UserManagementController extends Controller
             'profile_completion' => $this->calculateProfileCompletion($user),
         ];
 
-        // Get detailed comment statistics
+        // Provide a breakdown of comment moderation states for the user.
         $commentStats = [
             'total' => $user->comments()->count(),
             'approved' => $user->comments()->where('status', 'approved')->count(),
@@ -244,7 +247,7 @@ class UserManagementController extends Controller
             'spam' => $user->comments()->where('status', 'spam')->count(),
         ];
 
-        // Get recent activity (if audit logs exist)
+        // Retrieve recent administrative activity if audit logs are present.
         $recentActivity = [];
         if (class_exists('App\Models\AdminAuditLog')) {
             $recentActivity = \App\Models\AdminAuditLog::where('user_id', $user->id)
@@ -280,7 +283,7 @@ class UserManagementController extends Controller
     }
 
     /**
-     * Show the form for editing the specified user
+     * Show the form for editing the specified user profile and roles.
      */
     public function edit(User $user)
     {
@@ -304,16 +307,16 @@ class UserManagementController extends Controller
     }
 
     /**
-     * Update the specified user
+     * Update the specified user profile, credentials, and role assignments.
      */
     public function update(Request $request, User $user)
     {
-        // Security: Prevent editing own account through admin panel
+        // Security check: prevent administrators from modifying their own record here.
         if ($user->id === auth()->id()) {
             return back()->withErrors(['error' => 'No puedes editar tu propia cuenta desde el panel de administraciÃ³n.']);
         }
 
-        // Security: Only admin can modify admin users or assign admin role
+        // Security check: restrict admin role updates to existing admins.
         if (($user->hasRole('admin') || $request->role === 'admin') && !auth()->user()->hasRole('admin')) {
             abort(403, 'No tienes permisos para modificar usuarios administradores.');
         }
@@ -353,22 +356,22 @@ class UserManagementController extends Controller
             'location' => $request->location,
         ];
 
-        // Update password if provided
+        // Update the password when a new credential has been supplied.
         if ($request->filled('password')) {
             $updateData['password'] = Hash::make($request->password);
         }
 
-        // Handle email verification status
+        // Toggle email verification status when explicitly requested.
         if ($request->has('email_verified')) {
             $updateData['email_verified_at'] = $request->email_verified ? now() : null;
         }
 
-        // Remove is_active from update data as we use ban system instead
+        // Remove the obsolete is_active flag because bans control activation.
         unset($updateData['is_active']);
 
         $user->update($updateData);
 
-        // Sync roles if provided
+        // Sync any role selections after the profile details are updated.
         if ($request->has('roles')) {
             $user->roles()->sync($request->roles ?? []);
         }
@@ -378,21 +381,21 @@ class UserManagementController extends Controller
     }
 
     /**
-     * Remove the specified user
+     * Remove the specified user when permitted.
      */
     public function destroy(User $user)
     {
-        // Security: Prevent deletion of current user
+        // Security check: do not allow deletion of the acting administrator.
         if ($user->id === auth()->id()) {
             return back()->with('error', 'No puedes eliminar tu propia cuenta.');
         }
 
-        // Security: Only admin can delete admin users
+        // Security check: require admin privileges to delete other admin users.
         if ($user->hasRole('admin') && !auth()->user()->hasRole('admin')) {
             abort(403, 'No tienes permisos para eliminar usuarios administradores.');
         }
 
-        // Prevent deletion of super admin (if exists)
+        // Safeguard accounts flagged as super administrators from deletion.
         if ($user->role === 'super_admin' || $user->hasRole('super_admin')) {
             return back()->with('error', 'No se puede eliminar una cuenta de super administrador.');
         }
@@ -405,7 +408,7 @@ class UserManagementController extends Controller
     }
 
     /**
-     * Bulk actions for multiple users
+     * Execute bulk administrative actions against multiple users.
      */
     public function bulkAction(Request $request)
     {
@@ -423,7 +426,7 @@ class UserManagementController extends Controller
         $userIds = $request->user_ids;
         $currentUserId = auth()->id();
 
-        // Remove current user from bulk actions
+        // Remove the acting administrator to avoid self-modification during bulk work.
         $userIds = array_filter($userIds, fn($id) => $id != $currentUserId);
 
         if (empty($userIds)) {
@@ -473,13 +476,13 @@ class UserManagementController extends Controller
     }
 
     /**
-     * Export users data
+     * Export user data based on the current filter selection.
      */
     public function export(Request $request)
     {
         $query = User::with(['roles']);
 
-        // Apply same filters as index
+        // Apply the same filters used by the index listing.
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
@@ -534,7 +537,7 @@ class UserManagementController extends Controller
     }
 
     /**
-     * Calculate user profile completion percentage
+     * Calculate the user profile completion percentage based on key fields.
      */
     private function calculateProfileCompletion(User $user): int
     {
@@ -555,7 +558,7 @@ class UserManagementController extends Controller
     }
 
     /**
-     * Ban a user
+     * Ban a user for a configurable duration and reason.
      */
     public function banUser(Request $request, User $user)
     {
@@ -565,19 +568,19 @@ class UserManagementController extends Controller
             'request_data' => $request->all()
         ]);
 
-        // Security: Prevent self-banning
+        // Security check: prevent administrators from banning themselves.
         if ($user->id === auth()->id()) {
             \Log::warning('Self-ban attempt blocked', ['user_id' => $user->id]);
             return back()->withErrors(['error' => 'You cannot ban yourself.']);
         }
 
-        // Security: Only admins can ban users
+        // Security check: require administrative privileges for ban actions.
         if (!auth()->user()->hasRole('admin')) {
             \Log::warning('Unauthorized ban attempt', ['user_id' => auth()->id(), 'target_user' => $user->id]);
             return back()->withErrors(['error' => 'Unauthorized action.']);
         }
 
-        // Validate request
+        // Validate the incoming ban request data.
         $validator = Validator::make($request->all(), [
             'reason' => 'required|string|max:1000',
             'duration' => 'nullable|string|in:1_hour,1_day,1_week,1_month,3_months,6_months,1_year,permanent',
@@ -590,13 +593,13 @@ class UserManagementController extends Controller
             return back()->withErrors($validator->errors());
         }
 
-        // Check if user is already banned
+        // Abort if the target user already has an active ban.
         if ($user->isBanned()) {
             \Log::warning('User already banned', ['user_id' => $user->id]);
             return back()->withErrors(['error' => 'User is already banned.']);
         }
 
-        // Calculate expiration date
+        // Calculate the ban expiration timestamp from the provided duration.
         $expiresAt = null;
         if ($request->duration && $request->duration !== 'permanent') {
             $expiresAt = match($request->duration) {
@@ -611,7 +614,7 @@ class UserManagementController extends Controller
             };
         }
 
-        // Create ban record
+        // Create a ban record while logging the administrative action.
         try {
             $ban = UserBan::create([
                 'user_id' => $user->id,
@@ -641,32 +644,32 @@ class UserManagementController extends Controller
     }
 
     /**
-     * Unban a user
+     * Remove the active ban from a user account.
      */
     public function unbanUser(User $user)
     {
-        // Security: Only admins can unban users
+        // Security check: only administrators may lift bans.
         if (!auth()->user()->hasRole('admin')) {
             return back()->withErrors(['error' => 'Unauthorized action.']);
         }
 
-        // Check if user is banned
+        // Ensure the target account currently has an active ban record.
         if (!$user->isBanned()) {
             return back()->withErrors(['error' => 'User is not currently banned.']);
         }
 
-        // Deactivate current active ban
+        // Deactivate the active ban entries instead of deleting their history.
         $user->bans()->active()->update(['is_active' => false]);
 
         return back()->with('success', 'User has been unbanned successfully.');
     }
 
     /**
-     * Get ban history for a user
+     * Retrieve the complete ban history for a user.
      */
     public function getBanHistory(User $user)
     {
-        // Security: Only admins can view ban history
+        // Security check: restrict ban history access to administrators.
         if (!auth()->user()->hasRole('admin')) {
             return response()->json(['error' => 'Unauthorized'], 403);
         }
@@ -692,18 +695,18 @@ class UserManagementController extends Controller
     }
 
     /**
-     * Get user comments with pagination and filtering
+     * Retrieve a paginated set of user comments with search and filters.
      */
     public function getUserComments(Request $request, User $user)
     {
-        // Security: Only admins can view user comments
+        // Security check: restrict comment visibility to administrators.
         if (!auth()->user()->hasRole('admin')) {
             return response()->json(['error' => 'Unauthorized'], 403);
         }
 
         $query = $user->comments()->with(['post:id,title,slug']);
 
-        // Search functionality
+        // Apply full-text search against comment content and related post title.
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
@@ -714,12 +717,12 @@ class UserManagementController extends Controller
             });
         }
 
-        // Status filter
+        // Apply a moderation status filter when provided.
         if ($request->filled('status')) {
             $query->where('status', $request->status);
         }
 
-        // Date range filter
+        // Restrict results to a specific creation date range.
         if ($request->filled('date_from')) {
             $query->whereDate('created_at', '>=', $request->date_from);
         }
@@ -728,7 +731,7 @@ class UserManagementController extends Controller
             $query->whereDate('created_at', '<=', $request->date_to);
         }
 
-        // Sorting
+        // Sort by an allowed column and direction.
         $sortField = $request->get('sort', 'created_at');
         $sortDirection = $request->get('direction', 'desc');
 
@@ -737,13 +740,13 @@ class UserManagementController extends Controller
             $query->orderBy($sortField, $sortDirection);
         }
 
-        // Pagination
+        // Resolve the pagination size while enforcing the permitted options.
         $perPage = $request->get('per_page', 10);
         $perPage = in_array($perPage, [5, 10, 15, 25]) ? $perPage : 10;
 
         $comments = $query->paginate($perPage)->withQueryString();
 
-        // Transform comments data
+        // Normalize the comment payload for front-end consumption.
         $comments->getCollection()->transform(function ($comment) {
             return [
                 'id' => $comment->id,
@@ -771,11 +774,11 @@ class UserManagementController extends Controller
     }
 
     /**
-     * Update comment status from user management
+     * Update a comment status from the user management interface.
      */
     public function updateCommentStatus(Request $request, User $user, $commentId)
     {
-        // Security: Only admins can update comment status
+        // Security check: only administrators may adjust comment statuses.
         if (!auth()->user()->hasRole('admin')) {
             return response()->json(['error' => 'Unauthorized'], 403);
         }
@@ -799,27 +802,27 @@ class UserManagementController extends Controller
     }
 
     /**
-     * Delete comment from user management
+     * Delete a comment and its replies from user management.
      */
     public function deleteComment(User $user, $commentId)
     {
         try {
-            // Security: Only admins can delete comments
+            // Security check: only administrators can remove comments.
             if (!auth()->user()->hasRole('admin')) {
                 return back()->withErrors(['error' => 'No tienes permisos para eliminar comentarios.']);
             }
 
-            // Log the attempt to delete comment
+            // Log the attempted comment deletion for auditing.
             \Log::info('Attempting to delete comment', [
                 'comment_id' => $commentId,
                 'user_id' => $user->id,
                 'admin_id' => auth()->id(),
             ]);
 
-            // Find the comment and verify it belongs to the specified user
+            // Locate the comment and ensure it belongs to the selected user.
             $comment = $user->comments()->findOrFail($commentId);
 
-            // Verify the comment actually belongs to this user (extra security)
+            // Double-check the comment ownership for defense in depth.
             if ($comment->user_id !== $user->id) {
                 \Log::warning('Attempt to delete comment that does not belong to user', [
                     'comment_id' => $commentId,
@@ -830,7 +833,7 @@ class UserManagementController extends Controller
                 return back()->withErrors(['error' => 'Este comentario no pertenece al usuario especificado.']);
             }
 
-            // Delete all replies first (if any exist)
+            // Remove nested replies to maintain referential integrity.
             if ($comment->replies()->exists()) {
                 $repliesCount = $comment->replies()->count();
                 $comment->replies()->delete();
@@ -871,11 +874,11 @@ class UserManagementController extends Controller
     }
 
     /**
-     * Bulk actions for user comments
+     * Execute bulk moderation actions on user comments.
      */
     public function bulkCommentActions(Request $request, User $user)
     {
-        // Security: Only admins can perform bulk actions
+        // Security check: only administrators may run bulk comment operations.
         if (!auth()->user()->hasRole('admin')) {
             return response()->json(['error' => 'Unauthorized'], 403);
         }
@@ -960,44 +963,17 @@ class UserManagementController extends Controller
         }
     }
 
-         = collect();
-
-        if (!is_null()) {
-             = ->merge(is_array() ?  : []);
-        }
-
-        if (!is_null()) {
-            ->push();
-        }
-
-         = ->filter(function () {
-            return !is_null() &&  -ne '';
-        }).map({ param() [int] }).unique();
-
-        if (->isEmpty()) {
-            return;
-        }
-
-         = Role::whereIn('id', )
-            ->whereIn('name', ['admin', 'super_admin'])
-            ->exists();
-
-        if ( && !->hasRole('admin')) {
-            abort(403, 'No tienes permisos para asignar roles de administrador.');
-        }
-    }
-
     /**
-     * Verify a user
+     * Mark a user account as verified and log the action.
      */
     public function verifyUser(Request $request, User $user)
     {
-        // Check if current user is admin
+        // Security check: only administrators may verify accounts.
         if (!auth()->user()->hasRole('admin')) {
             return back()->withErrors(['error' => 'No tienes permisos para verificar usuarios.']);
         }
 
-        // Prevent self-verification
+        // Prevent administrators from verifying their own accounts here.
         if ($user->id === auth()->id()) {
             return back()->withErrors(['error' => 'No puedes verificarte a ti mismo.']);
         }
@@ -1010,7 +986,7 @@ class UserManagementController extends Controller
             $success = $user->verify(auth()->user(), $request->verification_notes);
 
             if ($success) {
-                // Log the verification action
+                // Log the verification action for auditing purposes.
                 \Log::info('User verified', [
                     'user_id' => $user->id,
                     'user_email' => $user->email,
@@ -1035,16 +1011,16 @@ class UserManagementController extends Controller
     }
 
     /**
-     * Unverify a user
+     * Remove verification from a user account and log the change.
      */
     public function unverifyUser(Request $request, User $user)
     {
-        // Check if current user is admin
+        // Security check: only administrators may remove verification.
         if (!auth()->user()->hasRole('admin')) {
             return back()->withErrors(['error' => 'No tienes permisos para desverificar usuarios.']);
         }
 
-        // Prevent self-unverification
+        // Prevent administrators from modifying their own verification flag here.
         if ($user->id === auth()->id()) {
             return back()->withErrors(['error' => 'No puedes desverificarte a ti mismo.']);
         }
@@ -1057,7 +1033,7 @@ class UserManagementController extends Controller
             $success = $user->unverify(auth()->user(), $request->verification_notes);
 
             if ($success) {
-                // Log the unverification action
+                // Log the unverification action for auditing purposes.
                 \Log::info('User unverified', [
                     'user_id' => $user->id,
                     'user_email' => $user->email,

@@ -13,12 +13,12 @@ use Inertia\Response;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Validator;
-// use Intervention\Image\ImageManagerStatic as Image; // Comentado hasta instalar la librería
+// use Intervention\Image\ImageManagerStatic as Image; // Disabled until the Intervention Image library is installed.
 
 class UserProfileController extends Controller
 {
     /**
-     * Mostrar el dashboard del usuario autenticado (su propio perfil)
+     * Display the authenticated user's dashboard profile view.
      */
     public function dashboard(): Response
     {
@@ -28,12 +28,12 @@ class UserProfileController extends Controller
             return redirect()->route('login')->with('error', 'Sesión expirada. Por favor, inicia sesión nuevamente.');
         }
 
-        // Cargar servicios favoritos del usuario
+        // Load the user's favorite services.
         $user->load(['favoriteServices' => function($query) {
             $query->latest('user_service_favorites.created_at')->limit(12);
         }]);
 
-        // 1. Cargar posts del usuario (solo sus propios posts)
+        // 1. Load the user's own posts with engagement metadata.
         $userPosts = $user->posts()
             ->with([
                 'author:id,name,avatar,bio,profession,is_verified',
@@ -44,11 +44,11 @@ class UserProfileController extends Controller
             ->orderBy('created_at', 'desc')
             ->get();
 
-        // 2. Cargar posts que le gustan al usuario (de otros autores)
+        // 2. Load posts liked by the user that belong to other authors.
         $likedPosts = \App\Models\Post::whereHas('likes', function($query) use ($user) {
             $query->where('user_id', $user->id);
         })
-        ->where('user_id', '!=', $user->id) // Excluir sus propios posts
+        ->where('user_id', '!=', $user->id) // Exclude the user's own posts.
         ->published()
         ->with([
             'author:id,name,avatar,bio,profession,is_verified',
@@ -59,7 +59,7 @@ class UserProfileController extends Controller
         ->orderBy('published_at', 'desc')
         ->get();
 
-        // 3. Cargar posts guardados por el usuario
+        // 3. Load posts the user has bookmarked.
         $savedPosts = \App\Models\Post::whereHas('bookmarks', function($query) use ($user) {
             $query->where('user_id', $user->id);
         })
@@ -73,7 +73,7 @@ class UserProfileController extends Controller
         ->orderBy('published_at', 'desc')
         ->get();
 
-        // 4. Cargar comentarios del usuario con información del post
+        // 4. Load approved comments made by the user with post details.
         $userComments = $user->comments()
             ->approved()
             ->with([
@@ -84,7 +84,7 @@ class UserProfileController extends Controller
             ->orderBy('created_at', 'desc')
             ->get();
 
-        // Agregar información de interacciones para todos los posts
+        // Decorate each post with like and bookmark status for the authenticated user.
         $allPosts = collect([$userPosts, $likedPosts, $savedPosts])->flatten();
 
         foreach ($allPosts as $post) {
@@ -92,7 +92,7 @@ class UserProfileController extends Controller
             $post->user_bookmarked = $post->isBookmarkedBy($user);
         }
 
-        // Agregar información de interacciones para comentarios
+        // Decorate each comment with user interaction metadata.
         foreach ($userComments as $comment) {
             $comment->user_liked = $comment->isLikedBy($user);
             $comment->user_disliked = $comment->isDislikedBy($user);
@@ -100,7 +100,7 @@ class UserProfileController extends Controller
             $comment->dislikes_count = $comment->dislikes()->count();
         }
 
-        // Estadísticas mejoradas
+        // Compile augmented statistics for quick display in the dashboard.
         $stats = [
             'favoriteServicesCount' => $user->favoriteServices()->count(),
             'postsCount' => $userPosts->count(),
@@ -123,8 +123,8 @@ class UserProfileController extends Controller
             'savedPosts' => $savedPosts,
             'userComments' => $userComments,
             'stats' => $stats,
-            'isFollowing' => false, // Not applicable for own profile
-            'isOwnProfile' => true, // Always true for dashboard
+            'isFollowing' => false, // Not applicable for own profile.
+            'isOwnProfile' => true, // Always true for dashboard.
             'favoriteServices' => $user->favoriteServices,
             'auth' => [
                 'user' => $user
@@ -133,13 +133,13 @@ class UserProfileController extends Controller
     }
 
     /**
-     * Mostrar el perfil público de un usuario
+     * Display the public profile for a given user.
      */
     public function show(User $user): Response
     {
         \Log::info('UserProfileController::show called for user ' . $user->id);
 
-        // Verificar si el perfil es visible o si es el propio usuario
+        // Ensure the profile is visible or belongs to the authenticated user.
         if (!$user->profile_visibility && Auth::id() !== $user->id) {
             abort(404, 'Perfil no encontrado');
         }
@@ -147,12 +147,12 @@ class UserProfileController extends Controller
         $currentUser = Auth::user();
         $isOwnProfile = $currentUser && $currentUser->id === $user->id;
 
-        // Cargar servicios favoritos del usuario
+        // Load the user's favorite services.
         $user->load(['favoriteServices' => function($query) {
             $query->latest('user_service_favorites.created_at')->limit(12);
         }]);
 
-        // 1. Cargar posts del usuario (solo sus propios posts)
+        // 1. Load the user's published posts.
         $userPosts = $user->posts()
             ->published()
             ->with([
@@ -164,13 +164,13 @@ class UserProfileController extends Controller
             ->orderBy('published_at', 'desc')
             ->get();
 
-        // 2. Cargar posts que le gustan al usuario (de otros autores)
+        // 2. Load posts liked by the user that belong to other authors.
         $likedPosts = collect();
         if ($currentUser) {
             $likedPosts = \App\Models\Post::whereHas('likes', function($query) use ($user) {
                 $query->where('user_id', $user->id);
             })
-            ->where('user_id', '!=', $user->id) // Excluir sus propios posts
+            ->where('user_id', '!=', $user->id) // Exclude the user's own posts.
             ->published()
             ->with([
                 'author:id,name,avatar,bio,profession,is_verified',
@@ -182,7 +182,7 @@ class UserProfileController extends Controller
             ->get();
         }
 
-        // 3. Cargar posts guardados por el usuario
+        // 3. Load posts the user has bookmarked.
         $savedPosts = collect();
         if ($currentUser) {
             $savedPosts = \App\Models\Post::whereHas('bookmarks', function($query) use ($user) {
@@ -199,7 +199,7 @@ class UserProfileController extends Controller
             ->get();
         }
 
-        // 4. Cargar comentarios del usuario con información del post (solo primeros 10 para la vista inicial)
+        // 4. Load approved comments with post information (limited to the first ten).
         $userComments = Comment::where('user_id', $user->id)
             ->where('status', 'approved')
             ->with(['post' => function ($query) {
@@ -209,7 +209,7 @@ class UserProfileController extends Controller
             ->limit(10)
             ->get();
 
-        // Agregar información de interacciones para todos los posts
+        // Decorate each post with interaction flags for the current user.
         $allPosts = collect([$userPosts, $likedPosts, $savedPosts])->flatten();
 
         if ($currentUser) {
@@ -218,9 +218,9 @@ class UserProfileController extends Controller
                 $post->user_bookmarked = $post->isBookmarkedBy($currentUser);
             }
 
-            // Agregar información de interacciones para comentarios
+            // Decorate each comment with interaction counts and flags.
             foreach ($userComments as $comment) {
-                // Verificar si el usuario actual ha dado like/dislike al comentario
+                // Determine whether the current user liked or disliked the comment.
                 $comment->user_liked = $comment->interactions()
                     ->where('user_id', $currentUser->id)
                     ->where('type', 'like')
@@ -231,7 +231,7 @@ class UserProfileController extends Controller
                     ->where('type', 'dislike')
                     ->exists();
 
-                // Contar likes y dislikes
+                // Count likes and dislikes for display metrics.
                 $comment->likes_count = $comment->interactions()
                     ->where('type', 'like')
                     ->count();
@@ -242,7 +242,7 @@ class UserProfileController extends Controller
             }
         }
 
-        // Estadísticas mejoradas
+        // Compile enhanced profile statistics for the public view.
         $stats = [
             'favoriteServicesCount' => $user->favoriteServices()->count(),
             'postsCount' => $userPosts->count(),
@@ -256,10 +256,10 @@ class UserProfileController extends Controller
             'lastActivity' => $user->updated_at->format('Y-m-d'),
         ];
 
-        // Verificar si el usuario actual sigue al usuario del perfil
+        // Determine whether the logged-in user follows the profile owner.
         $isFollowing = $currentUser ? $currentUser->isFollowing($user) : false;
 
-        // Agregar contadores de seguidores y seguidos
+        // Add follower and following counters.
         $stats['followersCount'] = $user->followers()->count();
         $stats['followingCount'] = $user->following()->count();
 
@@ -282,22 +282,22 @@ class UserProfileController extends Controller
     }
 
     /**
-     * Get paginated comments for a user (API endpoint)
+     * Retrieve paginated comments for a user through the API.
      */
     public function getUserComments(Request $request, $userId = null)
     {
         $user = $userId ? User::findOrFail($userId) : $request->user();
         $currentUser = $request->user();
 
-        // Security check: only allow viewing own comments or public profiles
+        // Security check: only allow viewing own comments or public profiles.
         if ($userId && $userId != $currentUser?->id) {
-            // Check if profile is public or if user has permission
+            // Check whether the profile is public or the user has permission.
             if (!$user || !$user->profile_visibility) {
                 return response()->json(['error' => 'Unauthorized'], 403);
             }
         }
 
-        $perPage = min($request->get('per_page', 10), 50); // Limit to max 50 per page
+        $perPage = min($request->get('per_page', 10), 50); // Limit to maximum 50 per page.
         $search = $request->get('search', '');
 
         $query = Comment::where('user_id', $user->id)
@@ -306,7 +306,7 @@ class UserProfileController extends Controller
                 $query->select('id', 'title', 'slug', 'status', 'published_at');
             }]);
 
-        // Apply search filter
+        // Apply a keyword filter when supplied.
         if ($search) {
             $query->where(function ($q) use ($search) {
                 $q->where('body', 'like', "%{$search}%")
@@ -326,7 +326,7 @@ class UserProfileController extends Controller
     }
 
     /**
-     * Mostrar formulario de edición del perfil
+     * Show the profile edit form for the authenticated user.
      */
     public function edit(Request $request): Response
     {
@@ -340,7 +340,7 @@ class UserProfileController extends Controller
     }
     
     /**
-     * Actualizar el perfil del usuario
+     * Update the authenticated user's profile.
      */
     public function update(Request $request): RedirectResponse
     {
@@ -372,7 +372,7 @@ class UserProfileController extends Controller
         $data = $validator->validated();
         $data['profile_updated_at'] = now();
         
-        // Limpiar enlaces sociales vacíos
+        // Strip out empty social link values.
         if (isset($data['social_links'])) {
             $data['social_links'] = array_filter($data['social_links'], function($value) {
                 return !empty($value);
@@ -385,7 +385,7 @@ class UserProfileController extends Controller
     }
     
     /**
-     * Subir avatar del usuario
+     * Upload a new avatar for the authenticated user.
      */
     public function uploadAvatar(Request $request): JsonResponse
     {
@@ -396,7 +396,7 @@ class UserProfileController extends Controller
         $user = $request->user();
         
         try {
-            // Eliminar avatar anterior si existe
+            // Delete any existing avatar stored locally.
             if ($user->avatar && !filter_var($user->avatar, FILTER_VALIDATE_URL)) {
                 Storage::disk('public')->delete('avatars/' . $user->avatar);
             }
@@ -404,11 +404,12 @@ class UserProfileController extends Controller
             $file = $request->file('avatar');
             $filename = time() . '_' . $user->id . '.' . $file->getClientOriginalExtension();
             
-            // Por ahora guardar imagen sin procesar (TODO: instalar Intervention Image)
+            // Persist the uploaded image without additional processing for now.
+            // TODO: Install Intervention Image to support server-side avatar processing.
             $filename = time() . '_' . $user->id . '.' . $file->getClientOriginalExtension();
             $file->storeAs('avatars', $filename, 'public');
             
-            // Actualizar usuario
+            // Update the user record with the new avatar reference.
             $user->update([
                 'avatar' => $filename,
                 'profile_updated_at' => now()
@@ -429,14 +430,14 @@ class UserProfileController extends Controller
     }
     
     /**
-     * Eliminar avatar del usuario
+     * Remove the user's avatar and fall back to the default image.
      */
     public function deleteAvatar(Request $request): JsonResponse
     {
         $user = $request->user();
         
         try {
-            // Eliminar archivo si no es URL externa
+            // Delete the stored file when it is not an external URL.
             if ($user->avatar && !filter_var($user->avatar, FILTER_VALIDATE_URL)) {
                 Storage::disk('public')->delete('avatars/' . $user->avatar);
             }
@@ -448,7 +449,7 @@ class UserProfileController extends Controller
             
             return response()->json([
                 'success' => true,
-                'avatar_url' => $user->avatar_url, // Esto devolverá el avatar por defecto
+                'avatar_url' => $user->avatar_url, // This returns the default avatar when null.
                 'message' => 'Avatar eliminado correctamente'
             ]);
             
@@ -461,7 +462,7 @@ class UserProfileController extends Controller
     }
     
     /**
-     * Obtener sugerencias de usuarios para seguir
+     * Provide follow suggestions tailored to the authenticated user.
      */
     public function suggestions(Request $request): JsonResponse
     {

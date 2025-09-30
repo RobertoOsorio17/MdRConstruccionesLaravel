@@ -7,11 +7,28 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
+/**
+ * Console command that performs a lightweight security audit of the application.
+ */
 class SecurityAuditCommand extends Command
 {
+    /**
+     * The console command signature.
+     *
+     * @var string
+     */
     protected $signature = 'security:audit {--detailed : Show detailed security information}';
+
+    /**
+     * The console command description.
+     *
+     * @var string
+     */
     protected $description = 'Perform a security audit of the application';
 
+    /**
+     * Execute the console command.
+     */
     public function handle()
     {
         $this->info('🔒 Security Audit Report');
@@ -31,6 +48,9 @@ class SecurityAuditCommand extends Command
         $this->info('✅ Security audit completed');
     }
 
+    /**
+     * Inspect session configuration for secure defaults.
+     */
     private function checkSessionConfiguration()
     {
         $this->info('📋 Session Configuration');
@@ -74,6 +94,9 @@ class SecurityAuditCommand extends Command
         $this->newLine();
     }
 
+    /**
+     * Summarize user-role assignments and highlight inconsistencies.
+     */
     private function checkUserRoles()
     {
         $this->info('👥 User Roles & Permissions');
@@ -109,6 +132,9 @@ class SecurityAuditCommand extends Command
         $this->newLine();
     }
 
+    /**
+     * Provide an overview of rate-limiting safeguards.
+     */
     private function checkRateLimiting()
     {
         $this->info('🚦 Rate Limiting Status');
@@ -139,6 +165,9 @@ class SecurityAuditCommand extends Command
         $this->newLine();
     }
 
+    /**
+     * Confirm that required security middleware is present.
+     */
     private function checkMiddlewareConfiguration()
     {
         $this->info('🛡️  Middleware Configuration');
@@ -171,6 +200,9 @@ class SecurityAuditCommand extends Command
         $this->newLine();
     }
 
+    /**
+     * Run extended diagnostics when the --detailed flag is supplied.
+     */
     private function checkDetailedSecurity()
     {
         $this->info('🔍 Detailed Security Analysis');

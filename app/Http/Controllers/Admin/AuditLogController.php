@@ -14,7 +14,7 @@ use Carbon\Carbon;
 class AuditLogController extends Controller
 {
     /**
-     * Display audit logs page
+     * Display the audit logs index page for administrators.
      */
     public function index(Request $request): Response
     {
@@ -24,14 +24,14 @@ class AuditLogController extends Controller
     }
 
     /**
-     * Get audit logs data for API
+     * Provide paginated audit log data for the Inertia API consumer.
      */
     public function data(Request $request): JsonResponse
     {
         $query = AdminAuditLog::with('user:id,name')
             ->orderBy('created_at', 'desc');
 
-        // Search filter
+        // Apply keyword filtering across descriptions, actions, and related users.
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
@@ -44,22 +44,22 @@ class AuditLogController extends Controller
             });
         }
 
-        // Action filter
+        // Filter by action signature.
         if ($request->filled('action')) {
             $query->byAction($request->action);
         }
 
-        // User filter
+        // Filter by originating administrator.
         if ($request->filled('user_id')) {
             $query->byUser($request->user_id);
         }
 
-        // Severity filter
+        // Filter by severity ranking.
         if ($request->filled('severity')) {
             $query->bySeverity($request->severity);
         }
 
-        // Date range filter
+        // Restrict the result set to the desired date window.
         if ($request->filled('date_from')) {
             $query->where('created_at', '>=', Carbon::parse($request->date_from)->startOfDay());
         }
@@ -104,7 +104,7 @@ class AuditLogController extends Controller
     }
 
     /**
-     * Get audit log statistics
+     * Provide aggregate statistics for audit log dashboards.
      */
     public function stats(Request $request): JsonResponse
     {
@@ -151,7 +151,7 @@ class AuditLogController extends Controller
     }
 
     /**
-     * Get daily activity for chart
+     * Generate day-by-day activity counts for charting.
      */
     private function getDailyActivity(Carbon $dateFrom, Carbon $dateTo): array
     {
@@ -174,12 +174,12 @@ class AuditLogController extends Controller
     }
 
     /**
-     * Export audit logs
+     * Stub endpoint for exporting audit logs.
      */
     public function export(Request $request): JsonResponse
     {
-        // This would typically generate a CSV or Excel file
-        // For now, return a JSON response indicating the feature is available
+        // This would typically generate a CSV or Excel file.
+        // For now, return a JSON response indicating the feature is available.
         
         return response()->json([
             'message' => 'Función de exportación disponible',
@@ -188,7 +188,7 @@ class AuditLogController extends Controller
     }
 
     /**
-     * Get available filter options
+     * Retrieve the available filter options for audit-log searches.
      */
     public function filterOptions(): JsonResponse
     {
@@ -215,7 +215,7 @@ class AuditLogController extends Controller
     }
 
     /**
-     * Get audit log details
+     * Return a detailed representation of a single audit log entry.
      */
     public function show(AdminAuditLog $auditLog): JsonResponse
     {

@@ -34,7 +34,7 @@ class AdminAuthController extends Controller
      */
     public function store(LoginRequest $request): RedirectResponse
     {
-        // Enhanced rate limiting for admin login
+        // Enhanced rate limiting for admin login.
         $key = 'admin-login:' . $request->ip();
         
         if (RateLimiter::tooManyAttempts($key, 5)) {
@@ -55,7 +55,7 @@ class AdminAuthController extends Controller
             ]);
         }
 
-        // Validate credentials
+        // Validate credentials.
         $credentials = $request->only('email', 'password');
         
         if (!Auth::attempt($credentials, $request->boolean('remember'))) {
@@ -73,7 +73,7 @@ class AdminAuthController extends Controller
             ]);
         }
 
-        // Check if user has admin privileges
+        // Check if user has admin privileges.
         $user = Auth::user();
         
         if (!$user->hasRole(['admin', 'editor'])) {
@@ -91,7 +91,7 @@ class AdminAuthController extends Controller
             ]);
         }
 
-        // Check if user is banned
+        // Check if the user is banned from the platform.
         if ($user->is_banned) {
             Auth::logout();
             
@@ -107,19 +107,19 @@ class AdminAuthController extends Controller
             ]);
         }
 
-        // Clear rate limiting on successful login
+        // Clear rate limiting on successful login.
         RateLimiter::clear($key);
         
-        // Update last login timestamp
+        // Update last login timestamp.
         $user->update([
             'last_login_at' => Carbon::now(),
             'last_login_ip' => $request->ip()
         ]);
 
-        // Regenerate session for security
+        // Regenerate the session for security.
         $request->session()->regenerate();
 
-        // Log successful admin login
+        // Log the successful admin login.
         Log::info('Successful admin login', [
             'user_id' => $user->id,
             'email' => $user->email,
@@ -129,7 +129,7 @@ class AdminAuthController extends Controller
             'timestamp' => now()
         ]);
 
-        // Create audit log entry
+        // Create an audit log entry when the model exists.
         if (class_exists(\App\Models\AuditLog::class)) {
             \App\Models\AuditLog::create([
                 'user_id' => $user->id,
@@ -154,7 +154,7 @@ class AdminAuthController extends Controller
     {
         $user = Auth::user();
         
-        // Log admin logout
+        // Log the administrator's logout action.
         if ($user) {
             Log::info('Admin logout', [
                 'user_id' => $user->id,
@@ -163,7 +163,7 @@ class AdminAuthController extends Controller
                 'timestamp' => now()
             ]);
 
-            // Create audit log entry
+            // Create the matching audit log entry when the model exists.
             if (class_exists(\App\Models\AuditLog::class)) {
                 \App\Models\AuditLog::create([
                     'user_id' => $user->id,
@@ -184,7 +184,7 @@ class AdminAuthController extends Controller
     }
 
     /**
-     * Check admin session status
+     * Check the current admin session status.
      */
     public function status(Request $request)
     {
@@ -216,7 +216,7 @@ class AdminAuthController extends Controller
     }
 
     /**
-     * Extend admin session
+     * Extend the admin session lifetime by regenerating the session.
      */
     public function extendSession(Request $request)
     {
@@ -229,7 +229,7 @@ class AdminAuthController extends Controller
             ], 401);
         }
 
-        // Regenerate session to extend lifetime
+        // Regenerate the session to extend its lifetime.
         $request->session()->regenerate();
         
         Log::info('Admin session extended', [
@@ -245,7 +245,7 @@ class AdminAuthController extends Controller
     }
 
     /**
-     * Get admin login statistics
+     * Provide recent admin login statistics and security context.
      */
     public function loginStats(Request $request)
     {
@@ -255,7 +255,7 @@ class AdminAuthController extends Controller
             return response()->json(['error' => 'Unauthorized'], 401);
         }
 
-        // Get recent login attempts (last 24 hours)
+        // Gather recent login attempts within the last 24 hours.
         $recentAttempts = collect();
         
         if (class_exists(\App\Models\AuditLog::class)) {

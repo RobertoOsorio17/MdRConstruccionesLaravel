@@ -6,8 +6,16 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Carbon\Carbon;
 
+/**
+ * Represents an administrative audit log entry recording backend activity.
+ */
 class AdminAuditLog extends Model
 {
+    /**
+     * Mass-assignable attributes for audit log records.
+     *
+     * @var array<int, string>
+     */
     protected $fillable = [
         'user_id',
         'action',
@@ -25,6 +33,11 @@ class AdminAuditLog extends Model
         'description',
     ];
 
+    /**
+     * Attribute casting definitions for the model.
+     *
+     * @var array<string, string>
+     */
     protected $casts = [
         'old_values' => 'array',
         'new_values' => 'array',
@@ -34,7 +47,7 @@ class AdminAuditLog extends Model
     ];
 
     /**
-     * Get the user that performed the action
+     * Get the administrator who performed the action.
      */
     public function user(): BelongsTo
     {
@@ -42,7 +55,9 @@ class AdminAuditLog extends Model
     }
 
     /**
-     * Get the model that was affected
+     * Resolve the model instance that was affected by the action.
+     *
+     * @return Model|null
      */
     public function model()
     {
@@ -53,7 +68,7 @@ class AdminAuditLog extends Model
     }
 
     /**
-     * Scope for filtering by action
+     * Scope a query to only include logs for the given action name.
      */
     public function scopeByAction($query, string $action)
     {
@@ -61,7 +76,7 @@ class AdminAuditLog extends Model
     }
 
     /**
-     * Scope for filtering by user
+     * Scope a query to only include logs belonging to the given user.
      */
     public function scopeByUser($query, int $userId)
     {
@@ -69,7 +84,7 @@ class AdminAuditLog extends Model
     }
 
     /**
-     * Scope for filtering by model type
+     * Scope a query to only include logs generated for a model type.
      */
     public function scopeByModelType($query, string $modelType)
     {
@@ -77,7 +92,7 @@ class AdminAuditLog extends Model
     }
 
     /**
-     * Scope for filtering by severity
+     * Scope a query to only include logs with a given severity.
      */
     public function scopeBySeverity($query, string $severity)
     {
@@ -85,7 +100,7 @@ class AdminAuditLog extends Model
     }
 
     /**
-     * Scope for recent logs
+     * Scope a query to only include logs created within the supplied timeframe.
      */
     public function scopeRecent($query, int $days = 30)
     {
@@ -93,7 +108,7 @@ class AdminAuditLog extends Model
     }
 
     /**
-     * Scope for high priority logs
+     * Scope a query to only include logs marked as high priority.
      */
     public function scopeHighPriority($query)
     {
@@ -101,7 +116,7 @@ class AdminAuditLog extends Model
     }
 
     /**
-     * Get formatted description
+     * Accessor that produces a human-readable description for the log entry.
      */
     public function getFormattedDescriptionAttribute(): string
     {
@@ -124,7 +139,7 @@ class AdminAuditLog extends Model
     }
 
     /**
-     * Get severity color for UI
+     * Accessor that returns the severity color used by the admin UI.
      */
     public function getSeverityColorAttribute(): string
     {
@@ -138,7 +153,7 @@ class AdminAuditLog extends Model
     }
 
     /**
-     * Log an admin action
+     * Persist a new audit log entry based on the supplied context.
      */
     public static function logAction(array $data): self
     {

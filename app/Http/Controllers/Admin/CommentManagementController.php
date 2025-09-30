@@ -19,17 +19,17 @@ class CommentManagementController extends Controller
         $query = Comment::with(['user', 'post:id,title,slug', 'parent:id,body,author_name', 'replies'])
                         ->withCount(['reports', 'interactions']);
         
-        // Filtros
+        // Apply status-based filtering.
         if ($request->has('status')) {
             $query->where('status', $request->status);
         }
-        
-        // Nuevo filtro por post
+
+        // Restrict results to a specific post when requested.
         if ($request->has('post_id') && $request->post_id !== '') {
             $query->where('post_id', $request->post_id);
         }
-        
-        // Filtro por tipo de usuario (registrado vs invitado)
+
+        // Filter by reporter type (registered user vs. guest).
         if ($request->has('user_type')) {
             if ($request->user_type === 'registered') {
                 $query->whereNotNull('user_id');
@@ -37,8 +37,8 @@ class CommentManagementController extends Controller
                 $query->whereNull('user_id');
             }
         }
-        
-        // Filtro por fecha
+
+        // Filter by creation date range.
         if ($request->has('date_from')) {
             $query->whereDate('created_at', '>=', $request->date_from);
         }
@@ -62,11 +62,11 @@ class CommentManagementController extends Controller
             });
         }
         
-        // Ordenamiento
+        // Sorting configuration.
         $sortBy = $request->get('sort_by', 'created_at');
         $sortDirection = $request->get('sort_direction', 'desc');
-        
-        // Validar campos de ordenamiento
+
+        // Validate the requested sort field.
         $allowedSortFields = ['created_at', 'status', 'reports_count', 'interactions_count'];
         if (!in_array($sortBy, $allowedSortFields)) {
             $sortBy = 'created_at';
@@ -80,14 +80,14 @@ class CommentManagementController extends Controller
         
         $comments = $query->paginate(20);
         
-        // Obtener lista de posts para el filtro
+        // Retrieve posts with comments for the filter dropdown.
         $posts = \App\Models\Post::select('id', 'title', 'slug')
                                   ->withCount('comments')
                                   ->having('comments_count', '>', 0)
                                   ->orderBy('title')
                                   ->get();
-        
-        // Estadísticas de comentarios
+
+        // Compile high-level comment statistics.
         $stats = [
             'total' => Comment::count(),
             'pending' => Comment::where('status', 'pending')->count(),
@@ -113,7 +113,7 @@ class CommentManagementController extends Controller
     {
         $query = CommentReport::with(['user', 'comment.user', 'comment.post']);
         
-        // Filtros
+        // Apply report-specific filters.
         if ($request->has('status')) {
             $query->where('status', $request->status);
         }
@@ -131,7 +131,7 @@ class CommentManagementController extends Controller
             });
         }
         
-        // Ordenamiento
+        // Sorting configuration for reports.
         $sortBy = $request->get('sort_by', 'created_at');
         $sortDirection = $request->get('sort_direction', 'desc');
         $query->orderBy($sortBy, $sortDirection);
@@ -157,7 +157,7 @@ class CommentManagementController extends Controller
         
         return response()->json([
             'success' => true,
-            'message' => 'Estado del comentario actualizado exitosamente'
+            'message' => 'Comment status updated successfully.'
         ]);
     }
     
@@ -178,7 +178,7 @@ class CommentManagementController extends Controller
         
         return response()->json([
             'success' => true,
-            'message' => 'Reporte actualizado exitosamente'
+            'message' => 'Report updated successfully.'
         ]);
     }
     
@@ -191,7 +191,7 @@ class CommentManagementController extends Controller
         
         return response()->json([
             'success' => true,
-            'message' => 'Comentario eliminado exitosamente'
+            'message' => 'Comment deleted successfully.'
         ]);
     }
     
@@ -249,7 +249,7 @@ class CommentManagementController extends Controller
         return response()->json([
             'success' => true,
             'approved_count' => $count,
-            'message' => "Se aprobaron {$count} comentarios exitosamente"
+            'message' => "{$count} comment(s) approved successfully."
         ]);
     }
     
@@ -269,7 +269,7 @@ class CommentManagementController extends Controller
         return response()->json([
             'success' => true,
             'rejected_count' => $count,
-            'message' => "Se rechazaron {$count} comentarios exitosamente"
+            'message' => "{$count} comment(s) rejected successfully."
         ]);
     }
     
@@ -294,7 +294,7 @@ class CommentManagementController extends Controller
         return response()->json([
             'success' => true,
             'deleted_count' => $count,
-            'message' => "Se eliminaron {$count} comentarios exitosamente"
+            'message' => "{$count} comment(s) deleted successfully."
         ]);
     }
     
@@ -307,7 +307,7 @@ class CommentManagementController extends Controller
         
         return response()->json([
             'success' => true,
-            'message' => 'Comentario marcado como spam exitosamente'
+            'message' => 'Comment flagged as spam successfully.'
         ]);
     }
     

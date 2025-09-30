@@ -6,8 +6,16 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Carbon\Carbon;
 
+/**
+ * Records administrative IP bans applied to guest interactions.
+ */
 class IpBan extends Model
 {
+    /**
+     * The attributes that are mass assignable.
+     *
+     * @var array<int, string>
+     */
     protected $fillable = [
         'ip_address',
         'ban_type', 
@@ -18,19 +26,28 @@ class IpBan extends Model
         'is_active'
     ];
 
+    /**
+     * Attribute casting definitions.
+     *
+     * @var array<string, string>
+     */
     protected $casts = [
         'banned_at' => 'datetime',
         'expires_at' => 'datetime',
         'is_active' => 'boolean'
     ];
 
-    // Relationships
+    /**
+     * Administrator who applied the ban.
+     */
     public function bannedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'banned_by');
     }
 
-    // Scopes
+    /**
+     * Scope active bans, respecting expiration dates.
+     */
     public function scopeActive($query)
     {
         return $query->where('is_active', true)
@@ -40,27 +57,41 @@ class IpBan extends Model
                     });
     }
 
+    /**
+     * Scope bans targeting a particular IP address.
+     */
     public function scopeForIp($query, $ip)
     {
         return $query->where('ip_address', $ip);
     }
 
-    // Methods
+    /**
+     * Determine whether the ban has expired.
+     */
     public function isExpired()
     {
         return $this->expires_at && $this->expires_at->isPast();
     }
 
+    /**
+     * Determine whether the ban is currently active.
+     */
     public function isActive()
     {
         return $this->is_active && !$this->isExpired();
     }
 
+    /**
+     * Determine if the given IP is actively banned.
+     */
     public static function isIpBanned($ip)
     {
         return self::forIp($ip)->active()->exists();
     }
 
+    /**
+     * Create a new IP ban entry.
+     */
     public static function banIp($ip, $reason = null, $banType = 'report_abuse', $duration = null, $bannedBy = null)
     {
         $expiresAt = $duration ? now()->addDays($duration) : null;

@@ -23,7 +23,7 @@ use Inertia\Inertia;
 class AdminController extends Controller
 {
     /**
-     * Get system overview statistics
+     * Retrieve high-level system statistics for administrator dashboards.
      */
     public function getSystemStats()
     {
@@ -71,15 +71,15 @@ class AdminController extends Controller
     }
 
     /**
-     * Get recent activity across the system
+     * Retrieve recent content activity across the application.
      */
     public function getRecentActivity(Request $request)
     {
         $limit = $request->get('limit', 20);
-        
+
         $activities = collect();
 
-        // Recent posts
+        // Append recently created posts.
         Post::with('author:id,name')
             ->orderBy('created_at', 'desc')
             ->limit($limit / 2)
@@ -89,7 +89,7 @@ class AdminController extends Controller
                     'type' => 'post',
                     'action' => 'created',
                     'title' => $post->title,
-                    'user' => $post->author->name ?? 'Sistema',
+                    'user' => $post->author->name ?? 'System',
                     'created_at' => $post->created_at,
                     'url' => route('admin.posts.edit', $post->id),
                     'icon' => 'article',
@@ -97,7 +97,7 @@ class AdminController extends Controller
                 ]);
             });
 
-        // Recent comments
+        // Append recently submitted comments.
         Comment::with(['post:id,title', 'user:id,name'])
             ->orderBy('created_at', 'desc')
             ->limit($limit / 2)
@@ -106,7 +106,7 @@ class AdminController extends Controller
                 $activities->push([
                     'type' => 'comment',
                     'action' => 'posted',
-                    'title' => 'Comentario en: ' . ($comment->post->title ?? 'Post eliminado'),
+                    'title' => 'Comment on: ' . ($comment->post->title ?? 'Deleted post'),
                     'user' => $comment->user->name ?? $comment->author_name,
                     'created_at' => $comment->created_at,
                     'url' => route('admin.comment-management.index'),
@@ -125,7 +125,7 @@ class AdminController extends Controller
     }
 
     /**
-     * Get system health status
+     * Report current system health checks for core services.
      */
     public function getSystemHealth()
     {
@@ -134,7 +134,7 @@ class AdminController extends Controller
             'checks' => [],
         ];
 
-        // Database connection check
+        // Verify database connectivity.
         try {
             DB::connection()->getPdo();
             $health['checks']['database'] = [
@@ -149,18 +149,18 @@ class AdminController extends Controller
             ];
         }
 
-        // Storage check
+        // Evaluate application storage usage.
         try {
             $diskFree = disk_free_space(storage_path());
             $diskTotal = disk_total_space(storage_path());
             $diskUsage = (($diskTotal - $diskFree) / $diskTotal) * 100;
-            
+
             $health['checks']['storage'] = [
                 'status' => $diskUsage < 90 ? 'healthy' : 'warning',
                 'message' => sprintf('Disk usage: %.1f%%', $diskUsage),
                 'usage' => $diskUsage,
             ];
-            
+
             if ($diskUsage >= 90) {
                 $health['status'] = 'warning';
             }
@@ -171,11 +171,11 @@ class AdminController extends Controller
             ];
         }
 
-        // Cache check
+        // Confirm cache store availability.
         try {
             Cache::put('health_check', 'test', 60);
             $cached = Cache::get('health_check');
-            
+
             $health['checks']['cache'] = [
                 'status' => $cached === 'test' ? 'healthy' : 'unhealthy',
                 'message' => $cached === 'test' ? 'Cache working properly' : 'Cache not working',
@@ -191,24 +191,24 @@ class AdminController extends Controller
     }
 
     /**
-     * Clear system caches
+     * Clear core application caches and record the audit trail.
      */
     public function clearCaches(Request $request)
     {
         try {
-            // Clear application cache
+            // Clear the application cache store.
             \Artisan::call('cache:clear');
-            
-            // Clear config cache
+
+            // Clear the configuration cache.
             \Artisan::call('config:clear');
-            
-            // Clear route cache
+
+            // Clear the cached route definitions.
             \Artisan::call('route:clear');
-            
-            // Clear view cache
+
+            // Clear compiled Blade views.
             \Artisan::call('view:clear');
 
-            // Log the action
+            // Log the cache clearing for audit purposes.
             AdminAuditLog::create([
                 'user_id' => Auth::id(),
                 'action' => 'system.cache.clear',
@@ -236,7 +236,7 @@ class AdminController extends Controller
     }
 
     /**
-     * Get disk usage information
+     * Calculate the current disk usage for the storage path.
      */
     private function getDiskUsage()
     {
@@ -249,7 +249,7 @@ class AdminController extends Controller
     }
 
     /**
-     * Get cache size (approximate)
+     * Estimate the cache directory size in human-readable format.
      */
     private function getCacheSize()
     {
@@ -277,12 +277,12 @@ class AdminController extends Controller
     }
 
     /**
-     * Format bytes to human readable format
+     * Convert a byte count into a human-readable unit value.
      */
     private function formatBytes($bytes, $precision = 2)
     {
         $units = ['B', 'KB', 'MB', 'GB', 'TB'];
-        
+
         for ($i = 0; $bytes > 1024 && $i < count($units) - 1; $i++) {
             $bytes /= 1024;
         }

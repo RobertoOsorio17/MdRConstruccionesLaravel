@@ -27,7 +27,7 @@ class DashboardController extends Controller
      */
     public function index(Request $request)
     {
-        // Basic stats
+        // Basic dashboard statistics.
         $stats = [
             'posts' => [
                 'total' => Post::count(),
@@ -72,7 +72,7 @@ class DashboardController extends Controller
             ],
         ];
 
-        // Recent posts
+        // Recent posts displayed in activity cards.
         $recentPosts = Post::with(['author:id,name', 'categories:id,name,color'])
             ->orderBy('created_at', 'desc')
             ->limit(5)
@@ -91,7 +91,7 @@ class DashboardController extends Controller
                 ];
             });
 
-        // Recent comments
+        // Most recent comments requiring attention.
         $recentComments = Comment::with(['post:id,title,slug', 'user:id,name'])
             ->orderBy('created_at', 'desc')
             ->limit(5)
@@ -108,7 +108,7 @@ class DashboardController extends Controller
                 ];
             });
 
-        // Popular posts (most viewed in last 30 days)
+        // Popular posts (most viewed within the last 30 days).
         $popularPosts = Post::published()
             ->where('created_at', '>=', Carbon::now()->subDays(30))
             ->orderBy('views_count', 'desc')
@@ -124,7 +124,7 @@ class DashboardController extends Controller
                 ];
             });
 
-        // Enhanced monthly stats (last 6 months)
+        // Enhanced monthly statistics (covering the last six months).
         $monthlyStats = [];
         for ($i = 5; $i >= 0; $i--) {
             $date = Carbon::now()->subMonths($i);
@@ -152,7 +152,7 @@ class DashboardController extends Controller
             ];
         }
 
-        // User growth trends
+        // User growth trends.
         $userGrowthStats = [];
         for ($i = 29; $i >= 0; $i--) {
             $date = Carbon::now()->subDays($i);
@@ -163,7 +163,7 @@ class DashboardController extends Controller
             ];
         }
 
-        // Service performance metrics
+        // Service performance metrics.
         $serviceStats = Service::select('id', 'title', 'views_count', 'featured', 'created_at')
             ->withCount('favorites')
             ->orderBy('views_count', 'desc')
@@ -180,7 +180,7 @@ class DashboardController extends Controller
                 ];
             });
 
-        // Project completion rates
+        // Project completion rates.
         $projectStats = [
             'completion_rate' => Project::where('status', 'completed')->count() / max(Project::count(), 1) * 100,
             'by_status' => Project::select('status', DB::raw('count(*) as count'))
@@ -204,7 +204,7 @@ class DashboardController extends Controller
                 }),
         ];
 
-        // Enhanced category distribution with engagement metrics
+        // Enhanced category distribution with engagement metrics.
         $categoryStats = Category::withCount(['posts', 'posts as published_posts_count' => function ($query) {
                 $query->where('status', 'published');
             }])
@@ -227,7 +227,7 @@ class DashboardController extends Controller
                 ];
             });
 
-        // Content engagement metrics
+        // Content engagement metrics.
         $engagementStats = [
             'top_posts_by_views' => Post::published()
                 ->orderBy('views_count', 'desc')
@@ -261,7 +261,7 @@ class DashboardController extends Controller
                 : 0,
         ];
 
-        // System performance metrics
+        // System performance statistics.
         $performanceStats = [
             'avg_page_load_time' => $this->getAveragePageLoadTime(),
             'database_queries_per_request' => $this->getAverageQueriesPerRequest(),
@@ -270,10 +270,10 @@ class DashboardController extends Controller
             'memory_usage' => $this->getMemoryUsage(),
         ];
 
-        // Recent activity (posts, comments, etc.)
+        // Recent activity (posts, comments, etc.).
         $recentActivity = collect();
 
-        // Temporarily disabled recent activity section until routes are properly configured
+        // Temporarily disabled recent activity section until routes are properly configured.
         /*
         // Add recent posts to activity
         Post::orderBy('created_at', 'desc')
@@ -284,7 +284,7 @@ class DashboardController extends Controller
                     'type' => 'post',
                     'action' => 'created',
                     'title' => $post->title,
-                    'user' => $post->author->name ?? 'Sistema',
+                    'user' => $post->author->name ?? 'System',
                     'created_at' => $post->created_at,
                     'url' => route('admin.posts.edit', $post),
                 ]);
@@ -299,7 +299,7 @@ class DashboardController extends Controller
                 $recentActivity->push([
                     'type' => 'comment',
                     'action' => 'posted',
-                    'title' => 'Comentario en: ' . ($comment->post->title ?? 'Post eliminado'),
+                    'title' => 'Comment on: ' . ($comment->post->title ?? 'Deleted post'),
                     'user' => $comment->user->name ?? $comment->author_name,
                     'created_at' => $comment->created_at,
                     'url' => route('admin.comment-management.index'),
@@ -316,15 +316,15 @@ class DashboardController extends Controller
             })
             ->values();
 
-        // Quick actions based on user role
+        // Quick actions tailored to the administrator role.
         $quickActions = [];
         /** @var \App\Models\User $user */
         $user = \Illuminate\Support\Facades\Auth::user();
 
         if ($user->canDo('posts.create')) {
             $quickActions[] = [
-                'title' => 'Nuevo Post',
-                'description' => 'Crear un nuevo artículo',
+                'title' => 'New Post',
+                'description' => 'Create a new article.',
                 'icon' => 'article',
                 'url' => route('admin.posts.create'),
                 'color' => 'primary',
@@ -333,8 +333,8 @@ class DashboardController extends Controller
 
         if ($user->canDo('categories.create')) {
             $quickActions[] = [
-                'title' => 'Nueva Categoría',
-                'description' => 'Agregar categoría',
+                'title' => 'New Category',
+                'description' => 'Add a new category.',
                 'icon' => 'category',
                 'url' => route('admin.categories.create'),
                 'color' => 'secondary',
@@ -343,8 +343,8 @@ class DashboardController extends Controller
 
         if ($user->canDo('comments.moderate')) {
             $quickActions[] = [
-                'title' => 'Moderar Comentarios',
-                'description' => 'Revisar comentarios pendientes',
+                'title' => 'Moderate Comments',
+                'description' => 'Review pending comments.',
                 'icon' => 'comment',
                 'url' => route('admin.comment-management.index') . '?status=pending',
                 'color' => 'warning',
@@ -356,8 +356,8 @@ class DashboardController extends Controller
         /*
         if ($user->canDo('projects.create')) {
             $quickActions[] = [
-                'title' => 'Nuevo Proyecto',
-                'description' => 'Agregar proyecto',
+                'title' => 'New Project',
+                'description' => 'Add a new project.',
                 'icon' => 'construction',
                 'url' => route('admin.projects.create'),
                 'color' => 'info',
@@ -395,7 +395,7 @@ class DashboardController extends Controller
             ->map(function ($log) {
                 return [
                     'id' => $log->id,
-                    'user' => $log->user?->name ?? 'Sistema',
+                    'user' => $log->user?->name ?? 'System',
                     'action' => $log->action,
                     'description' => $log->formatted_description,
                     'severity' => $log->severity,

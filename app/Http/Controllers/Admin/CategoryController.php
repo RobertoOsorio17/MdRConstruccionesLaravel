@@ -18,7 +18,7 @@ class CategoryController extends Controller
     {
         $query = Category::withCount('posts');
 
-        // Search functionality
+        // Apply keyword search across name and description.
         if ($request->has('search') && !empty($request->search)) {
             $query->where(function ($q) use ($request) {
                 $q->where('name', 'like', '%' . $request->search . '%')
@@ -26,7 +26,7 @@ class CategoryController extends Controller
             });
         }
 
-        // Filter by status
+        // Filter by active state when requested.
         if ($request->has('status')) {
             if ($request->status === 'active') {
                 $query->where('is_active', true);
@@ -89,11 +89,11 @@ class CategoryController extends Controller
             'is_active' => 'boolean',
         ]);
 
-        // Generate slug if not provided
+        // Generate a slug when none is provided by the request.
         if (empty($validated['slug'])) {
             $validated['slug'] = Str::slug($validated['name']);
             
-            // Ensure uniqueness
+            // Ensure the slug remains unique within the categories table.
             $originalSlug = $validated['slug'];
             $counter = 1;
             while (Category::where('slug', $validated['slug'])->exists()) {
@@ -102,7 +102,7 @@ class CategoryController extends Controller
             }
         }
 
-        // Set sort_order if not provided
+        // Default the sort order to the next available slot when omitted.
         if (!isset($validated['sort_order'])) {
             $validated['sort_order'] = Category::max('sort_order') + 1;
         }
@@ -110,7 +110,7 @@ class CategoryController extends Controller
         Category::create($validated);
 
         return redirect()->route('admin.categories.index')
-            ->with('success', 'Categoría creada exitosamente.');
+            ->with('success', 'Category created successfully.');
     }
 
     /**
@@ -168,11 +168,11 @@ class CategoryController extends Controller
             'is_active' => 'boolean',
         ]);
 
-        // Generate slug if not provided
+        // Generate a slug when none is provided by the request.
         if (empty($validated['slug'])) {
             $validated['slug'] = Str::slug($validated['name']);
             
-            // Ensure uniqueness
+            // Ensure the slug remains unique, excluding the current category.
             $originalSlug = $validated['slug'];
             $counter = 1;
             while (Category::where('slug', $validated['slug'])->where('id', '!=', $category->id)->exists()) {
@@ -184,7 +184,7 @@ class CategoryController extends Controller
         $category->update($validated);
 
         return redirect()->route('admin.categories.index')
-            ->with('success', 'Categoría actualizada exitosamente.');
+            ->with('success', 'Category updated successfully.');
     }
 
     /**
@@ -192,20 +192,20 @@ class CategoryController extends Controller
      */
     public function destroy(Category $category)
     {
-        // Check if category has posts
+        // Prevent deletion when the category still has related posts.
         if ($category->posts()->count() > 0) {
             return redirect()->route('admin.categories.index')
-                ->with('error', 'No se puede eliminar una categoría que tiene posts asociados.');
+                ->with('error', 'This category cannot be deleted because posts are still assigned to it.');
         }
 
         $category->delete();
 
         return redirect()->route('admin.categories.index')
-            ->with('success', 'Categoría eliminada exitosamente.');
+            ->with('success', 'Category deleted successfully.');
     }
 
     /**
-     * Toggle active status
+     * Toggle the active status for the specified category.
      */
     public function toggleStatus(Category $category)
     {
@@ -214,12 +214,12 @@ class CategoryController extends Controller
         return response()->json([
             'success' => true,
             'is_active' => $category->is_active,
-            'message' => $category->is_active ? 'Categoría activada' : 'Categoría desactivada'
+            'message' => $category->is_active ? 'Category activated.' : 'Category deactivated.'
         ]);
     }
 
     /**
-     * Update sort order
+     * Persist the manual sort order supplied by the admin UI.
      */
     public function updateOrder(Request $request)
     {
@@ -236,7 +236,7 @@ class CategoryController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Orden actualizado exitosamente'
+            'message' => 'Sort order updated successfully.'
         ]);
     }
 }

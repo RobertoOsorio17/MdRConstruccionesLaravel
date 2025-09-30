@@ -8,26 +8,32 @@ use App\Models\Post;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
+/**
+ * Handle rendering of the marketing home page with featured content.
+ */
 class HomeController extends Controller
 {
+    /**
+     * Display the home page with featured services, projects, and statistics.
+     */
     public function index()
     {
-        // Obtener servicios destacados para mostrar en home
+        // Retrieve featured services to highlight on the landing page.
         $services = Service::active()
             ->featured()
             ->ordered()
             ->get();
 
-        // Obtener proyectos destacados para el carrusel
+        // Retrieve featured projects for the hero carousel.
         $featuredProjects = Project::where('featured', true)
             ->orderBy('created_at', 'desc')
             ->limit(6)
             ->get(['id', 'title', 'slug', 'summary', 'gallery', 'location']);
 
-        // Obtener últimos posts del blog (cuando esté implementado)
-        $latestPosts = collect(); // Placeholder hasta implementar blog
+        // Pull latest blog posts once the blog module is enabled.
+        $latestPosts = collect(); // Placeholder until the blog is implemented.
 
-        // Estadísticas de la empresa
+        // Company statistics displayed on the home page.
         $stats = [
             'completed_projects' => Project::where('status', 'completed')->count() ?: 150,
             'years_experience' => now()->year - 2015,
@@ -41,8 +47,8 @@ class HomeController extends Controller
             'latestPosts' => $latestPosts,
             'stats' => $stats,
             'seo' => [
-                'title' => 'MDR Construcciones - Reformas Integrales en Madrid',
-                'description' => 'Empresa líder en reformas integrales, baños, cocinas y rehabilitaciones en Madrid. Presupuesto gratuito, garantía 2 años y entrega en plazo garantizada.',
+                'title' => 'MDR Construcciones - Complete Renovations in Madrid',
+                'description' => 'Leading company in full renovations, bathrooms, kitchens, and refurbishments in Madrid. Free estimates, two-year warranty, and guaranteed on-time delivery.',
             ],
         ]);
     }

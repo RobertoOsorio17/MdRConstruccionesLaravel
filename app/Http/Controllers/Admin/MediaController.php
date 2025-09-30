@@ -96,7 +96,7 @@ class MediaController extends Controller
         if ($validator->fails()) {
             return response()->json([
                 'success' => false,
-                'message' => 'Error de validación',
+                'message' => 'Validation error.',
                 'errors' => $validator->errors()
             ], 422);
         }
@@ -110,7 +110,7 @@ class MediaController extends Controller
             if (!in_array($file->getMimeType(), $allowedTypes)) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Tipo de archivo no permitido'
+                    'message' => 'File type is not allowed.'
                 ], 422);
             }
 
@@ -123,7 +123,7 @@ class MediaController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Archivo subido exitosamente',
+                'message' => 'File uploaded successfully.',
                 'file' => [
                     'name' => $filename,
                     'original_name' => $file->getClientOriginalName(),
@@ -141,7 +141,7 @@ class MediaController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Error al subir el archivo: ' . $e->getMessage()
+                'message' => 'Failed to upload file: ' . $e->getMessage()
             ], 500);
         }
     }
@@ -189,7 +189,7 @@ class MediaController extends Controller
         if ($validator->fails()) {
             return response()->json([
                 'success' => false,
-                'message' => 'Ruta del archivo requerida'
+                'message' => 'File path is required.'
             ], 422);
         }
 
@@ -199,7 +199,7 @@ class MediaController extends Controller
             if (!Storage::disk('public')->exists($path)) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'El archivo no existe'
+                    'message' => 'The file does not exist.'
                 ], 404);
             }
 
@@ -207,12 +207,12 @@ class MediaController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Archivo eliminado exitosamente'
+                'message' => 'File deleted successfully.'
             ]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Error al eliminar el archivo: ' . $e->getMessage()
+                'message' => 'Failed to delete file: ' . $e->getMessage()
             ], 500);
         }
     }
@@ -230,7 +230,7 @@ class MediaController extends Controller
         if ($validator->fails()) {
             return response()->json([
                 'success' => false,
-                'message' => 'Lista de archivos requerida'
+                'message' => 'A list of files is required.'
             ], 422);
         }
 
@@ -247,12 +247,12 @@ class MediaController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => "{$deletedCount} archivos eliminados exitosamente"
+                'message' => "{$deletedCount} file(s) deleted successfully."
             ]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Error al eliminar archivos: ' . $e->getMessage()
+                'message' => 'Failed to delete files: ' . $e->getMessage()
             ], 500);
         }
     }

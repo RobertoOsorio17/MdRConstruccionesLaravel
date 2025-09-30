@@ -16,7 +16,7 @@ class SearchController extends Controller
     ) {}
 
     /**
-     * Perform search with pagination and filters
+     * Perform a full search request with pagination and optional filters.
      */
     public function search(SearchRequest $request): JsonResponse
     {
@@ -39,7 +39,7 @@ class SearchController extends Controller
                 'filters' => $filters,
                 'meta' => [
                     'search_time' => round(microtime(true) - LARAVEL_START, 3),
-                    'cached' => false, // Can be enhanced with cache detection
+                    'cached' => false, // Can be enhanced with cache detection in a future iteration.
                 ],
             ]);
 
@@ -65,7 +65,7 @@ class SearchController extends Controller
     }
 
     /**
-     * Get search suggestions for autocomplete
+     * Provide search suggestions suitable for autocomplete inputs.
      */
     public function suggestions(Request $request): JsonResponse
     {
@@ -108,7 +108,7 @@ class SearchController extends Controller
     }
 
     /**
-     * Get popular search terms
+     * Return the most popular search terms within a recent window.
      */
     public function popular(Request $request): JsonResponse
     {
@@ -139,11 +139,11 @@ class SearchController extends Controller
     }
 
     /**
-     * Get search analytics (admin only)
+     * Return aggregate search analytics data for administrators.
      */
     public function analytics(Request $request): JsonResponse
     {
-        // Add authorization check here if needed
+        // Add authorization check here if needed.
         // $this->authorize('viewSearchAnalytics');
 
         try {
@@ -173,7 +173,7 @@ class SearchController extends Controller
     }
 
     /**
-     * Quick search for instant results (lighter version)
+     * Run a lightweight search for instant-results contexts.
      */
     public function quick(Request $request): JsonResponse
     {
@@ -186,10 +186,10 @@ class SearchController extends Controller
             $query = $validated['q'];
             $limit = $validated['limit'] ?? 5;
 
-            // Use search service but with smaller limit and no pagination
+            // Use the search service with a compressed pagination strategy.
             $results = $this->searchService->search($query, [], $limit, 1);
 
-            // Return simplified results for quick search
+            // Return simplified results tailored for quick search UIs.
             $quickResults = collect($results['data'])->map(function ($post) {
                 return [
                     'id' => $post['id'],

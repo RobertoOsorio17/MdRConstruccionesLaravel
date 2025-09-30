@@ -17,17 +17,17 @@ class CommentController extends Controller
     {
         $query = Comment::with(['post:id,title,slug', 'user:id,name', 'parent:id']);
 
-        // Filter by status
+        // Filter by moderation status when provided.
         if ($request->has('status') && !empty($request->status)) {
             $query->where('status', $request->status);
         }
 
-        // Filter by post
+        // Filter comments by the related post identifier.
         if ($request->has('post') && !empty($request->post)) {
             $query->where('post_id', $request->post);
         }
 
-        // Search functionality
+        // Apply keyword search across body and author information.
         if ($request->has('search') && !empty($request->search)) {
             $query->where(function ($q) use ($request) {
                 $q->where('body', 'like', '%' . $request->search . '%')
@@ -55,7 +55,7 @@ class CommentController extends Controller
                 ];
             });
 
-        // Get posts for filter
+        // Retrieve posts to populate the filter dropdown.
         $posts = Post::select('id', 'title')->orderBy('title')->get();
 
         return Inertia::render('Admin/Comments/Index', [
@@ -116,7 +116,7 @@ class CommentController extends Controller
         return response()->json([
             'success' => true,
             'status' => $comment->status,
-            'message' => 'Comentario actualizado exitosamente'
+            'message' => 'Comment updated successfully.'
         ]);
     }
 
@@ -125,19 +125,19 @@ class CommentController extends Controller
      */
     public function destroy(Comment $comment)
     {
-        // Delete all replies first
+        // Delete all replies first to avoid orphaned records.
         $comment->replies()->delete();
         
         $comment->delete();
 
         return response()->json([
             'success' => true,
-            'message' => 'Comentario eliminado exitosamente'
+            'message' => 'Comment deleted successfully.'
         ]);
     }
 
     /**
-     * Approve comment
+     * Approve a comment through the moderation endpoint.
      */
     public function approve(Comment $comment)
     {
@@ -146,12 +146,12 @@ class CommentController extends Controller
         return response()->json([
             'success' => true,
             'status' => 'approved',
-            'message' => 'Comentario aprobado'
+            'message' => 'Comment approved.'
         ]);
     }
 
     /**
-     * Mark comment as spam
+     * Mark a comment as spam for moderation purposes.
      */
     public function markAsSpam(Comment $comment)
     {
@@ -160,12 +160,12 @@ class CommentController extends Controller
         return response()->json([
             'success' => true,
             'status' => 'spam',
-            'message' => 'Comentario marcado como spam'
+            'message' => 'Comment marked as spam.'
         ]);
     }
 
     /**
-     * Bulk approve comments
+     * Approve multiple comments in a single request.
      */
     public function bulkApprove(Request $request)
     {
@@ -180,12 +180,12 @@ class CommentController extends Controller
         return response()->json([
             'success' => true,
             'approved_count' => $count,
-            'message' => "Se aprobaron {$count} comentarios"
+            'message' => "{$count} comment(s) approved successfully."
         ]);
     }
 
     /**
-     * Bulk delete comments
+     * Delete multiple comments and their replies in bulk.
      */
     public function bulkDelete(Request $request)
     {
@@ -200,12 +200,12 @@ class CommentController extends Controller
         return response()->json([
             'success' => true,
             'deleted_count' => $count,
-            'message' => "Se eliminaron {$count} comentarios"
+            'message' => "{$count} comment(s) deleted successfully."
         ]);
     }
 
     /**
-     * Bulk mark as spam
+     * Flag multiple comments as spam in one operation.
      */
     public function bulkMarkAsSpam(Request $request)
     {
@@ -220,7 +220,7 @@ class CommentController extends Controller
         return response()->json([
             'success' => true,
             'spam_count' => $count,
-            'message' => "Se marcaron {$count} comentarios como spam"
+            'message' => "{$count} comment(s) flagged as spam."
         ]);
     }
 }

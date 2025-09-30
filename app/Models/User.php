@@ -360,8 +360,12 @@ class User extends Authenticatable
      * Verificar si el usuario tiene un rol específico
      * Verifica tanto el campo 'role' como las relaciones en la tabla 'roles'
      */
-    public function hasRole(string $roleName): bool
+    public function hasRole(string|array $roleName): bool
     {
+        if (is_array($roleName)) {
+            return $this->hasAnyRole($roleName);
+        }
+
         // Verificar el campo 'role' directo en la tabla users
         if ($this->role === $roleName) {
             return true;
@@ -376,6 +380,10 @@ class User extends Authenticatable
      */
     public function hasAnyRole(array $roles): bool
     {
+        if ($this->role && in_array($this->role, $roles, true)) {
+            return true;
+        }
+
         return $this->roles()->whereIn('name', $roles)->exists();
     }
 
@@ -728,3 +736,4 @@ class User extends Authenticatable
         return $this->update(['last_login_at' => now()]);
     }
 }
+

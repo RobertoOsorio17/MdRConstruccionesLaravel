@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 namespace App\Http\Controllers\Admin;
 
@@ -170,7 +170,7 @@ class UserManagementController extends Controller
         }
 
         $validator = Validator::make($request->all(), [
-            'name' => 'required|string|max:255|regex:/^[a-zA-ZÀ-ÿ\s]+$/',
+            'name' => 'required|string|max:255|regex:/^[a-zA-ZÃ€-Ã¿\s]+$/',
             'email' => 'required|string|email|max:255|unique:users|regex:/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/',
             'password' => 'required|string|min:8|confirmed|regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/',
             'role' => 'nullable|string|in:admin,editor,user',
@@ -182,14 +182,16 @@ class UserManagementController extends Controller
             'send_welcome_email' => 'boolean',
         ], [
             'name.regex' => 'El nombre solo puede contener letras y espacios.',
-            'email.regex' => 'El formato del email no es válido.',
-            'password.regex' => 'La contraseña debe contener al menos: 1 mayúscula, 1 minúscula, 1 número y 1 carácter especial.',
-            'roles.max' => 'Un usuario no puede tener más de 3 roles.',
+            'email.regex' => 'El formato del email no es vÃ¡lido.',
+            'password.regex' => 'La contraseÃ±a debe contener al menos: 1 mayÃºscula, 1 minÃºscula, 1 nÃºmero y 1 carÃ¡cter especial.',
+            'roles.max' => 'Un usuario no puede tener mÃ¡s de 3 roles.',
         ]);
 
         if ($validator->fails()) {
             return back()->withErrors($validator)->withInput();
         }
+
+        $this->guardAdminRoleAssignment($request->input('roles', []));
 
         $user = User::create([
             'name' => $request->name,
@@ -308,7 +310,7 @@ class UserManagementController extends Controller
     {
         // Security: Prevent editing own account through admin panel
         if ($user->id === auth()->id()) {
-            return back()->withErrors(['error' => 'No puedes editar tu propia cuenta desde el panel de administración.']);
+            return back()->withErrors(['error' => 'No puedes editar tu propia cuenta desde el panel de administraciÃ³n.']);
         }
 
         // Security: Only admin can modify admin users or assign admin role
@@ -317,7 +319,7 @@ class UserManagementController extends Controller
         }
 
         $validator = Validator::make($request->all(), [
-            'name' => 'required|string|max:255|regex:/^[a-zA-ZÀ-ÿ\s]+$/',
+            'name' => 'required|string|max:255|regex:/^[a-zA-ZÃ€-Ã¿\s]+$/',
             'email' => ['required', 'string', 'email', 'max:255', 'regex:/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/', Rule::unique('users')->ignore($user->id)],
             'password' => 'nullable|string|min:8|confirmed|regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/',
             'role' => 'nullable|string|in:admin,editor,user',
@@ -329,13 +331,17 @@ class UserManagementController extends Controller
             'email_verified' => 'boolean',
         ], [
             'name.regex' => 'El nombre solo puede contener letras y espacios.',
-            'email.regex' => 'El formato del email no es válido.',
-            'password.regex' => 'La contraseña debe contener al menos: 1 mayúscula, 1 minúscula, 1 número y 1 carácter especial.',
-            'roles.max' => 'Un usuario no puede tener más de 3 roles.',
+            'email.regex' => 'El formato del email no es vÃ¡lido.',
+            'password.regex' => 'La contraseÃ±a debe contener al menos: 1 mayÃºscula, 1 minÃºscula, 1 nÃºmero y 1 carÃ¡cter especial.',
+            'roles.max' => 'Un usuario no puede tener mÃ¡s de 3 roles.',
         ]);
 
         if ($validator->fails()) {
             return back()->withErrors($validator)->withInput();
+        }
+
+        if ($request->filled('roles')) {
+            $this->guardAdminRoleAssignment($request->roles);
         }
 
         $updateData = [
@@ -452,12 +458,13 @@ class UserManagementController extends Controller
                 break;
 
             case 'assign_role':
+                $this->guardAdminRoleAssignment([], $request->role_id);
                 $users = User::whereIn('id', $userIds)->get();
                 foreach ($users as $user) {
                     $user->roles()->sync([$request->role_id]);
                 }
                 $count = $users->count();
-                $role = Role::find($request->role_id);
+                $message = "Se asignó el rol '{$role->display_name}' a {$count} usuarios.";
                 $message = "Se asignó el rol '{$role->display_name}' a {$count} usuarios.";
                 break;
         }
@@ -494,7 +501,7 @@ class UserManagementController extends Controller
         $users = $query->get();
 
         $csvData = [];
-        $csvData[] = ['ID', 'Nombre', 'Email', 'Rol', 'Estado', 'Fecha de Registro', 'Último Login'];
+        $csvData[] = ['ID', 'Nombre', 'Email', 'Rol', 'Estado', 'Fecha de Registro', 'Ãšltimo Login'];
 
         foreach ($users as $user) {
             $csvData[] = [
@@ -859,7 +866,7 @@ class UserManagementController extends Controller
                 'trace' => $e->getTraceAsString()
             ]);
 
-            return back()->withErrors(['error' => 'Error al eliminar comentario. Por favor, inténtalo de nuevo.']);
+            return back()->withErrors(['error' => 'Error al eliminar comentario. Por favor, intÃ©ntalo de nuevo.']);
         }
     }
 
@@ -916,6 +923,71 @@ class UserManagementController extends Controller
     }
 
     /**
+     * Ensure the current user is allowed to assign the requested roles.
+     */
+    private function guardAdminRoleAssignment($roles = [], ?int $singleRoleId = null): void
+    {
+        $actingUser = auth()->user();
+
+        if (!$actingUser) {
+            abort(403, 'No autenticado');
+        }
+
+        $roleIds = collect();
+
+        if (!is_null($roles)) {
+            $roleIds = $roleIds->merge(is_array($roles) ? $roles : [$roles]);
+        }
+
+        if (!is_null($singleRoleId)) {
+            $roleIds->push($singleRoleId);
+        }
+
+        $roleIds = $roleIds->filter(function ($id) {
+            return !is_null($id) && $id !== '';
+        })->map(fn ($id) => (int) $id)->unique();
+
+        if ($roleIds->isEmpty()) {
+            return;
+        }
+
+        $assigningRestrictedRole = Role::whereIn('id', $roleIds)
+            ->whereIn('name', ['admin', 'super_admin'])
+            ->exists();
+
+        if ($assigningRestrictedRole && !$actingUser->hasRole('admin')) {
+            abort(403, 'No tienes permisos para asignar roles de administrador.');
+        }
+    }
+
+         = collect();
+
+        if (!is_null()) {
+             = ->merge(is_array() ?  : []);
+        }
+
+        if (!is_null()) {
+            ->push();
+        }
+
+         = ->filter(function () {
+            return !is_null() &&  -ne '';
+        }).map({ param() [int] }).unique();
+
+        if (->isEmpty()) {
+            return;
+        }
+
+         = Role::whereIn('id', )
+            ->whereIn('name', ['admin', 'super_admin'])
+            ->exists();
+
+        if ( && !->hasRole('admin')) {
+            abort(403, 'No tienes permisos para asignar roles de administrador.');
+        }
+    }
+
+    /**
      * Verify a user
      */
     public function verifyUser(Request $request, User $user)
@@ -949,7 +1021,7 @@ class UserManagementController extends Controller
 
                 return back()->with('success', "Usuario {$user->name} verificado exitosamente.");
             } else {
-                return back()->withErrors(['error' => 'Error al verificar el usuario. Inténtalo de nuevo.']);
+                return back()->withErrors(['error' => 'Error al verificar el usuario. IntÃ©ntalo de nuevo.']);
             }
         } catch (\Exception $e) {
             \Log::error('Error verifying user', [
@@ -958,7 +1030,7 @@ class UserManagementController extends Controller
                 'verified_by' => auth()->id()
             ]);
 
-            return back()->withErrors(['error' => 'Error al verificar el usuario. Inténtalo de nuevo.']);
+            return back()->withErrors(['error' => 'Error al verificar el usuario. IntÃ©ntalo de nuevo.']);
         }
     }
 
@@ -994,9 +1066,9 @@ class UserManagementController extends Controller
                     'timestamp' => now()->toISOString()
                 ]);
 
-                return back()->with('success', "Verificación de {$user->name} removida exitosamente.");
+                return back()->with('success', "VerificaciÃ³n de {$user->name} removida exitosamente.");
             } else {
-                return back()->withErrors(['error' => 'Error al desverificar el usuario. Inténtalo de nuevo.']);
+                return back()->withErrors(['error' => 'Error al desverificar el usuario. IntÃ©ntalo de nuevo.']);
             }
         } catch (\Exception $e) {
             \Log::error('Error unverifying user', [
@@ -1005,7 +1077,24 @@ class UserManagementController extends Controller
                 'unverified_by' => auth()->id()
             ]);
 
-            return back()->withErrors(['error' => 'Error al desverificar el usuario. Inténtalo de nuevo.']);
+            return back()->withErrors(['error' => 'Error al desverificar el usuario. IntÃ©ntalo de nuevo.']);
         }
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

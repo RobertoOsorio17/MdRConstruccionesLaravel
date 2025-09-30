@@ -28,6 +28,7 @@ import {
     CalendarToday as CalendarIcon
 } from '@mui/icons-material';
 import AdminLayout from '@/Layouts/AdminLayout';
+import DOMPurify from 'dompurify';
 
 const ShowPost = ({ post }) => {
     const theme = useTheme();
@@ -176,7 +177,7 @@ const ShowPost = ({ post }) => {
                                                 my: 3
                                             }
                                         }}
-                                        dangerouslySetInnerHTML={{ __html: post.content }}
+                                        dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(post.content ?? '') }}
                                     />
                                 </CardContent>
                             </Card>

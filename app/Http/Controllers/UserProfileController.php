@@ -292,7 +292,7 @@ class UserProfileController extends Controller
         // Security check: only allow viewing own comments or public profiles
         if ($userId && $userId != $currentUser?->id) {
             // Check if profile is public or if user has permission
-            if (!$user || $user->profile_visibility === 'private') {
+            if (!$user || !$user->profile_visibility) {
                 return response()->json(['error' => 'Unauthorized'], 403);
             }
         }
@@ -481,3 +481,5 @@ class UserProfileController extends Controller
         ]);
     }
 }
+
+

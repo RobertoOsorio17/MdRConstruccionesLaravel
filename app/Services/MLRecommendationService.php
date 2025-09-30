@@ -9,6 +9,9 @@ use App\Models\MLInteractionLog;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 
+/**
+ * Provide machine-learning powered recommendations for posts.
+ */
 class MLRecommendationService
 {
     private ContentAnalysisService $contentAnalysis;
@@ -19,7 +22,7 @@ class MLRecommendationService
     }
 
     /**
-     * Obtiene recomendaciones inteligentes para un usuario
+     * Retrieve recommendations for a user or anonymous session.
      */
     public function getRecommendations(
         string $sessionId = null,
@@ -30,41 +33,41 @@ class MLRecommendationService
         $cacheKey = "ml_recommendations_{$userId}_{$sessionId}_{$currentPostId}_{$limit}";
         
         return Cache::remember($cacheKey, 300, function() use ($sessionId, $userId, $currentPostId, $limit) {
-            // Obtener perfil de usuario
+            // Retrieve the user profile if it exists.
             $userProfile = MLUserProfile::findByIdentifier($sessionId, $userId);
-            
-            // Obtener posts candidatos
+
+            // Retrieve candidate posts.
             $candidatePosts = $this->getCandidatePosts($currentPostId);
             
             if ($candidatePosts->isEmpty()) {
                 return [];
             }
 
-            // Aplicar diferentes algoritmos de recomendación
+            // Apply multiple recommendation strategies.
             $recommendations = [];
-            
-            // 1. Content-Based Filtering
+
+            // 1. Content-based filtering.
             $contentBasedRecs = $this->getContentBasedRecommendations($currentPostId, $candidatePosts, $limit);
             $recommendations = array_merge($recommendations, $contentBasedRecs);
-            
-            // 2. Collaborative Filtering (si hay perfil de usuario)
+
+            // 2. Collaborative filtering (when a user profile is present).
             if ($userProfile) {
                 $collaborativeRecs = $this->getCollaborativeRecommendations($userProfile, $candidatePosts, $limit);
                 $recommendations = array_merge($recommendations, $collaborativeRecs);
-                
-                // 3. Personalized Recommendations
+
+                // 3. Personalized recommendations.
                 $personalizedRecs = $this->getPersonalizedRecommendations($userProfile, $candidatePosts, $limit);
                 $recommendations = array_merge($recommendations, $personalizedRecs);
             }
-            
-            // 4. Trending/Popular posts
+
+            // 4. Trending/popular posts.
             $trendingRecs = $this->getTrendingRecommendations($candidatePosts, $limit);
             $recommendations = array_merge($recommendations, $trendingRecs);
-            
-            // Combinar y rankear recomendaciones
+
+            // Combine and rank the recommendation sets.
             $finalRecs = $this->combineAndRankRecommendations($recommendations, $userProfile, $limit);
-            
-            // Log para análisis posterior
+
+            // Log the recommendations for later analysis.
             $this->logRecommendations($sessionId, $userId, $finalRecs);
             
             return $finalRecs;
@@ -72,7 +75,7 @@ class MLRecommendationService
     }
 
     /**
-     * Obtiene posts candidatos para recomendación
+     * Retrieve candidate posts for recommendation.
      */
     private function getCandidatePosts(int $currentPostId = null): Collection
     {
@@ -85,12 +88,12 @@ class MLRecommendationService
         }
 
         return $query->orderBy('published_at', 'desc')
-            ->limit(100) // Limitar candidatos para performance
+            ->limit(100) // Limit candidates for performance.
             ->get();
     }
 
     /**
-     * Recomendaciones basadas en contenido
+     * Generate content-based recommendations.
      */
     private function getContentBasedRecommendations(int $currentPostId = null, Collection $candidates, int $limit): array
     {
@@ -109,11 +112,11 @@ class MLRecommendationService
             $candidateVector = MLPostVector::where('post_id', $candidate->id)->first();
             
             if (!$candidateVector) {
-                // Analizar post si no tiene vector
+                // Analyze the post if it lacks a vector.
                 $candidateVector = $this->contentAnalysis->analyzePost($candidate);
             }
 
-            // Calcular similitud
+            // Calculate similarity scores.
             $contentSimilarity = MLPostVector::cosineSimilarity(
                 $currentVector->content_vector ?? [],
                 $candidateVector->content_vector ?? []
@@ -129,10 +132,10 @@ class MLRecommendationService
                 $candidateVector->tag_vector ?? []
             );
 
-            // Score combinado
+            // Combined score.
             $score = ($contentSimilarity * 0.5) + ($categorySimilarity * 0.3) + ($tagSimilarity * 0.2);
             
-            if ($score > 0.1) { // Threshold mínimo
+            if ($score > 0.1) { // Minimum threshold.
                 $recommendations[] = [
                     'post' => $candidate,
                     'score' => $score,
@@ -147,17 +150,17 @@ class MLRecommendationService
             }
         }
 
-        // Ordenar por score y retornar top N
+        // Sort by score and return the top N.
         usort($recommendations, fn($a, $b) => $b['score'] <=> $a['score']);
         return array_slice($recommendations, 0, $limit);
     }
 
     /**
-     * Recomendaciones colaborativas
+     * Collaborative filtering recommendations.
      */
     private function getCollaborativeRecommendations(MLUserProfile $userProfile, Collection $candidates, int $limit): array
     {
-        // Encontrar usuarios similares
+        // Find similar user profiles.
         $similarUsers = $this->findSimilarUsers($userProfile, 10);
         
         if (empty($similarUsers)) {
@@ -167,7 +170,7 @@ class MLRecommendationService
         $recommendations = [];
         $candidateIds = $candidates->pluck('id')->toArray();
         
-        // Obtener posts que gustaron a usuarios similares
+        // Aggregate posts liked by similar users.
         $popularAmongSimilar = MLInteractionLog::whereIn('user_id', array_keys($similarUsers))
             ->whereIn('post_id', $candidateIds)
             ->whereIn('interaction_type', ['like', 'bookmark', 'share'])
@@ -187,7 +190,7 @@ class MLRecommendationService
                     'post' => $post,
                     'score' => $score,
                     'source' => 'collaborative',
-                    'reason' => "Usuarios con gustos similares disfrutaron este contenido",
+                    'reason' => 'Users with similar tastes enjoyed this content.',
                     'metadata' => [
                         'similar_users_liked' => $popular->interaction_count,
                         'avg_rating' => $popular->avg_rating
@@ -201,7 +204,7 @@ class MLRecommendationService
     }
 
     /**
-     * Recomendaciones personalizadas basadas en perfil
+     * Personalized recommendations tailored to a user profile.
      */
     private function getPersonalizedRecommendations(MLUserProfile $userProfile, Collection $candidates, int $limit): array
     {
@@ -211,40 +214,40 @@ class MLRecommendationService
             $score = 0;
             $reasons = [];
 
-            // Score basado en preferencias de categorías
+            // Score based on category preferences.
             if (!empty($userProfile->category_preferences)) {
                 $categoryScore = $this->calculateCategoryScore($candidate, $userProfile->category_preferences);
                 $score += $categoryScore * 0.4;
                 if ($categoryScore > 0.3) {
-                    $reasons[] = "Coincide con tus categorías favoritas";
+                    $reasons[] = 'Matches your favorite categories';
                 }
             }
 
-            // Score basado en intereses de tags
+            // Score based on tag interests.
             if (!empty($userProfile->tag_interests)) {
                 $tagScore = $this->calculateTagScore($candidate, $userProfile->tag_interests);
                 $score += $tagScore * 0.3;
                 if ($tagScore > 0.3) {
-                    $reasons[] = "Incluye temas de tu interés";
+                    $reasons[] = 'Includes topics you follow';
                 }
             }
 
-            // Score basado en patrones de lectura
+            // Score based on reading patterns.
             if (!empty($userProfile->reading_patterns)) {
                 $patternScore = $this->calculatePatternScore($candidate, $userProfile->reading_patterns);
                 $score += $patternScore * 0.2;
             }
 
-            // Score basado en longitud preferida
+            // Score based on preferred content length.
             $lengthScore = $this->calculateLengthScore($candidate, $userProfile);
             $score += $lengthScore * 0.1;
 
-            if ($score > 0.2) { // Threshold para personalización
+            if ($score > 0.2) { // Personalization threshold.
                 $recommendations[] = [
                     'post' => $candidate,
                     'score' => $score,
                     'source' => 'personalized',
-                    'reason' => implode(', ', $reasons) ?: "Basado en tu perfil de lectura",
+                    'reason' => implode(', ', $reasons) ?: 'Based on your reading profile',
                     'metadata' => [
                         'user_cluster' => $userProfile->user_cluster,
                         'profile_match' => $score
@@ -258,14 +261,14 @@ class MLRecommendationService
     }
 
     /**
-     * Recomendaciones trending/populares
+     * Trending/popular recommendations.
      */
     private function getTrendingRecommendations(Collection $candidates, int $limit): array
     {
         $recommendations = [];
         
         foreach ($candidates as $candidate) {
-            // Calcular score de trending basado en engagement reciente
+            // Calculate a trending score based on recent engagement.
             $recentEngagement = MLInteractionLog::where('post_id', $candidate->id)
                 ->where('created_at', '>', now()->subDays(7))
                 ->avg('engagement_score') ?? 0;
@@ -281,7 +284,7 @@ class MLRecommendationService
                     'post' => $candidate,
                     'score' => $score,
                     'source' => 'trending',
-                    'reason' => "Contenido popular y trending",
+                    'reason' => 'Popular and trending content.',
                     'metadata' => [
                         'recent_engagement' => $recentEngagement,
                         'total_views' => $candidate->views_count
@@ -295,11 +298,11 @@ class MLRecommendationService
     }
 
     /**
-     * Combina y rankea todas las recomendaciones
+     * Combine and rank the aggregated recommendations.
      */
     private function combineAndRankRecommendations(array $allRecommendations, MLUserProfile $userProfile = null, int $limit = 10): array
     {
-        // Agrupar por post_id para evitar duplicados
+        // Group by post ID to avoid duplicates.
         $grouped = [];
         
         foreach ($allRecommendations as $rec) {
@@ -311,7 +314,7 @@ class MLRecommendationService
                 $grouped[$postId]['sources'] = [];
             }
             
-            // Pesos por fuente
+            // Source weighting.
             $sourceWeights = [
                 'content_based' => 0.3,
                 'collaborative' => 0.25,
@@ -324,23 +327,23 @@ class MLRecommendationService
             $grouped[$postId]['sources'][] = $rec['source'];
         }
 
-        // Aplicar boost de diversidad
+        // Apply a diversity boost.
         $final = array_values($grouped);
         $final = $this->applyDiversityBoost($final);
         
-        // Ordenar por score final
+        // Sort by the final combined score.
         usort($final, fn($a, $b) => $b['combined_score'] <=> $a['combined_score']);
         
         return array_slice($final, 0, $limit);
     }
 
     /**
-     * Aplica boost de diversidad para evitar recomendaciones muy similares
+     * Apply diversity boost to avoid overly similar recommendations.
      */
     private function applyDiversityBoost(array $recommendations): array
     {
         $seenCategories = [];
-        $categoryPenalty = 0.9; // Penalización por categoría repetida
+        $categoryPenalty = 0.9; // Penalty for repeated categories.
         
         foreach ($recommendations as &$rec) {
             $categories = $rec['post']->categories->pluck('id')->toArray();
@@ -357,7 +360,7 @@ class MLRecommendationService
     }
 
     /**
-     * Encuentra usuarios similares
+     * Find users similar to the current profile.
      */
     private function findSimilarUsers(MLUserProfile $userProfile, int $limit): array
     {
@@ -365,24 +368,24 @@ class MLRecommendationService
         
         $otherProfiles = MLUserProfile::where('id', '!=', $userProfile->id)
             ->whereNotNull('category_preferences')
-            ->limit(50) // Limitar para performance
+            ->limit(50) // Limit for performance.
             ->get();
 
         foreach ($otherProfiles as $otherProfile) {
             $similarity = $userProfile->calculateSimilarity($otherProfile);
             
-            if ($similarity > 0.3) { // Threshold de similitud
+            if ($similarity > 0.3) { // Similarity threshold.
                 $similarUsers[$otherProfile->user_id ?: $otherProfile->session_id] = $similarity;
             }
         }
 
-        // Ordenar por similitud y retornar top N
+        // Sort by similarity and return the top N.
         arsort($similarUsers);
         return array_slice($similarUsers, 0, $limit, true);
     }
 
     /**
-     * Calcula score basado en categorías preferidas
+     * Calculate a score based on preferred categories.
      */
     private function calculateCategoryScore(Post $post, array $categoryPreferences): float
     {
@@ -402,7 +405,7 @@ class MLRecommendationService
     }
 
     /**
-     * Calcula score basado en tags de interés
+     * Calculate a score based on interesting tags.
      */
     private function calculateTagScore(Post $post, array $tagInterests): float
     {
@@ -422,27 +425,27 @@ class MLRecommendationService
     }
 
     /**
-     * Calcula score basado en patrones de lectura
+     * Calculate a score based on reading patterns.
      */
     private function calculatePatternScore(Post $post, array $readingPatterns): float
     {
-        $score = 0.5; // Score base neutral
+        $score = 0.5; // Neutral base score.
         $currentHour = now()->hour;
         $currentDayOfWeek = now()->dayOfWeek;
         
-        // Patrones horarios (MEJORA: peso aumentado)
+        // Hourly patterns (boosted weight).
         if (isset($readingPatterns['preferred_hours'][$currentHour])) {
             $hourPreference = $readingPatterns['preferred_hours'][$currentHour];
             $score += $hourPreference * 0.3;
         }
         
-        // Patrones de días de la semana
+        // Day-of-week patterns.
         if (isset($readingPatterns['preferred_days'][$currentDayOfWeek])) {
             $dayPreference = $readingPatterns['preferred_days'][$currentDayOfWeek];
             $score += $dayPreference * 0.2;
         }
         
-        // NUEVA MEJORA: Patrones de engagement por tipo de contenido
+        // Enhanced: engagement patterns by content length.
         if (isset($readingPatterns['engagement_by_length'])) {
             $contentLength = strlen(strip_tags($post->content ?? ''));
             $lengthCategory = $this->categorizeContentLength($contentLength);
@@ -453,18 +456,18 @@ class MLRecommendationService
             }
         }
         
-        // NUEVA MEJORA: Patrones de scroll depth 
+        // Enhanced: scroll depth patterns.
         if (isset($readingPatterns['avg_scroll_depth']) && $readingPatterns['avg_scroll_depth'] > 0.4) {
-            // Si el usuario generalmente hace scroll profundo, preferir contenido más largo
+            // If the user typically scrolls deeply, prefer longer content.
             $contentLength = strlen(strip_tags($post->content ?? ''));
             if ($contentLength > 2000) {
                 $score += 0.15;
             }
         }
         
-        // NUEVA MEJORA: Velocidad de lectura y profundidad
+        // Enhanced: reading velocity and depth.
         if (isset($readingPatterns['reading_velocity']) && $readingPatterns['reading_velocity'] > 0) {
-            $optimalVelocity = 0.1; // Scrolls por segundo ideal
+            $optimalVelocity = 0.1; // Ideal scrolls per second.
             $velocityDiff = abs($readingPatterns['reading_velocity'] - $optimalVelocity);
             $velocityScore = max(0, 1 - ($velocityDiff * 2));
             $score += $velocityScore * 0.1;
@@ -474,7 +477,7 @@ class MLRecommendationService
     }
     
     /**
-     * NUEVA MEJORA: Categorizar contenido por longitud
+     * Categorize content by approximate length.
      */
     private function categorizeContentLength(int $length): string
     {
@@ -485,7 +488,7 @@ class MLRecommendationService
     }
 
     /**
-     * Calcula score basado en longitud preferida
+     * Calculate a score based on preferred length.
      */
     private function calculateLengthScore(Post $post, MLUserProfile $userProfile): float
     {
@@ -493,27 +496,27 @@ class MLRecommendationService
         $preferredLength = $userProfile->content_type_preferences['preferred_length'] ?? 2000;
         
         $lengthDiff = abs($contentLength - $preferredLength);
-        $maxDiff = 5000; // Diferencia máxima tolerada
+        $maxDiff = 5000; // Maximum tolerated difference.
         
         return max(0, 1 - ($lengthDiff / $maxDiff));
     }
 
     /**
-     * Genera razón para recomendación content-based
+     * Generate a reason for a content-based recommendation
      */
     private function generateContentBasedReason(float $contentSim, float $categorySim, float $tagSim): string
     {
         $reasons = [];
         
-        if ($contentSim > 0.5) $reasons[] = "contenido similar";
-        if ($categorySim > 0.7) $reasons[] = "misma categoría";
-        if ($tagSim > 0.6) $reasons[] = "tags relacionados";
+        if ($contentSim > 0.5) $reasons[] = 'similar content';
+        if ($categorySim > 0.7) $reasons[] = 'same category';
+        if ($tagSim > 0.6) $reasons[] = 'related tags';
         
-        return "Recomendado por: " . (implode(', ', $reasons) ?: "similitud de contenido");
+        return "Recommended because: " . (implode(', ', $reasons) ?: "content similarity");
     }
 
     /**
-     * NUEVA MEJORA: Precomputación inteligente de recomendaciones
+     * Enhanced: intelligent precomputation of recommendations
      */
     public function precomputeRecommendations(
         int $userId = null,
@@ -522,7 +525,7 @@ class MLRecommendationService
     ): array {
         $cacheKey = "precomputed_recs_{$userId}_{$sessionId}";
         
-        // Verificar si ya hay recomendaciones precomputadas válidas
+        // Check if precomputed recommendations remain valid.
         $cached = Cache::get($cacheKey);
         if ($cached && isset($cached['computed_at']) && 
             (time() - $cached['computed_at']) < 1800) { // 30 minutos de validez
@@ -539,9 +542,9 @@ class MLRecommendationService
         
         $recommendations = [];
         
-        // Usar algoritmos más eficientes para precomputación
+        // Use more efficient algorithms for precomputation.
         if ($userProfile) {
-            // Algoritmo híbrido optimizado
+            // Optimized hybrid algorithm.
             $personalizedRecs = $this->getEnhancedPersonalizedRecommendations(
                 $userProfile, 
                 $candidatePosts, 
@@ -567,7 +570,7 @@ class MLRecommendationService
     }
     
     /**
-     * NUEVA MEJORA: Recomendaciones personalizadas mejoradas con engagement
+     * Enhanced: personalized recommendations with engagement insights
      */
     private function getEnhancedPersonalizedRecommendations(
         MLUserProfile $userProfile, 
@@ -580,7 +583,7 @@ class MLRecommendationService
             $score = 0;
             $reasons = [];
             
-            // Score basado en preferencias de categorías (mejorado)
+            // Score based on category preferences. (mejorado)
             if (!empty($userProfile->category_preferences)) {
                 $categoryScore = $this->calculateEnhancedCategoryScore(
                     $candidate, 
@@ -588,11 +591,11 @@ class MLRecommendationService
                 );
                 $score += $categoryScore * 0.35; // Peso aumentado
                 if ($categoryScore > 0.3) {
-                    $reasons[] = "Coincide con tus categorías favoritas";
+                    $reasons[] = 'Matches your favorite categories';
                 }
             }
             
-            // Score basado en patrones de engagement temporales
+            // Score based on temporal engagement patterns.
             if (!empty($userProfile->reading_patterns)) {
                 $patternScore = $this->calculateEnhancedPatternScore(
                     $candidate, 
@@ -600,11 +603,11 @@ class MLRecommendationService
                 );
                 $score += $patternScore * 0.3; // Nuevo peso para patrones
                 if ($patternScore > 0.4) {
-                    $reasons[] = "Coincide con tus patrones de lectura";
+                    $reasons[] = 'Aligns with your reading patterns';
                 }
             }
             
-            // Score basado en engagement histórico
+            // Score based on historical engagement.
             if (isset($userProfile->engagement_history)) {
                 $engagementScore = $this->calculateEngagementCompatibility(
                     $candidate,
@@ -612,7 +615,7 @@ class MLRecommendationService
                 );
                 $score += $engagementScore * 0.25;
                 if ($engagementScore > 0.5) {
-                    $reasons[] = "Contenido con alto engagement previo";
+                    $reasons[] = 'Content with strong prior engagement';
                 }
             }
             
@@ -620,12 +623,12 @@ class MLRecommendationService
             $lengthScore = $this->calculateEnhancedLengthScore($candidate, $userProfile);
             $score += $lengthScore * 0.1;
             
-            if ($score > 0.25) { // Threshold más exigente
+            if ($score > 0.25) { // more selective threshold
                 $recommendations[] = [
                     'post' => $candidate,
                     'score' => $score,
                     'source' => 'enhanced_personalized',
-                    'reason' => implode(', ', $reasons) ?: "Basado en tu perfil optimizado",
+                    'reason' => implode(', ', $reasons) ?: 'Based on your optimized profile',
                     'metadata' => [
                         'user_cluster' => $userProfile->user_cluster,
                         'profile_match' => $score,
@@ -658,8 +661,8 @@ class MLRecommendationService
             // Decaimiento temporal (contenido muy antiguo pierde relevancia)
             $temporalDecay = $daysSincePublished > 30 ? max(0.1, 1 - (($daysSincePublished - 30) / 365)) : 1;
             
-            // Métricas de engagement recientes
-            $recentViews = $this->getRecentViews($candidate->id, 7); // Últimos 7 días
+            // Recent engagement metrics.
+            $recentViews = $this->getRecentViews($candidate->id, 7); // last 7 days
             $recentLikes = $this->getRecentLikes($candidate->id, 7);
             $recentShares = $this->getRecentShares($candidate->id, 7);
             
@@ -676,7 +679,7 @@ class MLRecommendationService
                     'post' => $candidate,
                     'score' => $trendingScore,
                     'source' => 'temporal_trending',
-                    'reason' => "Tendencia con alto engagement reciente",
+                    'reason' => 'Trending with strong recent engagement.',
                     'metadata' => [
                         'recent_engagement' => $trendingScore,
                         'recency_boost' => $recencyBoost,
@@ -692,11 +695,11 @@ class MLRecommendationService
     }
     
     /**
-     * MEJORAS ML: Métodos auxiliares para nuevas funcionalidades
+     * ML improvements: helper methods for new capabilities
      */
     private function calculateEnhancedCategoryScore(Post $post, array $categoryPreferences): float
     {
-        // Implementación mejorada del score de categorías
+        // Improved category score implementation
         return $this->calculateCategoryScore($post, $categoryPreferences);
     }
     
@@ -744,7 +747,7 @@ class MLRecommendationService
     }
     
     /**
-     * Registra las recomendaciones para análisis posterior
+     * Log recommendations for later analysis
      */
     private function logRecommendations(string $sessionId = null, int $userId = null, array $recommendations): void
     {
@@ -790,7 +793,7 @@ class MLRecommendationService
                 $candidateVector = $this->contentAnalysis->analyzePost($candidate);
             }
 
-            // Similitud de contenido mejorada con múltiples factores
+            // Enhanced content similarity across multiple factors
             $contentSimilarity = MLPostVector::cosineSimilarity(
                 $currentVector->content_vector ?? [],
                 $candidateVector->content_vector ?? []
@@ -809,7 +812,7 @@ class MLRecommendationService
             // Similitud de autor (si es el mismo autor, boost)
             $authorBoost = $currentPost->author_id === $candidate->author_id ? 0.2 : 0;
 
-            // Similitud temporal (posts más recientes tienen ligero boost)
+            // Temporal similarity (recent posts receive a slight boost)
             $daysDiff = $currentPost->published_at->diffInDays($candidate->published_at);
             $temporalBoost = max(0, (30 - $daysDiff) / 30) * 0.1;
 
@@ -820,7 +823,7 @@ class MLRecommendationService
                     $authorBoost +
                     $temporalBoost;
 
-            if ($score > 0.15) { // Threshold más selectivo
+            if ($score > 0.15) { // more selective threshold
                 $recommendations[] = [
                     'post' => $candidate,
                     'score' => $score,
@@ -849,7 +852,7 @@ class MLRecommendationService
         $recommendations = [];
 
         foreach ($candidates as $candidate) {
-            // Engagement reciente (últimas 24 horas)
+            // Recent engagement (last 24 hours)
             $recentEngagement = MLInteractionLog::where('post_id', $candidate->id)
                 ->where('created_at', '>', now()->subDay())
                 ->whereIn('interaction_type', ['like', 'share', 'comment', 'bookmark'])
@@ -863,7 +866,7 @@ class MLRecommendationService
             // Score basado en velocidad de engagement
             $engagementVelocity = $hourlyEngagement > 0 ? ($recentEngagement / 24) * $hourlyEngagement : 0;
 
-            // Métricas generales con peso temporal
+            // General metrics with temporal weighting
             $ageInDays = $candidate->published_at->diffInDays(now());
             $agePenalty = $ageInDays > 7 ? 0.5 : 1.0; // Penalizar posts muy antiguos
 
@@ -894,17 +897,17 @@ class MLRecommendationService
     }
 
     /**
-     * Genera razón mejorada para recomendaciones de contenido
+     * Generate an enhanced reason for content recommendations
      */
     private function generateEnhancedContentReason(float $content, float $category, float $tag, float $author): string
     {
         $reasons = [];
 
-        if ($content > 0.7) $reasons[] = "Contenido muy similar";
-        elseif ($content > 0.4) $reasons[] = "Contenido relacionado";
+        if ($content > 0.7) $reasons[] = "Highly similar content";
+        elseif ($content > 0.4) $reasons[] = "Related content";
 
-        if ($category > 0.8) $reasons[] = "Misma categoría";
-        elseif ($category > 0.5) $reasons[] = "Categoría relacionada";
+        if ($category > 0.8) $reasons[] = "Same category";
+        elseif ($category > 0.5) $reasons[] = "Related category";
 
         if ($tag > 0.6) $reasons[] = "Tags similares";
 

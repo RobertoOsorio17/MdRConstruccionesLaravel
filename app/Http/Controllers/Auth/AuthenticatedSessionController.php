@@ -74,9 +74,9 @@ class AuthenticatedSessionController extends Controller
                     $errorMessage .= ' Motivo: ' . $banStatus['reason'];
                 }
                 if ($banStatus['expires_at']) {
-                    $errorMessage .= ' La suspensión expira el: ' . $banStatus['expires_at'];
+                    $errorMessage .= ' La suspensiÃƒÆ’Ã‚Â³n expira el: ' . $banStatus['expires_at'];
                 } else {
-                    $errorMessage .= ' Esta suspensión es permanente.';
+                    $errorMessage .= ' Esta suspensiÃƒÆ’Ã‚Â³n es permanente.';
                 }
 
                 return redirect()->route('login')->withErrors([

@@ -8,19 +8,21 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpFoundation\Response;
 
+/**
+ * Share authentication state with Inertia responses for front-end consumption.
+ */
 class AuthStateMiddleware
 {
     /**
      * Handle an incoming request.
-     * 
-     * Este middleware agrega información del estado de autenticación 
-     * a todas las respuestas de Inertia para uso del frontend
+     *
+     * This middleware attaches authentication details to each Inertia response.
      */
     public function handle(Request $request, Closure $next): Response
     {
         $response = $next($request);
 
-        // Solo para respuestas de Inertia
+        // Only enrich Inertia responses.
         if ($request->inertia()) {
             $user = Auth::user();
             
@@ -33,7 +35,7 @@ class AuthStateMiddleware
                 'has_user_object' => !is_null($user)
             ]);
             
-            // Datos básicos del usuario
+            // Basic user information payload.
             $authData = [
                 'isAuthenticated' => Auth::check(),
                 'isGuest' => Auth::guest(),
@@ -54,7 +56,7 @@ class AuthStateMiddleware
                 ] : null
             ];
 
-            // Agregar estadísticas si el usuario está autenticado
+            // Enrich with statistics when the user is authenticated.
             if ($user) {
                 try {
                     $authData['user']['stats'] = [
@@ -69,7 +71,7 @@ class AuthStateMiddleware
                         'stats' => $authData['user']['stats']
                     ]);
 
-                    // Agregar permisos para usuarios con roles
+                    // Inject permissions for role-based accounts.
                     if (method_exists($user, 'roles') && $user->roles()->exists()) {
                         $permissions = $user->roles()
                             ->with('permissions')
@@ -96,7 +98,7 @@ class AuthStateMiddleware
                         'trace' => $e->getTraceAsString()
                     ]);
                     
-                    // En caso de error, usar valores por defecto
+                    // Use default values when enrichment fails.
                     $authData['user']['stats'] = [
                         'comments_count' => 0,
                         'saved_posts_count' => 0,
@@ -106,7 +108,7 @@ class AuthStateMiddleware
                 }
             }
 
-            // Compartir con Inertia
+            // Share the auth payload with Inertia.
             inertia()->share('auth', $authData);
             
             Log::debug('Auth data shared with Inertia', [

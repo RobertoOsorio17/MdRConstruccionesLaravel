@@ -49,7 +49,7 @@ class Role extends Model
     }
 
     /**
-     * Scope para ordenar por nivel jerárquico
+     * Scope para ordenar por nivel jerÃƒÆ’Ã‚Â¡rquico
      */
     public function scopeByLevel($query)
     {
@@ -57,7 +57,7 @@ class Role extends Model
     }
 
     /**
-     * Verificar si el rol tiene un permiso específico
+     * Verificar si el rol tiene un permiso especÃƒÆ’Ã‚Â­fico
      */
     public function hasPermission(string $permission): bool
     {
@@ -65,7 +65,7 @@ class Role extends Model
     }
 
     /**
-     * Verificar si el rol tiene permisos en un módulo
+     * Verificar si el rol tiene permisos en un mÃƒÆ’Ã‚Â³dulo
      */
     public function hasModuleAccess(string $module): bool
     {
@@ -73,7 +73,7 @@ class Role extends Model
     }
 
     /**
-     * Obtener permisos agrupados por módulo
+     * Obtener permisos agrupados por mÃƒÆ’Ã‚Â³dulo
      */
     public function getPermissionsByModule()
     {

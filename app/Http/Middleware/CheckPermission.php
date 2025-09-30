@@ -7,6 +7,9 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Symfony\Component\HttpFoundation\Response;
 
+/**
+ * Middleware enforcing role/permission-based access checks.
+ */
 class CheckPermission
 {
     /**
@@ -14,10 +17,10 @@ class CheckPermission
      */
     public function handle(Request $request, Closure $next, string $permission = null): Response
     {
-        // Verificar si el usuario está autenticado
+        // Ensure the user is authenticated.
         if (!Auth::check()) {
             if ($request->expectsJson()) {
-                return response()->json(['message' => 'No autenticado'], 401);
+                return response()->json(['message' => 'Unauthenticated.'], 401);
             }
             return redirect()->route('login');
         }
@@ -25,27 +28,27 @@ class CheckPermission
         /** @var \App\Models\User $user */
         $user = Auth::user();
 
-        // Si no se especifica permiso, solo verificar acceso al dashboard
+        // If no permission is provided, enforce dashboard access only.
         if (!$permission) {
             if (!$user->hasPermission('dashboard.access')) {
                 if ($request->expectsJson()) {
-                    return response()->json(['message' => 'Acceso denegado'], 403);
+                    return response()->json(['message' => 'Access denied.'], 403);
                 }
-                abort(403, 'No tienes permisos para acceder al panel de administración');
+                abort(403, 'You do not have permission to access the admin panel.');
             }
             return $next($request);
         }
 
-        // Verificar permiso específico
+        // Enforce the requested permission.
         if (!$user->hasPermission($permission)) {
             if ($request->expectsJson()) {
                 return response()->json([
-                    'message' => 'No tienes permisos para realizar esta acción',
+                    'message' => 'You do not have permission to perform this action.',
                     'required_permission' => $permission
                 ], 403);
             }
-            
-            abort(403, 'No tienes permisos para realizar esta acción');
+
+            abort(403, 'You do not have permission to perform this action.');
         }
 
         return $next($request);

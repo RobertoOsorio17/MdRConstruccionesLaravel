@@ -48,16 +48,16 @@ class Service extends Model
         
         if (is_string($value)) {
             try {
-                // Primera decodificación
+                // Primera decodificaciÃƒÆ’Ã‚Â³n
                 $firstDecode = json_decode($value, true);
                 
-                // Si la primera decodificación devuelve un string, hacer una segunda decodificación
+                // Si la primera decodificaciÃƒÆ’Ã‚Â³n devuelve un string, hacer una segunda decodificaciÃƒÆ’Ã‚Â³n
                 if (is_string($firstDecode)) {
                     $secondDecode = json_decode($firstDecode, true);
                     return is_array($secondDecode) ? $secondDecode : [];
                 }
                 
-                // Si la primera decodificación ya devolvió un array, usarlo
+                // Si la primera decodificaciÃƒÆ’Ã‚Â³n ya devolviÃƒÆ’Ã‚Â³ un array, usarlo
                 return is_array($firstDecode) ? $firstDecode : [];
                 
             } catch (\Exception $e) {
@@ -106,7 +106,7 @@ class Service extends Model
     public function getFaqCountAttribute()
     {
         try {
-            $faq = $this->faq; // Esto usará el accessor personalizado
+            $faq = $this->faq; // Esto usarÃƒÆ’Ã‚Â¡ el accessor personalizado
             if (is_array($faq)) {
                 return count($faq);
             }

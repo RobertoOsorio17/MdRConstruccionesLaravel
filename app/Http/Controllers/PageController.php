@@ -43,8 +43,8 @@ class PageController extends Controller
             'recentProjects' => $recentProjects,
             'companyInfo' => $companyInfo,
             'seo' => [
-                'title' => 'Sobre Nosotros - MDR Construcciones',
-                'description' => 'Conoce más sobre MDR Construcciones, empresa líder en reformas integrales con más de 8 años de experiencia en Madrid.',
+                'title' => 'About Us - MDR Construcciones',
+                'description' => 'Learn more about MDR Construcciones, a leading renovation company with more than eight years of experience in Madrid.',
             ],
         ]);
     }
@@ -75,8 +75,8 @@ class PageController extends Controller
             'contactInfo' => $contactInfo,
             'services' => $services,
             'seo' => [
-                'title' => 'Contacto - MDR Construcciones',
-                'description' => 'Ponte en contacto con MDR Construcciones para tu reforma. Presupuesto gratuito y asesoramiento personalizado.',
+                'title' => 'Contact - MDR Construcciones',
+                'description' => 'Get in touch with MDR Construcciones for your renovation. Receive a free quote and personalized guidance.',
             ],
         ]);
     }
@@ -88,8 +88,8 @@ class PageController extends Controller
     {
         return Inertia::render('Pages/Privacy', [
             'seo' => [
-                'title' => 'Política de Privacidad - MDR Construcciones',
-                'description' => 'Política de privacidad y protección de datos de MDR Construcciones.',
+                'title' => 'Privacy Policy - MDR Construcciones',
+                'description' => 'Privacy policy and data protection details for MDR Construcciones.',
             ],
         ]);
     }
@@ -108,8 +108,8 @@ class PageController extends Controller
         return Inertia::render('Pages/Legal', [
             'companyInfo' => $companyInfo,
             'seo' => [
-                'title' => 'Aviso Legal - MDR Construcciones',
-                'description' => 'Aviso legal y términos de uso del sitio web de MDR Construcciones.',
+                'title' => 'Legal Notice - MDR Construcciones',
+                'description' => 'Legal notice and terms of use for the MDR Construcciones website.',
             ],
         ]);
     }
@@ -121,9 +121,11 @@ class PageController extends Controller
     {
         return Inertia::render('Pages/Cookies', [
             'seo' => [
-                'title' => 'Política de Cookies - MDR Construcciones',
-                'description' => 'Información sobre el uso de cookies en el sitio web de MDR Construcciones.',
+                'title' => 'Cookie Policy - MDR Construcciones',
+                'description' => 'Information about how cookies are used on the MDR Construcciones website.',
             ],
         ]);
     }
 }
+
+

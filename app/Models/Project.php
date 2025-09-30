@@ -88,7 +88,7 @@ class Project extends Model
     public function getFormattedBudgetAttribute()
     {
         if ($this->budget_estimate) {
-            return number_format($this->budget_estimate, 0, ',', '.') . ' €';
+            return number_format($this->budget_estimate, 0, ',', '.') . ' â‚¬';
         }
         return 'Consultar';
     }

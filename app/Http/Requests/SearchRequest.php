@@ -75,20 +75,20 @@ class SearchRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'q.required' => 'El término de búsqueda es obligatorio.',
-            'q.min' => 'El término de búsqueda debe tener al menos 2 caracteres.',
-            'q.max' => 'El término de búsqueda no puede exceder 500 caracteres.',
-            'q.regex' => 'El término de búsqueda contiene caracteres no válidos.',
-            'category.exists' => 'La categoría seleccionada no existe.',
+            'q.required' => 'El tÃƒÆ’Ã‚Â©rmino de bÃƒÆ’Ã‚Âºsqueda es obligatorio.',
+            'q.min' => 'El tÃƒÆ’Ã‚Â©rmino de bÃƒÆ’Ã‚Âºsqueda debe tener al menos 2 caracteres.',
+            'q.max' => 'El tÃƒÆ’Ã‚Â©rmino de bÃƒÆ’Ã‚Âºsqueda no puede exceder 500 caracteres.',
+            'q.regex' => 'El tÃƒÆ’Ã‚Â©rmino de bÃƒÆ’Ã‚Âºsqueda contiene caracteres no vÃƒÆ’Ã‚Â¡lidos.',
+            'category.exists' => 'La categorÃƒÆ’Ã‚Â­a seleccionada no existe.',
             'author.exists' => 'El autor seleccionado no existe.',
             'date_from.before_or_equal' => 'La fecha de inicio no puede ser futura.',
             'date_to.after_or_equal' => 'La fecha de fin debe ser posterior a la fecha de inicio.',
             'date_to.before_or_equal' => 'La fecha de fin no puede ser futura.',
-            'page.min' => 'El número de página debe ser mayor a 0.',
-            'page.max' => 'El número de página no puede exceder 100.',
-            'per_page.min' => 'Los resultados por página deben ser mayor a 0.',
-            'per_page.max' => 'Los resultados por página no pueden exceder 50.',
-            'sort.in' => 'El criterio de ordenamiento no es válido.',
+            'page.min' => 'El nÃƒÆ’Ã‚Âºmero de pÃƒÆ’Ã‚Â¡gina debe ser mayor a 0.',
+            'page.max' => 'El nÃƒÆ’Ã‚Âºmero de pÃƒÆ’Ã‚Â¡gina no puede exceder 100.',
+            'per_page.min' => 'Los resultados por pÃƒÆ’Ã‚Â¡gina deben ser mayor a 0.',
+            'per_page.max' => 'Los resultados por pÃƒÆ’Ã‚Â¡gina no pueden exceder 50.',
+            'sort.in' => 'El criterio de ordenamiento no es vÃƒÆ’Ã‚Â¡lido.',
         ];
     }
 

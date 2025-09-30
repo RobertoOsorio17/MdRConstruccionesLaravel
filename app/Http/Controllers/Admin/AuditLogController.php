@@ -182,8 +182,8 @@ class AuditLogController extends Controller
         // For now, return a JSON response indicating the feature is available.
         
         return response()->json([
-            'message' => 'Función de exportación disponible',
-            'note' => 'Esta función se implementará para generar archivos CSV/Excel',
+            'message' => 'Export function available',
+            'note' => 'This function will be implemented to generate CSV/Excel files',
         ]);
     }
 
@@ -247,3 +247,4 @@ class AuditLogController extends Controller
         ]);
     }
 }
+

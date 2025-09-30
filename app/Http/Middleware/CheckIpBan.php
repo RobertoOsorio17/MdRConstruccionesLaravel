@@ -19,17 +19,17 @@ class CheckIpBan
         $ip = $request->ip();
         
         if (IpBan::isIpBanned($ip)) {
-            // Si es una petición AJAX, devolver JSON
+            // Si es una peticiÃƒÆ’Ã‚Â³n AJAX, devolver JSON
             if ($request->expectsJson()) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Tu dirección IP ha sido bloqueada por violar nuestros términos de uso. Si crees que esto es un error, contacta con el administrador.',
+                    'message' => 'Tu direcciÃƒÆ’Ã‚Â³n IP ha sido bloqueada por violar nuestros tÃƒÆ’Ã‚Â©rminos de uso. Si crees que esto es un error, contacta con el administrador.',
                     'error' => 'IP_BANNED'
                 ], 403);
             }
             
-            // Para peticiones normales, mostrar página de error
-            abort(403, 'Tu dirección IP ha sido bloqueada.');
+            // Para peticiones normales, mostrar pÃƒÆ’Ã‚Â¡gina de error
+            abort(403, 'Tu direcciÃƒÆ’Ã‚Â³n IP ha sido bloqueada.');
         }
         
         return $next($request);

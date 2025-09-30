@@ -6,6 +6,9 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * Represents a behavioural profile used by the recommendation engine.
+ */
 class MLUserProfile extends Model
 {
     use HasFactory;
@@ -49,7 +52,7 @@ class MLUserProfile extends Model
     }
 
     /**
-     * Encuentra perfil por session_id o user_id
+     * Locate the profile using either session ID or user ID
      */
     public static function findByIdentifier(string $sessionId = null, int $userId = null): ?self
     {
@@ -67,7 +70,7 @@ class MLUserProfile extends Model
     }
 
     /**
-     * Actualiza las preferencias de categorías basado en interacciones
+     * Update category preferences based on interactions
      */
     public function updateCategoryPreferences(array $categoryInteractions): void
     {
@@ -77,7 +80,7 @@ class MLUserProfile extends Model
             $preferences[$categoryId] = ($preferences[$categoryId] ?? 0) + $weight;
         }
 
-        // Normalizar preferencias
+        // Normalize preference weights.
         $total = array_sum($preferences);
         if ($total > 0) {
             foreach ($preferences as $categoryId => $value) {
@@ -91,7 +94,7 @@ class MLUserProfile extends Model
     }
 
     /**
-     * Actualiza las preferencias de tags
+     * Update tag interests based on interactions
      */
     public function updateTagInterests(array $tagInteractions): void
     {
@@ -101,7 +104,7 @@ class MLUserProfile extends Model
             $interests[$tagId] = ($interests[$tagId] ?? 0) + $weight;
         }
 
-        // Normalizar y mantener solo los top tags
+        // Normalize and keep only the top tags.
         arsort($interests);
         $interests = array_slice($interests, 0, 20, true); // Top 20 tags
 
@@ -118,20 +121,20 @@ class MLUserProfile extends Model
     }
 
     /**
-     * Calcula score de similitud con otro perfil de usuario
+     * Calculate a similarity score with another user profile
      */
     public function calculateSimilarity(self $otherProfile): float
     {
         $similarity = 0;
         $factors = 0;
 
-        // Similitud en preferencias de categorías
+        // Category preference similarity.
         if (!empty($this->category_preferences) && !empty($otherProfile->category_preferences)) {
             $similarity += $this->cosineSimilarityArrays($this->category_preferences, $otherProfile->category_preferences);
             $factors++;
         }
 
-        // Similitud en intereses de tags
+        // Tag interest similarity.
         if (!empty($this->tag_interests) && !empty($otherProfile->tag_interests)) {
             $similarity += $this->cosineSimilarityArrays($this->tag_interests, $otherProfile->tag_interests);
             $factors++;
@@ -141,7 +144,7 @@ class MLUserProfile extends Model
     }
 
     /**
-     * Similitud de coseno para arrays asociativos
+     * Cosine similarity helper for associative arrays
      */
     private function cosineSimilarityArrays(array $arrayA, array $arrayB): float
     {

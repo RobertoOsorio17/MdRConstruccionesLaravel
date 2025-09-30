@@ -264,7 +264,7 @@ class User extends Authenticatable
     }
     
     /**
-     * Verificar si este usuario le gusta un post específico
+     * Verificar si este usuario le gusta un post especÃƒÆ’Ã‚Â­fico
      */
     public function hasLiked($post)
     {
@@ -287,7 +287,7 @@ class User extends Authenticatable
     }
     
     /**
-     * Verificar si este usuario tiene guardado un post específico
+     * Verificar si este usuario tiene guardado un post especÃƒÆ’Ã‚Â­fico
      */
     public function hasBookmarked($post)
     {
@@ -357,7 +357,7 @@ class User extends Authenticatable
     }
 
     /**
-     * Verificar si el usuario tiene un rol específico
+     * Verificar si el usuario tiene un rol especÃƒÆ’Ã‚Â­fico
      * Verifica tanto el campo 'role' como las relaciones en la tabla 'roles'
      */
     public function hasRole(string|array $roleName): bool
@@ -396,7 +396,7 @@ class User extends Authenticatable
     }
 
     /**
-     * Verificar si el usuario tiene un permiso específico
+     * Verificar si el usuario tiene un permiso especÃƒÆ’Ã‚Â­fico
      */
     public function hasPermission(string $permission): bool
     {
@@ -406,7 +406,7 @@ class User extends Authenticatable
     }
 
     /**
-     * Verificar si el usuario puede acceder a un módulo
+     * Verificar si el usuario puede acceder a un mÃƒÆ’Ã‚Â³dulo
      */
     public function canAccessModule(string $module): bool
     {
@@ -416,7 +416,7 @@ class User extends Authenticatable
     }
 
     /**
-     * Verificar si el usuario puede realizar una acción en un módulo
+     * Verificar si el usuario puede realizar una acciÃƒÆ’Ã‚Â³n en un mÃƒÆ’Ã‚Â³dulo
      */
     public function canDo(string $action, string $module = null): bool
     {
@@ -493,7 +493,7 @@ class User extends Authenticatable
     }
 
     /**
-     * Método helper para obtener la URL del avatar
+     * MÃƒÆ’Ã‚Â©todo helper para obtener la URL del avatar
      */
     public function getAvatarUrl()
     {
@@ -517,7 +517,7 @@ class User extends Authenticatable
     }
     
     /**
-     * Obtener la biografía formateada
+     * Obtener la biografÃƒÆ’Ã‚Â­a formateada
      */
     public function getFormattedBioAttribute()
     {
@@ -529,7 +529,7 @@ class User extends Authenticatable
     }
     
     /**
-     * Verificar si el perfil está completo
+     * Verificar si el perfil estÃƒÆ’Ã‚Â¡ completo
      */
     public function getIsProfileCompleteAttribute()
     {

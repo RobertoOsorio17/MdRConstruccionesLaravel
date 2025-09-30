@@ -8,10 +8,16 @@ use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Validation\Rule;
 
+/**
+ * Manage administrative notifications and related lifecycle operations.
+ */
 class NotificationController extends Controller
 {
     /**
-     * Get notifications for the authenticated user
+     * Retrieve paginated notifications for the authenticated administrator.
+     *
+     * @param Request $request The request containing filter parameters.
+     * @return JsonResponse JSON response with notification data and pagination metadata.
      */
     public function index(Request $request): JsonResponse
     {
@@ -19,17 +25,17 @@ class NotificationController extends Controller
             ->orderBy('priority', 'desc')
             ->orderBy('created_at', 'desc');
 
-        // Filter by read status
+        // Filter by read status.
         if ($request->has('unread_only') && $request->boolean('unread_only')) {
             $query->unread();
         }
 
-        // Filter by type
+        // Filter by notification type.
         if ($request->filled('type')) {
             $query->byType($request->type);
         }
 
-        // Filter by priority
+        // Filter by priority level.
         if ($request->filled('priority')) {
             $query->byPriority($request->priority);
         }
@@ -48,43 +54,51 @@ class NotificationController extends Controller
     }
 
     /**
-     * Mark notification as read
+     * Mark a notification as read.
+     *
+     * @param AdminNotification $notification The notification instance to update.
+     * @return JsonResponse JSON response describing the updated notification state.
      */
     public function markAsRead(AdminNotification $notification): JsonResponse
     {
-        // Ensure user can only mark their own notifications as read
+        // Ensure the acting administrator owns the notification unless it is a system notice.
         if ($notification->user_id !== auth()->id() && !$notification->is_system) {
-            return response()->json(['message' => 'No autorizado'], 403);
+            return response()->json(['message' => 'Unauthorized.'], 403);
         }
 
         $notification->markAsRead();
 
         return response()->json([
-            'message' => 'Notificación marcada como leída',
+            'message' => 'Notification marked as read.',
             'notification' => $notification->fresh(),
         ]);
     }
 
     /**
-     * Mark notification as unread
+     * Mark a notification as unread.
+     *
+     * @param AdminNotification $notification The notification instance to update.
+     * @return JsonResponse JSON response describing the updated notification state.
      */
     public function markAsUnread(AdminNotification $notification): JsonResponse
     {
-        // Ensure user can only mark their own notifications as unread
+        // Ensure the acting administrator owns the notification unless it is a system notice.
         if ($notification->user_id !== auth()->id() && !$notification->is_system) {
-            return response()->json(['message' => 'No autorizado'], 403);
+            return response()->json(['message' => 'Unauthorized.'], 403);
         }
 
         $notification->markAsUnread();
 
         return response()->json([
-            'message' => 'Notificación marcada como no leída',
+            'message' => 'Notification marked as unread.',
             'notification' => $notification->fresh(),
         ]);
     }
 
     /**
-     * Mark all notifications as read
+     * Mark all unread notifications as read for the authenticated user.
+     *
+     * @return JsonResponse JSON response summarizing how many notifications were updated.
      */
     public function markAllAsRead(): JsonResponse
     {
@@ -93,35 +107,41 @@ class NotificationController extends Controller
             ->update(['read_at' => now()]);
 
         return response()->json([
-            'message' => "Se marcaron {$count} notificaciones como leídas",
+            'message' => "{$count} notification(s) marked as read.",
             'count' => $count,
         ]);
     }
 
     /**
-     * Delete notification
+     * Delete a notification.
+     *
+     * @param AdminNotification $notification The notification instance to delete.
+     * @return JsonResponse JSON response confirming the deletion.
      */
     public function destroy(AdminNotification $notification): JsonResponse
     {
-        // Ensure user can only delete their own notifications or system notifications
+        // Ensure the acting administrator owns the notification unless it is a system notice.
         if ($notification->user_id !== auth()->id() && !$notification->is_system) {
-            return response()->json(['message' => 'No autorizado'], 403);
+            return response()->json(['message' => 'Unauthorized.'], 403);
         }
 
-        // Check if notification is dismissible
+        // Check if the notification is dismissible.
         if (!$notification->is_dismissible) {
-            return response()->json(['message' => 'Esta notificación no se puede eliminar'], 400);
+            return response()->json(['message' => 'This notification cannot be deleted.'], 400);
         }
 
         $notification->delete();
 
         return response()->json([
-            'message' => 'Notificación eliminada correctamente',
+            'message' => 'Notification deleted successfully.',
         ]);
     }
 
     /**
-     * Create a new notification (admin only)
+     * Create a new notification (admin only).
+     *
+     * @param Request $request The request payload describing the notification.
+     * @return JsonResponse JSON response containing the newly created notification.
      */
     public function store(Request $request): JsonResponse
     {
@@ -141,13 +161,15 @@ class NotificationController extends Controller
         $notification = AdminNotification::create($request->all());
 
         return response()->json([
-            'message' => 'Notificación creada correctamente',
+            'message' => 'Notification created successfully.',
             'notification' => $notification,
         ], 201);
     }
 
     /**
-     * Get notification statistics
+     * Get notification statistics for the current administrator.
+     *
+     * @return JsonResponse JSON response containing aggregated notification counts.
      */
     public function stats(): JsonResponse
     {
@@ -173,14 +195,16 @@ class NotificationController extends Controller
     }
 
     /**
-     * Clean up expired notifications
+     * Clean up expired notifications.
+     *
+     * @return JsonResponse JSON response summarizing how many notifications were removed.
      */
     public function cleanup(): JsonResponse
     {
         $count = AdminNotification::cleanupExpired();
 
         return response()->json([
-            'message' => "Se eliminaron {$count} notificaciones expiradas",
+            'message' => "{$count} expired notification(s) removed.",
             'count' => $count,
         ]);
     }

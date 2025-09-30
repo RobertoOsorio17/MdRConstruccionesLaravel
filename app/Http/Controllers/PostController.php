@@ -241,7 +241,7 @@ class PostController extends Controller
                 'categories' => [],
                 'tags' => [],
                 'filters' => [],
-                'error' => 'Error al cargar el blog. Mostrando contenido básico.'
+                'error' => 'Failed to load the blog. Displaying basic content.'
             ]);
         }
     }
@@ -379,7 +379,7 @@ class PostController extends Controller
         $post->loadCount(['likes', 'bookmarks', 'approvedComments']);
 
         // Get suggested posts using the new intelligent algorithm
-        $suggestedPosts = $post->getSuggestedPosts(8) // Aumentamos para tener más opciones para invitados
+        $suggestedPosts = $post->getSuggestedPosts(8) // Increase count to provide more options for guests
             ->map(function ($suggestedPost) {
                 return [
                     'id' => $suggestedPost->id,
@@ -449,7 +449,7 @@ class PostController extends Controller
         $visitedPosts = $request->input('visited_posts', []);
         $limit = min($request->input('limit', 6), 10); // Max 10 posts
 
-        // Si no hay historial, usar el algoritmo estándar
+        // If no history is available, fall back to the standard algorithm
         if (empty($visitedPosts)) {
             $currentPost = Post::find($currentPostId);
             if (!$currentPost) {
@@ -458,7 +458,7 @@ class PostController extends Controller
 
             $suggested = $currentPost->getSuggestedPosts($limit);
         } else {
-            // Algoritmo personalizado basado en historial del invitado
+            // Custom algorithm based on the guest history
             $suggested = $this->getPersonalizedRecommendations($currentPostId, $visitedPosts, $limit);
         }
 
@@ -489,11 +489,11 @@ class PostController extends Controller
      */
     private function getPersonalizedRecommendations($currentPostId, $visitedPosts, $limit)
     {
-        // Extraer IDs de posts ya leídos
-        $readPostIds = array_map('intval', array_keys($visitedPosts)); // Convertir a enteros
+        // Extract IDs of posts that have already been read
+        $readPostIds = array_map('intval', array_keys($visitedPosts)); // Cast to integers
         $readPostIds[] = intval($currentPostId); // Incluir el post actual
         
-        // Extraer categorías y tags más visitados con pesos por tiempo
+        // Extract the most visited categories and tags with time-based weighting
         $categoryWeights = [];
         $tagWeights = [];
         $totalTime = 0;
@@ -507,18 +507,18 @@ class PostController extends Controller
             $totalTime += $visitedPost['totalTimeSpent'];
             $totalVisits += $visitedPost['visits'];
 
-            // Pesar categorías
+            // Weight categories
             foreach ($visitedPost['categories'] as $category) {
                 $categoryWeights[$category['id']] = ($categoryWeights[$category['id']] ?? 0) + $combinedWeight;
             }
 
-            // Pesar tags
+            // Weight tags
             foreach ($visitedPost['tags'] as $tag) {
                 $tagWeights[$tag['id']] = ($tagWeights[$tag['id']] ?? 0) + $combinedWeight;
             }
         }
 
-        // Construir query excluyendo posts leídos en primera instancia
+        // Build the query excluding already read posts initially
         $query = Post::published()
             ->whereNotIn('id', $readPostIds)
             ->with(['author:id,name,avatar,is_verified', 'categories:id,name,slug', 'tags:id,name,slug,color'])
@@ -526,12 +526,12 @@ class PostController extends Controller
 
         $unreadPosts = $query->get();
 
-        // Si no hay suficientes posts no leídos, incluir algunos leídos pero con penalización
+        // If there are not enough unread posts, include a few read ones with a penalty
         $posts = $unreadPosts;
         if ($unreadPosts->count() < $limit) {
             $remainingLimit = $limit - $unreadPosts->count();
             
-            // Obtener posts leídos que fueron muy interesantes (tiempo > 2 minutos o múltiples visitas)
+            // Fetch read posts that were very engaging (time > 2 minutes or multiple visits)
             $interestingReadIds = [];
             foreach ($visitedPosts as $id => $visitedPost) {
                 if ($visitedPost['averageTimeSpent'] > 120000 || $visitedPost['visits'] > 1) {
@@ -551,25 +551,25 @@ class PostController extends Controller
             }
         }
 
-        // Calcular puntuación de recomendación para cada post
+        // Calculate a recommendation score for each post
         $scoredPosts = $posts->map(function ($post) use ($categoryWeights, $tagWeights, $readPostIds) {
             $score = 0;
             $isRead = in_array($post->id, $readPostIds);
             
-            // Penalización por haber sido leído (reducir score significativamente)
-            $readPenalty = $isRead ? 0.2 : 1.0; // Posts leídos tienen 20% del score
+            // Penalty for already-read posts (significantly reduce the score)
+            $readPenalty = $isRead ? 0.2 : 1.0; // Previously read posts keep only 20% of the score
             
-            // Puntuación base por popularidad
+            // Base score driven by popularity
             $score += ($post->views_count ?? 0) * 0.01 * $readPenalty;
             $score += ($post->likes_count ?? 0) * 0.5 * $readPenalty;
             $score += ($post->featured ? 2 : 0) * $readPenalty;
             
-            // Puntuación por categorías visitadas
+            // Score contribution from visited categories
             foreach ($post->categories as $category) {
                 $score += ($categoryWeights[$category->id] ?? 0) * 3 * $readPenalty;
             }
             
-            // Puntuación por tags visitados
+            // Score contribution from visited tags
             foreach ($post->tags as $tag) {
                 $score += ($tagWeights[$tag->id] ?? 0) * 2 * $readPenalty;
             }
@@ -581,16 +581,17 @@ class PostController extends Controller
             return $post;
         });
 
-        // Ordenar por prioridad: no leídos primero, luego por puntuación
+        // Sort by priority: unread first, then by score
         return $scoredPosts
             ->sort(function ($a, $b) {
-                // Priorizar posts no leídos
+                // Prioritize unread posts
                 if ($a->is_read !== $b->is_read) {
                     return $a->is_read ? 1 : -1;
                 }
-                // Luego por puntuación
+                // Then sort by score
                 return $b->recommendation_score <=> $a->recommendation_score;
             })
             ->take($limit);
     }
 }
+

@@ -15,17 +15,22 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Validator;
 // use Intervention\Image\ImageManagerStatic as Image; // Disabled until the Intervention Image library is installed.
 
+/**
+ * Handle user profile rendering, updates, and related utilities.
+ */
 class UserProfileController extends Controller
 {
     /**
      * Display the authenticated user's dashboard profile view.
+     *
+     * @return Response Inertia response containing dashboard data for the owner.
      */
     public function dashboard(): Response
     {
         $user = Auth::user();
 
         if (!$user) {
-            return redirect()->route('login')->with('error', 'Sesión expirada. Por favor, inicia sesión nuevamente.');
+            return redirect()->route('login')->with('error', 'Session expired. Please log in again.');
         }
 
         // Load the user's favorite services.
@@ -134,6 +139,9 @@ class UserProfileController extends Controller
 
     /**
      * Display the public profile for a given user.
+     *
+     * @param User $user The profile owner being viewed.
+     * @return Response Inertia response with aggregated public profile data.
      */
     public function show(User $user): Response
     {
@@ -141,7 +149,7 @@ class UserProfileController extends Controller
 
         // Ensure the profile is visible or belongs to the authenticated user.
         if (!$user->profile_visibility && Auth::id() !== $user->id) {
-            abort(404, 'Perfil no encontrado');
+            abort(404, 'Profile not found.');
         }
 
         $currentUser = Auth::user();
@@ -283,6 +291,10 @@ class UserProfileController extends Controller
 
     /**
      * Retrieve paginated comments for a user through the API.
+     *
+     * @param Request $request The current HTTP request instance.
+     * @param int|null $userId Optional user identifier when querying another profile.
+     * @return JsonResponse JSON response containing paginated comment data.
      */
     public function getUserComments(Request $request, $userId = null)
     {
@@ -327,6 +339,9 @@ class UserProfileController extends Controller
 
     /**
      * Show the profile edit form for the authenticated user.
+     *
+     * @param Request $request The current HTTP request instance.
+     * @return Response Inertia response with editable profile information.
      */
     public function edit(Request $request): Response
     {
@@ -341,6 +356,9 @@ class UserProfileController extends Controller
     
     /**
      * Update the authenticated user's profile.
+     *
+     * @param Request $request The validated profile update request.
+     * @return RedirectResponse Redirect response with status messaging.
      */
     public function update(Request $request): RedirectResponse
     {
@@ -381,11 +399,14 @@ class UserProfileController extends Controller
         
         $user->update($data);
         
-        return back()->with('success', 'Perfil actualizado correctamente');
+        return back()->with('success', 'Profile updated successfully.');
     }
     
     /**
      * Upload a new avatar for the authenticated user.
+     *
+     * @param Request $request The HTTP request containing the avatar file.
+     * @return JsonResponse JSON response describing the upload outcome.
      */
     public function uploadAvatar(Request $request): JsonResponse
     {
@@ -418,19 +439,22 @@ class UserProfileController extends Controller
             return response()->json([
                 'success' => true,
                 'avatar_url' => $user->avatar_url,
-                'message' => 'Avatar actualizado correctamente'
+                'message' => 'Avatar updated successfully.'
             ]);
             
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Error al subir el avatar: ' . $e->getMessage()
+                'message' => 'Failed to upload avatar: ' . $e->getMessage()
             ], 500);
         }
     }
     
     /**
      * Remove the user's avatar and fall back to the default image.
+     *
+     * @param Request $request The HTTP request for the removal action.
+     * @return JsonResponse JSON response describing the delete outcome.
      */
     public function deleteAvatar(Request $request): JsonResponse
     {
@@ -450,19 +474,22 @@ class UserProfileController extends Controller
             return response()->json([
                 'success' => true,
                 'avatar_url' => $user->avatar_url, // This returns the default avatar when null.
-                'message' => 'Avatar eliminado correctamente'
+                'message' => 'Avatar removed successfully.'
             ]);
             
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Error al eliminar el avatar: ' . $e->getMessage()
+                'message' => 'Failed to delete avatar: ' . $e->getMessage()
             ], 500);
         }
     }
     
     /**
      * Provide follow suggestions tailored to the authenticated user.
+     *
+     * @param Request $request The current HTTP request instance.
+     * @return JsonResponse JSON response containing suggested users to follow.
      */
     public function suggestions(Request $request): JsonResponse
     {

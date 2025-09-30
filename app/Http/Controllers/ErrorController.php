@@ -26,7 +26,7 @@ class ErrorController extends Controller
                         'id' => $post->id,
                         'title' => $post->title,
                         'slug' => $post->slug,
-                        'excerpt' => $post->excerpt ?? 'Sin descripción disponible',
+                        'excerpt' => $post->excerpt ?? 'No description available',
                         'featured_image' => $post->cover_image,
                         'url' => route('blog.show', $post->slug)
                     ];
@@ -48,7 +48,7 @@ class ErrorController extends Controller
                         'id' => $post->id,
                         'title' => $post->title,
                         'slug' => $post->slug,
-                        'excerpt' => $post->excerpt ?? 'Sin descripción disponible',
+                        'excerpt' => $post->excerpt ?? 'No description available',
                         'featured_image' => $post->cover_image,
                         'url' => route('blog.show', $post->slug)
                     ];
@@ -132,7 +132,7 @@ class ErrorController extends Controller
     public function maintenance(Request $request)
     {
         return Inertia::render('Errors/Maintenance', [
-            'estimatedTime' => config('app.maintenance_estimated_time', '30 minutos'),
+            'estimatedTime' => config('app.maintenance_estimated_time', '30 minutes'),
         ])->toResponse($request)->setStatusCode(503);
     }
 
@@ -163,3 +163,4 @@ class ErrorController extends Controller
         }
     }
 }
+

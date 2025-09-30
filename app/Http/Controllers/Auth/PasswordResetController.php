@@ -37,7 +37,7 @@ class PasswordResetLinkController extends Controller
             'email' => 'required|email',
         ], [
             'email.required' => 'El email es obligatorio.',
-            'email.email' => 'Introduce un email válido.',
+            'email.email' => 'Introduce un email vÃƒÆ’Ã‚Â¡lido.',
         ]);
 
         // We will send the password reset link to this user. Once we have attempted
@@ -91,17 +91,17 @@ class NewPasswordController extends Controller
                     ->uncompromised()
             ],
         ], [
-            'token.required' => 'Token de recuperación requerido.',
+            'token.required' => 'Token de recuperaciÃƒÆ’Ã‚Â³n requerido.',
             'email.required' => 'El email es obligatorio.',
-            'email.email' => 'Introduce un email válido.',
-            'password.required' => 'La contraseña es obligatoria.',
-            'password.confirmed' => 'Las contraseñas no coinciden.',
-            'password.min' => 'La contraseña debe tener al menos 8 caracteres.',
-            'password.letters' => 'La contraseña debe contener al menos una letra.',
-            'password.mixed_case' => 'La contraseña debe contener mayúsculas y minúsculas.',
-            'password.numbers' => 'La contraseña debe contener al menos un número.',
-            'password.symbols' => 'La contraseña debe contener al menos un símbolo.',
-            'password.uncompromised' => 'Esta contraseña ha aparecido en filtraciones de datos. Elige una diferente.',
+            'email.email' => 'Introduce un email vÃƒÆ’Ã‚Â¡lido.',
+            'password.required' => 'La contraseÃƒÆ’Ã‚Â±a es obligatoria.',
+            'password.confirmed' => 'Las contraseÃƒÆ’Ã‚Â±as no coinciden.',
+            'password.min' => 'La contraseÃƒÆ’Ã‚Â±a debe tener al menos 8 caracteres.',
+            'password.letters' => 'La contraseÃƒÆ’Ã‚Â±a debe contener al menos una letra.',
+            'password.mixed_case' => 'La contraseÃƒÆ’Ã‚Â±a debe contener mayÃƒÆ’Ã‚Âºsculas y minÃƒÆ’Ã‚Âºsculas.',
+            'password.numbers' => 'La contraseÃƒÆ’Ã‚Â±a debe contener al menos un nÃƒÆ’Ã‚Âºmero.',
+            'password.symbols' => 'La contraseÃƒÆ’Ã‚Â±a debe contener al menos un sÃƒÆ’Ã‚Â­mbolo.',
+            'password.uncompromised' => 'Esta contraseÃƒÆ’Ã‚Â±a ha aparecido en filtraciones de datos. Elige una diferente.',
         ]);
 
         // Here we will attempt to reset the user's password. If it is successful we
@@ -120,7 +120,7 @@ class NewPasswordController extends Controller
         );
 
         if ($status == Password::PASSWORD_RESET) {
-            return redirect()->route('login')->with('status', 'Tu contraseña ha sido restablecida correctamente. Ya puedes iniciar sesión.');
+            return redirect()->route('login')->with('status', 'Tu contraseÃƒÆ’Ã‚Â±a ha sido restablecida correctamente. Ya puedes iniciar sesiÃƒÆ’Ã‚Â³n.');
         }
 
         throw ValidationException::withMessages([

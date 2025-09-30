@@ -10,6 +10,9 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Carbon\Carbon;
 
+/**
+ * Manage projects and related analytics for administrators.
+ */
 class ProjectManagementController extends Controller
 {
     /**
@@ -17,10 +20,10 @@ class ProjectManagementController extends Controller
      */
     public function index(Request $request)
     {
-        // Build query with filters
+        // Build query with filters.
         $query = Project::query();
 
-        // Search filter
+        // Search filter.
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
@@ -30,18 +33,18 @@ class ProjectManagementController extends Controller
             });
         }
 
-        // Status filter
+        // Status filter.
         if ($request->filled('status')) {
             $query->where('status', $request->status);
         }
 
-        // Featured filter
+        // Featured filter.
         if ($request->filled('featured')) {
             $featured = $request->featured === 'true';
             $query->where('featured', $featured);
         }
 
-        // Date range filter
+        // Date range filter.
         if ($request->filled('date_from')) {
             $query->whereDate('start_date', '>=', $request->date_from);
         }
@@ -49,7 +52,7 @@ class ProjectManagementController extends Controller
             $query->whereDate('end_date', '<=', $request->date_to);
         }
 
-        // Budget range filter
+        // Budget range filter.
         if ($request->filled('budget_min')) {
             $query->where('budget_estimate', '>=', $request->budget_min);
         }
@@ -57,15 +60,15 @@ class ProjectManagementController extends Controller
             $query->where('budget_estimate', '<=', $request->budget_max);
         }
 
-        // Sort
+        // Sorting.
         $sortField = $request->get('sort', 'created_at');
         $sortDirection = $request->get('direction', 'desc');
         $query->orderBy($sortField, $sortDirection);
 
-        // Paginate
+        // Paginate results.
         $projects = $query->paginate($request->get('per_page', 15))->withQueryString();
 
-        // Transform projects for frontend
+        // Transform projects for the frontend payload.
         $projects->getCollection()->transform(function ($project) {
             return [
                 'id' => $project->id,
@@ -87,12 +90,12 @@ class ProjectManagementController extends Controller
                     : null,
                 'status_label' => $this->getStatusLabel($project->status),
                 'budget_formatted' => $project->budget_estimate
-                    ? '€' . number_format($project->budget_estimate, 2, ',', '.')
+                    ? 'â‚¬' . number_format($project->budget_estimate, 2, ',', '.')
                     : 'No especificado',
             ];
         });
 
-        // Get statistics
+        // Build high-level statistics.
         $stats = [
             'total_projects' => Project::count(),
             'draft_projects' => Project::where('status', 'draft')->count(),
@@ -135,7 +138,7 @@ class ProjectManagementController extends Controller
 
         $project = Project::create($validated);
 
-        return redirect()->back()->with('success', 'Proyecto creado exitosamente.');
+        return redirect()->back()->with('success', 'Project created successfully.');
     }
 
     /**
@@ -162,7 +165,7 @@ class ProjectManagementController extends Controller
 
         $project->update($validated);
 
-        return redirect()->back()->with('success', 'Proyecto actualizado exitosamente.');
+        return redirect()->back()->with('success', 'Project updated successfully.');
     }
 
     /**
@@ -170,7 +173,7 @@ class ProjectManagementController extends Controller
      */
     public function destroy(Project $project)
     {
-        // Delete gallery images if they exist
+        // Delete gallery images if they exist.
         if ($project->gallery && is_array($project->gallery)) {
             foreach ($project->gallery as $imagePath) {
                 if (Storage::disk('public')->exists($imagePath)) {
@@ -181,7 +184,7 @@ class ProjectManagementController extends Controller
 
         $project->delete();
 
-        return redirect()->back()->with('success', 'Proyecto eliminado exitosamente.');
+        return redirect()->back()->with('success', 'Project deleted successfully.');
     }
 
     /**
@@ -200,23 +203,23 @@ class ProjectManagementController extends Controller
         switch ($validated['action']) {
             case 'publish':
                 $projects->update(['status' => 'published']);
-                $message = 'Proyectos publicados exitosamente.';
+                $message = 'Projects published successfully.';
                 break;
             case 'draft':
                 $projects->update(['status' => 'draft']);
-                $message = 'Proyectos marcados como borrador exitosamente.';
+                $message = 'Projects marked as draft successfully.';
                 break;
             case 'complete':
                 $projects->update(['status' => 'completed']);
-                $message = 'Proyectos marcados como completados exitosamente.';
+                $message = 'Projects marked as completed successfully.';
                 break;
             case 'feature':
                 $projects->update(['featured' => true]);
-                $message = 'Proyectos marcados como destacados exitosamente.';
+                $message = 'Projects marked as featured successfully.';
                 break;
             case 'unfeature':
                 $projects->update(['featured' => false]);
-                $message = 'Proyectos desmarcados como destacados exitosamente.';
+                $message = 'Projects unmarked as featured successfully.';
                 break;
             case 'delete':
                 // Delete gallery images for each project
@@ -231,7 +234,7 @@ class ProjectManagementController extends Controller
                     }
                 }
                 $projects->delete();
-                $message = 'Proyectos eliminados exitosamente.';
+                $message = 'Projects deleted successfully.';
                 break;
         }
 
@@ -245,7 +248,7 @@ class ProjectManagementController extends Controller
     {
         $query = Project::query();
 
-        // Apply same filters as index
+        // Apply same filters as index.
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
@@ -268,9 +271,9 @@ class ProjectManagementController extends Controller
 
         $csvData = [];
         $csvData[] = [
-            'ID', 'Título', 'Resumen', 'Ubicación', 'Presupuesto',
-            'Fecha Inicio', 'Fecha Fin', 'Estado', 'Destacado',
-            'Vistas', 'Creado', 'Actualizado'
+            'ID', 'Title', 'Summary', 'Location', 'Budget',
+            'Start Date', 'End Date', 'Status', 'Featured',
+            'Views', 'Created At', 'Updated At'
         ];
 
         foreach ($projects as $project) {
@@ -279,18 +282,18 @@ class ProjectManagementController extends Controller
                 $project->title,
                 $project->summary,
                 $project->location ?? 'N/A',
-                $project->budget_estimate ? '€' . number_format($project->budget_estimate, 2) : 'N/A',
+                $project->budget_estimate ? 'â‚¬' . number_format($project->budget_estimate, 2) : 'N/A',
                 $project->start_date ? $project->start_date->format('Y-m-d') : 'N/A',
                 $project->end_date ? $project->end_date->format('Y-m-d') : 'N/A',
                 $this->getStatusLabel($project->status),
-                $project->featured ? 'Sí' : 'No',
+                $project->featured ? 'Yes' : 'No',
                 $project->views_count,
                 $project->created_at->format('Y-m-d H:i:s'),
                 $project->updated_at->format('Y-m-d H:i:s'),
             ];
         }
 
-        $filename = 'proyectos_' . now()->format('Y-m-d_H-i-s') . '.csv';
+        $filename = 'projects_' . now()->format('Y-m-d_H-i-s') . '.csv';
 
         $headers = [
             'Content-Type' => 'text/csv',
@@ -313,11 +316,11 @@ class ProjectManagementController extends Controller
      */
     public function show(Project $project)
     {
-        // Get project timeline/milestones (mock data for now)
+        // Get project timeline/milestones (mock data for now).
         $timeline = [
             [
-                'title' => 'Proyecto Iniciado',
-                'description' => 'El proyecto ha sido creado y planificado',
+                'title' => 'Project Started',
+                'description' => 'The project has been created and planned.',
                 'date' => $project->created_at,
                 'type' => 'milestone'
             ],
@@ -325,8 +328,8 @@ class ProjectManagementController extends Controller
 
         if ($project->start_date) {
             $timeline[] = [
-                'title' => 'Inicio de Desarrollo',
-                'description' => 'Comenzó la fase de desarrollo del proyecto',
+                'title' => 'Development Started',
+                'description' => 'The development phase of the project began.',
                 'date' => $project->start_date,
                 'type' => 'milestone'
             ];
@@ -334,8 +337,8 @@ class ProjectManagementController extends Controller
 
         if ($project->status === 'completed' && $project->end_date) {
             $timeline[] = [
-                'title' => 'Proyecto Completado',
-                'description' => 'El proyecto ha sido finalizado exitosamente',
+                'title' => 'Project Completed',
+                'description' => 'The project has been successfully completed.',
                 'date' => $project->end_date,
                 'type' => 'milestone'
             ];
@@ -364,7 +367,7 @@ class ProjectManagementController extends Controller
     }
 
     /**
-     * Show project analytics
+     * Show project analytics.
      */
     public function analytics(Request $request)
     {

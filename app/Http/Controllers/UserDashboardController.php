@@ -12,10 +12,13 @@ use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use Inertia\Response;
 
+/**
+ * Handle authenticated user dashboard and related activity pages.
+ */
 class UserDashboardController extends Controller
 {
     /**
-     * Display user dashboard overview
+     * Display user dashboard overview.
      */
     public function index(): Response
     {
@@ -34,7 +37,7 @@ class UserDashboardController extends Controller
                 'session_id' => session()->getId(),
                 'ip' => request()->ip()
             ]);
-            return redirect()->route('login')->with('error', 'Sesión expirada. Por favor, inicia sesión nuevamente.');
+            return redirect()->route('login')->with('error', 'Session expired. Please log in again.');
         }
 
         Log::info('Dashboard loading for user', [
@@ -44,11 +47,11 @@ class UserDashboardController extends Controller
         ]);
         
         try {
-            // Detectar si el usuario es administrador
+            // Determine whether the current user has administrative privileges.
             $isAdmin = $user->role === 'admin' || $user->is_admin || false;
             
             if ($isAdmin) {
-                // Estadísticas del sistema para administradores
+                // System statistics shown to administrators.
                 $stats = [
                     'total_posts' => Post::count(),
                     'total_users' => User::count(),
@@ -85,7 +88,7 @@ class UserDashboardController extends Controller
                     ]
                 ];
                 
-                // Actividad reciente para admins
+                // Recent activity timeline for administrators.
                 $recentComments = Comment::with(['post:id,title,slug', 'user:id,name'])
                     ->latest()
                     ->take(5)
@@ -97,7 +100,7 @@ class UserDashboardController extends Controller
                     ->get();
                     
             } else {
-                // Estadísticas personales para usuarios regulares
+                // Personal statistics for regular users.
                 $stats = [
                     'comments_count' => $user->comments()->count(),
                     'saved_posts_count' => $user->savedPosts()->count(),
@@ -105,7 +108,7 @@ class UserDashboardController extends Controller
                     'followers_count' => $user->followers()->count(),
                 ];
 
-                // Get recent activity
+                // Retrieve the authenticated user's recent comments.
                 $recentComments = $user->comments()
                     ->with(['post:id,title,slug'])
                     ->latest()
@@ -140,12 +143,12 @@ class UserDashboardController extends Controller
                 'trace' => $e->getTraceAsString()
             ]);
             
-            return back()->with('error', 'Error al cargar el dashboard. Por favor, inténtalo de nuevo.');
+            return back()->with('error', 'Failed to load the dashboard. Please try again.');
         }
     }
 
     /**
-     * Display user's comments management
+     * Display user's comments management.
      */
     public function comments(Request $request): Response
     {

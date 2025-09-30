@@ -25,7 +25,7 @@ class Permission extends Model
     }
 
     /**
-     * Scope para filtrar por módulo
+     * Scope para filtrar por mÃƒÆ’Ã‚Â³dulo
      */
     public function scopeByModule($query, string $module)
     {
@@ -33,7 +33,7 @@ class Permission extends Model
     }
 
     /**
-     * Scope para filtrar por acción
+     * Scope para filtrar por acciÃƒÆ’Ã‚Â³n
      */
     public function scopeByAction($query, string $action)
     {
@@ -41,7 +41,7 @@ class Permission extends Model
     }
 
     /**
-     * Obtener permisos agrupados por módulo
+     * Obtener permisos agrupados por mÃƒÆ’Ã‚Â³dulo
      */
     public static function getByModules()
     {

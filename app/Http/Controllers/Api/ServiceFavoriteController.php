@@ -10,6 +10,9 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 
+/**
+ * API endpoints for managing service favorites.
+ */
 class ServiceFavoriteController extends Controller
 {
     /**
@@ -23,17 +26,17 @@ class ServiceFavoriteController extends Controller
             if (!$user) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Usuario no autenticado'
+                    'message' => 'Unauthenticated user.'
                 ], 401);
             }
 
-            // Check if already favorited
+            // Determine whether the service is already favorited.
             $existingFavorite = ServiceFavorite::where('user_id', $user->id)
                                              ->where('service_id', $service->id)
                                              ->first();
 
             if ($existingFavorite) {
-                // Remove from favorites
+                // Remove from favorites.
                 $existingFavorite->delete();
 
                 Log::info('Service removed from favorites', [
@@ -45,11 +48,11 @@ class ServiceFavoriteController extends Controller
                 return response()->json([
                     'success' => true,
                     'favorited' => false,
-                    'message' => 'Servicio eliminado de favoritos',
+                    'message' => 'Service removed from favorites.',
                     'favorites_count' => $service->fresh()->favorites_count
                 ]);
             } else {
-                // Add to favorites
+                // Add to favorites.
                 ServiceFavorite::create([
                     'user_id' => $user->id,
                     'service_id' => $service->id,
@@ -64,7 +67,7 @@ class ServiceFavoriteController extends Controller
                 return response()->json([
                     'success' => true,
                     'favorited' => true,
-                    'message' => 'Servicio añadido a favoritos',
+                    'message' => 'Service added to favorites.',
                     'favorites_count' => $service->fresh()->favorites_count
                 ]);
             }
@@ -78,7 +81,7 @@ class ServiceFavoriteController extends Controller
 
             return response()->json([
                 'success' => false,
-                'message' => 'Error al procesar la solicitud'
+                'message' => 'Failed to process favorite request.'
             ], 500);
         }
     }
@@ -94,7 +97,7 @@ class ServiceFavoriteController extends Controller
             if (!$user) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Usuario no autenticado'
+                    'message' => 'Unauthenticated user.'
                 ], 401);
             }
 
@@ -127,7 +130,7 @@ class ServiceFavoriteController extends Controller
 
             return response()->json([
                 'success' => false,
-                'message' => 'Error al obtener favoritos'
+                'message' => 'Failed to fetch favorites.'
             ], 500);
         }
     }
@@ -163,7 +166,7 @@ class ServiceFavoriteController extends Controller
 
             return response()->json([
                 'success' => false,
-                'message' => 'Error al verificar estado de favorito'
+                'message' => 'Failed to verify favorite status.'
             ], 500);
         }
     }

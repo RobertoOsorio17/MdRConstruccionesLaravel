@@ -7,10 +7,13 @@ use App\Models\Post;
 use App\Models\UserInteraction;
 use Illuminate\Http\JsonResponse;
 
+/**
+ * Manage like and bookmark interactions for posts.
+ */
 class UserInteractionController extends Controller
 {
     /**
-     * Toggle like en un post
+     * Toggle a like on the provided post.
      */
     public function toggleLike(Request $request, Post $post): JsonResponse
     {
@@ -28,12 +31,12 @@ class UserInteractionController extends Controller
             'success' => true,
             'isLiked' => $isLiked,
             'likesCount' => $likesCount,
-            'message' => $isLiked ? 'Te gusta este post' : 'Ya no te gusta este post'
+            'message' => $isLiked ? 'You like this post.' : 'You no longer like this post.'
         ]);
     }
     
     /**
-     * Toggle bookmark en un post
+     * Toggle a bookmark on the provided post.
      */
     public function toggleBookmark(Request $request, Post $post): JsonResponse
     {
@@ -51,12 +54,12 @@ class UserInteractionController extends Controller
             'success' => true,
             'isBookmarked' => $isBookmarked,
             'bookmarksCount' => $bookmarksCount,
-            'message' => $isBookmarked ? 'Post guardado en favoritos' : 'Post eliminado de favoritos'
+            'message' => $isBookmarked ? 'Post saved to favorites.' : 'Post removed from favorites.'
         ]);
     }
     
     /**
-     * Obtener el estado de interacciones de un usuario con un post
+     * Retrieve the current interaction status for the authenticated user.
      */
     public function getInteractionStatus(Request $request, Post $post): JsonResponse
     {

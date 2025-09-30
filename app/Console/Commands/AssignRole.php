@@ -58,7 +58,7 @@ class AssignRole extends Command
         // Attach the requested role to the user.
         $user->assignRole($role);
 
-        $this->info("✓ Role '{$roleName}' successfully assigned to {$user->name} ({$user->email}).");
+        $this->info("âœ“ Role '{$roleName}' successfully assigned to {$user->name} ({$user->email}).");
 
         // Display the consolidated permission set now available.
         $permissions = $user->roles()

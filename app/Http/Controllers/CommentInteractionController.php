@@ -18,36 +18,36 @@ class CommentInteractionController extends Controller
     {
         $user = Auth::user();
         
-        // Verificar si ya existe una interacción del mismo tipo
+        // Check whether an interaction of the same type already exists.
         $existingInteraction = CommentInteraction::where('user_id', $user->id)
             ->where('comment_id', $comment->id)
             ->where('type', 'like')
             ->first();
             
         if ($existingInteraction) {
-            // Si ya existe, eliminarla (toggle)
+            // Toggle off the interaction when it already exists.
             $existingInteraction->delete();
-            $message = 'Like eliminado';
+            $message = 'Like removed.';
             $liked = false;
         } else {
-            // Eliminar cualquier dislike existente
+            // Remove any existing dislike before saving the like.
             CommentInteraction::where('user_id', $user->id)
                 ->where('comment_id', $comment->id)
                 ->where('type', 'dislike')
                 ->delete();
                 
-            // Crear nuevo like
+            // Record the new like interaction.
             CommentInteraction::create([
                 'user_id' => $user->id,
                 'comment_id' => $comment->id,
                 'type' => 'like'
             ]);
             
-            $message = 'Comentario marcado como útil';
+            $message = 'Comment marked as helpful.';
             $liked = true;
         }
         
-        // Obtener conteos actualizados
+        // Retrieve the latest interaction counters.
         $likeCount = $comment->likeCount();
         $dislikeCount = $comment->dislikeCount();
         
@@ -67,36 +67,36 @@ class CommentInteractionController extends Controller
     {
         $user = Auth::user();
         
-        // Verificar si ya existe una interacción del mismo tipo
+        // Check whether an interaction of the same type already exists.
         $existingInteraction = CommentInteraction::where('user_id', $user->id)
             ->where('comment_id', $comment->id)
             ->where('type', 'dislike')
             ->first();
             
         if ($existingInteraction) {
-            // Si ya existe, eliminarla (toggle)
+            // Toggle off the interaction when it already exists.
             $existingInteraction->delete();
-            $message = 'Dislike eliminado';
+            $message = 'Dislike removed.';
             $disliked = false;
         } else {
-            // Eliminar cualquier like existente
+            // Remove any existing like before saving the dislike.
             CommentInteraction::where('user_id', $user->id)
                 ->where('comment_id', $comment->id)
                 ->where('type', 'like')
                 ->delete();
                 
-            // Crear nuevo dislike
+            // Record the new dislike interaction.
             CommentInteraction::create([
                 'user_id' => $user->id,
                 'comment_id' => $comment->id,
                 'type' => 'dislike'
             ]);
             
-            $message = 'Comentario marcado como no útil';
+            $message = 'Comment marked as not helpful.';
             $disliked = true;
         }
         
-        // Obtener conteos actualizados
+        // Retrieve the latest interaction counters.
         $likeCount = $comment->likeCount();
         $dislikeCount = $comment->dislikeCount();
         
@@ -124,14 +124,14 @@ class CommentInteractionController extends Controller
         $ipAddress = $request->ip();
         $userAgent = $request->userAgent();
         
-        // Verificar si ya existe un reporte del mismo usuario o IP
+        // Check whether the same user or IP address has already reported this comment.
         $existingReportQuery = CommentReport::where('comment_id', $comment->id);
         
         if ($user) {
-            // Usuario autenticado: verificar por user_id
+            // Authenticated user: constrain by the authenticated user identifier.
             $existingReportQuery->where('user_id', $user->id);
         } else {
-            // Usuario invitado: verificar por IP en las últimas 24 horas
+            // Guest user: limit repeated reports from the same IP within the last 24 hours.
             $existingReportQuery->where('ip_address', $ipAddress)
                                ->where('created_at', '>', now()->subDay());
         }
@@ -140,8 +140,8 @@ class CommentInteractionController extends Controller
             
         if ($existingReport) {
             $message = $user 
-                ? 'Ya has reportado este comentario'
-                : 'Ya se ha reportado este comentario desde esta ubicación en las últimas 24 horas';
+                ? 'You have already reported this comment.'
+                : 'This comment was already reported from this location within the last 24 hours.';
                 
             return response()->json([
                 'success' => false,
@@ -149,7 +149,7 @@ class CommentInteractionController extends Controller
             ], 400);
         }
         
-        // Crear nuevo reporte
+        // Persist the new report entry.
         CommentReport::create([
             'user_id' => $user?->id,
             'comment_id' => $comment->id,
@@ -162,8 +162,8 @@ class CommentInteractionController extends Controller
         ]);
         
         $successMessage = $user 
-            ? 'Comentario reportado exitosamente. Nuestro equipo lo revisará pronto.'
-            : 'Comentario reportado exitosamente. Ten en cuenta que los reportes falsos pueden resultar en el bloqueo de tu IP.';
+            ? 'Comment reported successfully. Our team will review it shortly.'
+            : 'Comment reported successfully. Remember that false reports can result in your IP being blocked.';
         
         return response()->json([
             'success' => true,
@@ -171,3 +171,8 @@ class CommentInteractionController extends Controller
         ]);
     }
 }
+
+
+
+
+

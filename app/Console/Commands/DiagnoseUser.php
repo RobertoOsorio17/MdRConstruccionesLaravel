@@ -96,7 +96,7 @@ class DiagnoseUser extends Command
 
         foreach ($importantPermissions as $permission) {
             $hasPermission = method_exists($user, 'hasPermission') ? $user->hasPermission($permission) : false;
-            $status = $hasPermission ? "✓" : "✗";
+            $status = $hasPermission ? "âœ“" : "âœ—";
             $this->line("{$status} {$permission}");
         }
         $this->line("");

@@ -23,14 +23,14 @@ class UserInteraction extends Model
         'metadata' => 'array'
     ];
     
-    // Tipos de interacción disponibles
+    // Tipos de interacciÃƒÆ’Ã‚Â³n disponibles
     const TYPE_LIKE = 'like';
     const TYPE_BOOKMARK = 'bookmark';
     const TYPE_VIEW = 'view';
     const TYPE_SHARE = 'share';
     
     /**
-     * Relación con el usuario
+     * RelaciÃƒÆ’Ã‚Â³n con el usuario
      */
     public function user(): BelongsTo
     {
@@ -38,7 +38,7 @@ class UserInteraction extends Model
     }
     
     /**
-     * Relación polimórfica con el elemento interactuado
+     * RelaciÃƒÆ’Ã‚Â³n polimÃƒÆ’Ã‚Â³rfica con el elemento interactuado
      */
     public function interactable(): MorphTo
     {
@@ -46,7 +46,7 @@ class UserInteraction extends Model
     }
     
     /**
-     * Scope para filtrar por tipo de interacción
+     * Scope para filtrar por tipo de interacciÃƒÆ’Ã‚Â³n
      */
     public function scopeOfType($query, $type)
     {
@@ -70,7 +70,7 @@ class UserInteraction extends Model
     }
     
     /**
-     * Crear o eliminar una interacción
+     * Crear o eliminar una interacciÃƒÆ’Ã‚Â³n
      */
     public static function toggle($userId, $interactable, $type)
     {

@@ -15,7 +15,7 @@ use Inertia\Inertia;
 class DebugController extends Controller
 {
     /**
-     * Mostrar página de depuración del sistema
+     * Display the system debugging dashboard.
      */
     public function index()
     {
@@ -33,7 +33,7 @@ class DebugController extends Controller
     }
 
     /**
-     * Obtener información del sistema para depuración
+     * Provide system information for debugging purposes.
      */
     public function systemInfo()
     {
@@ -48,7 +48,7 @@ class DebugController extends Controller
     }
 
     /**
-     * Limpiar logs del sistema
+     * Clear the application log files.
      */
     public function clearLogs(Request $request)
     {
@@ -59,7 +59,7 @@ class DebugController extends Controller
         ]);
 
         try {
-            // Limpiar archivos de log de Laravel
+            // Clear Laravel log files.
             $logPath = storage_path('logs');
             $files = glob($logPath . '/laravel*.log');
             
@@ -76,7 +76,7 @@ class DebugController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Logs limpiados correctamente',
+                'message' => 'Logs cleared successfully.',
                 'files_cleared' => count($files)
             ]);
 
@@ -88,13 +88,13 @@ class DebugController extends Controller
 
             return response()->json([
                 'success' => false,
-                'message' => 'Error al limpiar logs: ' . $e->getMessage()
+                'message' => 'Failed to clear logs: ' . $e->getMessage()
             ], 500);
         }
     }
 
     /**
-     * Depurar problema específico de autenticación
+     * Debug authentication-specific issues.
      */
     public function debugAuth()
     {
@@ -120,7 +120,7 @@ class DebugController extends Controller
     }
 
     /**
-     * Depurar problema de posts del blog
+     * Debug blog post issues.
      */
     public function debugBlog()
     {
@@ -134,11 +134,11 @@ class DebugController extends Controller
                 'comments_count' => Comment::count(),
             ];
 
-            // Verificar si hay posts con imágenes
+            // Check whether posts include images.
             $postsWithImages = Post::whereNotNull('featured_image')->count();
             $blogDebug['posts_with_images'] = $postsWithImages;
 
-            // Verificar estructura de base de datos
+            // Verify database structure.
             $blogDebug['posts_table_exists'] = DB::getSchemaBuilder()->hasTable('posts');
             $blogDebug['categories_table_exists'] = DB::getSchemaBuilder()->hasTable('categories');
 
@@ -168,7 +168,7 @@ class DebugController extends Controller
     }
 
     /**
-     * Recopilar información general del sistema
+     * Collect general system information.
      */
     private function gatherSystemInfo()
     {
@@ -213,3 +213,5 @@ class DebugController extends Controller
         ];
     }
 }
+
+

@@ -20,10 +20,15 @@ use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
 use Inertia\Inertia;
 
+/**
+ * Deliver administrative overview data, health metrics, and maintenance utilities.
+ */
 class AdminController extends Controller
 {
     /**
      * Retrieve high-level system statistics for administrator dashboards.
+     *
+     * @return array Aggregated counts and metrics for administrative widgets.
      */
     public function getSystemStats()
     {
@@ -72,6 +77,9 @@ class AdminController extends Controller
 
     /**
      * Retrieve recent content activity across the application.
+     *
+     * @param Request $request The current HTTP request containing pagination hints.
+     * @return \Illuminate\Support\Collection Collection of normalized activity records.
      */
     public function getRecentActivity(Request $request)
     {
@@ -126,6 +134,8 @@ class AdminController extends Controller
 
     /**
      * Report current system health checks for core services.
+     *
+     * @return array Structured health indicators for infrastructure components.
      */
     public function getSystemHealth()
     {
@@ -192,6 +202,9 @@ class AdminController extends Controller
 
     /**
      * Clear core application caches and record the audit trail.
+     *
+     * @param Request $request The current HTTP request supplying audit metadata.
+     * @return \Illuminate\Http\JsonResponse JSON response confirming the cache operation.
      */
     public function clearCaches(Request $request)
     {
@@ -237,6 +250,8 @@ class AdminController extends Controller
 
     /**
      * Calculate the current disk usage for the storage path.
+     *
+     * @return string Human-readable disk usage measurement.
      */
     private function getDiskUsage()
     {
@@ -250,6 +265,8 @@ class AdminController extends Controller
 
     /**
      * Estimate the cache directory size in human-readable format.
+     *
+     * @return string Estimated cache footprint measurement.
      */
     private function getCacheSize()
     {
@@ -278,6 +295,10 @@ class AdminController extends Controller
 
     /**
      * Convert a byte count into a human-readable unit value.
+     *
+     * @param int|float $bytes The number of bytes to convert.
+     * @param int $precision The decimal precision for rounding.
+     * @return string Human-readable representation of the byte count.
      */
     private function formatBytes($bytes, $precision = 2)
     {

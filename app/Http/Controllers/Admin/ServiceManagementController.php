@@ -12,16 +12,19 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 
+/**
+ * Advanced service management features for administrators.
+ */
 class ServiceManagementController extends Controller
 {
     /**
-     * Display a listing of services
+     * Display a listing of services.
      */
     public function index(Request $request)
     {
         $query = Service::with(['category']);
 
-        // Search functionality
+        // Apply keyword filtering across title and descriptions.
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
@@ -31,12 +34,12 @@ class ServiceManagementController extends Controller
             });
         }
 
-        // Category filter
+        // Filter by the selected category.
         if ($request->filled('category')) {
             $query->where('category_id', $request->category);
         }
 
-        // Status filter
+        // Filter by active/inactive status.
         if ($request->filled('status')) {
             if ($request->status === 'active') {
                 $query->where('is_active', true);
@@ -45,7 +48,7 @@ class ServiceManagementController extends Controller
             }
         }
 
-        // Featured filter
+        // Filter by featured flag.
         if ($request->filled('featured')) {
             if ($request->featured === 'yes') {
                 $query->where('is_featured', true);
@@ -54,16 +57,16 @@ class ServiceManagementController extends Controller
             }
         }
 
-        // Sorting
+        // Sorting preferences.
         $sortBy = $request->get('sort_by', 'created_at');
         $sortOrder = $request->get('sort_order', 'desc');
         $query->orderBy($sortBy, $sortOrder);
 
-        // Pagination
+        // Paginate the results.
         $perPage = $request->get('per_page', 15);
         $services = $query->paginate($perPage);
 
-        // Transform services data
+        // Transform services data for the frontend.
         $services->getCollection()->transform(function ($service) {
             return [
                 'id' => $service->id,
@@ -88,7 +91,7 @@ class ServiceManagementController extends Controller
             ];
         });
 
-        // Get statistics
+        // Aggregate simple dashboard statistics.
         $stats = [
             'total_services' => Service::count(),
             'active_services' => Service::where('is_active', true)->count(),
@@ -97,7 +100,7 @@ class ServiceManagementController extends Controller
             'total_views' => Service::sum('views_count') ?? 0,
         ];
 
-        // Get categories for filters
+        // Retrieve categories for filtering.
         $categories = Category::select('id', 'name', 'slug')->get();
 
         return Inertia::render('Admin/ServiceManagement', [
@@ -109,7 +112,7 @@ class ServiceManagementController extends Controller
     }
 
     /**
-     * Show the form for creating a new service
+     * Show the form for creating a new service.
      */
     public function create()
     {
@@ -123,7 +126,7 @@ class ServiceManagementController extends Controller
     }
 
     /**
-     * Store a newly created service
+     * Store a newly created service.
      */
     public function store(Request $request)
     {
@@ -147,7 +150,7 @@ class ServiceManagementController extends Controller
         $data = $validator->validated();
         $data['slug'] = Str::slug($data['title']);
 
-        // Handle image upload
+        // Handle image upload.
         if ($request->hasFile('image')) {
             $data['image'] = $request->file('image')->store('services', 'public');
         }
@@ -155,17 +158,17 @@ class ServiceManagementController extends Controller
         $service = Service::create($data);
 
         return redirect()->route('admin.admin.services.index')
-            ->with('success', 'Servicio creado exitosamente.');
+            ->with('success', 'Service created successfully.');
     }
 
     /**
-     * Display the specified service
+     * Display the specified service.
      */
     public function show(Service $service)
     {
         $service->load(['category']);
 
-        // Get service analytics (last 30 days)
+        // Collect simple service analytics (last 30 days).
         $analytics = [
             'monthly_views' => $service->views_count ?? 0, // In a real app, this would be calculated from analytics data
             'monthly_favorites' => $service->favorites()->where('created_at', '>=', now()->subDays(30))->count(),
@@ -200,7 +203,7 @@ class ServiceManagementController extends Controller
     }
 
     /**
-     * Show the form for editing the specified service
+     * Show the form for editing the specified service.
      */
     public function edit(Service $service)
     {
@@ -228,7 +231,7 @@ class ServiceManagementController extends Controller
     }
 
     /**
-     * Update the specified service
+     * Update the specified service.
      */
     public function update(Request $request, Service $service)
     {
@@ -251,12 +254,12 @@ class ServiceManagementController extends Controller
 
         $data = $validator->validated();
 
-        // Update slug if title changed
+        // Update the slug when the title changes.
         if ($data['title'] !== $service->title) {
             $data['slug'] = Str::slug($data['title']);
         }
 
-        // Handle image upload
+        // Handle image upload.
         if ($request->hasFile('image')) {
             // Delete old image
             if ($service->image) {
@@ -268,15 +271,15 @@ class ServiceManagementController extends Controller
         $service->update($data);
 
         return redirect()->route('admin.admin.services.index')
-            ->with('success', 'Servicio actualizado exitosamente.');
+            ->with('success', 'Service updated successfully.');
     }
 
     /**
-     * Remove the specified service
+     * Remove the specified service.
      */
     public function destroy(Service $service)
     {
-        // Delete associated image
+        // Delete associated image.
         if ($service->image) {
             Storage::disk('public')->delete($service->image);
         }
@@ -284,11 +287,11 @@ class ServiceManagementController extends Controller
         $service->delete();
 
         return redirect()->route('admin.admin.services.index')
-            ->with('success', 'Servicio eliminado exitosamente.');
+            ->with('success', 'Service deleted successfully.');
     }
 
     /**
-     * Handle bulk actions on services
+     * Handle bulk actions on services.
      */
     public function bulkAction(Request $request)
     {
@@ -309,19 +312,19 @@ class ServiceManagementController extends Controller
         switch ($action) {
             case 'activate':
                 $services->update(['is_active' => true]);
-                $message = 'Servicios activados exitosamente.';
+                $message = 'Services activated successfully.';
                 break;
             case 'deactivate':
                 $services->update(['is_active' => false]);
-                $message = 'Servicios desactivados exitosamente.';
+                $message = 'Services deactivated successfully.';
                 break;
             case 'feature':
                 $services->update(['is_featured' => true]);
-                $message = 'Servicios marcados como destacados exitosamente.';
+                $message = 'Services marked as featured successfully.';
                 break;
             case 'unfeature':
                 $services->update(['is_featured' => false]);
-                $message = 'Servicios desmarcados como destacados exitosamente.';
+                $message = 'Services unmarked as featured successfully.';
                 break;
             case 'delete':
                 // Delete associated images
@@ -332,7 +335,7 @@ class ServiceManagementController extends Controller
                     }
                 }
                 $services->delete();
-                $message = 'Servicios eliminados exitosamente.';
+                $message = 'Services deleted successfully.';
                 break;
         }
 
@@ -341,13 +344,13 @@ class ServiceManagementController extends Controller
     }
 
     /**
-     * Export services to CSV
+     * Export services to CSV.
      */
     public function export(Request $request)
     {
         $query = Service::with(['category']);
 
-        // Apply same filters as index
+        // Apply the same filters used by the index view.
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
@@ -381,9 +384,9 @@ class ServiceManagementController extends Controller
 
         $csvData = [];
         $csvData[] = [
-            'ID', 'Título', 'Slug', 'Descripción Corta', 'Categoría',
-            'Precio', 'Tipo de Precio', 'Duración', 'Activo', 'Destacado',
-            'Vistas', 'Fecha de Creación'
+            'ID', 'Title', 'Slug', 'Short Description', 'Category',
+            'Price', 'Price Type', 'Duration', 'Active', 'Featured',
+            'Views', 'Created At'
         ];
 
         foreach ($services as $service) {
@@ -392,18 +395,18 @@ class ServiceManagementController extends Controller
                 $service->title,
                 $service->slug,
                 $service->short_description,
-                $service->category ? $service->category->name : 'Sin categoría',
+                $service->category ? $service->category->name : 'No category',
                 $service->price ?? 'N/A',
                 $service->price_type ?? 'N/A',
                 $service->duration ?? 'N/A',
-                $service->is_active ? 'Sí' : 'No',
-                $service->is_featured ? 'Sí' : 'No',
+                $service->is_active ? 'Yes' : 'No',
+                $service->is_featured ? 'Yes' : 'No',
                 $service->views_count ?? 0,
                 $service->created_at->format('Y-m-d H:i:s'),
             ];
         }
 
-        $filename = 'servicios_' . date('Y-m-d_H-i-s') . '.csv';
+        $filename = 'services_' . date('Y-m-d_H-i-s') . '.csv';
 
         $headers = [
             'Content-Type' => 'text/csv',
@@ -422,7 +425,7 @@ class ServiceManagementController extends Controller
     }
 
     /**
-     * Show service analytics
+     * Show service analytics.
      */
     public function analytics(Request $request)
     {

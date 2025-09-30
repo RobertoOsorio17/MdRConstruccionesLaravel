@@ -21,11 +21,11 @@ class AdminOnly
             if ($request->expectsJson()) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'No tienes permisos para realizar esta acción.'
+                    'message' => 'No tienes permisos para realizar esta acciÃƒÆ’Ã‚Â³n.'
                 ], 403);
             }
             
-            return redirect()->route('login')->with('error', 'Debes iniciar sesión para acceder a esta página.');
+            return redirect()->route('login')->with('error', 'Debes iniciar sesiÃƒÆ’Ã‚Â³n para acceder a esta pÃƒÆ’Ã‚Â¡gina.');
         }
 
         $user = Auth::user();
@@ -35,7 +35,7 @@ class AdminOnly
             if ($request->expectsJson()) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'No tienes permisos de administrador para realizar esta acción.'
+                    'message' => 'No tienes permisos de administrador para realizar esta acciÃƒÆ’Ã‚Â³n.'
                 ], 403);
             }
             

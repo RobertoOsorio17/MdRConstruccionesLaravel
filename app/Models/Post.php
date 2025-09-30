@@ -221,7 +221,7 @@ class Post extends Model
     }
 
     /**
-     * Obtener posts relacionados/sugeridos basados en categorías y etiquetas
+     * Obtener posts relacionados/sugeridos basados en categorÃƒÆ’Ã‚Â­as y etiquetas
      */
     public function getRelatedPosts($limit = 3)
     {
@@ -250,16 +250,16 @@ class Post extends Model
     }
     
     /**
-     * Obtener posts sugeridos inteligentes basados en múltiples factores
+     * Obtener posts sugeridos inteligentes basados en mÃƒÆ’Ã‚Âºltiples factores
      */
     public function getSuggestedPosts($limit = 4)
     {
         $categoryIds = $this->categories->pluck('id');
         $tagIds = $this->tags->pluck('id');
         
-        // Posts con mayor relevancia por categorías y etiquetas compartidas
+        // Posts con mayor relevancia por categorÃƒÆ’Ã‚Â­as y etiquetas compartidas
         if ($categoryIds->isEmpty() && $tagIds->isEmpty()) {
-            // Si no hay categorías ni etiquetas, usar posts populares directamente
+            // Si no hay categorÃƒÆ’Ã‚Â­as ni etiquetas, usar posts populares directamente
             return static::published()
                 ->where('id', '!=', $this->id)
                 ->with(['author:id,name,avatar', 'categories:id,name,slug', 'tags:id,name,slug,color'])
@@ -270,12 +270,12 @@ class Post extends Model
                 ->get();
         }
         
-        // Construir la query de relevancia de forma segura usando parámetros
+        // Construir la query de relevancia de forma segura usando parÃƒÆ’Ã‚Â¡metros
         $query = static::published()
             ->where('id', '!=', $this->id)
             ->select('posts.*');
 
-        // Construir la query de relevancia usando parámetros seguros
+        // Construir la query de relevancia usando parÃƒÆ’Ã‚Â¡metros seguros
         $relevanceQuery = '(posts.views_count / 100) + (posts.featured * 1)';
         $bindings = [];
 

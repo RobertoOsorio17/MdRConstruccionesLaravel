@@ -9,6 +9,9 @@ use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
+/**
+ * Manage blog tags within the admin panel.
+ */
 class TagController extends Controller
 {
     /**
@@ -18,7 +21,7 @@ class TagController extends Controller
     {
         $query = Tag::withCount('posts');
 
-        // Search functionality
+        // Apply keyword filtering.
         if ($request->has('search') && !empty($request->search)) {
             $query->where('name', 'like', '%' . $request->search . '%');
         }
@@ -69,11 +72,11 @@ class TagController extends Controller
             'color' => 'required|string|regex:/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/',
         ]);
 
-        // Generate slug if not provided
+        // Generate slug if not provided.
         if (empty($validated['slug'])) {
             $validated['slug'] = Str::slug($validated['name']);
-            
-            // Ensure uniqueness
+
+            // Ensure uniqueness.
             $originalSlug = $validated['slug'];
             $counter = 1;
             while (Tag::where('slug', $validated['slug'])->exists()) {
@@ -85,7 +88,7 @@ class TagController extends Controller
         Tag::create($validated);
 
         return redirect()->route('admin.tags.index')
-            ->with('success', 'Tag creado exitosamente.');
+            ->with('success', 'Tag created successfully.');
     }
 
     /**
@@ -134,11 +137,11 @@ class TagController extends Controller
             'color' => 'required|string|regex:/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/',
         ]);
 
-        // Generate slug if not provided
+        // Generate slug if not provided.
         if (empty($validated['slug'])) {
             $validated['slug'] = Str::slug($validated['name']);
-            
-            // Ensure uniqueness
+
+            // Ensure uniqueness.
             $originalSlug = $validated['slug'];
             $counter = 1;
             while (Tag::where('slug', $validated['slug'])->where('id', '!=', $tag->id)->exists()) {
@@ -150,7 +153,7 @@ class TagController extends Controller
         $tag->update($validated);
 
         return redirect()->route('admin.tags.index')
-            ->with('success', 'Tag actualizado exitosamente.');
+            ->with('success', 'Tag updated successfully.');
     }
 
     /**
@@ -158,16 +161,16 @@ class TagController extends Controller
      */
     public function destroy(Tag $tag)
     {
-        // Check if tag has posts
+        // Prevent deletion when posts still reference the tag.
         if ($tag->posts()->count() > 0) {
             return redirect()->route('admin.tags.index')
-                ->with('error', 'No se puede eliminar un tag que tiene posts asociados.');
+                ->with('error', 'This tag cannot be removed because posts are still linked to it.');
         }
 
         $tag->delete();
 
         return redirect()->route('admin.tags.index')
-            ->with('success', 'Tag eliminado exitosamente.');
+            ->with('success', 'Tag deleted successfully.');
     }
 
     /**
@@ -180,7 +183,7 @@ class TagController extends Controller
         return response()->json([
             'success' => true,
             'deleted_count' => $deletedCount,
-            'message' => "Se eliminaron {$deletedCount} tags no utilizados"
+            'message' => "{$deletedCount} unused tag(s) deleted."
         ]);
     }
 }

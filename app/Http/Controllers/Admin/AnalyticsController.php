@@ -16,21 +16,29 @@ use Illuminate\Support\Facades\Cache;
 use Carbon\Carbon;
 use Inertia\Inertia;
 
+/**
+ * Provide analytics endpoints for administrative dashboards and reports.
+ */
 class AnalyticsController extends Controller
 {
     /**
      * Display the primary analytics dashboard for administrators.
+     *
+     * @return \Inertia\Response Inertia response for the analytics overview page.
      */
     public function index()
     {
         return Inertia::render('Admin/Analytics/Index', [
             'title' => 'Analytics & Reporting',
-            'description' => 'Análisis detallado de rendimiento y métricas del sistema'
+            'description' => 'Detailed performance and system metrics analysis'
         ]);
     }
 
     /**
      * Retrieve user analytics data grouped by the requested period.
+     *
+     * @param Request $request The current HTTP request instance.
+     * @return array Cached analytics payload containing user metrics.
      */
     public function getUserAnalytics(Request $request)
     {
@@ -49,6 +57,9 @@ class AnalyticsController extends Controller
 
     /**
      * Retrieve content analytics data such as posts and comments.
+     *
+     * @param Request $request The current HTTP request instance.
+     * @return array Cached analytics payload describing content performance.
      */
     public function getContentAnalytics(Request $request)
     {
@@ -67,6 +78,9 @@ class AnalyticsController extends Controller
 
     /**
      * Retrieve service analytics including performance and conversions.
+     *
+     * @param Request $request The current HTTP request instance.
+     * @return array Cached analytics payload describing service engagement.
      */
     public function getServiceAnalytics(Request $request)
     {
@@ -85,6 +99,9 @@ class AnalyticsController extends Controller
 
     /**
      * Retrieve project analytics metrics for reporting.
+     *
+     * @param Request $request The current HTTP request instance.
+     * @return array Cached analytics payload describing project performance.
      */
     public function getProjectAnalytics(Request $request)
     {
@@ -103,6 +120,9 @@ class AnalyticsController extends Controller
 
     /**
      * Retrieve system health and performance analytics.
+     *
+     * @param Request $request The current HTTP request instance.
+     * @return array Analytics payload describing system health indicators.
      */
     public function getSystemAnalytics(Request $request)
     {
@@ -497,3 +517,4 @@ class AnalyticsController extends Controller
         ];
     }
 }
+

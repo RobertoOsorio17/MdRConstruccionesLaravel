@@ -24,11 +24,11 @@ class ContactController extends Controller
             'privacy_accepted' => 'required|accepted',
             'g-recaptcha-response' => 'sometimes', // Will be required when reCAPTCHA is implemented
         ], [
-            'name.required' => 'El nombre es obligatorio.',
-            'email.required' => 'El email es obligatorio.',
-            'email.email' => 'El email debe tener un formato válido.',
-            'message.required' => 'El mensaje es obligatorio.',
-            'privacy_accepted.accepted' => 'Debe aceptar la política de privacidad.',
+            'name.required' => 'The name field is required.',
+            'email.required' => 'The email field is required.',
+            'email.email' => 'The email must be a valid address.',
+            'message.required' => 'The message field is required.',
+            'privacy_accepted.accepted' => 'You must accept the privacy policy.',
         ]);
 
         try {
@@ -52,11 +52,11 @@ class ContactController extends Controller
             /*
             Mail::send('emails.contact', $contactData, function ($message) use ($validated) {
                 $message->to(Setting::get('company_email', 'info@mdrconstrucciones.com'))
-                        ->subject('Nueva consulta desde la web - ' . $validated['name']);
+                        ->subject('New inquiry from the website - ' . $validated['name']);
             });
             */
 
-            return back()->with('success', '¡Gracias por tu consulta! Nos pondremos en contacto contigo en las próximas 24 horas.');
+            return back()->with('success', 'Thank you for your inquiry! We will contact you within the next 24 hours.');
 
         } catch (\Exception $e) {
             Log::error('Error processing contact form', [
@@ -64,7 +64,7 @@ class ContactController extends Controller
                 'data' => $validated,
             ]);
 
-            return back()->with('error', 'Ha ocurrido un error al enviar tu consulta. Por favor, inténtalo de nuevo o contáctanos por teléfono.');
+            return back()->with('error', 'An error occurred while sending your inquiry. Please try again or contact us by phone.');
         }
     }
 
@@ -85,13 +85,13 @@ class ContactController extends Controller
             'description' => 'required|string|max:2000',
             'privacy_accepted' => 'required|accepted',
         ], [
-            'name.required' => 'El nombre es obligatorio.',
-            'email.required' => 'El email es obligatorio.',
-            'phone.required' => 'El teléfono es obligatorio.',
-            'service.required' => 'Debe seleccionar un servicio.',
-            'property_type.required' => 'Debe indicar el tipo de propiedad.',
-            'description.required' => 'La descripción del proyecto es obligatoria.',
-            'privacy_accepted.accepted' => 'Debe aceptar la política de privacidad.',
+            'name.required' => 'The name field is required.',
+            'email.required' => 'The email field is required.',
+            'phone.required' => 'The phone field is required.',
+            'service.required' => 'You must select a service.',
+            'property_type.required' => 'You must specify the property type.',
+            'description.required' => 'The project description is required.',
+            'privacy_accepted.accepted' => 'You must accept the privacy policy.',
         ]);
 
         try {
@@ -107,7 +107,7 @@ class ContactController extends Controller
             // For now, just log it
             Log::info('New budget request submission', $budgetData);
 
-            return back()->with('success', '¡Solicitud de presupuesto recibida! Nuestro equipo se pondrá en contacto contigo en las próximas horas para concretar una visita gratuita.');
+            return back()->with('success', 'Budget request received! Our team will contact you in the next few hours to schedule a free visit.');
 
         } catch (\Exception $e) {
             Log::error('Error processing budget request', [
@@ -115,7 +115,9 @@ class ContactController extends Controller
                 'data' => $validated,
             ]);
 
-            return back()->with('error', 'Ha ocurrido un error al enviar tu solicitud. Por favor, inténtalo de nuevo o llámanos directamente.');
+            return back()->with('error', 'An error occurred while sending your request. Please try again or call us directly.');
         }
     }
 }
+
+

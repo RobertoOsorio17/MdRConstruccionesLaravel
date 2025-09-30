@@ -20,9 +20,9 @@ class ServiceController extends Controller
                 ->map(function ($service) {
                     return [
                         'id' => $service->id,
-                        'title' => $service->title ?? 'Sin título',
+                        'title' => $service->title ?? 'Untitled',
                         'slug' => $service->slug,
-                        'excerpt' => $service->excerpt ?? 'Sin descripción disponible',
+                        'excerpt' => $service->excerpt ?? 'No description available',
                         'icon' => $service->icon ?? 'Construction',
                         'icon_name' => $service->icon ?? 'Construction',
                         'featured' => $service->featured ?? false,
@@ -84,3 +84,4 @@ class ServiceController extends Controller
         ]);
     }
 }
+

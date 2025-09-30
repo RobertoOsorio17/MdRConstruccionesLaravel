@@ -59,13 +59,13 @@ class AdminSessionTimeout
             
             if ($request->expectsJson()) {
                 return response()->json([
-                    'message' => 'Sesión expirada por inactividad',
+                    'message' => 'SesiÃƒÆ’Ã‚Â³n expirada por inactividad',
                     'timeout' => true
                 ], 401);
             }
             
             return redirect()->route('login')
-                ->with('error', 'Tu sesión ha expirado por inactividad. Por favor, inicia sesión nuevamente.');
+                ->with('error', 'Tu sesiÃƒÆ’Ã‚Â³n ha expirado por inactividad. Por favor, inicia sesiÃƒÆ’Ã‚Â³n nuevamente.');
         }
 
         // Update last activity
@@ -83,7 +83,7 @@ class AdminSessionTimeout
                 // Add warning to session for display in UI
                 Session::flash('session_warning', [
                     'remaining_minutes' => $remainingMinutes,
-                    'message' => "Tu sesión expirará en {$remainingMinutes} minutos por inactividad."
+                    'message' => "Tu sesiÃƒÆ’Ã‚Â³n expirarÃƒÆ’Ã‚Â¡ en {$remainingMinutes} minutos por inactividad."
                 ]);
             }
         }

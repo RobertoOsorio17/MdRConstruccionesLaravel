@@ -11,12 +11,20 @@ use Illuminate\Validation\ValidationException;
 
 class SearchController extends Controller
 {
+    /**
+     * Instantiate the controller with the search service dependency.
+     *
+     * @param SearchService $searchService The service that executes search queries.
+     */
     public function __construct(
         private SearchService $searchService
     ) {}
 
     /**
      * Perform a full search request with pagination and optional filters.
+     *
+     * @param SearchRequest $request The validated search request instance.
+     * @return JsonResponse JSON response containing search results and metadata.
      */
     public function search(SearchRequest $request): JsonResponse
     {
@@ -66,6 +74,9 @@ class SearchController extends Controller
 
     /**
      * Provide search suggestions suitable for autocomplete inputs.
+     *
+     * @param Request $request The current HTTP request.
+     * @return JsonResponse JSON response containing suggestion strings.
      */
     public function suggestions(Request $request): JsonResponse
     {
@@ -109,6 +120,9 @@ class SearchController extends Controller
 
     /**
      * Return the most popular search terms within a recent window.
+     *
+     * @param Request $request The current HTTP request.
+     * @return JsonResponse JSON response containing popular terms data.
      */
     public function popular(Request $request): JsonResponse
     {
@@ -140,6 +154,9 @@ class SearchController extends Controller
 
     /**
      * Return aggregate search analytics data for administrators.
+     *
+     * @param Request $request The current HTTP request.
+     * @return JsonResponse JSON response with analytics aggregates.
      */
     public function analytics(Request $request): JsonResponse
     {
@@ -174,6 +191,9 @@ class SearchController extends Controller
 
     /**
      * Run a lightweight search for instant-results contexts.
+     *
+     * @param Request $request The current HTTP request containing query parameters.
+     * @return JsonResponse JSON response optimized for quick search UIs.
      */
     public function quick(Request $request): JsonResponse
     {

@@ -26,7 +26,7 @@ class MLController extends Controller
     }
 
     /**
-     * Obtiene recomendaciones ML para un usuario
+     * Retrieve ML recommendations for a user.
      */
     public function getRecommendations(Request $request): JsonResponse
     {
@@ -69,14 +69,14 @@ class MLController extends Controller
 
             return response()->json([
                 'success' => false,
-                'error' => 'No se pudieron generar recomendaciones',
+                'error' => 'Recommendations could not be generated.',
                 'recommendations' => []
             ], 500);
         }
     }
 
     /**
-     * Registra una interacción de usuario para el sistema ML
+     * Register a user interaction for the ML system.
      */
     public function logInteraction(Request $request): JsonResponse
     {
@@ -96,7 +96,7 @@ class MLController extends Controller
             $sessionId = $validated['session_id'] ?? $request->session()->getId();
             $userId = Auth::id();
 
-            // Registrar la interacción
+            // Record the interaction entry.
             $interaction = MLInteractionLog::logInteraction([
                 'session_id' => $sessionId,
                 'user_id' => $userId,
@@ -110,12 +110,12 @@ class MLController extends Controller
                 'interaction_metadata' => $validated['metadata'] ?? null,
             ]);
 
-            // Actualizar perfil de usuario si es necesario
+            // Update the user profile when required.
             $this->updateUserProfile($sessionId, $userId, $interaction);
 
             return response()->json([
                 'success' => true,
-                'message' => 'Interacción registrada correctamente',
+                'message' => 'Interaction recorded successfully.',
                 'interaction_id' => $interaction->id
             ]);
 
@@ -127,13 +127,13 @@ class MLController extends Controller
 
             return response()->json([
                 'success' => false,
-                'error' => 'No se pudo registrar la interacción'
+                'error' => 'The interaction could not be recorded.'
             ], 500);
         }
     }
 
     /**
-     * Obtiene insights ML para un usuario
+     * Retrieve ML insights for a user.
      */
     public function getUserInsights(Request $request): JsonResponse
     {
@@ -147,7 +147,7 @@ class MLController extends Controller
                 return response()->json([
                     'success' => true,
                     'insights' => [
-                        'message' => 'Sigue explorando para obtener recomendaciones personalizadas',
+                        'message' => 'Keep exploring to receive personalized recommendations.',
                         'reading_time' => 0,
                         'posts_read' => 0,
                         'top_categories' => [],
@@ -157,7 +157,7 @@ class MLController extends Controller
             }
 
             $insights = [
-                'reading_time' => round($profile->avg_reading_time / 60, 1), // en minutos
+                'reading_time' => round($profile->avg_reading_time / 60, 1), // in minutes
                 'posts_read' => $profile->total_posts_read,
                 'engagement_rate' => round($profile->engagement_rate * 100, 1),
                 'top_categories' => $this->getTopCategories($profile),
@@ -179,35 +179,35 @@ class MLController extends Controller
 
             return response()->json([
                 'success' => false,
-                'error' => 'No se pudieron obtener los insights'
+                'error' => 'Unable to retrieve insights.'
             ], 500);
         }
     }
 
     /**
-     * Fuerza el entrenamiento de modelos ML
+     * Trigger ML model training.
      */
     public function trainModels(Request $request): JsonResponse
     {
         try {
-            // Solo permitir a administradores (simplificado - verificar role de otra manera)
+            // Allow only administrators (simplified - enforce role checks separately).
             $user = Auth::user();
             if (!$user || !$user->is_admin) {
                 return response()->json([
                     'success' => false,
-                    'error' => 'No autorizado'
+                    'error' => 'Unauthorized.'
                 ], 403);
             }
 
-            // Analizar todos los posts
+            // Analyze all posts.
             $this->contentAnalysis->analyzeAllPosts();
             
-            // Entrenar clustering de usuarios (simplificado)
+            // Train user clustering (simplified).
             $this->trainUserClustering();
             
             return response()->json([
                 'success' => true,
-                'message' => 'Modelos entrenados correctamente',
+                'message' => 'Models trained successfully.',
                 'trained_at' => now()->toISOString()
             ]);
 
@@ -218,13 +218,13 @@ class MLController extends Controller
 
             return response()->json([
                 'success' => false,
-                'error' => 'Error entrenando modelos'
+                'error' => 'Error training models.'
             ], 500);
         }
     }
 
     /**
-     * Obtiene métricas de rendimiento del sistema ML
+     * Retrieve ML system performance metrics.
      */
     public function getMetrics(Request $request): JsonResponse
     {
@@ -257,13 +257,13 @@ class MLController extends Controller
 
             return response()->json([
                 'success' => false,
-                'error' => 'No se pudieron obtener las métricas'
+                'error' => 'Unable to retrieve metrics.'
             ], 500);
         }
     }
 
     /**
-     * Formatea las recomendaciones para el frontend
+     * Format recommendation payloads for the frontend.
      */
     private function formatRecommendations(array $recommendations): array
     {
@@ -277,7 +277,7 @@ class MLController extends Controller
                 'published_at' => $rec['post']->published_at,
                 'author' => [
                     'id' => $rec['post']->author->id ?? null,
-                    'name' => $rec['post']->author->name ?? 'Anónimo',
+                    'name' => $rec['post']->author->name ?? 'Anonymous',
                     'avatar' => $rec['post']->author->avatar ?? null,
                 ],
                 'categories' => $rec['post']->categories->map(fn($cat) => [
@@ -306,7 +306,7 @@ class MLController extends Controller
     }
 
     /**
-     * Actualiza el perfil de usuario basado en interacciones
+     * Update the user profile based on interactions.
      */
     private function updateUserProfile(string $sessionId, int $userId = null, MLInteractionLog $interaction): void
     {
@@ -323,7 +323,7 @@ class MLController extends Controller
             ]);
         }
 
-        // Actualizar métricas básicas
+        // Update basic metrics.
         $profile->total_posts_read++;
         $profile->last_activity = now();
         
@@ -339,7 +339,7 @@ class MLController extends Controller
             $profile->engagement_rate = $newEngagement;
         }
 
-        // Actualizar preferencias de categorías
+        // Update category preferences.
         $post = Post::with(['categories', 'tags'])->find($interaction->post_id);
         if ($post && $post->categories->isNotEmpty()) {
             $categoryWeights = [];
@@ -350,7 +350,7 @@ class MLController extends Controller
             $profile->updateCategoryPreferences($categoryWeights);
         }
 
-        // Actualizar intereses de tags
+        // Update tag interests.
         if ($post && $post->tags->isNotEmpty()) {
             $tagWeights = [];
             foreach ($post->tags as $tag) {
@@ -364,7 +364,7 @@ class MLController extends Controller
     }
 
     /**
-     * Calcula el peso de una interacción para actualizar preferencias
+     * Calculate interaction weight to update preferences.
      */
     private function calculateInteractionWeight(MLInteractionLog $interaction): float
     {
@@ -380,12 +380,12 @@ class MLController extends Controller
 
         $baseWeight = $weights[$interaction->interaction_type] ?? 0.1;
         
-        // Boost por tiempo gastado
+        // Increase weight for time spent.
         if ($interaction->time_spent_seconds > 60) {
             $baseWeight *= 1.5;
         }
         
-        // Boost por engagement score
+        // Increase weight for engagement score.
         if ($interaction->engagement_score > 0.7) {
             $baseWeight *= 1.3;
         }
@@ -394,7 +394,7 @@ class MLController extends Controller
     }
 
     /**
-     * Obtiene top categorías del usuario
+     * Retrieve the user top categories.
      */
     private function getTopCategories(MLUserProfile $profile): array
     {
@@ -417,37 +417,37 @@ class MLController extends Controller
     }
 
     /**
-     * Obtiene patrones de lectura
+     * Retrieve reading patterns.
      */
     private function getReadingPatterns(MLUserProfile $profile): array
     {
         $patterns = $profile->reading_patterns ?? [];
         
         return [
-            'preferred_time' => $patterns['preferred_time'] ?? 'No definido',
+            'preferred_time' => $patterns['preferred_time'] ?? 'Not defined',
             'avg_session_duration' => round(($patterns['avg_session_duration'] ?? 0) / 60, 1),
-            'reading_frequency' => $patterns['reading_frequency'] ?? 'No definido'
+            'reading_frequency' => $patterns['reading_frequency'] ?? 'Not defined'
         ];
     }
 
     /**
-     * Obtiene descripción del cluster de usuario
+     * Retrieve the user cluster description.
      */
     private function getClusterDescription(int $cluster = null): string
     {
         $descriptions = [
-            0 => 'Lector ocasional - Explora diversos temas ocasionalmente',
-            1 => 'Entusiasta de la construcción - Le interesan proyectos y técnicas',
-            2 => 'Profesional del sector - Busca información técnica especializada',
-            3 => 'Aprendiz activo - Constantemente busca nueva información',
-            4 => 'Lector social - Le gusta interactuar y compartir contenido'
+            0 => 'Casual reader - Explores various topics occasionally.',
+            1 => 'Construction enthusiast - Interested in projects and techniques.',
+            2 => 'Industry professional - Seeks specialized technical information.',
+            3 => 'Active learner - Constantly seeks new information.',
+            4 => 'Social reader - Enjoys interacting with and sharing content.'
         ];
 
-        return $descriptions[$cluster] ?? 'Perfil en desarrollo';
+        return $descriptions[$cluster] ?? 'Profile in progress.';
     }
 
     /**
-     * Calcula precisión de recomendaciones
+     * Calculate recommendation accuracy.
      */
     private function getRecommendationAccuracy(string $sessionId, int $userId = null): float
     {
@@ -478,20 +478,20 @@ class MLController extends Controller
     }
 
     /**
-     * Entrenar clustering de usuarios (simplificado)
+     * Train user clustering (simplified).
      */
     private function trainUserClustering(): void
     {
-        // Implementación simplificada de K-means
-        // En producción se usaría una librería ML más robusta
+        // Simplified K-means implementation.
+        // In production use a more robust ML library.
         
         $profiles = MLUserProfile::whereNotNull('category_preferences')->get();
         
         if ($profiles->count() < 5) {
-            return; // Necesitamos más datos
+            return; // Additional data is required.
         }
 
-        // Asignar clusters basados en preferencias dominantes
+        // Assign clusters based on dominant preferences.
         foreach ($profiles as $profile) {
             $cluster = $this->assignUserCluster($profile);
             $profile->update([
@@ -502,7 +502,7 @@ class MLController extends Controller
     }
 
     /**
-     * Asigna cluster a usuario basado en preferencias
+     * Assign a user cluster based on preferences.
      */
     private function assignUserCluster(MLUserProfile $profile): int
     {
@@ -512,23 +512,23 @@ class MLController extends Controller
             return 0; // Cluster por defecto
         }
 
-        // Lógica simplificada basada en categorías dominantes
+        // Simplified logic based on dominant categories.
         $maxPreference = max($preferences);
         $dominantCategory = array_search($maxPreference, $preferences);
         
-        // Mapear categorías a clusters (simplificado)
+        // Map categories to clusters (simplified).
         $categoryToCluster = [
-            1 => 1, // Construcción general
-            2 => 2, // Técnico/profesional
-            3 => 3, // Diseño/innovación
-            4 => 4, // Social/tendencias
+            1 => 1, // General construction
+            2 => 2, // Technical/professional
+            3 => 3, // Design/innovation
+            4 => 4, // Social/trends
         ];
 
         return $categoryToCluster[$dominantCategory] ?? 0;
     }
 
     /**
-     * Obtiene métricas generales del sistema
+     * Retrieve overall system metrics.
      */
     private function getOverallMetrics(\DateTime $from): array
     {
@@ -548,3 +548,5 @@ class MLController extends Controller
         ];
     }
 }
+
+

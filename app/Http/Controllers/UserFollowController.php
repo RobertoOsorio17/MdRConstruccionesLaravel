@@ -8,38 +8,41 @@ use App\Models\UserFollow;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Validation\ValidationException;
 
+/**
+ * Manage follow relationships between users.
+ */
 class UserFollowController extends Controller
 {
     /**
-     * Toggle seguimiento de un usuario
+     * Toggle following status for the given user.
      */
     public function toggle(Request $request, User $user): JsonResponse
     {
         $follower = $request->user();
         
-        // Evitar que un usuario se siga a sí mismo
+        // Prevent users from following themselves.
         if ($follower->id === $user->id) {
             throw ValidationException::withMessages([
-                'error' => 'No puedes seguirte a ti mismo'
+                'error' => 'You cannot follow yourself.'
             ]);
         }
         
         $isFollowing = UserFollow::toggle($follower->id, $user->id);
-        
+
         $followersCount = $user->followers()->count();
         
         return response()->json([
             'success' => true,
             'isFollowing' => $isFollowing,
             'followersCount' => $followersCount,
-            'message' => $isFollowing 
-                ? "Ahora sigues a {$user->name}" 
-                : "Has dejado de seguir a {$user->name}"
+            'message' => $isFollowing
+                ? "You are now following {$user->name}."
+                : "You have unfollowed {$user->name}."
         ]);
     }
     
     /**
-     * Obtener el estado de seguimiento entre dos usuarios
+     * Retrieve the follow status between the authenticated user and target user.
      */
     public function getFollowStatus(Request $request, User $user): JsonResponse
     {
@@ -61,7 +64,7 @@ class UserFollowController extends Controller
     }
     
     /**
-     * Obtener la lista de seguidores de un usuario
+     * Retrieve a paginated list of followers for the target user.
      */
     public function followers(Request $request, User $user): JsonResponse
     {
@@ -75,7 +78,7 @@ class UserFollowController extends Controller
     }
     
     /**
-     * Obtener la lista de usuarios seguidos por un usuario
+     * Retrieve a paginated list of profiles the target user follows.
      */
     public function following(Request $request, User $user): JsonResponse
     {

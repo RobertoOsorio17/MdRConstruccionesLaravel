@@ -9,10 +9,18 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Validation\ValidationException;
 
+/**
+ * Manage comment creation, retrieval, and moderation endpoints.
+ */
 class CommentController extends Controller
 {
     /**
      * Store a new comment for a blog post.
+     *
+     * @param Request $request The current HTTP request containing comment data.
+     * @param Post $post The post model receiving the comment.
+     * @return \Illuminate\Http\JsonResponse JSON response indicating the outcome.
+     * @throws ValidationException When the request fails validation or rate limiting.
      */
     public function store(Request $request, Post $post)
     {
@@ -32,7 +40,7 @@ class CommentController extends Controller
 
         if (!$executed) {
             throw ValidationException::withMessages([
-                'rate_limit' => 'Has enviado demasiados comentarios muy rápido. Espera un momento antes de enviar otro comentario.',
+                'rate_limit' => 'You are posting comments too quickly. Please wait a moment before trying again.',
             ]);
         }
 
@@ -55,7 +63,7 @@ class CommentController extends Controller
 
                 return response()->json([
                     'success' => false,
-                    'message' => 'Tu cuenta ha sido suspendida y no puedes crear comentarios.',
+                    'message' => 'Your account is suspended and cannot post comments.',
                     'error' => 'USER_BANNED'
                 ], 403);
             }
@@ -89,7 +97,7 @@ class CommentController extends Controller
 
                 return response()->json([
                     'success' => false,
-                    'message' => 'Has alcanzado el límite máximo de 2 comentarios por artículo como usuario invitado. Regístrate para comentar sin límites.',
+                    'message' => 'You reached the guest limit of two comments per article. Sign up to keep commenting.',
                     'error' => 'GUEST_COMMENT_LIMIT_REACHED'
                 ], 429);
             }
@@ -109,7 +117,7 @@ class CommentController extends Controller
         if (!empty($validated['parent_id'])) {
             $parentComment = Comment::find($validated['parent_id']);
             if (!$parentComment || $parentComment->post_id !== $post->id) {
-                abort(422, 'El comentario padre no pertenece a este post.');
+                abort(422, 'The parent comment does not belong to this post.');
             }
         }
 
@@ -160,6 +168,10 @@ class CommentController extends Controller
 
     /**
      * Calculate a basic spam score for a comment body.
+     *
+     * @param string|null $body The comment text to evaluate.
+     * @param string|null $authorName Optional author name for heuristic checks.
+     * @return int Numeric spam score derived from simple heuristics.
      */
     private function calculateSpamScore($body, $authorName = null)
     {
@@ -209,21 +221,31 @@ class CommentController extends Controller
     /**
      * Get the appropriate message based on comment status and user type.
      */
+    /**
+     * Resolve a user-friendly status message for the given comment.
+     *
+     * @param Comment $comment The comment instance being returned to the client.
+     * @return string Message explaining the moderation outcome.
+     */
     private function getCommentStatusMessage($comment)
     {
         if ($comment->status === 'spam') {
-            return 'Tu comentario ha sido marcado para revisión debido a posible contenido spam.';
+            return 'Your comment was flagged for review due to potential spam content.';
         }
 
         if (Auth::check()) {
-            return 'Tu comentario ha sido publicado exitosamente.';
+            return 'Your comment was published successfully.';
         } else {
-            return 'Tu comentario ha sido enviado y aparecerá aquí mientras espera moderación. Una vez aprobado, será visible para todos los visitantes.';
+            return 'Your comment was submitted and will appear here once moderation approves it.';
         }
     }
 
     /**
-     * Get comments for a specific post (public API)
+     * Get comments for a specific post (public API).
+     *
+     * @param Request $request The current HTTP request instance.
+     * @param Post $post The post whose comments are being retrieved.
+     * @return \Illuminate\Http\JsonResponse JSON response containing formatted comments.
      */
     public function getComments(Request $request, Post $post)
     {
@@ -300,6 +322,9 @@ class CommentController extends Controller
 
     /**
      * Delete a comment (admin only).
+     *
+     * @param Comment $comment The comment instance targeted for deletion.
+     * @return \Illuminate\Http\JsonResponse JSON response summarizing the deletion.
      */
     public function destroy(Comment $comment)
     {
@@ -307,7 +332,7 @@ class CommentController extends Controller
         if (!Auth::check()) {
             return response()->json([
                 'success' => false,
-                'message' => 'No tienes permisos para realizar esta acción.'
+                'message' => 'You do not have permission to perform this action.'
             ], 403);
         }
 
@@ -317,7 +342,7 @@ class CommentController extends Controller
         if (!$user->hasRole('admin')) {
             return response()->json([
                 'success' => false,
-                'message' => 'No tienes permisos para eliminar comentarios.'
+                'message' => 'You do not have permission to delete comments.'
             ], 403);
         }
 
@@ -330,7 +355,7 @@ class CommentController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => "Comentario de {$commentAuthor} eliminado correctamente."
+                'message' => "Comment from {$commentAuthor} deleted successfully."
             ]);
 
         } catch (\Exception $e) {
@@ -342,7 +367,7 @@ class CommentController extends Controller
 
             return response()->json([
                 'success' => false,
-                'message' => 'Error al eliminar el comentario. Inténtalo de nuevo.'
+                'message' => 'Failed to delete the comment. Please try again.'
             ], 500);
         }
     }

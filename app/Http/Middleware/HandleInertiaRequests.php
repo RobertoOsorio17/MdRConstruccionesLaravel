@@ -5,6 +5,9 @@ namespace App\Http\Middleware;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
+/**
+ * Customize the shared Inertia props for the application.
+ */
 class HandleInertiaRequests extends Middleware
 {
     /**
@@ -50,7 +53,7 @@ class HandleInertiaRequests extends Middleware
             ] : null
         ];
 
-        // Agregar estadísticas y permisos si el usuario está autenticado
+        // Enrich with statistics and permissions when authenticated.
         if ($auth) {
             try {
                 $authData['user']['stats'] = [
@@ -60,7 +63,7 @@ class HandleInertiaRequests extends Middleware
                     'followers_count' => method_exists($auth, 'followers') ? $auth->followers()->count() : 0,
                 ];
 
-                // Agregar permisos para usuarios con roles
+                // Append permissions for role-based accounts.
                 if (method_exists($auth, 'roles') && $auth->roles()->exists()) {
                     $permissions = $auth->roles()
                         ->with('permissions')
@@ -82,7 +85,7 @@ class HandleInertiaRequests extends Middleware
 
                     $authData['user']['permissions'] = $permissions;
 
-                    // También agregar roles
+                    // Include the assigned roles.
                     $authData['user']['roles'] = $auth->roles()->get()->map(function ($role) {
                         return [
                             'id' => $role->id,
@@ -94,7 +97,7 @@ class HandleInertiaRequests extends Middleware
                     })->toArray();
                 }
             } catch (\Exception $e) {
-                // En caso de error, usar valores por defecto
+                // Default statistics when enrichment fails.
                 $authData['user']['stats'] = [
                     'comments_count' => 0,
                     'saved_posts_count' => 0,

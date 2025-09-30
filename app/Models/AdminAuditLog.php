@@ -48,6 +48,8 @@ class AdminAuditLog extends Model
 
     /**
      * Get the administrator who performed the action.
+     *
+     * @return BelongsTo Relationship instance linking to the acting user.
      */
     public function user(): BelongsTo
     {
@@ -57,7 +59,7 @@ class AdminAuditLog extends Model
     /**
      * Resolve the model instance that was affected by the action.
      *
-     * @return Model|null
+     * @return Model|null The affected model instance when available.
      */
     public function model()
     {
@@ -69,6 +71,10 @@ class AdminAuditLog extends Model
 
     /**
      * Scope a query to only include logs for the given action name.
+     *
+     * @param \Illuminate\Database\Eloquent\Builder $query The base audit log query.
+     * @param string $action The action name to filter by.
+     * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeByAction($query, string $action)
     {
@@ -77,6 +83,10 @@ class AdminAuditLog extends Model
 
     /**
      * Scope a query to only include logs belonging to the given user.
+     *
+     * @param \Illuminate\Database\Eloquent\Builder $query The base audit log query.
+     * @param int $userId The user identifier to filter by.
+     * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeByUser($query, int $userId)
     {
@@ -85,6 +95,10 @@ class AdminAuditLog extends Model
 
     /**
      * Scope a query to only include logs generated for a model type.
+     *
+     * @param \Illuminate\Database\Eloquent\Builder $query The base audit log query.
+     * @param string $modelType The model class to filter by.
+     * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeByModelType($query, string $modelType)
     {
@@ -93,6 +107,10 @@ class AdminAuditLog extends Model
 
     /**
      * Scope a query to only include logs with a given severity.
+     *
+     * @param \Illuminate\Database\Eloquent\Builder $query The base audit log query.
+     * @param string $severity The severity level to include.
+     * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeBySeverity($query, string $severity)
     {
@@ -101,6 +119,10 @@ class AdminAuditLog extends Model
 
     /**
      * Scope a query to only include logs created within the supplied timeframe.
+     *
+     * @param \Illuminate\Database\Eloquent\Builder $query The base audit log query.
+     * @param int $days Number of days to include in the result window.
+     * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeRecent($query, int $days = 30)
     {
@@ -109,6 +131,9 @@ class AdminAuditLog extends Model
 
     /**
      * Scope a query to only include logs marked as high priority.
+     *
+     * @param \Illuminate\Database\Eloquent\Builder $query The base audit log query.
+     * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeHighPriority($query)
     {
@@ -117,6 +142,8 @@ class AdminAuditLog extends Model
 
     /**
      * Accessor that produces a human-readable description for the log entry.
+     *
+     * @return string Rendered description containing contextual information.
      */
     public function getFormattedDescriptionAttribute(): string
     {
@@ -140,6 +167,8 @@ class AdminAuditLog extends Model
 
     /**
      * Accessor that returns the severity color used by the admin UI.
+     *
+     * @return string Hex color value mapped from the severity level.
      */
     public function getSeverityColorAttribute(): string
     {
@@ -154,6 +183,9 @@ class AdminAuditLog extends Model
 
     /**
      * Persist a new audit log entry based on the supplied context.
+     *
+     * @param array<string, mixed> $data Contextual attributes describing the audit event.
+     * @return self Newly created audit log instance.
      */
     public static function logAction(array $data): self
     {

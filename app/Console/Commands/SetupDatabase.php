@@ -30,17 +30,17 @@ class SetupDatabase extends Command
         $this->info('Setting up database for MDR Construcciones...');
 
         try {
-            // Conectar a MySQL sin especificar base de datos
+            // Connect to MySQL without selecting a database.
             $connection = config('database.connections.mysql');
-            $connection['database'] = null; // Conectar sin DB específica
+            $connection['database'] = null; // Connect without targeting a specific database.
             
             config(['database.connections.temp_mysql' => $connection]);
             
-            // Crear la base de datos usando la conexión temporal
+            // Create the database using the temporary connection.
             DB::connection('temp_mysql')->statement('CREATE DATABASE IF NOT EXISTS mdrconstrucciones CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci');
             $this->info('Database "mdrconstrucciones" created successfully!');
             
-            // Ahora verificar la conexión normal
+            // Verify the default connection afterward.
             DB::connection('mysql')->select('SELECT 1');
             $this->info('MySQL connection verified!');
             

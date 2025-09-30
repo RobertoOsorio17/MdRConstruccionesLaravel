@@ -85,7 +85,7 @@ class MLPostVector extends Model
 
         foreach ($allVectors as $vector) {
             $similarity = self::cosineSimilarity($this->content_vector, $vector->content_vector);
-            if ($similarity > 0.1) { // Threshold mínimo
+            if ($similarity > 0.1) { // Threshold mÃƒÆ’Ã‚Â­nimo
                 $similarPosts[] = [
                     'post' => $vector->post,
                     'similarity_score' => $similarity,

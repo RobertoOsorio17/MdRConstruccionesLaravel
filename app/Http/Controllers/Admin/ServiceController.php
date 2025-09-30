@@ -8,6 +8,9 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Str;
 
+/**
+ * Manage CRUD operations for service records in the admin panel.
+ */
 class ServiceController extends Controller
 {
     /**
@@ -54,8 +57,8 @@ class ServiceController extends Controller
         ]);
 
         $validated['slug'] = Str::slug($validated['title']);
-        
-        // Ensure unique slug
+
+        // Ensure unique slug.
         $originalSlug = $validated['slug'];
         $counter = 1;
         while (Service::where('slug', $validated['slug'])->exists()) {
@@ -63,7 +66,7 @@ class ServiceController extends Controller
             $counter++;
         }
 
-        // Convert FAQ array to JSON if present
+        // Convert FAQ array to JSON if present.
         if (isset($validated['faq'])) {
             $validated['faq'] = json_encode($validated['faq']);
         }
@@ -71,7 +74,7 @@ class ServiceController extends Controller
         Service::create($validated);
 
         return redirect()->route('admin.services.index')
-            ->with('success', 'Servicio creado exitosamente.');
+            ->with('success', 'Service created successfully.');
     }
 
     /**
@@ -89,7 +92,7 @@ class ServiceController extends Controller
      */
     public function edit(Service $service)
     {
-        // Parse FAQ JSON back to array for editing
+        // Parse FAQ JSON back to array for editing.
         $service->faq = $service->faq ? json_decode($service->faq, true) : [];
         
         return Inertia::render('Admin/Services/Edit', [
@@ -115,11 +118,11 @@ class ServiceController extends Controller
             'featured' => 'boolean',
         ]);
 
-        // Update slug only if title changed
+        // Update slug only when the title changes.
         if ($validated['title'] !== $service->title) {
             $validated['slug'] = Str::slug($validated['title']);
-            
-            // Ensure unique slug
+
+            // Ensure unique slug.
             $originalSlug = $validated['slug'];
             $counter = 1;
             while (Service::where('slug', $validated['slug'])->where('id', '!=', $service->id)->exists()) {
@@ -128,7 +131,7 @@ class ServiceController extends Controller
             }
         }
 
-        // Convert FAQ array to JSON if present
+        // Convert FAQ array to JSON if present.
         if (isset($validated['faq'])) {
             $validated['faq'] = json_encode($validated['faq']);
         }
@@ -136,7 +139,7 @@ class ServiceController extends Controller
         $service->update($validated);
 
         return redirect()->route('admin.services.index')
-            ->with('success', 'Servicio actualizado exitosamente.');
+            ->with('success', 'Service updated successfully.');
     }
 
     /**
@@ -147,7 +150,7 @@ class ServiceController extends Controller
         $service->delete();
 
         return redirect()->route('admin.services.index')
-            ->with('success', 'Servicio eliminado exitosamente.');
+            ->with('success', 'Service deleted successfully.');
     }
 
     /**
@@ -166,7 +169,7 @@ class ServiceController extends Controller
                 ->update(['sort_order' => $serviceData['sort_order']]);
         }
 
-        return response()->json(['message' => 'Orden actualizado exitosamente.']);
+        return response()->json(['message' => 'Sort order updated successfully.']);
     }
 
     /**
@@ -177,7 +180,7 @@ class ServiceController extends Controller
         $service->update(['is_active' => !$service->is_active]);
 
         return response()->json([
-            'message' => $service->is_active ? 'Servicio activado.' : 'Servicio desactivado.',
+            'message' => $service->is_active ? 'Service activated.' : 'Service deactivated.',
             'is_active' => $service->is_active
         ]);
     }
@@ -190,7 +193,7 @@ class ServiceController extends Controller
         $service->update(['featured' => !$service->featured]);
 
         return response()->json([
-            'message' => $service->featured ? 'Servicio marcado como destacado.' : 'Servicio desmarcado como destacado.',
+            'message' => $service->featured ? 'Service marked as featured.' : 'Service unmarked as featured.',
             'featured' => $service->featured
         ]);
     }

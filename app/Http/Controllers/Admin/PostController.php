@@ -23,19 +23,19 @@ class PostController extends Controller
         $query = Post::with(['author:id,name', 'categories:id,name,slug,color', 'tags:id,name,slug'])
             ->orderBy('created_at', 'desc');
 
-        // Filter by status
+        // Filter by post status.
         if ($request->has('status') && !empty($request->status)) {
             $query->where('status', $request->status);
         }
 
-        // Filter by category
+        // Filter by category selection.
         if ($request->has('category') && !empty($request->category)) {
             $query->whereHas('categories', function ($q) use ($request) {
                 $q->where('id', $request->category);
             });
         }
 
-        // Search functionality
+        // Apply keyword search across title, excerpt, and content.
         if ($request->has('search') && !empty($request->search)) {
             $query->where(function ($q) use ($request) {
                 $q->where('title', 'like', '%' . $request->search . '%')
@@ -63,7 +63,7 @@ class PostController extends Controller
             ];
         });
 
-        // Get categories and tags for filters
+        // Retrieve categories and tags for filter dropdowns.
         $categories = Category::active()->ordered()->get(['id', 'name']);
         $tags = Tag::orderBy('name')->get(['id', 'name']);
 
@@ -126,31 +126,31 @@ class PostController extends Controller
             'seo_description' => 'nullable|string|max:255',
         ]);
 
-        // Auto-generate slug if not provided
+        // Auto-generate slug if not provided.
         if (empty($validated['slug'])) {
             $validated['slug'] = Str::slug($validated['title']);
         }
 
-        // Set author to current user if not specified
+        // Set author to the acting user when not explicitly assigned.
         if (empty($validated['user_id'])) {
             $validated['user_id'] = auth()->id();
         }
 
-        // Handle scheduled posts
+        // Handle scheduled publication dates.
         if ($validated['status'] === 'scheduled' && !$validated['published_at']) {
             $validated['published_at'] = now()->addHour();
         }
 
-        // Set published_at for published posts
+        // Ensure published posts have a publication timestamp.
         if ($validated['status'] === 'published' && !$validated['published_at']) {
             $validated['published_at'] = now();
         }
 
-        // Generate slug if not provided
+        // Guarantee slug uniqueness when generated.
         if (empty($validated['slug'])) {
             $validated['slug'] = Str::slug($validated['title']);
             
-            // Ensure uniqueness
+        // Ensure uniqueness.
             $originalSlug = $validated['slug'];
             $counter = 1;
             while (Post::where('slug', $validated['slug'])->exists()) {
@@ -159,10 +159,10 @@ class PostController extends Controller
             }
         }
 
-        // Set author
+        // Finalize the author attribution.
         $validated['user_id'] = $validated['user_id'] ?? \Illuminate\Support\Facades\Auth::id();
 
-        // Handle published_at
+        // Normalize publication timestamps for the given status.
         if ($validated['status'] === 'published' && !$validated['published_at']) {
             $validated['published_at'] = now();
         } elseif ($validated['status'] !== 'published') {
@@ -171,7 +171,7 @@ class PostController extends Controller
 
         $post = Post::create($validated);
 
-        // Attach categories and tags
+        // Attach categories and tags.
         if (!empty($validated['categories'])) {
             $post->categories()->attach($validated['categories']);
         }
@@ -181,7 +181,7 @@ class PostController extends Controller
         }
 
         return redirect()->route('admin.posts.index')
-            ->with('success', 'Post creado exitosamente.');
+            ->with('success', 'Post created successfully.');
     }
 
     /**
@@ -286,7 +286,7 @@ class PostController extends Controller
             }
         }
 
-        // Handle published_at
+        // Handle published_at.
         if ($validated['status'] === 'published' && !$post->published_at && !$validated['published_at']) {
             $validated['published_at'] = now();
         } elseif ($validated['status'] !== 'published' && $post->status === 'published') {
@@ -300,7 +300,7 @@ class PostController extends Controller
         $post->tags()->sync($validated['tags'] ?? []);
 
         return redirect()->route('admin.posts.index')
-            ->with('success', 'Post actualizado exitosamente.');
+            ->with('success', 'Post updated successfully.');
     }
 
     /**
@@ -308,7 +308,7 @@ class PostController extends Controller
      */
     public function destroy(Post $post)
     {
-        // Delete cover image if exists
+        // Delete cover image if it exists.
         if ($post->cover_image && Storage::exists($post->cover_image)) {
             Storage::delete($post->cover_image);
         }
@@ -316,7 +316,7 @@ class PostController extends Controller
         $post->delete();
 
         return redirect()->route('admin.posts.index')
-            ->with('success', 'Post eliminado exitosamente.');
+            ->with('success', 'Post deleted successfully.');
     }
 
     /**
@@ -329,7 +329,7 @@ class PostController extends Controller
         return response()->json([
             'success' => true,
             'featured' => $post->featured,
-            'message' => $post->featured ? 'Post destacado' : 'Post removido de destacados'
+            'message' => $post->featured ? 'Post marked as featured.' : 'Post removed from featured.',
         ]);
     }
 
@@ -352,7 +352,7 @@ class PostController extends Controller
         return response()->json([
             'success' => true,
             'status' => $post->status,
-            'message' => 'Estado del post actualizado'
+            'message' => 'Post status updated.',
         ]);
     }
 
@@ -362,8 +362,8 @@ class PostController extends Controller
     public function duplicate(Post $post)
     {
         $newPost = $post->replicate();
-        $newPost->title = $post->title . ' (Copia)';
-        $newPost->slug = $post->slug . '-copia-' . time();
+        $newPost->title = $post->title . ' (Copy)';
+        $newPost->slug = $post->slug . '-copy-' . time();
         $newPost->status = 'draft';
         $newPost->featured = false;
         $newPost->published_at = null;
@@ -376,7 +376,7 @@ class PostController extends Controller
         $newPost->tags()->attach($post->tags->pluck('id'));
 
         return redirect()->route('admin.posts.edit', $newPost)
-            ->with('success', 'Post duplicado exitosamente.');
+            ->with('success', 'Post duplicated successfully.');
     }
 
     /**
@@ -397,26 +397,26 @@ class PostController extends Controller
             switch ($request->action) {
                 case 'delete':
                     $posts->delete();
-                    $message = "{$count} posts eliminados exitosamente.";
+                    $message = "{$count} post(s) deleted successfully.";
                     break;
                 case 'publish':
                     $posts->update([
                         'status' => 'published',
                         'published_at' => now()
                     ]);
-                    $message = "{$count} posts publicados exitosamente.";
+                    $message = "{$count} post(s) published successfully.";
                     break;
                 case 'draft':
                     $posts->update(['status' => 'draft']);
-                    $message = "{$count} posts marcados como borrador.";
+                    $message = "{$count} post(s) set to draft.";
                     break;
                 case 'feature':
                     $posts->update(['featured' => true]);
-                    $message = "{$count} posts marcados como destacados.";
+                    $message = "{$count} post(s) marked as featured.";
                     break;
                 case 'unfeature':
                     $posts->update(['featured' => false]);
-                    $message = "{$count} posts desmarcados como destacados.";
+                    $message = "{$count} post(s) unmarked as featured.";
                     break;
             }
 
@@ -427,7 +427,7 @@ class PostController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Error en la acción masiva: ' . $e->getMessage()
+                'message' => 'Bulk action failed: ' . $e->getMessage(),
             ], 500);
         }
     }
@@ -473,7 +473,7 @@ class PostController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Error al obtener analíticas: ' . $e->getMessage()
+                'message' => 'Failed to load analytics: ' . $e->getMessage(),
             ], 500);
         }
     }
@@ -507,7 +507,7 @@ class PostController extends Controller
             $posts = $query->get();
 
             $csvData = [];
-            $csvData[] = ['ID', 'Título', 'Slug', 'Estado', 'Destacado', 'Autor', 'Categorías', 'Etiquetas', 'Vistas', 'Fecha Publicación', 'Fecha Creación'];
+            $csvData[] = ['ID', 'Title', 'Slug', 'Status', 'Featured', 'Author', 'Categories', 'Tags', 'Views', 'Published At', 'Created At'];
 
             foreach ($posts as $post) {
                 $csvData[] = [
@@ -515,13 +515,13 @@ class PostController extends Controller
                     $post->title,
                     $post->slug,
                     $post->status,
-                    $post->featured ? 'Sí' : 'No',
+                    $post->featured ? 'Yes' : 'No',
                     $post->author->name ?? 'N/A',
                     $post->categories->pluck('name')->join(', '),
                     $post->tags->pluck('name')->join(', '),
                     $post->views_count,
                     $post->published_at ? $post->published_at->format('d/m/Y H:i') : 'N/A',
-                    $post->created_at->format('d/m/Y H:i')
+                    $post->created_at->format('d/m/Y H:i'),
                 ];
             }
 
@@ -535,7 +535,7 @@ class PostController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Error al exportar posts: ' . $e->getMessage()
+                'message' => 'Failed to export posts: ' . $e->getMessage(),
             ], 500);
         }
     }

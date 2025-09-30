@@ -6,6 +6,9 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * Persist interaction events used to train recommendation models.
+ */
 class MLInteractionLog extends Model
 {
     use HasFactory;
@@ -50,14 +53,14 @@ class MLInteractionLog extends Model
     }
 
     /**
-     * Registra una interacción de usuario
+     * Record a new interaction, deriving implicit metrics.
      */
     public static function logInteraction(array $data): self
     {
-        // Calcular rating implícito basado en el comportamiento
+        // Calculate implicit rating derived from behaviour.
         $implicitRating = self::calculateImplicitRating($data);
-        
-        // Calcular engagement score
+
+        // Derive engagement score.
         $engagementScore = self::calculateEngagementScore($data);
 
         return self::create(array_merge($data, [
@@ -67,13 +70,13 @@ class MLInteractionLog extends Model
     }
 
     /**
-     * Calcula rating implícito basado en comportamiento
+     * Calculate an implicit rating from behaviour data.
      */
     private static function calculateImplicitRating(array $data): float
     {
         $rating = 0;
 
-        // Base por tipo de interacción
+        // Base weight per interaction type.
         $typeWeights = [
             'view' => 0.1,
             'click' => 0.3,
@@ -86,34 +89,34 @@ class MLInteractionLog extends Model
 
         $rating += $typeWeights[$data['interaction_type']] ?? 0;
 
-        // Bonus por tiempo gastado
+        // Bonus for time spent.
         if (!empty($data['time_spent_seconds'])) {
             $timeBonus = min($data['time_spent_seconds'] / 300, 0.5); // Max 0.5 por 5 minutos
             $rating += $timeBonus;
         }
 
-        // Bonus por scroll
+        // Bonus for scroll depth.
         if (!empty($data['scroll_percentage'])) {
             $scrollBonus = $data['scroll_percentage'] / 100 * 0.3;
             $rating += $scrollBonus;
         }
 
-        // Bonus por lectura completa
+        // Bonus for completed reading.
         if (!empty($data['completed_reading'])) {
             $rating += 0.3;
         }
 
-        return min($rating, 5.0); // Rating máximo de 5
+        return min($rating, 5.0); // Maximum rating of 5.
     }
 
     /**
-     * Calcula score de engagement
+     * Compute an engagement score for the interaction.
      */
     private static function calculateEngagementScore(array $data): float
     {
         $score = 0;
 
-        // Componentes del engagement
+        // Engagement components.
         $components = [
             'interaction_depth' => 0,
             'time_investment' => 0,
@@ -121,7 +124,7 @@ class MLInteractionLog extends Model
             'social_engagement' => 0
         ];
 
-        // Profundidad de interacción
+        // Interaction depth component.
         $depthWeights = [
             'view' => 0.1,
             'click' => 0.2,
@@ -133,22 +136,22 @@ class MLInteractionLog extends Model
         ];
         $components['interaction_depth'] = $depthWeights[$data['interaction_type']] ?? 0;
 
-        // Inversión de tiempo
+        // Time investment component.
         if (!empty($data['time_spent_seconds'])) {
-            $components['time_investment'] = min($data['time_spent_seconds'] / 180, 1.0); // 3 minutos = máximo
+            $components['time_investment'] = min($data['time_spent_seconds'] / 180, 1.0); // 3 minutes equals the upper bound.
         }
 
-        // Tasa de completación
+        // Completion rate component.
         if (!empty($data['scroll_percentage'])) {
             $components['completion_rate'] = $data['scroll_percentage'] / 100;
         }
 
-        // Engagement social
+        // Social engagement component.
         if (in_array($data['interaction_type'], ['like', 'share', 'comment'])) {
             $components['social_engagement'] = 1.0;
         }
 
-        // Promedio ponderado
+        // Weighted average across components.
         $weights = [
             'interaction_depth' => 0.3,
             'time_investment' => 0.3,
@@ -164,7 +167,7 @@ class MLInteractionLog extends Model
     }
 
     /**
-     * Obtiene métricas de rendimiento de recomendaciones
+     * Aggregate recommendation performance metrics.
      */
     public static function getRecommendationMetrics(string $source, \DateTime $from = null, \DateTime $to = null): array
     {

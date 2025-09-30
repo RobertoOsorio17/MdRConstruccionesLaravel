@@ -31,7 +31,7 @@ class SecurityAuditCommand extends Command
      */
     public function handle()
     {
-        $this->info('🔒 Security Audit Report');
+        $this->info('ðŸ”’ Security Audit Report');
         $this->info('========================');
         $this->newLine();
 
@@ -45,7 +45,7 @@ class SecurityAuditCommand extends Command
         }
 
         $this->newLine();
-        $this->info('✅ Security audit completed');
+        $this->info('âœ… Security audit completed');
     }
 
     /**
@@ -53,7 +53,7 @@ class SecurityAuditCommand extends Command
      */
     private function checkSessionConfiguration()
     {
-        $this->info('📋 Session Configuration');
+        $this->info('ðŸ“‹ Session Configuration');
         $this->line('-------------------------');
 
         $lifetime = config('session.lifetime');
@@ -63,32 +63,32 @@ class SecurityAuditCommand extends Command
 
         // Check session lifetime
         if ($lifetime <= 30) {
-            $this->info("✅ Session lifetime: {$lifetime} minutes (secure)");
+            $this->info("âœ… Session lifetime: {$lifetime} minutes (secure)");
         } else {
-            $this->warn("⚠️  Session lifetime: {$lifetime} minutes (consider reducing)");
+            $this->warn("âš ï¸  Session lifetime: {$lifetime} minutes (consider reducing)");
         }
 
         // Check HTTP only
         if ($httpOnly) {
-            $this->info('✅ HTTP Only cookies: enabled');
+            $this->info('âœ… HTTP Only cookies: enabled');
         } else {
-            $this->error('❌ HTTP Only cookies: disabled (security risk)');
+            $this->error('âŒ HTTP Only cookies: disabled (security risk)');
         }
 
         // Check secure cookies
         if ($secure) {
-            $this->info('✅ Secure cookies: enabled');
+            $this->info('âœ… Secure cookies: enabled');
         } else {
-            $this->warn('⚠️  Secure cookies: disabled (ensure HTTPS in production)');
+            $this->warn('âš ï¸  Secure cookies: disabled (ensure HTTPS in production)');
         }
 
         // Check SameSite
         if ($sameSite === 'strict') {
-            $this->info('✅ SameSite: strict (most secure)');
+            $this->info('âœ… SameSite: strict (most secure)');
         } elseif ($sameSite === 'lax') {
-            $this->info('✅ SameSite: lax (secure)');
+            $this->info('âœ… SameSite: lax (secure)');
         } else {
-            $this->warn("⚠️  SameSite: {$sameSite} (consider strict or lax)");
+            $this->warn("âš ï¸  SameSite: {$sameSite} (consider strict or lax)");
         }
 
         $this->newLine();
@@ -99,7 +99,7 @@ class SecurityAuditCommand extends Command
      */
     private function checkUserRoles()
     {
-        $this->info('👥 User Roles & Permissions');
+        $this->info('ðŸ‘¥ User Roles & Permissions');
         $this->line('---------------------------');
 
         $totalUsers = User::count();
@@ -124,9 +124,9 @@ class SecurityAuditCommand extends Command
             ->count();
 
         if ($conflictUsers > 0) {
-            $this->warn("⚠️  {$conflictUsers} users have both role field and roles relationship");
+            $this->warn("âš ï¸  {$conflictUsers} users have both role field and roles relationship");
         } else {
-            $this->info('✅ No role conflicts detected');
+            $this->info('âœ… No role conflicts detected');
         }
 
         $this->newLine();
@@ -137,7 +137,7 @@ class SecurityAuditCommand extends Command
      */
     private function checkRateLimiting()
     {
-        $this->info('🚦 Rate Limiting Status');
+        $this->info('ðŸš¦ Rate Limiting Status');
         $this->line('----------------------');
 
         // Check for active rate limits
@@ -150,16 +150,16 @@ class SecurityAuditCommand extends Command
             $middlewareAliases = config('app.middleware_aliases', []);
             
             if (class_exists(\App\Http\Middleware\AuthRateLimitMiddleware::class)) {
-                $this->info('✅ Auth rate limiting middleware: available');
+                $this->info('âœ… Auth rate limiting middleware: available');
             } else {
-                $this->error('❌ Auth rate limiting middleware: missing');
+                $this->error('âŒ Auth rate limiting middleware: missing');
             }
 
             $this->info("Active IP blocks: {$ipBlocks}");
             $this->info("Active email blocks: {$emailBlocks}");
 
         } catch (\Exception $e) {
-            $this->warn('⚠️  Could not check rate limiting status');
+            $this->warn('âš ï¸  Could not check rate limiting status');
         }
 
         $this->newLine();
@@ -170,7 +170,7 @@ class SecurityAuditCommand extends Command
      */
     private function checkMiddlewareConfiguration()
     {
-        $this->info('🛡️  Middleware Configuration');
+        $this->info('ðŸ›¡ï¸  Middleware Configuration');
         $this->line('----------------------------');
 
         $requiredMiddleware = [
@@ -183,18 +183,18 @@ class SecurityAuditCommand extends Command
 
         foreach ($requiredMiddleware as $alias => $class) {
             if (class_exists($class)) {
-                $this->info("✅ {$alias}: configured");
+                $this->info("âœ… {$alias}: configured");
             } else {
-                $this->error("❌ {$alias}: missing class {$class}");
+                $this->error("âŒ {$alias}: missing class {$class}");
             }
         }
 
         // Check that the problematic combined middleware file is gone
         $problematicFile = app_path('Http/Middleware/AuthenticationMiddleware.php');
         if (!file_exists($problematicFile)) {
-            $this->info('✅ PSR-4 violation fixed: AuthenticationMiddleware.php removed');
+            $this->info('âœ… PSR-4 violation fixed: AuthenticationMiddleware.php removed');
         } else {
-            $this->error('❌ PSR-4 violation: AuthenticationMiddleware.php still exists');
+            $this->error('âŒ PSR-4 violation: AuthenticationMiddleware.php still exists');
         }
 
         $this->newLine();
@@ -205,7 +205,7 @@ class SecurityAuditCommand extends Command
      */
     private function checkDetailedSecurity()
     {
-        $this->info('🔍 Detailed Security Analysis');
+        $this->info('ðŸ” Detailed Security Analysis');
         $this->line('-----------------------------');
 
         // Check for recent failed login attempts

@@ -48,7 +48,7 @@ class ResetPasswordNotification extends Notification
         ], false));
 
         return (new MailMessage)
-            ->subject('Recuperar Contraseña - MDR Construcciones')
+            ->subject('Recuperar ContraseÃƒÆ’Ã‚Â±a - MDR Construcciones')
             ->view('emails.reset-password', [
                 'user' => $notifiable,
                 'url' => $url,

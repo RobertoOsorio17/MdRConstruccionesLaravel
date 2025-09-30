@@ -5,8 +5,16 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * Represents a configurable dashboard widget for administrators.
+ */
 class AdminDashboardWidget extends Model
 {
+    /**
+     * Mass assignable attributes.
+     *
+     * @var array<int, string>
+     */
     protected $fillable = [
         'user_id',
         'widget_type',
@@ -20,6 +28,11 @@ class AdminDashboardWidget extends Model
         'refresh_interval',
     ];
 
+    /**
+     * Attribute casting definitions.
+     *
+     * @var array<string, string>
+     */
     protected $casts = [
         'configuration' => 'array',
         'position_x' => 'integer',
@@ -31,7 +44,7 @@ class AdminDashboardWidget extends Model
     ];
 
     /**
-     * Get the user that owns the widget
+     * Widget belongs to a user.
      */
     public function user(): BelongsTo
     {
@@ -39,7 +52,7 @@ class AdminDashboardWidget extends Model
     }
 
     /**
-     * Scope for visible widgets
+     * Scope visible widgets.
      */
     public function scopeVisible($query)
     {
@@ -47,7 +60,7 @@ class AdminDashboardWidget extends Model
     }
 
     /**
-     * Scope for widgets by type
+     * Scope widgets by type.
      */
     public function scopeByType($query, string $type)
     {
@@ -55,7 +68,7 @@ class AdminDashboardWidget extends Model
     }
 
     /**
-     * Scope for user's widgets
+     * Scope widgets belonging to the supplied user.
      */
     public function scopeForUser($query, int $userId)
     {
@@ -63,7 +76,7 @@ class AdminDashboardWidget extends Model
     }
 
     /**
-     * Scope ordered by position
+     * Scope widgets ordered by board position.
      */
     public function scopeOrderedByPosition($query)
     {
@@ -78,7 +91,7 @@ class AdminDashboardWidget extends Model
         return [
             [
                 'widget_type' => 'stats_overview',
-                'title' => 'Resumen General',
+                'title' => 'Overview',
                 'configuration' => [
                     'metrics' => ['users', 'posts', 'services', 'projects']
                 ],
@@ -91,7 +104,7 @@ class AdminDashboardWidget extends Model
             ],
             [
                 'widget_type' => 'recent_activity',
-                'title' => 'Actividad Reciente',
+                'title' => 'Recent Activity',
                 'configuration' => [
                     'limit' => 10,
                     'show_user_actions' => true
@@ -105,7 +118,7 @@ class AdminDashboardWidget extends Model
             ],
             [
                 'widget_type' => 'quick_actions',
-                'title' => 'Acciones Rápidas',
+                'title' => 'Quick Actions',
                 'configuration' => [
                     'actions' => ['create_post', 'create_user', 'create_service']
                 ],
@@ -114,11 +127,11 @@ class AdminDashboardWidget extends Model
                 'width' => 2,
                 'height' => 2,
                 'is_visible' => true,
-                'refresh_interval' => 0, // No refresh needed
+                'refresh_interval' => 0, // No refresh needed.
             ],
             [
                 'widget_type' => 'system_status',
-                'title' => 'Estado del Sistema',
+                'title' => 'System Status',
                 'configuration' => [
                     'show_server_info' => true,
                     'show_database_status' => true
@@ -232,7 +245,7 @@ class AdminDashboardWidget extends Model
             ->map(function ($log) {
                 return [
                     'id' => $log->id,
-                    'user' => $log->user?->name ?? 'Sistema',
+                    'user' => $log->user?->name ?? 'System',
                     'action' => $log->formatted_description,
                     'created_at' => $log->created_at,
                     'severity' => $log->severity,
@@ -251,19 +264,19 @@ class AdminDashboardWidget extends Model
         return collect($actions)->map(function ($action) {
             return match($action) {
                 'create_post' => [
-                    'label' => 'Crear Post',
+                    'label' => 'Create Post',
                     'url' => route('admin.posts.create'),
                     'icon' => 'add_circle',
                     'color' => 'primary'
                 ],
                 'create_user' => [
-                    'label' => 'Crear Usuario',
+                    'label' => 'Create User',
                     'url' => route('admin.users.create'),
                     'icon' => 'person_add',
                     'color' => 'secondary'
                 ],
                 'create_service' => [
-                    'label' => 'Crear Servicio',
+                    'label' => 'Create Service',
                     'url' => route('admin.services.create'),
                     'icon' => 'build',
                     'color' => 'success'

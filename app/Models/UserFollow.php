@@ -22,7 +22,7 @@ class UserFollow extends Model
     ];
     
     /**
-     * Relación con el usuario que sigue (follower)
+     * RelaciÃƒÆ’Ã‚Â³n con el usuario que sigue (follower)
      */
     public function follower(): BelongsTo
     {
@@ -30,7 +30,7 @@ class UserFollow extends Model
     }
     
     /**
-     * Relación con el usuario seguido (following)
+     * RelaciÃƒÆ’Ã‚Â³n con el usuario seguido (following)
      */
     public function following(): BelongsTo
     {
@@ -58,7 +58,7 @@ class UserFollow extends Model
      */
     public static function toggle($followerId, $followingId)
     {
-        // Evitar que un usuario se siga a sí mismo
+        // Evitar que un usuario se siga a sÃƒÆ’Ã‚Â­ mismo
         if ($followerId == $followingId) {
             return false;
         }

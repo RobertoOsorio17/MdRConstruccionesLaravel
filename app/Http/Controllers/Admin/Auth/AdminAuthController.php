@@ -16,10 +16,15 @@ use Inertia\Inertia;
 use Inertia\Response;
 use Carbon\Carbon;
 
+/**
+ * Handle authentication workflows for administrative users.
+ */
 class AdminAuthController extends Controller
 {
     /**
      * Display the admin login view.
+     *
+     * @return Response Inertia response rendering the admin login form.
      */
     public function create(): Response
     {
@@ -31,6 +36,9 @@ class AdminAuthController extends Controller
 
     /**
      * Handle an incoming admin authentication request.
+     *
+     * @param LoginRequest $request The validated login request instance.
+     * @return RedirectResponse Redirect response targeting the intended admin area.
      */
     public function store(LoginRequest $request): RedirectResponse
     {
@@ -87,7 +95,7 @@ class AdminAuthController extends Controller
             ]);
             
             throw ValidationException::withMessages([
-                'email' => 'No tienes permisos para acceder al panel de administración.',
+                'email' => 'No tienes permisos para acceder al panel de administraciÃƒÆ’Ã‚Â³n.',
             ]);
         }
 
@@ -149,6 +157,9 @@ class AdminAuthController extends Controller
 
     /**
      * Destroy an authenticated admin session.
+     *
+     * @param Request $request The current HTTP request instance.
+     * @return RedirectResponse Redirect response back to the admin login screen.
      */
     public function destroy(Request $request): RedirectResponse
     {
@@ -185,6 +196,9 @@ class AdminAuthController extends Controller
 
     /**
      * Check the current admin session status.
+     *
+     * @param Request $request The current HTTP request instance.
+     * @return \Illuminate\Http\JsonResponse JSON response describing session and user data.
      */
     public function status(Request $request)
     {
@@ -217,6 +231,9 @@ class AdminAuthController extends Controller
 
     /**
      * Extend the admin session lifetime by regenerating the session.
+     *
+     * @param Request $request The current HTTP request instance.
+     * @return \Illuminate\Http\JsonResponse JSON response containing the new expiry timestamp.
      */
     public function extendSession(Request $request)
     {
@@ -246,6 +263,9 @@ class AdminAuthController extends Controller
 
     /**
      * Provide recent admin login statistics and security context.
+     *
+     * @param Request $request The current HTTP request instance.
+     * @return \Illuminate\Http\JsonResponse JSON response with session and security insights.
      */
     public function loginStats(Request $request)
     {

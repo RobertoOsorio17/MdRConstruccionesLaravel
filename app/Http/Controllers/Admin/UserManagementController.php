@@ -14,6 +14,9 @@ use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Carbon\Carbon;
 
+/**
+ * Manage administrative operations for user accounts and moderation workflows.
+ */
 class UserManagementController extends Controller
 {
     /**
@@ -21,6 +24,9 @@ class UserManagementController extends Controller
      *
      * Supports keyword search, role constraints, ban status filtering, date ranges,
      * and configurable sorting so administrators can audit user activity efficiently.
+     *
+     * @param Request $request The current HTTP request with filter parameters.
+     * @return \Inertia\Response Inertia response containing the user listing data.
      */
     public function index(Request $request)
     {
@@ -152,6 +158,8 @@ class UserManagementController extends Controller
 
     /**
      * Show the form for creating a new user within the admin area.
+     *
+     * @return \Inertia\Response Inertia response containing the creation form data.
      */
     public function create()
     {
@@ -164,6 +172,9 @@ class UserManagementController extends Controller
 
     /**
      * Store a newly created user account and optional role assignments.
+     *
+     * @param Request $request The validated request payload describing the new user.
+     * @return \Illuminate\Http\RedirectResponse Redirect response after persisting the user.
      */
     public function store(Request $request)
     {
@@ -173,7 +184,7 @@ class UserManagementController extends Controller
         }
 
         $validator = Validator::make($request->all(), [
-            'name' => 'required|string|max:255|regex:/^[a-zA-ZÃ€-Ã¿\s]+$/',
+            'name' => 'required|string|max:255|regex:/^[a-zA-ZÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬-ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¿\s]+$/',
             'email' => 'required|string|email|max:255|unique:users|regex:/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/',
             'password' => 'required|string|min:8|confirmed|regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/',
             'role' => 'nullable|string|in:admin,editor,user',
@@ -185,9 +196,9 @@ class UserManagementController extends Controller
             'send_welcome_email' => 'boolean',
         ], [
             'name.regex' => 'El nombre solo puede contener letras y espacios.',
-            'email.regex' => 'El formato del email no es vÃ¡lido.',
-            'password.regex' => 'La contraseÃ±a debe contener al menos: 1 mayÃºscula, 1 minÃºscula, 1 nÃºmero y 1 carÃ¡cter especial.',
-            'roles.max' => 'Un usuario no puede tener mÃ¡s de 3 roles.',
+            'email.regex' => 'El formato del email no es vÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡lido.',
+            'password.regex' => 'La contraseÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â±a debe contener al menos: 1 mayÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âºscula, 1 minÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âºscula, 1 nÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âºmero y 1 carÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡cter especial.',
+            'roles.max' => 'Un usuario no puede tener mÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡s de 3 roles.',
         ]);
 
         if ($validator->fails()) {
@@ -223,6 +234,12 @@ class UserManagementController extends Controller
 
     /**
      * Display the specified user together with engagement metrics.
+     */
+    /**
+     * Display detailed account information for a specific user.
+     *
+     * @param User $user The user model to inspect within the admin panel.
+     * @return \Inertia\Response Inertia response with expanded user details.
      */
     public function show(User $user)
     {
@@ -285,6 +302,12 @@ class UserManagementController extends Controller
     /**
      * Show the form for editing the specified user profile and roles.
      */
+    /**
+     * Show the admin edit form for the specified user.
+     *
+     * @param User $user The user being edited.
+     * @return \Inertia\Response Inertia response containing editable user data.
+     */
     public function edit(User $user)
     {
         $user->load(['roles']);
@@ -309,11 +332,18 @@ class UserManagementController extends Controller
     /**
      * Update the specified user profile, credentials, and role assignments.
      */
+    /**
+     * Persist administrative updates to the specified user record.
+     *
+     * @param Request $request The validated admin update request.
+     * @param User $user The user model being updated.
+     * @return \Illuminate\Http\RedirectResponse Redirect response after applying changes.
+     */
     public function update(Request $request, User $user)
     {
         // Security check: prevent administrators from modifying their own record here.
         if ($user->id === auth()->id()) {
-            return back()->withErrors(['error' => 'No puedes editar tu propia cuenta desde el panel de administraciÃ³n.']);
+            return back()->withErrors(['error' => 'No puedes editar tu propia cuenta desde el panel de administraciÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³n.']);
         }
 
         // Security check: restrict admin role updates to existing admins.
@@ -322,7 +352,7 @@ class UserManagementController extends Controller
         }
 
         $validator = Validator::make($request->all(), [
-            'name' => 'required|string|max:255|regex:/^[a-zA-ZÃ€-Ã¿\s]+$/',
+            'name' => 'required|string|max:255|regex:/^[a-zA-ZÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬-ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¿\s]+$/',
             'email' => ['required', 'string', 'email', 'max:255', 'regex:/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/', Rule::unique('users')->ignore($user->id)],
             'password' => 'nullable|string|min:8|confirmed|regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/',
             'role' => 'nullable|string|in:admin,editor,user',
@@ -334,9 +364,9 @@ class UserManagementController extends Controller
             'email_verified' => 'boolean',
         ], [
             'name.regex' => 'El nombre solo puede contener letras y espacios.',
-            'email.regex' => 'El formato del email no es vÃ¡lido.',
-            'password.regex' => 'La contraseÃ±a debe contener al menos: 1 mayÃºscula, 1 minÃºscula, 1 nÃºmero y 1 carÃ¡cter especial.',
-            'roles.max' => 'Un usuario no puede tener mÃ¡s de 3 roles.',
+            'email.regex' => 'El formato del email no es vÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡lido.',
+            'password.regex' => 'La contraseÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â±a debe contener al menos: 1 mayÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âºscula, 1 minÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âºscula, 1 nÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âºmero y 1 carÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡cter especial.',
+            'roles.max' => 'Un usuario no puede tener mÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡s de 3 roles.',
         ]);
 
         if ($validator->fails()) {
@@ -383,6 +413,12 @@ class UserManagementController extends Controller
     /**
      * Remove the specified user when permitted.
      */
+    /**
+     * Permanently delete the specified user account.
+     *
+     * @param User $user The user slated for deletion.
+     * @return \Illuminate\Http\RedirectResponse Redirect response summarizing the result.
+     */
     public function destroy(User $user)
     {
         // Security check: do not allow deletion of the acting administrator.
@@ -409,6 +445,12 @@ class UserManagementController extends Controller
 
     /**
      * Execute bulk administrative actions against multiple users.
+     */
+    /**
+     * Execute a bulk administrative action against multiple users.
+     *
+     * @param Request $request The request describing the bulk action and targets.
+     * @return \Illuminate\Http\RedirectResponse Redirect response confirming the bulk operation.
      */
     public function bulkAction(Request $request)
     {
@@ -467,8 +509,8 @@ class UserManagementController extends Controller
                     $user->roles()->sync([$request->role_id]);
                 }
                 $count = $users->count();
-                $message = "Se asignó el rol '{$role->display_name}' a {$count} usuarios.";
-                $message = "Se asignó el rol '{$role->display_name}' a {$count} usuarios.";
+                $message = "Se asignÃƒÆ’Ã‚Â³ el rol '{$role->display_name}' a {$count} usuarios.";
+                $message = "Se asignÃƒÆ’Ã‚Â³ el rol '{$role->display_name}' a {$count} usuarios.";
                 break;
         }
 
@@ -477,6 +519,9 @@ class UserManagementController extends Controller
 
     /**
      * Export user data based on the current filter selection.
+     *
+     * @param Request $request The request containing export filters.
+     * @return \Symfony\Component\HttpFoundation\StreamedResponse Streamed CSV response of user data.
      */
     public function export(Request $request)
     {
@@ -504,7 +549,7 @@ class UserManagementController extends Controller
         $users = $query->get();
 
         $csvData = [];
-        $csvData[] = ['ID', 'Nombre', 'Email', 'Rol', 'Estado', 'Fecha de Registro', 'Ãšltimo Login'];
+        $csvData[] = ['ID', 'Nombre', 'Email', 'Rol', 'Estado', 'Fecha de Registro', 'ÃƒÆ’Ã†â€™Ãƒâ€¦Ã‚Â¡ltimo Login'];
 
         foreach ($users as $user) {
             $csvData[] = [
@@ -538,6 +583,9 @@ class UserManagementController extends Controller
 
     /**
      * Calculate the user profile completion percentage based on key fields.
+     *
+     * @param User $user The user whose profile completeness is evaluated.
+     * @return int Percentage value representing profile completion.
      */
     private function calculateProfileCompletion(User $user): int
     {
@@ -559,6 +607,10 @@ class UserManagementController extends Controller
 
     /**
      * Ban a user for a configurable duration and reason.
+     *
+     * @param Request $request The request containing ban configuration.
+     * @param User $user The user being banned.
+     * @return \Illuminate\Http\RedirectResponse Redirect response indicating the ban result.
      */
     public function banUser(Request $request, User $user)
     {
@@ -646,6 +698,12 @@ class UserManagementController extends Controller
     /**
      * Remove the active ban from a user account.
      */
+    /**
+     * Remove any active bans from the specified user.
+     *
+     * @param User $user The user whose ban is being lifted.
+     * @return \Illuminate\Http\RedirectResponse Redirect response summarizing the action.
+     */
     public function unbanUser(User $user)
     {
         // Security check: only administrators may lift bans.
@@ -666,6 +724,12 @@ class UserManagementController extends Controller
 
     /**
      * Retrieve the complete ban history for a user.
+     */
+    /**
+     * Retrieve the full ban history for a given user.
+     *
+     * @param User $user The user whose ban history is requested.
+     * @return \Illuminate\Http\JsonResponse JSON response listing ban records.
      */
     public function getBanHistory(User $user)
     {
@@ -696,6 +760,10 @@ class UserManagementController extends Controller
 
     /**
      * Retrieve a paginated set of user comments with search and filters.
+     *
+     * @param Request $request The current HTTP request containing filter inputs.
+     * @param User $user The user whose comments are being retrieved.
+     * @return \Illuminate\Http\JsonResponse JSON response containing paginated comments.
      */
     public function getUserComments(Request $request, User $user)
     {
@@ -776,6 +844,14 @@ class UserManagementController extends Controller
     /**
      * Update a comment status from the user management interface.
      */
+    /**
+     * Update the moderation status of a user's comment.
+     *
+     * @param Request $request The request containing the new status.
+     * @param User $user The comment author.
+     * @param int $commentId The identifier of the comment being updated.
+     * @return \Illuminate\Http\JsonResponse JSON response indicating the outcome.
+     */
     public function updateCommentStatus(Request $request, User $user, $commentId)
     {
         // Security check: only administrators may adjust comment statuses.
@@ -803,6 +879,13 @@ class UserManagementController extends Controller
 
     /**
      * Delete a comment and its replies from user management.
+     */
+    /**
+     * Delete a specific comment created by the given user.
+     *
+     * @param User $user The author of the comment.
+     * @param int $commentId The identifier of the comment being removed.
+     * @return \Illuminate\Http\RedirectResponse Redirect response with the deletion result.
      */
     public function deleteComment(User $user, $commentId)
     {
@@ -869,12 +952,19 @@ class UserManagementController extends Controller
                 'trace' => $e->getTraceAsString()
             ]);
 
-            return back()->withErrors(['error' => 'Error al eliminar comentario. Por favor, intÃ©ntalo de nuevo.']);
+            return back()->withErrors(['error' => 'Error al eliminar comentario. Por favor, intÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©ntalo de nuevo.']);
         }
     }
 
     /**
      * Execute bulk moderation actions on user comments.
+     */
+    /**
+     * Execute bulk moderation actions against a user's comments.
+     *
+     * @param Request $request The request containing action details.
+     * @param User $user The user whose comments are targeted.
+     * @return \Illuminate\Http\JsonResponse JSON response reporting the bulk results.
      */
     public function bulkCommentActions(Request $request, User $user)
     {
@@ -927,6 +1017,10 @@ class UserManagementController extends Controller
 
     /**
      * Ensure the current user is allowed to assign the requested roles.
+     *
+     * @param array<int, mixed> $roles A set of role identifiers requested for assignment.
+     * @param int|null $singleRoleId Optional single role identifier when assigning one role.
+     * @return void
      */
     private function guardAdminRoleAssignment($roles = [], ?int $singleRoleId = null): void
     {
@@ -965,6 +1059,10 @@ class UserManagementController extends Controller
 
     /**
      * Mark a user account as verified and log the action.
+     *
+     * @param Request $request The request containing optional verification metadata.
+     * @param User $user The user being verified.
+     * @return \Illuminate\Http\RedirectResponse Redirect response reflecting verification outcome.
      */
     public function verifyUser(Request $request, User $user)
     {
@@ -997,7 +1095,7 @@ class UserManagementController extends Controller
 
                 return back()->with('success', "Usuario {$user->name} verificado exitosamente.");
             } else {
-                return back()->withErrors(['error' => 'Error al verificar el usuario. IntÃ©ntalo de nuevo.']);
+                return back()->withErrors(['error' => 'Error al verificar el usuario. IntÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©ntalo de nuevo.']);
             }
         } catch (\Exception $e) {
             \Log::error('Error verifying user', [
@@ -1006,12 +1104,16 @@ class UserManagementController extends Controller
                 'verified_by' => auth()->id()
             ]);
 
-            return back()->withErrors(['error' => 'Error al verificar el usuario. IntÃ©ntalo de nuevo.']);
+            return back()->withErrors(['error' => 'Error al verificar el usuario. IntÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©ntalo de nuevo.']);
         }
     }
 
     /**
      * Remove verification from a user account and log the change.
+     *
+     * @param Request $request The request containing optional notes.
+     * @param User $user The user being unverified.
+     * @return \Illuminate\Http\RedirectResponse Redirect response reflecting unverification outcome.
      */
     public function unverifyUser(Request $request, User $user)
     {
@@ -1042,9 +1144,9 @@ class UserManagementController extends Controller
                     'timestamp' => now()->toISOString()
                 ]);
 
-                return back()->with('success', "VerificaciÃ³n de {$user->name} removida exitosamente.");
+                return back()->with('success', "VerificaciÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³n de {$user->name} removida exitosamente.");
             } else {
-                return back()->withErrors(['error' => 'Error al desverificar el usuario. IntÃ©ntalo de nuevo.']);
+                return back()->withErrors(['error' => 'Error al desverificar el usuario. IntÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©ntalo de nuevo.']);
             }
         } catch (\Exception $e) {
             \Log::error('Error unverifying user', [
@@ -1053,7 +1155,7 @@ class UserManagementController extends Controller
                 'unverified_by' => auth()->id()
             ]);
 
-            return back()->withErrors(['error' => 'Error al desverificar el usuario. IntÃ©ntalo de nuevo.']);
+            return back()->withErrors(['error' => 'Error al desverificar el usuario. IntÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©ntalo de nuevo.']);
         }
     }
 }

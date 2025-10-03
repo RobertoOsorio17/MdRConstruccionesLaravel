@@ -776,11 +776,7 @@ Agradecimientos especiales a los creadores y mantenedores de:
 - [Material-UI](https://mui.com/) - MUI Team
 - [Vite](https://vitejs.dev/) - Evan You y el equipo de Vite
 
-### Contacto
 
-- **Website**: [https://mdrconstrucciones.com](https://mdrconstrucciones.com)
-- **Email**: info@mdrconstrucciones.com
-- **Teléfono**: +34 123 456 789
 
 ---
 

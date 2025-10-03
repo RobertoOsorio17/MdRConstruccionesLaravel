@@ -42,7 +42,12 @@ Route::middleware('guest.redirect')->group(function () {
 
     // Two Factor Authentication Challenge
     Route::get('two-factor-challenge', [TwoFactorController::class, 'challenge'])
+        ->middleware('two-factor.challenge')
         ->name('two-factor.login');
+
+    Route::post('two-factor-challenge', [TwoFactorController::class, 'verify'])
+        ->middleware(['two-factor.challenge', 'auth.ratelimit'])
+        ->name('two-factor.verify');
 
     // OAuth Social Authentication
     Route::get('auth/{provider}', [SocialAuthController::class, 'redirect'])

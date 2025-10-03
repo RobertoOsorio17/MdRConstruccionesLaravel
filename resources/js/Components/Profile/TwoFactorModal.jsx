@@ -14,10 +14,10 @@ import {
     TextField,
     Alert,
     Paper,
-    Grid,
     Chip,
     IconButton,
     CircularProgress,
+    Stack,
 } from '@mui/material';
 import {
     Close as CloseIcon,
@@ -26,6 +26,7 @@ import {
     QrCode2 as QrCodeIcon,
     Key as KeyIcon,
     Security as SecurityIcon,
+    Download as DownloadIcon,
 } from '@mui/icons-material';
 
 const steps = ['Escanear QR', 'Guardar Códigos', 'Verificar'];
@@ -47,26 +48,39 @@ export default function TwoFactorModal({ open, onClose, twoFactorEnabled }) {
             setLoading(true);
             router.post('/user/two-factor-authentication', {}, {
                 preserveScroll: true,
-                onSuccess: (page) => {
-                    // Fetch QR code and secret
-                    fetch('/user/two-factor-qr-code')
-                        .then(res => res.text())
-                        .then(svg => {
-                            setQrCode(svg);
-                            setLoading(false);
-                        });
-                    
-                    fetch('/user/two-factor-secret-key')
-                        .then(res => res.json())
-                        .then(data => {
-                            setSecret(data.secretKey);
-                        });
-                    
-                    fetch('/user/two-factor-recovery-codes')
-                        .then(res => res.json())
-                        .then(codes => {
-                            setRecoveryCodes(codes);
-                        });
+                onSuccess: async (page) => {
+                    try {
+                        // Fetch QR code
+                        const qrResponse = await fetch('/user/two-factor-authentication/qr-code');
+                        const qrData = await qrResponse.json();
+
+                        if (qrData.svg) {
+                            setQrCode(qrData.svg);
+                        }
+
+                        if (qrData.url) {
+                            // Extract secret from URL
+                            const urlParams = new URLSearchParams(qrData.url.split('?')[1]);
+                            const secretParam = urlParams.get('secret');
+                            if (secretParam) {
+                                setSecret(secretParam);
+                            }
+                        }
+
+                        // Fetch recovery codes
+                        const codesResponse = await fetch('/user/two-factor-authentication/recovery-codes');
+                        const codesData = await codesResponse.json();
+
+                        if (codesData.recoveryCodes) {
+                            setRecoveryCodes(codesData.recoveryCodes);
+                        }
+
+                        setLoading(false);
+                    } catch (error) {
+                        console.error('Error fetching 2FA data:', error);
+                        setError('Error al cargar los datos de 2FA');
+                        setLoading(false);
+                    }
                 },
                 onError: () => {
                     setLoading(false);
@@ -85,13 +99,15 @@ export default function TwoFactorModal({ open, onClose, twoFactorEnabled }) {
             }
 
             setLoading(true);
-            router.post('/user/confirmed-two-factor-authentication', {
+            router.post('/user/two-factor-authentication/confirm', {
                 code: verificationCode
             }, {
                 preserveScroll: true,
                 onSuccess: () => {
                     setLoading(false);
                     handleClose();
+                    // Reload page to update 2FA status
+                    window.location.reload();
                 },
                 onError: (errors) => {
                     setLoading(false);
@@ -121,15 +137,91 @@ export default function TwoFactorModal({ open, onClose, twoFactorEnabled }) {
         onClose();
     };
 
-    const copyToClipboard = (text, type) => {
-        navigator.clipboard.writeText(text);
-        if (type === 'codes') {
-            setCopiedCode(true);
-            setTimeout(() => setCopiedCode(false), 2000);
-        } else {
-            setCopiedSecret(true);
-            setTimeout(() => setCopiedSecret(false), 2000);
+    const copyToClipboard = async (text, type) => {
+        try {
+            await navigator.clipboard.writeText(text);
+            if (type === 'codes') {
+                setCopiedCode(true);
+                setTimeout(() => setCopiedCode(false), 2000);
+            } else {
+                setCopiedSecret(true);
+                setTimeout(() => setCopiedSecret(false), 2000);
+            }
+        } catch (err) {
+            console.error('Error al copiar:', err);
+            // Fallback para navegadores antiguos
+            const textArea = document.createElement('textarea');
+            textArea.value = text;
+            textArea.style.position = 'fixed';
+            textArea.style.left = '-999999px';
+            document.body.appendChild(textArea);
+            textArea.select();
+            try {
+                document.execCommand('copy');
+                if (type === 'codes') {
+                    setCopiedCode(true);
+                    setTimeout(() => setCopiedCode(false), 2000);
+                } else {
+                    setCopiedSecret(true);
+                    setTimeout(() => setCopiedSecret(false), 2000);
+                }
+            } catch (err2) {
+                console.error('Error en fallback:', err2);
+            }
+            document.body.removeChild(textArea);
         }
+    };
+
+    const downloadRecoveryCodes = () => {
+        const date = new Date().toLocaleDateString('es-ES');
+        const time = new Date().toLocaleTimeString('es-ES');
+
+        const content = `
+╔════════════════════════════════════════════════════════════╗
+║                                                            ║
+║        CÓDIGOS DE RECUPERACIÓN 2FA - MDR CONSTRUCCIONES    ║
+║                                                            ║
+╚════════════════════════════════════════════════════════════╝
+
+📅 Fecha de generación: ${date}
+🕐 Hora: ${time}
+
+⚠️  IMPORTANTE:
+   • Guarda estos códigos en un lugar seguro
+   • Cada código solo puede usarse una vez
+   • Los necesitarás si pierdes acceso a tu dispositivo
+   • No compartas estos códigos con nadie
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🔑 TUS CÓDIGOS DE RECUPERACIÓN:
+
+${recoveryCodes.map((code, index) => `   ${(index + 1).toString().padStart(2, '0')}. ${code}`).join('\n')}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📝 INSTRUCCIONES DE USO:
+
+   1. Si pierdes acceso a tu aplicación de autenticación
+   2. En la pantalla de login, selecciona "Usar código de recuperación"
+   3. Ingresa uno de estos códigos
+   4. El código se invalidará después de usarlo
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🔒 MDR Construcciones - Sistema de Seguridad
+   © ${new Date().getFullYear()} Todos los derechos reservados
+`;
+
+        const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `MDR-2FA-Recovery-Codes-${Date.now()}.txt`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
     };
 
     const getStepContent = (step) => {
@@ -148,7 +240,21 @@ export default function TwoFactorModal({ open, onClose, twoFactorEnabled }) {
                         {loading ? (
                             <CircularProgress />
                         ) : qrCode ? (
-                            <Paper elevation={0} sx={{ p: 3, display: 'inline-block', border: '1px solid', borderColor: 'divider' }}>
+                            <Paper
+                                elevation={0}
+                                sx={{
+                                    p: 3,
+                                    display: 'inline-block',
+                                    border: '1px solid',
+                                    borderColor: 'divider',
+                                    bgcolor: 'white',
+                                    '& svg': {
+                                        width: '200px !important',
+                                        height: '200px !important',
+                                        display: 'block',
+                                    }
+                                }}
+                            >
                                 <div dangerouslySetInnerHTML={{ __html: qrCode }} />
                             </Paper>
                         ) : null}
@@ -183,25 +289,44 @@ export default function TwoFactorModal({ open, onClose, twoFactorEnabled }) {
                         </Alert>
                         
                         <Paper elevation={0} sx={{ p: 3, border: '1px solid', borderColor: 'divider' }}>
-                            <Grid container spacing={2}>
+                            <Box sx={{
+                                display: 'grid',
+                                gridTemplateColumns: 'repeat(2, 1fr)',
+                                gap: 2
+                            }}>
                                 {recoveryCodes.map((code, index) => (
-                                    <Grid item xs={6} key={index}>
-                                        <Chip 
-                                            label={code} 
-                                            sx={{ width: '100%', fontFamily: 'monospace', fontSize: '0.9rem' }}
-                                        />
-                                    </Grid>
+                                    <Chip
+                                        key={index}
+                                        label={code}
+                                        sx={{
+                                            width: '100%',
+                                            fontFamily: 'monospace',
+                                            fontSize: '0.9rem',
+                                            fontWeight: 600,
+                                        }}
+                                    />
                                 ))}
-                            </Grid>
-                            <Button
-                                fullWidth
-                                variant="outlined"
-                                startIcon={copiedCode ? <CheckCircleIcon /> : <ContentCopyIcon />}
-                                onClick={() => copyToClipboard(recoveryCodes.join('\n'), 'codes')}
-                                sx={{ mt: 2 }}
-                            >
-                                {copiedCode ? 'Copiado' : 'Copiar Todos'}
-                            </Button>
+                            </Box>
+                            <Stack direction="row" spacing={2} sx={{ mt: 2 }}>
+                                <Button
+                                    fullWidth
+                                    variant="outlined"
+                                    startIcon={copiedCode ? <CheckCircleIcon /> : <ContentCopyIcon />}
+                                    onClick={() => copyToClipboard(recoveryCodes.join('\n'), 'codes')}
+                                    color={copiedCode ? 'success' : 'primary'}
+                                >
+                                    {copiedCode ? '✓ Copiado' : 'Copiar Todos'}
+                                </Button>
+                                <Button
+                                    fullWidth
+                                    variant="contained"
+                                    startIcon={<DownloadIcon />}
+                                    onClick={downloadRecoveryCodes}
+                                    color="primary"
+                                >
+                                    Descargar TXT
+                                </Button>
+                            </Stack>
                         </Paper>
                     </Box>
                 );

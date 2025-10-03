@@ -35,6 +35,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'auth.ratelimit' => \App\Http\Middleware\AuthRateLimitMiddleware::class,
             'security.headers' => \App\Http\Middleware\SecurityHeadersMiddleware::class,
             'track.device' => \App\Http\Middleware\TrackDeviceMiddleware::class,
+            'two-factor.challenge' => \App\Http\Middleware\EnsureTwoFactorChallenge::class,
             // Admin security middleware
             'admin.audit' => \App\Http\Middleware\AdminAuditMiddleware::class,
             'admin.security' => \App\Http\Middleware\AdminSecurityHeaders::class,

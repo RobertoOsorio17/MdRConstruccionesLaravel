@@ -118,6 +118,34 @@ class AuthenticatedSessionController extends Controller
                 'timestamp' => now()->toISOString()
             ]);
 
+            // Check if user has 2FA enabled
+            if ($user->two_factor_secret && $user->two_factor_confirmed_at) {
+                Log::info('User has 2FA enabled, redirecting to challenge', [
+                    'user_id' => $user->id,
+                    'user_email' => $user->email,
+                    'timestamp' => now()->toISOString()
+                ]);
+
+                // Store intended URL before 2FA challenge
+                session()->put('url.intended', $user->hasPermission('dashboard.access')
+                    ? route('dashboard', absolute: false)
+                    : route('user.dashboard', absolute: false));
+
+                // Store user ID and credentials hash for 2FA verification
+                session()->put('login.id', $user->id);
+                session()->put('login.remember', $request->boolean('remember'));
+                session()->put('login.password_hash', $user->password); // Verify password hasn't changed
+                session()->put('login.attempt_time', now()->timestamp); // Expire after 5 minutes
+
+                // Logout temporarily for 2FA challenge
+                Auth::logout();
+
+                // Regenerate session to prevent fixation
+                $request->session()->regenerate();
+
+                return redirect()->route('two-factor.login');
+            }
+
             // Redirect based on user permissions
             if ($user && $user->hasPermission('dashboard.access')) {
                 return redirect()->intended(route('dashboard', absolute: false));

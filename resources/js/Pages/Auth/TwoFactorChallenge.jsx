@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Head, useForm } from '@inertiajs/react';
-import GuestLayout from '@/Layouts/GuestLayout';
+import MainLayout from '@/Layouts/MainLayout';
 import {
     Box,
     Container,
@@ -17,6 +17,7 @@ import { Security, Key, VpnKey } from '@mui/icons-material';
 
 export default function TwoFactorChallenge() {
     const [tabValue, setTabValue] = useState(0);
+    const [attempts, setAttempts] = useState(0);
     const { data, setData, post, processing, errors } = useForm({
         code: '',
         recovery_code: '',
@@ -24,20 +25,57 @@ export default function TwoFactorChallenge() {
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        
+
+        // Validate input before submitting
         if (tabValue === 0) {
-            post(route('two-factor.login'), {
+            // Validate code is 6 digits
+            if (!/^\d{6}$/.test(data.code)) {
+                return;
+            }
+            setData('recovery_code', '');
+        } else {
+            // Validate recovery code is not empty
+            if (!data.recovery_code || data.recovery_code.trim().length === 0) {
+                return;
+            }
+            setData('code', '');
+        }
+
+        // Increment attempts
+        setAttempts(prev => prev + 1);
+
+        // Clear the field that's not being used
+        if (tabValue === 0) {
+            post('/two-factor-challenge', {
                 preserveScroll: true,
+                onError: (errors) => {
+                    console.error('2FA Error:', errors);
+                    // Clear code on error for security
+                    setData('code', '');
+                },
+                onSuccess: () => {
+                    // Reset attempts on success
+                    setAttempts(0);
+                }
             });
         } else {
-            post(route('two-factor.login'), {
+            post('/two-factor-challenge', {
                 preserveScroll: true,
+                onError: (errors) => {
+                    console.error('2FA Error:', errors);
+                    // Clear recovery code on error for security
+                    setData('recovery_code', '');
+                },
+                onSuccess: () => {
+                    // Reset attempts on success
+                    setAttempts(0);
+                }
             });
         }
     };
 
     return (
-        <GuestLayout>
+        <MainLayout>
             <Head title="Two-Factor Authentication" />
 
             <Container maxWidth="sm" sx={{ py: 8 }}>
@@ -53,6 +91,18 @@ export default function TwoFactorChallenge() {
                         Please confirm access to your account by entering the authentication code provided by your
                         authenticator application.
                     </Typography>
+
+                    {attempts >= 3 && (
+                        <Alert severity="warning" sx={{ mb: 3 }}>
+                            Multiple failed attempts detected. After 5 failed attempts, you will be temporarily locked out.
+                        </Alert>
+                    )}
+
+                    {(errors.code || errors.recovery_code) && (
+                        <Alert severity="error" sx={{ mb: 3 }}>
+                            {errors.code || errors.recovery_code}
+                        </Alert>
+                    )}
 
                     <Tabs
                         value={tabValue}
@@ -139,7 +189,7 @@ export default function TwoFactorChallenge() {
                     </Box>
                 </Paper>
             </Container>
-        </GuestLayout>
+        </MainLayout>
     );
 }
 

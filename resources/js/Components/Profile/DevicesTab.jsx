@@ -125,38 +125,37 @@ export default function DevicesTab({ devices = [], stats = {} }) {
             </Typography>
 
             {/* Stats Cards */}
-            <Grid container spacing={3} sx={{ mb: 4 }}>
-                <Grid item xs={12} sm={4}>
-                    <Paper elevation={0} sx={{ p: 3, border: '1px solid', borderColor: 'divider', textAlign: 'center' }}>
-                        <Typography variant="h3" color="primary" fontWeight="700">
-                            {stats.total || 0}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                            Total Dispositivos
-                        </Typography>
-                    </Paper>
-                </Grid>
-                <Grid item xs={12} sm={4}>
-                    <Paper elevation={0} sx={{ p: 3, border: '1px solid', borderColor: 'divider', textAlign: 'center' }}>
-                        <Typography variant="h3" color="success.main" fontWeight="700">
-                            {stats.active || 0}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                            Activos (30 días)
-                        </Typography>
-                    </Paper>
-                </Grid>
-                <Grid item xs={12} sm={4}>
-                    <Paper elevation={0} sx={{ p: 3, border: '1px solid', borderColor: 'divider', textAlign: 'center' }}>
-                        <Typography variant="h3" color="info.main" fontWeight="700">
-                            {stats.trusted || 0}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                            Confiables
-                        </Typography>
-                    </Paper>
-                </Grid>
-            </Grid>
+            <Box sx={{
+                display: 'grid',
+                gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' },
+                gap: 3,
+                mb: 4
+            }}>
+                <Paper elevation={0} sx={{ p: 3, border: '1px solid', borderColor: 'divider', textAlign: 'center' }}>
+                    <Typography variant="h3" color="primary" fontWeight="700">
+                        {stats.total || 0}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                        Total Dispositivos
+                    </Typography>
+                </Paper>
+                <Paper elevation={0} sx={{ p: 3, border: '1px solid', borderColor: 'divider', textAlign: 'center' }}>
+                    <Typography variant="h3" color="success.main" fontWeight="700">
+                        {stats.active || 0}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                        Activos (30 días)
+                    </Typography>
+                </Paper>
+                <Paper elevation={0} sx={{ p: 3, border: '1px solid', borderColor: 'divider', textAlign: 'center' }}>
+                    <Typography variant="h3" color="info.main" fontWeight="700">
+                        {stats.trusted || 0}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                        Confiables
+                    </Typography>
+                </Paper>
+            </Box>
 
             {/* Actions */}
             {devices.length > 0 && (
@@ -189,13 +188,11 @@ export default function DevicesTab({ devices = [], stats = {} }) {
                     {devices.map((device) => (
                         <Card key={device.id} elevation={0} sx={{ border: '1px solid', borderColor: 'divider' }}>
                             <CardContent>
-                                <Grid container spacing={2} alignItems="center">
-                                    <Grid item>
-                                        <Avatar sx={{ bgcolor: device.is_active ? 'success.main' : 'grey.400', width: 56, height: 56 }}>
-                                            {getDeviceIcon(device.device_type)}
-                                        </Avatar>
-                                    </Grid>
-                                    <Grid item xs>
+                                <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                                    <Avatar sx={{ bgcolor: device.is_active ? 'success.main' : 'grey.400', width: 56, height: 56 }}>
+                                        {getDeviceIcon(device.device_type)}
+                                    </Avatar>
+                                    <Box sx={{ flex: 1 }}>
                                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
                                             <Typography variant="h6" fontWeight="600">
                                                 {device.custom_name || device.display_name || `${device.browser} en ${device.platform}`}
@@ -224,27 +221,25 @@ export default function DevicesTab({ devices = [], stats = {} }) {
                                                 </Typography>
                                             </Box>
                                         </Box>
-                                    </Grid>
-                                    <Grid item>
-                                        <Stack direction="row" spacing={1}>
-                                            <Tooltip title="Editar nombre">
-                                                <IconButton onClick={() => handleEditDevice(device)} size="small">
-                                                    <EditIcon />
-                                                </IconButton>
-                                            </Tooltip>
-                                            <Tooltip title={device.is_trusted ? "Marcar como no confiable" : "Marcar como confiable"}>
-                                                <IconButton onClick={() => handleTrustDevice(device)} size="small" color={device.is_trusted ? "primary" : "default"}>
-                                                    {device.is_trusted ? <ShieldIcon /> : <ShieldOutlinedIcon />}
-                                                </IconButton>
-                                            </Tooltip>
-                                            <Tooltip title="Eliminar dispositivo">
-                                                <IconButton onClick={() => handleDeleteDevice(device)} size="small" color="error">
-                                                    <DeleteIcon />
-                                                </IconButton>
-                                            </Tooltip>
-                                        </Stack>
-                                    </Grid>
-                                </Grid>
+                                    </Box>
+                                    <Stack direction="row" spacing={1}>
+                                        <Tooltip title="Editar nombre">
+                                            <IconButton onClick={() => handleEditDevice(device)} size="small">
+                                                <EditIcon />
+                                            </IconButton>
+                                        </Tooltip>
+                                        <Tooltip title={device.is_trusted ? "Marcar como no confiable" : "Marcar como confiable"}>
+                                            <IconButton onClick={() => handleTrustDevice(device)} size="small" color={device.is_trusted ? "primary" : "default"}>
+                                                {device.is_trusted ? <ShieldIcon /> : <ShieldOutlinedIcon />}
+                                            </IconButton>
+                                        </Tooltip>
+                                        <Tooltip title="Eliminar dispositivo">
+                                            <IconButton onClick={() => handleDeleteDevice(device)} size="small" color="error">
+                                                <DeleteIcon />
+                                            </IconButton>
+                                        </Tooltip>
+                                    </Stack>
+                                </Box>
                             </CardContent>
                         </Card>
                     ))}

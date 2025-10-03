@@ -41,6 +41,9 @@ const SecurityTab = ({ user, twoFactorEnabled, recoveryCodes }) => {
     const [successMessage, setSuccessMessage] = useState('');
     const [twoFactorModalOpen, setTwoFactorModalOpen] = useState(false);
     const [showRecoveryCodes, setShowRecoveryCodes] = useState(false);
+    const [disableModalOpen, setDisableModalOpen] = useState(false);
+    const [disablePassword, setDisablePassword] = useState('');
+    const [disableError, setDisableError] = useState('');
 
     const handlePasswordChange = (e) => {
         const { name, value } = e.target;
@@ -79,13 +82,31 @@ const SecurityTab = ({ user, twoFactorEnabled, recoveryCodes }) => {
     };
 
     const handleDisable2FA = () => {
-        if (!confirm('¿Estás seguro de que deseas desactivar la autenticación de dos factores?')) return;
+        setDisableModalOpen(true);
+        setDisablePassword('');
+        setDisableError('');
+    };
 
+    const confirmDisable2FA = () => {
+        if (!disablePassword) {
+            setDisableError('Por favor ingresa tu contraseña');
+            return;
+        }
+
+        setLoading(true);
         router.delete(route('two-factor.disable'), {
+            data: { password: disablePassword },
             preserveScroll: true,
             onSuccess: () => {
+                setDisableModalOpen(false);
+                setDisablePassword('');
                 setSuccessMessage('Autenticación de dos factores desactivada');
                 setTimeout(() => setSuccessMessage(''), 3000);
+                setLoading(false);
+            },
+            onError: (errors) => {
+                setDisableError(errors.password || 'Contraseña incorrecta');
+                setLoading(false);
             }
         });
     };
@@ -328,6 +349,52 @@ const SecurityTab = ({ user, twoFactorEnabled, recoveryCodes }) => {
                 onClose={() => setTwoFactorModalOpen(false)}
                 twoFactorEnabled={twoFactorEnabled}
             />
+
+            {/* Disable 2FA Modal */}
+            <Dialog open={disableModalOpen} onClose={() => setDisableModalOpen(false)} maxWidth="sm" fullWidth>
+                <DialogTitle>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <CloseIcon color="error" />
+                        Desactivar Autenticación de Dos Factores
+                    </Box>
+                </DialogTitle>
+                <DialogContent>
+                    <Alert severity="warning" sx={{ mb: 3 }}>
+                        Desactivar 2FA reducirá la seguridad de tu cuenta. Por favor confirma tu contraseña para continuar.
+                    </Alert>
+                    <TextField
+                        fullWidth
+                        type="password"
+                        label="Contraseña"
+                        value={disablePassword}
+                        onChange={(e) => {
+                            setDisablePassword(e.target.value);
+                            setDisableError('');
+                        }}
+                        error={!!disableError}
+                        helperText={disableError}
+                        autoFocus
+                        onKeyPress={(e) => {
+                            if (e.key === 'Enter') {
+                                confirmDisable2FA();
+                            }
+                        }}
+                    />
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setDisableModalOpen(false)} disabled={loading}>
+                        Cancelar
+                    </Button>
+                    <Button
+                        onClick={confirmDisable2FA}
+                        color="error"
+                        variant="contained"
+                        disabled={loading}
+                    >
+                        {loading ? 'Desactivando...' : 'Desactivar 2FA'}
+                    </Button>
+                </DialogActions>
+            </Dialog>
         </Box>
     );
 };

@@ -782,7 +782,7 @@ Agradecimientos especiales a los creadores y mantenedores de:
 
 <div align="center">
 
-**Hecho con ❤️ por Roberto Osorio Vidal para Mdr Construcciones**
+**Hecho con ❤️ por Roberto Osorio Vidal para MdR Construcciones**
 
 ⭐ Si te gusta este proyecto, considera darle una estrella en GitHub
 

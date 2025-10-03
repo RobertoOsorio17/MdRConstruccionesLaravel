@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Head, useForm } from '@inertiajs/react';
+import { Head, useForm, router } from '@inertiajs/react';
 import {
     Box,
     Container,
@@ -118,7 +118,7 @@ const PostForm = ({ post, categories, tags, authors, isEdit = false }) => {
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        
+
         const formData = {
             ...data,
             categories: selectedCategories,
@@ -130,14 +130,22 @@ const PostForm = ({ post, categories, tags, authors, isEdit = false }) => {
             submitPost(route('admin.posts.update', post.id), {
                 data: formData,
                 onSuccess: () => {
-                    // Handle success
+                    router.visit(route('admin.posts.index'), {
+                        onSuccess: () => {
+                            // Success notification will be shown via flash message
+                        }
+                    });
                 }
             });
         } else {
             submitPost(route('admin.posts.store'), {
                 data: formData,
                 onSuccess: () => {
-                    // Handle success
+                    router.visit(route('admin.posts.index'), {
+                        onSuccess: () => {
+                            // Success notification will be shown via flash message
+                        }
+                    });
                 }
             });
         }

@@ -696,6 +696,96 @@ class UserManagementController extends Controller
     }
 
     /**
+     * Modify an existing ban for a user.
+     *
+     * @param Request $request The request containing updated ban configuration.
+     * @param User $user The user whose ban is being modified.
+     * @return \Illuminate\Http\RedirectResponse Redirect response indicating the modification result.
+     */
+    public function modifyBan(Request $request, User $user)
+    {
+        \Log::info('Modify ban request started', [
+            'user_id' => $user->id,
+            'modified_by' => auth()->id(),
+            'request_data' => $request->all()
+        ]);
+
+        // Security check: require administrative privileges.
+        if (!auth()->user()->hasRole('admin')) {
+            \Log::warning('Unauthorized modify ban attempt', ['user_id' => auth()->id(), 'target_user' => $user->id]);
+            return back()->withErrors(['error' => 'Unauthorized action.']);
+        }
+
+        // Check if user has an active ban
+        if (!$user->isBanned()) {
+            \Log::warning('Attempted to modify non-existent ban', ['user_id' => $user->id]);
+            return back()->withErrors(['error' => 'User is not currently banned.']);
+        }
+
+        // Validate the incoming modification request data.
+        $validator = Validator::make($request->all(), [
+            'reason' => 'required|string|max:1000',
+            'duration' => 'nullable|string|in:1_hour,1_day,1_week,1_month,3_months,6_months,1_year,permanent',
+            'ip_ban' => 'nullable|boolean',
+            'admin_notes' => 'nullable|string|max:1000',
+        ]);
+
+        if ($validator->fails()) {
+            \Log::error('Modify ban validation failed', ['errors' => $validator->errors()->toArray()]);
+            return back()->withErrors($validator->errors());
+        }
+
+        // Calculate the new ban expiration timestamp.
+        $expiresAt = null;
+        if ($request->duration && $request->duration !== 'permanent') {
+            $expiresAt = match($request->duration) {
+                '1_hour' => now()->addHour(),
+                '1_day' => now()->addDay(),
+                '1_week' => now()->addWeek(),
+                '1_month' => now()->addMonth(),
+                '3_months' => now()->addMonths(3),
+                '6_months' => now()->addMonths(6),
+                '1_year' => now()->addYear(),
+                default => null,
+            };
+        }
+
+        // Update the active ban record.
+        try {
+            $ban = UserBan::where('user_id', $user->id)
+                ->where('is_active', true)
+                ->first();
+
+            if (!$ban) {
+                \Log::error('Active ban not found for user', ['user_id' => $user->id]);
+                return back()->withErrors(['error' => 'Active ban record not found.']);
+            }
+
+            $ban->update([
+                'reason' => $request->reason,
+                'expires_at' => $expiresAt,
+                'admin_notes' => $request->admin_notes,
+            ]);
+
+            \Log::info('Ban modified successfully', [
+                'ban_id' => $ban->id,
+                'user_id' => $user->id,
+                'modified_by' => auth()->id(),
+                'new_expires_at' => $expiresAt
+            ]);
+
+            return back()->with('success', 'Ban has been modified successfully.');
+        } catch (\Exception $e) {
+            \Log::error('Failed to modify ban record', [
+                'user_id' => $user->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return back()->withErrors(['error' => 'Failed to modify ban: ' . $e->getMessage()]);
+        }
+    }
+
+    /**
      * Remove the active ban from a user account.
      */
     /**

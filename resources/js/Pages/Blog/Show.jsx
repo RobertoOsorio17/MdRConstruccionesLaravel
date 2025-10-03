@@ -556,7 +556,7 @@ const BlogShow = ({ post, suggestedPosts, seo }) => {
 
             {/* Contenido principal */}
             <Container
-                maxWidth="lg"
+                maxWidth="xl"
                 sx={{
                     py: { xs: 4, sm: 6, md: 8, lg: 10 },
                     px: { xs: 2, sm: 3, md: 4 }
@@ -564,7 +564,7 @@ const BlogShow = ({ post, suggestedPosts, seo }) => {
             >
                 <Grid container spacing={{ xs: 2, sm: 3, md: 4, lg: 5 }}>
                     {/* Contenido del artículo */}
-                    <Grid size={{ xs: 12, lg: 8 }}>
+                    <Grid size={{ xs: 12, lg: 9 }}>
                         <AnimatedSection>
                             <Paper
                                 elevation={0}
@@ -847,7 +847,7 @@ const BlogShow = ({ post, suggestedPosts, seo }) => {
                     </Grid>
 
                     {/* Sidebar responsive */}
-                    <Grid size={{ xs: 12, lg: 4 }}>
+                    <Grid size={{ xs: 12, lg: 3 }}>
                         <Box
                             sx={{
                                 position: { xs: 'static', lg: 'sticky' },

@@ -186,7 +186,7 @@ const UserMenu = () => {
                     Mi Perfil
                 </MenuItem>
 
-                <MenuItem component={Link} href="/profile/edit" onClick={handleClose}>
+                <MenuItem component={Link} href="/profile/settings" onClick={handleClose}>
                     <SettingsIcon sx={{ mr: 2, color: 'secondary.main' }} />
                     Configuración
                 </MenuItem>

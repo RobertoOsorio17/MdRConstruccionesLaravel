@@ -1,0 +1,167 @@
+<?php
+
+namespace App\Http\Controllers\Auth;
+
+use App\Http\Controllers\Controller;
+use App\Models\User;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
+use Inertia\Inertia;
+use Laravel\Socialite\Facades\Socialite;
+use Exception;
+
+class SocialAuthController extends Controller
+{
+    /**
+     * Supported OAuth providers
+     */
+    private const SUPPORTED_PROVIDERS = ['google', 'facebook', 'github'];
+
+    /**
+     * Redirect the user to the OAuth provider authentication page.
+     */
+    public function redirect(string $provider)
+    {
+        if (!in_array($provider, self::SUPPORTED_PROVIDERS)) {
+            return redirect()->route('login')->with('error', 'Proveedor de autenticación no soportado.');
+        }
+
+        try {
+            return Socialite::driver($provider)->redirect();
+        } catch (Exception $e) {
+            return redirect()->route('login')->with('error', 'Error al conectar con ' . ucfirst($provider) . '. Por favor, intenta de nuevo.');
+        }
+    }
+
+    /**
+     * Obtain the user information from OAuth provider.
+     */
+    public function callback(string $provider)
+    {
+        if (!in_array($provider, self::SUPPORTED_PROVIDERS)) {
+            return redirect()->route('login')->with('error', 'Proveedor de autenticación no soportado.');
+        }
+
+        try {
+            $socialUser = Socialite::driver($provider)->user();
+        } catch (Exception $e) {
+            return redirect()->route('login')->with('error', 'Error al autenticar con ' . ucfirst($provider) . '. Por favor, intenta de nuevo.');
+        }
+
+        // Find or create user
+        $user = $this->findOrCreateUser($socialUser, $provider);
+
+        // Log the user in
+        Auth::login($user, true);
+
+        // Redirect based on role
+        if ($user->role === 'admin') {
+            return redirect()->route('admin.dashboard')->with('success', '¡Bienvenido de vuelta, ' . $user->name . '!');
+        }
+
+        return redirect()->route('dashboard')->with('success', '¡Bienvenido de vuelta, ' . $user->name . '!');
+    }
+
+    /**
+     * Find or create a user based on OAuth provider data.
+     */
+    private function findOrCreateUser($socialUser, string $provider): User
+    {
+        // Check if user already exists with this provider
+        $user = User::where('provider', $provider)
+            ->where('provider_id', $socialUser->getId())
+            ->first();
+
+        if ($user) {
+            // Update tokens
+            $user->update([
+                'provider_token' => $socialUser->token,
+                'provider_refresh_token' => $socialUser->refreshToken ?? null,
+            ]);
+
+            return $user;
+        }
+
+        // Check if user exists with same email
+        $existingUser = User::where('email', $socialUser->getEmail())->first();
+
+        if ($existingUser) {
+            // Link OAuth account to existing user
+            $existingUser->update([
+                'provider' => $provider,
+                'provider_id' => $socialUser->getId(),
+                'provider_token' => $socialUser->token,
+                'provider_refresh_token' => $socialUser->refreshToken ?? null,
+            ]);
+
+            return $existingUser;
+        }
+
+        // Create new user
+        return User::create([
+            'name' => $socialUser->getName() ?? $socialUser->getNickname() ?? 'Usuario',
+            'email' => $socialUser->getEmail(),
+            'email_verified_at' => now(), // OAuth users are pre-verified
+            'provider' => $provider,
+            'provider_id' => $socialUser->getId(),
+            'provider_token' => $socialUser->token,
+            'provider_refresh_token' => $socialUser->refreshToken ?? null,
+            'password' => null, // OAuth users don't need password
+            'role' => 'user', // Default role
+            'avatar' => $socialUser->getAvatar() ?? null,
+        ]);
+    }
+
+    /**
+     * Unlink OAuth provider from user account.
+     */
+    public function unlink(Request $request, string $provider)
+    {
+        $user = $request->user();
+
+        // Check if user has a password set (can't unlink if it's the only auth method)
+        if (!$user->password) {
+            return back()->with('error', 'No puedes desvincular tu cuenta de ' . ucfirst($provider) . ' sin establecer una contraseña primero.');
+        }
+
+        // Check if this is the correct provider
+        if ($user->provider !== $provider) {
+            return back()->with('error', 'Esta cuenta no está vinculada con ' . ucfirst($provider) . '.');
+        }
+
+        // Unlink provider
+        $user->update([
+            'provider' => null,
+            'provider_id' => null,
+            'provider_token' => null,
+            'provider_refresh_token' => null,
+        ]);
+
+        return back()->with('success', 'Cuenta de ' . ucfirst($provider) . ' desvinculada exitosamente.');
+    }
+
+    /**
+     * Show connected accounts page.
+     */
+    public function index(Request $request)
+    {
+        $user = $request->user();
+
+        $connectedAccounts = [];
+        if ($user->provider) {
+            $connectedAccounts[] = [
+                'provider' => $user->provider,
+                'provider_id' => $user->provider_id,
+                'created_at' => $user->created_at,
+            ];
+        }
+
+        return Inertia::render('Profile/ConnectedAccounts', [
+            'connectedAccounts' => $connectedAccounts,
+            'hasPassword' => !empty($user->password),
+        ]);
+    }
+}
+

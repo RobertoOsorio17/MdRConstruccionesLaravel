@@ -7,12 +7,13 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Laravel\Fortify\TwoFactorAuthenticatable;
 use App\Notifications\ResetPasswordNotification;
 
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable;
+    use HasFactory, Notifiable, TwoFactorAuthenticatable;
 
     /**
      * The attributes that are mass assignable.
@@ -35,6 +36,12 @@ class User extends Authenticatable
         'profile_visibility',
         'show_email',
         'profile_updated_at',
+        'provider',
+        'provider_id',
+        'provider_token',
+        'provider_refresh_token',
+        'email_verified_at',
+        'role',
     ];
 
     /**
@@ -57,6 +64,11 @@ class User extends Authenticatable
     protected $hidden = [
         'password',
         'remember_token',
+        'two_factor_secret',
+        'two_factor_recovery_codes',
+        'two_factor_confirmed_at',
+        'provider_token',
+        'provider_refresh_token',
     ];
 
     /**
@@ -72,6 +84,7 @@ class User extends Authenticatable
             'birth_date' => 'date',
             'profile_updated_at' => 'datetime',
             'social_links' => 'array',
+            'preferences' => 'array',
             'profile_visibility' => 'boolean',
             'show_email' => 'boolean',
             'password' => 'hashed',
@@ -144,6 +157,14 @@ class User extends Authenticatable
     public function adminNotifications(): HasMany
     {
         return $this->hasMany(AdminNotification::class);
+    }
+
+    /**
+     * Get the user's devices
+     */
+    public function devices(): HasMany
+    {
+        return $this->hasMany(UserDevice::class);
     }
 
     /**
@@ -736,4 +757,3 @@ class User extends Authenticatable
         return $this->update(['last_login_at' => now()]);
     }
 }
-

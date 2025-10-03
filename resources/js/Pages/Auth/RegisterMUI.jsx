@@ -27,6 +27,7 @@ import {
     PersonAdd as RegisterIcon,
     Google as GoogleIcon,
     Facebook as FacebookIcon,
+    GitHub as GitHubIcon,
     Construction as ConstructionIcon,
     Check as CheckIcon
 } from '@mui/icons-material';
@@ -80,6 +81,10 @@ const RegisterMUI = () => {
         if (passwordStrength < 50) return 'Débil';
         if (passwordStrength < 75) return 'Buena';
         return 'Muy segura';
+    };
+
+    const handleSocialLogin = (provider) => {
+        window.location.href = route('social.redirect', { provider });
     };
 
     return (
@@ -166,6 +171,7 @@ const RegisterMUI = () => {
                                         fullWidth
                                         variant="outlined"
                                         startIcon={<GoogleIcon />}
+                                        onClick={() => handleSocialLogin('google')}
                                         sx={{
                                             py: 1.5,
                                             borderRadius: 3,
@@ -183,6 +189,7 @@ const RegisterMUI = () => {
                                         fullWidth
                                         variant="outlined"
                                         startIcon={<FacebookIcon />}
+                                        onClick={() => handleSocialLogin('facebook')}
                                         sx={{
                                             py: 1.5,
                                             borderRadius: 3,
@@ -195,6 +202,26 @@ const RegisterMUI = () => {
                                         }}
                                     >
                                         Facebook
+                                    </Button>
+                                </Box>
+                                <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
+                                    <Button
+                                        fullWidth
+                                        variant="outlined"
+                                        startIcon={<GitHubIcon />}
+                                        onClick={() => handleSocialLogin('github')}
+                                        sx={{
+                                            py: 1.5,
+                                            borderRadius: 3,
+                                            borderColor: alpha(theme.palette.text.primary, 0.2),
+                                            '&:hover': {
+                                                borderColor: '#333',
+                                                backgroundColor: alpha('#333', 0.1),
+                                                color: '#333'
+                                            }
+                                        }}
+                                    >
+                                        GitHub
                                     </Button>
                                 </Box>
                                 

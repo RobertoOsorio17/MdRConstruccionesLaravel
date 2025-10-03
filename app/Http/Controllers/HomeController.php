@@ -30,8 +30,13 @@ class HomeController extends Controller
             ->limit(6)
             ->get(['id', 'title', 'slug', 'summary', 'gallery', 'location']);
 
-        // Pull latest blog posts once the blog module is enabled.
-        $latestPosts = collect(); // Placeholder until the blog is implemented.
+        // Pull latest featured blog posts for the home page.
+        $latestPosts = Post::where('status', 'published')
+            ->where('featured', true)
+            ->with(['author:id,name,avatar', 'categories:id,name,slug,color'])
+            ->latest('published_at')
+            ->limit(3)
+            ->get(['id', 'title', 'slug', 'excerpt', 'cover_image', 'published_at', 'user_id', 'views_count']);
 
         // Company statistics displayed on the home page.
         $stats = [

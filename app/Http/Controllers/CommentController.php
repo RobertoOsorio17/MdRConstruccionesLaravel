@@ -113,6 +113,15 @@ class CommentController extends Controller
             $validated['user_id'] = null;
         }
 
+        // Sanitize the comment body before persisting it.
+        $validated['body'] = $this->sanitizeCommentBody($validated['body']);
+
+        if ($validated['body'] === '') {
+            throw ValidationException::withMessages([
+                'body' => 'Comment content is empty after removing unsupported formatting.'
+            ]);
+        }
+
         // If replying to a comment, ensure it belongs to this post.
         if (!empty($validated['parent_id'])) {
             $parentComment = Comment::find($validated['parent_id']);
@@ -141,11 +150,18 @@ class CommentController extends Controller
             $validated['status'] = 'spam';
         }
 
-        // Create the comment with all validated data including tracking info.
-        $comment = Comment::create(array_merge($validated, [
-            'ip_address' => $request->ip(),
-            'user_agent' => $request->userAgent(),
-        ]));
+        // Create the comment - use direct assignment for admin-only fields
+        $comment = new Comment($validated);
+        $comment->status = $validated['status'];
+        $comment->ip_address = $request->ip();
+        $comment->user_agent = $request->userAgent();
+
+        // Set user_id if authenticated
+        if (Auth::check()) {
+            $comment->user_id = Auth::id();
+        }
+
+        $comment->save();
 
         // Load relationships for response.
         $comment->load(['user:id,name', 'parent:id,author_name']);
@@ -216,6 +232,25 @@ class CommentController extends Controller
         }
 
         return $score;
+    }
+
+    /**
+     * Sanitize comment content to mitigate XSS attacks.
+     */
+    private function sanitizeCommentBody(?string $body): string
+    {
+        $body = $body ?? '';
+
+        // Remove script/style blocks explicitly.
+        $body = preg_replace('/<\/(?:script|style)>/i', '', preg_replace('/<(script|style)[^>]*>.*?<\/\1>/is', '', $body));
+
+        // Strip all remaining HTML tags to store plain text content.
+        $body = strip_tags($body);
+
+        // Normalize whitespace and trim.
+        $body = preg_replace("/\s+/u", ' ', $body);
+
+        return trim($body);
     }
 
     /**

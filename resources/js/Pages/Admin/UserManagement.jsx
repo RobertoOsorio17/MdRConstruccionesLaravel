@@ -60,6 +60,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { alpha } from '@mui/material/styles';
 import AdminLayoutNew from '../../Layouts/AdminLayoutNew';
 import BanUserModal from '../../Components/Admin/BanUserModal';
+import ModifyBanModal from '../../Components/Admin/ModifyBanModal';
+import BanHistoryModal from '../../Components/Admin/BanHistoryModal';
 import BannedUsersTab from '../../Components/Admin/BannedUsersTab';
 
 const UserManagement = () => {
@@ -80,6 +82,15 @@ const UserManagement = () => {
     const [banModalOpen, setBanModalOpen] = useState(false);
     const [userToBan, setUserToBan] = useState(null);
     const [banLoading, setBanLoading] = useState(false);
+
+    // State for modify ban modal
+    const [modifyBanModalOpen, setModifyBanModalOpen] = useState(false);
+    const [userToModifyBan, setUserToModifyBan] = useState(null);
+    const [modifyBanLoading, setModifyBanLoading] = useState(false);
+
+    // State for ban history modal
+    const [banHistoryModalOpen, setBanHistoryModalOpen] = useState(false);
+    const [userForBanHistory, setUserForBanHistory] = useState(null);
 
     // Glassmorphism styles
     const glassmorphismCard = {
@@ -221,8 +232,6 @@ const UserManagement = () => {
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
-
-            console.log('CSV export completed successfully');
         } catch (error) {
             console.error('Error exporting data:', error);
             alert('Error al exportar los datos');
@@ -305,6 +314,27 @@ const UserManagement = () => {
             });
         }
         handleMenuClose();
+    };
+
+    // Handle modify ban
+    const handleModifyBan = (user) => {
+        setUserToModifyBan(user);
+        setModifyBanModalOpen(true);
+    };
+
+    // Handle modify ban confirmation from modal
+    const handleModifyBanConfirm = (banData) => {
+        setModifyBanLoading(true);
+        router.patch(route('admin.users.ban.modify', userToModifyBan.id), banData, {
+            onSuccess: () => {
+                setModifyBanModalOpen(false);
+                setUserToModifyBan(null);
+                setModifyBanLoading(false);
+            },
+            onError: () => {
+                setModifyBanLoading(false);
+            }
+        });
     };
 
     const confirmDelete = () => {
@@ -788,13 +818,10 @@ const UserManagement = () => {
                                 ip_bans: users.data.filter(user => user.is_banned && user.ban_details?.ip_ban).length,
                             }}
                             onUnbanUser={handleUnbanUser}
-                            onModifyBan={(user) => {
-                                // TODO: Implement modify ban functionality
-                                console.log('Modify ban for user:', user);
-                            }}
+                            onModifyBan={handleModifyBan}
                             onViewHistory={(user) => {
-                                // TODO: Implement view history functionality
-                                console.log('View history for user:', user);
+                                setUserForBanHistory(user);
+                                setBanHistoryModalOpen(true);
                             }}
                         />
                     </motion.div>
@@ -810,6 +837,28 @@ const UserManagement = () => {
                     user={userToBan}
                     onConfirm={handleBanConfirm}
                     loading={banLoading}
+                />
+
+                {/* Modify Ban Modal */}
+                <ModifyBanModal
+                    open={modifyBanModalOpen}
+                    onClose={() => {
+                        setModifyBanModalOpen(false);
+                        setUserToModifyBan(null);
+                    }}
+                    user={userToModifyBan}
+                    onConfirm={handleModifyBanConfirm}
+                    loading={modifyBanLoading}
+                />
+
+                {/* Ban History Modal */}
+                <BanHistoryModal
+                    open={banHistoryModalOpen}
+                    onClose={() => {
+                        setBanHistoryModalOpen(false);
+                        setUserForBanHistory(null);
+                    }}
+                    user={userForBanHistory}
                 />
 
                 {/* Context Menu */}

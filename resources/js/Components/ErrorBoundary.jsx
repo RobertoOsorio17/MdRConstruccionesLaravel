@@ -14,6 +14,7 @@ import {
     Home as HomeIcon
 } from '@mui/icons-material';
 import { Link } from '@inertiajs/react';
+import errorLogger from '@/Utils/ErrorLogger';
 
 class ErrorBoundary extends React.Component {
     constructor(props) {
@@ -33,14 +34,17 @@ class ErrorBoundary extends React.Component {
     componentDidCatch(error, errorInfo) {
         // Registra el error
         console.error('ErrorBoundary caught an error:', error, errorInfo);
-        
+
         this.setState({
             error: error,
             errorInfo: errorInfo
         });
 
-        // Aquí podrías enviar el error a un servicio de logging
-        // logErrorToService(error, errorInfo);
+        // Send error to logging service
+        errorLogger.logError(error, errorInfo, {
+            boundary: 'ErrorBoundary',
+            component: errorInfo?.componentStack?.split('\n')[1]?.trim() || 'Unknown',
+        });
     }
 
     handleReload = () => {
@@ -124,11 +128,14 @@ class ErrorBoundary extends React.Component {
 
 // Hook para usar con componentes funcionales
 export const useErrorHandler = () => {
-    const handleError = (error, errorInfo = null) => {
+    const handleError = (error, errorInfo = null, context = {}) => {
         console.error('Error handled:', error, errorInfo);
-        
-        // Aquí podrías enviar a un servicio de logging
-        // logErrorToService(error, errorInfo);
+
+        // Send error to logging service
+        errorLogger.logError(error, errorInfo, {
+            ...context,
+            handler: 'useErrorHandler',
+        });
     };
 
     return { handleError };

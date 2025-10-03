@@ -66,9 +66,9 @@ function AuthenticatedLayoutContent({ header, children }) {
 
                                     <Dropdown.Content>
                                         <Dropdown.Link
-                                            href={route('profile.edit')}
+                                            href={route('profile.settings')}
                                         >
-                                            Profile
+                                            Settings
                                         </Dropdown.Link>
                                         <Dropdown.Link
                                             href={route('logout')}
@@ -151,8 +151,8 @@ function AuthenticatedLayoutContent({ header, children }) {
                         </div>
 
                         <div className="mt-3 space-y-1">
-                            <ResponsiveNavLink href={route('profile.edit')}>
-                                Profile
+                            <ResponsiveNavLink href={route('profile.settings')}>
+                                Settings
                             </ResponsiveNavLink>
                             <ResponsiveNavLink
                                 method="post"

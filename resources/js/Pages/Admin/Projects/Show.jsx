@@ -21,15 +21,17 @@ import {
     ListItemText,
     ListItemIcon,
     LinearProgress,
+    alpha,
+    useTheme,
+} from '@mui/material';
+import {
     Timeline,
     TimelineItem,
     TimelineSeparator,
     TimelineConnector,
     TimelineContent,
     TimelineDot,
-    alpha,
-    useTheme,
-} from '@mui/material';
+} from '@mui/lab';
 import {
     Edit as EditIcon,
     Delete as DeleteIcon,

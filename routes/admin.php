@@ -82,6 +82,7 @@ Route::middleware(['auth', 'verified', 'auth.enhanced', 'role:admin,editor', 'ad
 
     // User Ban Management
     Route::post('/users/{user}/ban', [App\Http\Controllers\Admin\UserManagementController::class, 'banUser'])->name('users.ban');
+    Route::patch('/users/{user}/ban', [App\Http\Controllers\Admin\UserManagementController::class, 'modifyBan'])->name('users.ban.modify');
     Route::post('/users/{user}/unban', [App\Http\Controllers\Admin\UserManagementController::class, 'unbanUser'])->name('users.unban');
     Route::get('/users/{user}/ban-history', [App\Http\Controllers\Admin\UserManagementController::class, 'getBanHistory'])->name('users.ban-history');
 
@@ -282,21 +283,7 @@ Route::middleware(['auth', 'verified', 'auth.enhanced', 'role:admin,editor', 'ad
 
 // Admin only routes (restricted to admin role) with enhanced security
 Route::middleware(['auth', 'verified', 'auth.enhanced', 'role:admin', 'admin.security', 'admin.timeout', 'admin.audit'])->group(function () {
-    
-    // Users Management (TODO: Create UserController)
-    /*
-    Route::resource('users', App\Http\Controllers\Admin\UserController::class)
-        ->names([
-            'index' => 'admin.users.index',
-            'create' => 'admin.users.create',
-            'store' => 'admin.users.store',
-            'show' => 'admin.users.show',
-            'edit' => 'admin.users.edit',
-            'update' => 'admin.users.update',
-            'destroy' => 'admin.users.destroy',
-        ]);
-    */
-    
+
     // System Management & Utilities
     Route::get('/system/stats', [App\Http\Controllers\Admin\AdminController::class, 'getSystemStats'])
         ->name('system.stats');

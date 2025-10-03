@@ -34,14 +34,16 @@ Route::post('/api/guest-recommendations', [PostController::class, 'getGuestRecom
     ->middleware('throttle:20,1')
     ->name('guest.recommendations');
 
-// Debug routes (for development)
-Route::middleware(['auth', 'auth.enhanced'])->prefix('debug')->name('debug.')->group(function () {
-    Route::get('/', [App\Http\Controllers\DebugController::class, 'index'])->name('index');
-    Route::get('/system-info', [App\Http\Controllers\DebugController::class, 'systemInfo'])->name('system-info');
-    Route::post('/clear-logs', [App\Http\Controllers\DebugController::class, 'clearLogs'])->name('clear-logs');
-    Route::get('/auth', [App\Http\Controllers\DebugController::class, 'debugAuth'])->name('auth');
-    Route::get('/blog', [App\Http\Controllers\DebugController::class, 'debugBlog'])->name('blog');
-});
+// Debug routes (only available in development environment)
+if (config('app.debug')) {
+    Route::middleware(['auth', 'auth.enhanced'])->prefix('debug')->name('debug.')->group(function () {
+        Route::get('/', [App\Http\Controllers\DebugController::class, 'index'])->name('index');
+        Route::get('/system-info', [App\Http\Controllers\DebugController::class, 'systemInfo'])->name('system-info');
+        Route::post('/clear-logs', [App\Http\Controllers\DebugController::class, 'clearLogs'])->name('clear-logs');
+        Route::get('/auth', [App\Http\Controllers\DebugController::class, 'debugAuth'])->name('auth');
+        Route::get('/blog', [App\Http\Controllers\DebugController::class, 'debugBlog'])->name('blog');
+    });
+}
 
 // Machine Learning API Routes
 Route::prefix('api/ml')->name('ml.')->group(function () {
@@ -104,16 +106,40 @@ Route::middleware(['throttle:5,1'])->group(function () {
 });
 
 // Profile Routes (protected)
-Route::middleware(['auth', 'auth.enhanced'])->group(function () {
+Route::middleware(['auth', 'auth.enhanced', 'track.device'])->group(function () {
     // Dashboard Route (protected) - Main Dashboard
     Route::get('/dashboard', [App\Http\Controllers\UserDashboardController::class, 'index'])
         ->middleware(['check.permission'])
         ->name('dashboard');
     
+    // Profile Settings (new unified settings page)
+    Route::get('/profile/settings', [ProfileController::class, 'settings'])->name('profile.settings');
+
+    // Legacy profile routes (redirect to settings)
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
-    
+
+    // Device Management Routes
+    Route::prefix('devices')->name('devices.')->group(function () {
+        Route::get('/', [App\Http\Controllers\DeviceController::class, 'index'])->name('index');
+        Route::patch('/{device}', [App\Http\Controllers\DeviceController::class, 'update'])->name('update');
+        Route::post('/{device}/trust', [App\Http\Controllers\DeviceController::class, 'trust'])->name('trust');
+        Route::delete('/{device}', [App\Http\Controllers\DeviceController::class, 'destroy'])->name('destroy');
+        Route::delete('/', [App\Http\Controllers\DeviceController::class, 'destroyInactive'])->name('destroy-inactive');
+    });
+
+    // Two Factor Authentication Routes
+    Route::prefix('user/two-factor-authentication')->name('two-factor.')->group(function () {
+        Route::get('/', [App\Http\Controllers\Auth\TwoFactorController::class, 'show'])->name('show');
+        Route::post('/', [App\Http\Controllers\Auth\TwoFactorController::class, 'store'])->name('enable');
+        Route::post('/confirm', [App\Http\Controllers\Auth\TwoFactorController::class, 'confirm'])->name('confirm');
+        Route::delete('/', [App\Http\Controllers\Auth\TwoFactorController::class, 'destroy'])->name('disable');
+        Route::get('/qr-code', [App\Http\Controllers\Auth\TwoFactorController::class, 'qrCode'])->name('qr-code');
+        Route::get('/recovery-codes', [App\Http\Controllers\Auth\TwoFactorController::class, 'recoveryCodes'])->name('recovery-codes');
+        Route::post('/recovery-codes', [App\Http\Controllers\Auth\TwoFactorController::class, 'regenerate'])->name('recovery-codes.regenerate');
+    });
+
     // User Profile Management
     Route::get('/profile/edit', [App\Http\Controllers\UserProfileController::class, 'edit'])->name('user.profile.edit');
     Route::put('/profile/update', [App\Http\Controllers\UserProfileController::class, 'update'])->name('user.profile.update');

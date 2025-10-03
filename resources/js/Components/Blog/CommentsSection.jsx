@@ -35,7 +35,8 @@ import {
     Star as PremiumIcon,
     Favorite as LikeIcon,
     FavoriteBorder as LikeOutlineIcon,
-    Delete as DeleteIcon
+    Delete as DeleteIcon,
+    HourglassTop as PendingIcon
 } from '@mui/icons-material';
 import { motion, AnimatePresence } from 'framer-motion';
 import { router, usePage } from '@inertiajs/react';
@@ -193,9 +194,15 @@ const CommentItem = ({ comment, onReply, onDelete, level = 0 }) => {
                 elevation={0}
                 sx={{
                     p: 3,
-                    border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+                    border: comment.is_own_pending
+                        ? `1px dashed ${theme.palette.warning.main}`
+                        : `1px solid ${alpha(theme.palette.divider, 0.1)}`,
                     borderRadius: 2,
-                    backgroundColor: level > 0 ? alpha(theme.palette.grey[50], 0.5) : 'white',
+                    backgroundColor: comment.is_own_pending
+                        ? alpha(theme.palette.warning.light, 0.2)
+                        : level > 0
+                            ? alpha(theme.palette.grey[50], 0.5)
+                            : 'white',
                     '&:hover': {
                         boxShadow: '0 2px 8px rgba(0,0,0,0.05)'
                     },
@@ -267,13 +274,14 @@ const CommentItem = ({ comment, onReply, onDelete, level = 0 }) => {
                                 )}
                                 {comment.is_own_pending && (
                                     <Chip
-                                        label="Pendiente de moderación"
+                                        icon={<PendingIcon sx={{ fontSize: '0.9rem !important' }} />}
+                                        label="Pendiente de moderaci�n"
                                         size="small"
                                         color="warning"
                                         variant="outlined"
                                         sx={{
                                             fontSize: '0.7rem',
-                                            height: 20
+                                            height: 22
                                         }}
                                     />
                                 )}
@@ -323,6 +331,25 @@ const CommentItem = ({ comment, onReply, onDelete, level = 0 }) => {
                 >
                     {comment.body}
                 </Typography>
+
+                {comment.is_own_pending && (
+                    <Box
+                        sx={{
+                            mt: 2,
+                            p: 2,
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 1.5,
+                            borderRadius: 2,
+                            backgroundColor: alpha(theme.palette.warning.main, 0.12)
+                        }}
+                    >
+                        <PendingIcon sx={{ color: theme.palette.warning.dark }} />
+                        <Typography variant="body2" color="warning.dark">
+                            Tu comentario está a la espera de moderación. Solo tú puedes verlo hasta que sea aprobado.
+                        </Typography>
+                    </Box>
+                )}
 
                 {/* Interacciones con el comentario */}
                 <CommentInteractions 
@@ -728,6 +755,22 @@ const CommentsSection = ({ postId, postSlug, comments: initialComments = [] }) =
     const commentsRef = useRef(null);
     const [showLoginPrompt, setShowLoginPrompt] = useState(false);
 
+    const pendingComments = React.useMemo(
+        () => comments.filter((comment) => comment.is_own_pending),
+        [comments]
+    );
+
+    const sortedComments = React.useMemo(() => {
+        if (!pendingComments.length) {
+            return comments;
+        }
+
+        const pendingIds = new Set(pendingComments.map((comment) => comment.id));
+        const others = comments.filter((comment) => !pendingIds.has(comment.id));
+
+        return [...pendingComments, ...others];
+    }, [comments, pendingComments]);
+
     const showAlert = (message, severity = 'success') => {
         setAlert({ message, severity });
         setTimeout(() => setAlert(null), 5000);
@@ -784,7 +827,12 @@ const CommentsSection = ({ postId, postSlug, comments: initialComments = [] }) =
 
             showAlert(response.data.message, 'success');
 
-            // Recargar comentarios para mostrar la actualización
+            if (response.data?.comment) {
+                setComments((prev) => [response.data.comment, ...prev]);
+                setCommentsCount((prev) => prev + 1);
+            }
+
+            // Recargar comentarios para mostrar la actualizaci�n y mantener el orden
             await loadComments();
 
             return response.data;
@@ -992,8 +1040,25 @@ const CommentsSection = ({ postId, postSlug, comments: initialComments = [] }) =
                         {commentsCount} {commentsCount === 1 ? 'comentario' : 'comentarios'}
                     </Typography>
                     
+                    {pendingComments.length > 0 && (
+                        <Alert
+                            severity="info"
+                            icon={<PendingIcon />}
+                            sx={{
+                                mb: 3,
+                                borderRadius: 2,
+                                backgroundColor: alpha(theme.palette.warning.light, 0.3),
+                                border: `1px solid ${alpha(theme.palette.warning.main, 0.4)}`
+                            }}
+                        >
+                            <Typography variant="body2" color="warning.dark">
+                                Tu comentario está pendiente de aprobación. Mientras tanto solo tú lo puedes ver en esta lista.
+                            </Typography>
+                        </Alert>
+                    )}
+
                     <AnimatePresence>
-                        {comments.map((comment) => (
+                        {sortedComments.map((comment) => (
                             <CommentItem
                                 key={comment.id}
                                 comment={comment}

@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\SearchController;
+use App\Http\Controllers\Api\ErrorLogController;
 use App\Http\Controllers\UserProfileController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -55,6 +56,22 @@ Route::prefix('search')->group(function () {
     
     // Search analytics (can be protected with middleware if needed)
     Route::get('/analytics', [SearchController::class, 'analytics'])->name('api.search.analytics');
+});
+
+/*
+|--------------------------------------------------------------------------
+| Error Logging API Routes
+|--------------------------------------------------------------------------
+*/
+
+// Error logging endpoint (no auth required, but rate limited)
+Route::middleware(['throttle:60,1'])->group(function () {
+    Route::post('/log-error', [ErrorLogController::class, 'logError'])->name('api.log-error');
+});
+
+// Error statistics (admin only)
+Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
+    Route::get('/error-stats', [ErrorLogController::class, 'getErrorStats'])->name('api.error-stats');
 });
 
 /*

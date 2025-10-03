@@ -49,7 +49,7 @@ return [
     'channels' => [
         'stack' => [
             'driver' => 'stack',
-            'channels' => ['single', 'debug', 'auth', 'blog'],
+            'channels' => ['single', 'debug', 'auth', 'blog', 'frontend'],
             'ignore_exceptions' => false,
         ],
 
@@ -87,6 +87,14 @@ return [
         'blog' => [
             'driver' => 'daily',
             'path' => storage_path('logs/blog.log'),
+            'level' => 'debug',
+            'days' => 14,
+            'replace_placeholders' => true,
+        ],
+
+        'frontend' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/frontend.log'),
             'level' => 'debug',
             'days' => 14,
             'replace_placeholders' => true,

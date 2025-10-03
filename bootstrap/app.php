@@ -34,6 +34,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'role' => \App\Http\Middleware\RoleMiddleware::class,
             'auth.ratelimit' => \App\Http\Middleware\AuthRateLimitMiddleware::class,
             'security.headers' => \App\Http\Middleware\SecurityHeadersMiddleware::class,
+            'track.device' => \App\Http\Middleware\TrackDeviceMiddleware::class,
             // Admin security middleware
             'admin.audit' => \App\Http\Middleware\AdminAuditMiddleware::class,
             'admin.security' => \App\Http\Middleware\AdminSecurityHeaders::class,

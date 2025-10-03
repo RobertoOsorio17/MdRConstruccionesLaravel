@@ -8,6 +8,8 @@ use App\Http\Controllers\Auth\NewPasswordController;
 use App\Http\Controllers\Auth\PasswordController;
 use App\Http\Controllers\Auth\PasswordResetLinkController;
 use App\Http\Controllers\Auth\RegisteredUserController;
+use App\Http\Controllers\Auth\SocialAuthController;
+use App\Http\Controllers\Auth\TwoFactorController;
 use App\Http\Controllers\Auth\VerifyEmailController;
 use Illuminate\Support\Facades\Route;
 
@@ -37,6 +39,17 @@ Route::middleware('guest.redirect')->group(function () {
     Route::post('reset-password', [NewPasswordController::class, 'store'])
         ->middleware('auth.ratelimit')
         ->name('password.store');
+
+    // Two Factor Authentication Challenge
+    Route::get('two-factor-challenge', [TwoFactorController::class, 'challenge'])
+        ->name('two-factor.login');
+
+    // OAuth Social Authentication
+    Route::get('auth/{provider}', [SocialAuthController::class, 'redirect'])
+        ->name('social.redirect');
+
+    Route::get('auth/{provider}/callback', [SocialAuthController::class, 'callback'])
+        ->name('social.callback');
 });
 
 Route::middleware(['auth', 'auth.enhanced'])->group(function () {
@@ -60,4 +73,11 @@ Route::middleware(['auth', 'auth.enhanced'])->group(function () {
 
     Route::post('logout', [AuthenticatedSessionController::class, 'destroy'])
         ->name('logout');
+
+    // OAuth Management
+    Route::get('connected-accounts', [SocialAuthController::class, 'index'])
+        ->name('connected-accounts');
+
+    Route::delete('auth/{provider}/unlink', [SocialAuthController::class, 'unlink'])
+        ->name('social.unlink');
 });

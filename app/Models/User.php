@@ -168,6 +168,14 @@ class User extends Authenticatable
     }
 
     /**
+     * Get the user's trusted devices
+     */
+    public function trustedDevices(): HasMany
+    {
+        return $this->hasMany(TrustedDevice::class);
+    }
+
+    /**
      * Get the user's dashboard widgets
      */
     public function dashboardWidgets(): HasMany

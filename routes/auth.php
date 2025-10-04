@@ -11,6 +11,7 @@ use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\Auth\SocialAuthController;
 use App\Http\Controllers\Auth\TwoFactorController;
 use App\Http\Controllers\Auth\VerifyEmailController;
+use App\Http\Controllers\TrustedDeviceController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest.redirect')->group(function () {
@@ -85,4 +86,17 @@ Route::middleware(['auth', 'auth.enhanced'])->group(function () {
 
     Route::delete('auth/{provider}/unlink', [SocialAuthController::class, 'unlink'])
         ->name('social.unlink');
+
+    // Trusted Devices Management
+    Route::get('trusted-devices', [TrustedDeviceController::class, 'index'])
+        ->name('trusted-devices.index');
+
+    Route::delete('trusted-devices/{id}', [TrustedDeviceController::class, 'destroy'])
+        ->name('trusted-devices.destroy');
+
+    Route::delete('trusted-devices', [TrustedDeviceController::class, 'destroyAll'])
+        ->name('trusted-devices.destroy-all');
+
+    Route::post('recovery-codes/regenerate', [TrustedDeviceController::class, 'regenerateRecoveryCodes'])
+        ->name('recovery-codes.regenerate');
 });

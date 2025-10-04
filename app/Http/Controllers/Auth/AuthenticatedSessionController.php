@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -46,10 +47,17 @@ class AuthenticatedSessionController extends Controller
         ]);
 
         try {
-            $request->authenticate();
+            // Verify credentials WITHOUT authenticating yet
+            $credentials = $request->only('email', 'password');
 
-            // Check if user is banned after authentication
-            $user = Auth::user();
+            if (!Auth::validate($credentials)) {
+                throw ValidationException::withMessages([
+                    'email' => __('auth.failed'),
+                ]);
+            }
+
+            // Get user without authenticating
+            $user = \App\Models\User::where('email', $request->email)->first();
             if ($user->isBanned()) {
                 $banStatus = $user->getBanStatus();
 
@@ -63,8 +71,8 @@ class AuthenticatedSessionController extends Controller
                     'timestamp' => now()->toISOString()
                 ]);
 
-                // Logout the user immediately
-                Auth::logout();
+                // User is not authenticated yet, so no need to logout
+                // Just clear any session data and regenerate token
                 $request->session()->invalidate();
                 $request->session()->regenerateToken();
 
@@ -84,43 +92,59 @@ class AuthenticatedSessionController extends Controller
                 ]);
             }
 
-            Log::info('Authentication successful', [
-                'user_id' => Auth::id(),
-                'user_email' => Auth::user()->email,
+            Log::info('Credentials verified successfully', [
+                'user_id' => $user->id,
+                'user_email' => $user->email,
                 'ip' => $request->ip(),
                 'session_id' => session()->getId(),
-                'previous_login' => Auth::user()->last_login_at,
-                'timestamp' => now()->toISOString()
-            ]);
-
-            // Enhanced session security: regenerate session ID and token
-            $oldSessionId = session()->getId();
-            $request->session()->regenerate();
-            $request->session()->regenerateToken();
-
-            // Initialize session activity tracking
-            session(['last_activity' => time()]);
-
-            // Update last_login_at and IP immediately upon successful login
-            $user->forceFill([
-                'last_login_at' => now(),
-                'last_login_ip' => $request->ip()
-            ])->save();
-
-            Log::info('Secure session regenerated after login', [
-                'user_id' => Auth::id(),
-                'user_email' => $user->email,
-                'old_session_id' => $oldSessionId,
-                'new_session_id' => session()->getId(),
-                'last_login_updated' => now()->toISOString(),
-                'login_ip' => $request->ip(),
-                'user_agent' => $request->userAgent(),
                 'timestamp' => now()->toISOString()
             ]);
 
             // Check if user has 2FA enabled
             if ($user->two_factor_secret && $user->two_factor_confirmed_at) {
-                Log::info('User has 2FA enabled, redirecting to challenge', [
+
+                // Check for trusted device FIRST
+                $trustedDeviceToken = $request->cookie('trusted_device_token');
+
+                if ($trustedDeviceToken) {
+                    $tokenHash = \App\Models\TrustedDevice::hashToken($trustedDeviceToken);
+
+                    $trustedDevice = $user->trustedDevices()
+                        ->where('token_hash', $tokenHash)
+                        ->valid()
+                        ->first();
+
+                    if ($trustedDevice) {
+                        // Update last used
+                        $trustedDevice->updateLastUsed();
+
+                        Log::info('Login via trusted device - skipping 2FA', [
+                            'user_id' => $user->id,
+                            'device_id' => $trustedDevice->id,
+                            'ip' => $request->ip(),
+                            'timestamp' => now()->toISOString()
+                        ]);
+
+                        // Skip 2FA challenge - allow direct login
+                        Auth::login($user, $request->boolean('remember'));
+
+                        $user->forceFill([
+                            'last_login_at' => now(),
+                            'last_login_ip' => $request->ip()
+                        ])->save();
+
+                        $request->session()->regenerate();
+
+                        $intended = $user->hasPermission('dashboard.access')
+                            ? route('dashboard', absolute: false)
+                            : route('user.dashboard', absolute: false);
+
+                        return redirect()->intended($intended);
+                    }
+                }
+
+                // No trusted device found - require 2FA
+                Log::info('User has 2FA enabled, requiring 2FA verification', [
                     'user_id' => $user->id,
                     'user_email' => $user->email,
                     'timestamp' => now()->toISOString()
@@ -132,19 +156,46 @@ class AuthenticatedSessionController extends Controller
                     : route('user.dashboard', absolute: false));
 
                 // Store user ID and credentials hash for 2FA verification
+                // DO NOT authenticate the user yet!
+                session()->put('2fa_required', true);
                 session()->put('login.id', $user->id);
                 session()->put('login.remember', $request->boolean('remember'));
                 session()->put('login.password_hash', $user->password); // Verify password hasn't changed
                 session()->put('login.attempt_time', now()->timestamp); // Expire after 5 minutes
 
-                // Logout temporarily for 2FA challenge
-                Auth::logout();
+                Log::info('2FA required - user NOT authenticated yet', [
+                    'user_id' => $user->id,
+                    'user_email' => $user->email,
+                    'timestamp' => now()->toISOString()
+                ]);
 
-                // Regenerate session to prevent fixation
-                $request->session()->regenerate();
-
-                return redirect()->route('two-factor.login');
+                // Return error to trigger 2FA modal in frontend
+                return back()->withErrors([
+                    'requires2FA' => true
+                ]);
             }
+
+            // No 2FA required - authenticate user now
+            Auth::login($user, $request->boolean('remember'));
+
+            // Enhanced session security: regenerate session ID and token
+            $request->session()->regenerate();
+            $request->session()->regenerateToken();
+
+            // Initialize session activity tracking
+            session(['last_activity' => time()]);
+
+            // Update last_login_at and IP
+            $user->forceFill([
+                'last_login_at' => now(),
+                'last_login_ip' => $request->ip()
+            ])->save();
+
+            Log::info('User authenticated successfully (no 2FA)', [
+                'user_id' => $user->id,
+                'user_email' => $user->email,
+                'timestamp' => now()->toISOString()
+            ]);
 
             // Redirect based on user permissions
             if ($user && $user->hasPermission('dashboard.access')) {

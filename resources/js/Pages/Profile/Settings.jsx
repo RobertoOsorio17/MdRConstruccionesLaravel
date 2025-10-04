@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Head, router } from '@inertiajs/react';
-import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import MainLayout from '@/Layouts/MainLayout';
 import {
     Box,
     Container,
@@ -113,13 +113,16 @@ const Settings = ({
     };
 
     return (
-        <AuthenticatedLayout
-            header={
-                <Box>
+        <MainLayout>
+            <Head title="Configuración" />
+
+            <Container maxWidth="lg" sx={{ py: 8 }}>
+                {/* Header */}
+                <Box sx={{ mb: 4 }}>
                     <Breadcrumbs aria-label="breadcrumb" sx={{ mb: 2 }}>
                         <MuiLink
                             component={Link}
-                            href="/dashboard"
+                            href="/"
                             underline="hover"
                             sx={{ display: 'flex', alignItems: 'center', color: 'inherit' }}
                         >
@@ -135,11 +138,7 @@ const Settings = ({
                         Gestiona tu información personal, seguridad y preferencias
                     </Typography>
                 </Box>
-            }
-        >
-            <Head title="Configuración" />
 
-            <Container maxWidth="lg" sx={{ py: 4 }}>
                 <Paper elevation={0} sx={{ border: '1px solid', borderColor: 'divider', overflow: 'hidden' }}>
                     {/* Tabs */}
                     <Box sx={{ borderBottom: 1, borderColor: 'divider', bgcolor: 'background.paper' }}>
@@ -181,7 +180,7 @@ const Settings = ({
                     </Box>
                 </Paper>
             </Container>
-        </AuthenticatedLayout>
+        </MainLayout>
     );
 };
 

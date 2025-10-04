@@ -59,14 +59,33 @@ class TwoFactorController extends Controller
 
     /**
      * Get the two factor authentication recovery codes.
+     * Requires password verification for security.
      */
     public function recoveryCodes(Request $request)
     {
+        $request->validate([
+            'password' => 'required|string',
+        ]);
+
         $user = $request->user();
+
+        // Verify password
+        if (!Hash::check($request->password, $user->password)) {
+            return response()->json([
+                'error' => 'La contraseña es incorrecta.'
+            ], 422);
+        }
 
         if (is_null($user->two_factor_secret)) {
             return response()->json(['error' => 'Two factor authentication is not enabled.'], 400);
         }
+
+        \Log::info('Recovery codes accessed', [
+            'user_id' => $user->id,
+            'user_email' => $user->email,
+            'ip' => $request->ip(),
+            'timestamp' => now()->toISOString()
+        ]);
 
         return response()->json([
             'recoveryCodes' => json_decode(decrypt($user->two_factor_recovery_codes), true),
@@ -209,9 +228,26 @@ class TwoFactorController extends Controller
         $attempts = cache()->get($key, 0);
 
         if ($attempts >= 5) {
-            return back()->withErrors([
-                'code' => 'Too many attempts. Please try again in 1 minute.'
+            $retryAfter = 60; // 60 seconds
+            $error = ['code' => 'Too many attempts. Please try again in 1 minute.'];
+
+            \Log::warning('2FA rate limit exceeded', [
+                'ip' => $request->ip(),
+                'attempts' => $attempts,
+                'retry_after' => $retryAfter,
+                'timestamp' => now()->toISOString()
             ]);
+
+            if ($request->expectsJson() || $request->wantsJson()) {
+                return response()->json([
+                    'errors' => $error,
+                    'rate_limited' => true,
+                    'retry_after' => $retryAfter,
+                    'attempts' => $attempts,
+                    'max_attempts' => 5
+                ], 429);
+            }
+            return back()->withErrors($error);
         }
 
         $userId = session('login.id');
@@ -221,41 +257,52 @@ class TwoFactorController extends Controller
         // Verify session data exists
         if (!$userId || !$passwordHash || !$attemptTime) {
             session()->forget(['login.id', 'login.remember', 'login.password_hash', 'login.attempt_time']);
-            return redirect()->route('login')->withErrors([
-                'code' => 'Session expired. Please login again.'
-            ]);
+            $error = ['code' => 'Session expired. Please login again.'];
+            if ($request->expectsJson() || $request->wantsJson()) {
+                return response()->json(['errors' => $error, 'session_expired' => true], 422);
+            }
+            return redirect()->route('login')->withErrors($error);
         }
 
         // Check if 2FA attempt has expired (5 minutes)
         if ((now()->timestamp - $attemptTime) > 300) {
             session()->forget(['login.id', 'login.remember', 'login.password_hash', 'login.attempt_time']);
-            return redirect()->route('login')->withErrors([
-                'code' => '2FA challenge expired. Please login again.'
-            ]);
+            $error = ['code' => '2FA challenge expired. Please login again.'];
+            if ($request->expectsJson() || $request->wantsJson()) {
+                return response()->json(['errors' => $error, 'session_expired' => true], 422);
+            }
+            return redirect()->route('login')->withErrors($error);
         }
 
         $user = \App\Models\User::find($userId);
         if (!$user) {
             session()->forget(['login.id', 'login.remember', 'login.password_hash', 'login.attempt_time']);
-            return redirect()->route('login')->withErrors([
-                'code' => 'User not found.'
-            ]);
+            $error = ['code' => 'User not found.'];
+            if ($request->expectsJson() || $request->wantsJson()) {
+                return response()->json(['errors' => $error, 'session_expired' => true], 422);
+            }
+            return redirect()->route('login')->withErrors($error);
         }
 
         // Verify password hasn't changed during 2FA challenge
-        if ($user->password !== $passwordHash) {
+        // Use hash_equals to prevent timing attacks
+        if (!hash_equals($user->password, $passwordHash)) {
             session()->forget(['login.id', 'login.remember', 'login.password_hash', 'login.attempt_time']);
-            return redirect()->route('login')->withErrors([
-                'code' => 'Security error. Please login again.'
-            ]);
+            $error = ['code' => 'Security error. Please login again.'];
+            if ($request->expectsJson() || $request->wantsJson()) {
+                return response()->json(['errors' => $error, 'session_expired' => true], 422);
+            }
+            return redirect()->route('login')->withErrors($error);
         }
 
         // Verify 2FA is still enabled
         if (!$user->two_factor_secret || !$user->two_factor_confirmed_at) {
             session()->forget(['login.id', 'login.remember', 'login.password_hash', 'login.attempt_time']);
-            return redirect()->route('login')->withErrors([
-                'code' => '2FA is not enabled for this account.'
-            ]);
+            $error = ['code' => '2FA is not enabled for this account.'];
+            if ($request->expectsJson() || $request->wantsJson()) {
+                return response()->json(['errors' => $error, 'session_expired' => true], 422);
+            }
+            return redirect()->route('login')->withErrors($error);
         }
 
         $provider = app(TwoFactorAuthenticationProvider::class);
@@ -282,12 +329,20 @@ class TwoFactorController extends Controller
                     'user_id' => $user->id,
                     'user_email' => $user->email,
                     'ip' => $request->ip(),
-                    'attempts' => $attempts + 1
+                    'attempts' => $attempts + 1,
+                    'code_provided' => substr($request->code, 0, 2) . '****', // Log only first 2 digits for security
+                    'timestamp' => now()->toISOString()
                 ]);
 
-                return back()->withErrors([
-                    'code' => 'The provided code was invalid.'
-                ]);
+                $error = ['code' => 'The provided code was invalid.'];
+                if ($request->expectsJson() || $request->wantsJson()) {
+                    return response()->json([
+                        'errors' => $error,
+                        'attempts' => $attempts + 1,
+                        'max_attempts' => 5
+                    ], 422);
+                }
+                return back()->withErrors($error);
             }
         }
         // Try recovery code
@@ -315,7 +370,7 @@ class TwoFactorController extends Controller
                     \Log::info('2FA recovery code used', [
                         'user_id' => $user->id,
                         'user_email' => $user->email,
-                        'remaining_codes' => count($recoveryCodes) - 1,
+                        'remaining_codes' => count($recoveryCodes),
                         'ip' => $request->ip()
                     ]);
 
@@ -332,24 +387,34 @@ class TwoFactorController extends Controller
                     'user_id' => $user->id,
                     'user_email' => $user->email,
                     'ip' => $request->ip(),
-                    'attempts' => $attempts + 1
+                    'attempts' => $attempts + 1,
+                    'timestamp' => now()->toISOString()
                 ]);
 
-                return back()->withErrors([
-                    'recovery_code' => 'The provided recovery code was invalid.'
-                ]);
+                $error = ['recovery_code' => 'The provided recovery code was invalid.'];
+                if ($request->expectsJson() || $request->wantsJson()) {
+                    return response()->json([
+                        'errors' => $error,
+                        'attempts' => $attempts + 1,
+                        'max_attempts' => 5
+                    ], 422);
+                }
+                return back()->withErrors($error);
             }
         }
         else {
-            return back()->withErrors([
-                'code' => 'Please provide a code or recovery code.'
-            ]);
+            $error = ['code' => 'Please provide a code or recovery code.'];
+            if ($request->expectsJson() || $request->wantsJson()) {
+                return response()->json(['errors' => $error], 422);
+            }
+            return back()->withErrors($error);
         }
 
         // Clear rate limit counter on success
         cache()->forget($key);
 
-        // Login the user
+        // Authenticate the user NOW (after successful 2FA verification)
+        // User was NOT authenticated before - only credentials were verified
         Auth::login($user, session('login.remember', false));
 
         // Update last login
@@ -366,14 +431,95 @@ class TwoFactorController extends Controller
             'method' => $request->filled('code') ? 'code' : 'recovery_code'
         ]);
 
+        // Handle trusted device if requested
+        $lowRecoveryCodes = false;
+        $remainingCodes = 0;
+
+        if ($request->boolean('remember_device')) {
+            try {
+                $token = \App\Models\TrustedDevice::generateToken();
+                $tokenHash = \App\Models\TrustedDevice::hashToken($token);
+
+                $device = $user->trustedDevices()->create([
+                    'token_hash' => $tokenHash,
+                    'device_name' => $request->userAgent(),
+                    'ip_address' => $request->ip(),
+                    'last_used_at' => now(),
+                    'expires_at' => now()->addDays(30),
+                ]);
+
+                \Log::info('Trusted device created', [
+                    'user_id' => $user->id,
+                    'device_id' => $device->id,
+                    'ip' => $request->ip(),
+                    'user_agent' => $request->userAgent()
+                ]);
+
+                // Set secure cookie
+                cookie()->queue(
+                    'trusted_device_token',
+                    $token,
+                    43200, // 30 days in minutes
+                    null,
+                    null,
+                    true, // secure
+                    true, // httpOnly
+                    false,
+                    'strict' // sameSite
+                );
+            } catch (\Exception $e) {
+                \Log::error('Failed to create trusted device', [
+                    'user_id' => $user->id,
+                    'error' => $e->getMessage()
+                ]);
+            }
+        }
+
+        // Check for low recovery codes
+        if ($request->filled('recovery_code')) {
+            try {
+                $recoveryCodes = json_decode(decrypt($user->two_factor_recovery_codes), true);
+                $remainingCodes = count($recoveryCodes);
+
+                if ($remainingCodes <= 2) {
+                    $lowRecoveryCodes = true;
+
+                    \Log::warning('Low recovery codes', [
+                        'user_id' => $user->id,
+                        'remaining' => $remainingCodes
+                    ]);
+                }
+            } catch (\Exception $e) {
+                \Log::error('Error checking recovery codes', [
+                    'user_id' => $user->id,
+                    'error' => $e->getMessage()
+                ]);
+            }
+        }
+
         // Regenerate session to prevent fixation
         $request->session()->regenerate();
 
         // Clear 2FA session data
-        session()->forget(['login.id', 'login.remember', 'login.password_hash', 'login.attempt_time']);
+        session()->forget(['2fa_required', 'login.id', 'login.remember', 'login.password_hash', 'login.attempt_time']);
 
-        // Redirect to intended URL
+        // Get intended URL
         $intended = session()->pull('url.intended', route('dashboard'));
+
+        // Return JSON response for AJAX requests
+        if ($request->expectsJson() || $request->wantsJson()) {
+            $response = [
+                'success' => true,
+                'redirect' => $intended
+            ];
+
+            if ($lowRecoveryCodes) {
+                $response['low_recovery_codes'] = true;
+                $response['remaining_codes'] = $remainingCodes;
+            }
+
+            return response()->json($response);
+        }
 
         return redirect($intended);
     }

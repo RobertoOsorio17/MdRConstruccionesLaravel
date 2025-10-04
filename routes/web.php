@@ -120,13 +120,13 @@ Route::middleware(['auth', 'auth.enhanced', 'track.device'])->group(function () 
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
-    // Device Management Routes
+    // Device/Session Management Routes
     Route::prefix('devices')->name('devices.')->group(function () {
-        Route::get('/', [App\Http\Controllers\DeviceController::class, 'index'])->name('index');
-        Route::patch('/{device}', [App\Http\Controllers\DeviceController::class, 'update'])->name('update');
-        Route::post('/{device}/trust', [App\Http\Controllers\DeviceController::class, 'trust'])->name('trust');
-        Route::delete('/{device}', [App\Http\Controllers\DeviceController::class, 'destroy'])->name('destroy');
-        Route::delete('/', [App\Http\Controllers\DeviceController::class, 'destroyInactive'])->name('destroy-inactive');
+        Route::get('/', [App\Http\Controllers\DeviceSessionController::class, 'index'])->name('index');
+        Route::patch('/{device}', [App\Http\Controllers\DeviceSessionController::class, 'update'])->name('update');
+        Route::post('/{device}/trust', [App\Http\Controllers\DeviceSessionController::class, 'trust'])->name('trust');
+        Route::delete('/{device}', [App\Http\Controllers\DeviceSessionController::class, 'destroy'])->name('destroy');
+        Route::delete('/', [App\Http\Controllers\DeviceSessionController::class, 'destroyInactive'])->name('destroy-inactive');
     });
 
     // Two Factor Authentication Routes
@@ -136,8 +136,8 @@ Route::middleware(['auth', 'auth.enhanced', 'track.device'])->group(function () 
         Route::post('/confirm', [App\Http\Controllers\Auth\TwoFactorController::class, 'confirm'])->name('confirm');
         Route::delete('/', [App\Http\Controllers\Auth\TwoFactorController::class, 'destroy'])->name('disable');
         Route::get('/qr-code', [App\Http\Controllers\Auth\TwoFactorController::class, 'qrCode'])->name('qr-code');
-        Route::get('/recovery-codes', [App\Http\Controllers\Auth\TwoFactorController::class, 'recoveryCodes'])->name('recovery-codes');
-        Route::post('/recovery-codes', [App\Http\Controllers\Auth\TwoFactorController::class, 'regenerate'])->name('recovery-codes.regenerate');
+        Route::post('/recovery-codes', [App\Http\Controllers\Auth\TwoFactorController::class, 'recoveryCodes'])->name('recovery-codes');
+        Route::post('/recovery-codes/regenerate', [App\Http\Controllers\Auth\TwoFactorController::class, 'regenerate'])->name('recovery-codes.regenerate');
     });
 
     // User Profile Management

@@ -16,6 +16,7 @@ return Application::configure(basePath: dirname(__DIR__))
             \App\Http\Middleware\HandleInertiaRequests::class,
             \Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets::class,
             \App\Http\Middleware\AuthStateMiddleware::class,
+            \App\Http\Middleware\Require2FAVerification::class,
         ]);
 
         // Add security headers to all web requests
@@ -36,6 +37,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'security.headers' => \App\Http\Middleware\SecurityHeadersMiddleware::class,
             'track.device' => \App\Http\Middleware\TrackDeviceMiddleware::class,
             'two-factor.challenge' => \App\Http\Middleware\EnsureTwoFactorChallenge::class,
+            'require.2fa' => \App\Http\Middleware\Require2FAVerification::class,
             // Admin security middleware
             'admin.audit' => \App\Http\Middleware\AdminAuditMiddleware::class,
             'admin.security' => \App\Http\Middleware\AdminSecurityHeaders::class,

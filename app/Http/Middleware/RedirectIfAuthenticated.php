@@ -22,12 +22,18 @@ class RedirectIfAuthenticated
             if (Auth::guard($guard)->check()) {
                 $user = Auth::guard($guard)->user();
 
-                // Redirect based on user permissions
-                if ($user && $user->hasPermission('dashboard.access')) {
-                    return redirect()->route('dashboard');
-                } else {
-                    return redirect()->route('user.dashboard');
+                // Determine redirect URL based on user permissions
+                $redirectUrl = ($user && $user->hasPermission('dashboard.access'))
+                    ? route('dashboard')
+                    : route('user.dashboard');
+
+                // Handle Inertia requests
+                if ($request->inertia()) {
+                    return \Inertia\Inertia::location($redirectUrl);
                 }
+
+                // Handle regular requests
+                return redirect($redirectUrl);
             }
         }
 

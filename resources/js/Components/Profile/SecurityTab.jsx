@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { router } from '@inertiajs/react';
+import axios from 'axios';
 import {
     Box,
     Grid,
@@ -30,7 +31,7 @@ import {
 } from '@mui/icons-material';
 import TwoFactorModal from './TwoFactorModal';
 
-const SecurityTab = ({ user, twoFactorEnabled, recoveryCodes }) => {
+const SecurityTab = ({ user, twoFactorEnabled, recoveryCodes: initialRecoveryCodes }) => {
     const [passwordData, setPasswordData] = useState({
         current_password: '',
         password: '',
@@ -44,6 +45,11 @@ const SecurityTab = ({ user, twoFactorEnabled, recoveryCodes }) => {
     const [disableModalOpen, setDisableModalOpen] = useState(false);
     const [disablePassword, setDisablePassword] = useState('');
     const [disableError, setDisableError] = useState('');
+    const [verifyPasswordModalOpen, setVerifyPasswordModalOpen] = useState(false);
+    const [verifyPassword, setVerifyPassword] = useState('');
+    const [verifyPasswordError, setVerifyPasswordError] = useState('');
+    const [recoveryCodes, setRecoveryCodes] = useState(null);
+    const [loadingRecoveryCodes, setLoadingRecoveryCodes] = useState(false);
 
     const handlePasswordChange = (e) => {
         const { name, value } = e.target;
@@ -112,7 +118,39 @@ const SecurityTab = ({ user, twoFactorEnabled, recoveryCodes }) => {
     };
 
     const handleShowRecoveryCodes = () => {
-        setShowRecoveryCodes(true);
+        // Open password verification modal first
+        setVerifyPasswordModalOpen(true);
+        setVerifyPassword('');
+        setVerifyPasswordError('');
+    };
+
+    const confirmShowRecoveryCodes = async () => {
+        if (!verifyPassword) {
+            setVerifyPasswordError('Por favor ingresa tu contraseña');
+            return;
+        }
+
+        setLoadingRecoveryCodes(true);
+        setVerifyPasswordError('');
+
+        try {
+            const response = await axios.post(route('two-factor.recovery-codes'), {
+                password: verifyPassword
+            });
+
+            setRecoveryCodes(response.data.recoveryCodes);
+            setVerifyPasswordModalOpen(false);
+            setShowRecoveryCodes(true);
+            setVerifyPassword('');
+        } catch (error) {
+            if (error.response?.status === 422) {
+                setVerifyPasswordError(error.response.data.error || 'Contraseña incorrecta');
+            } else {
+                setVerifyPasswordError('Error al obtener los códigos de recuperación');
+            }
+        } finally {
+            setLoadingRecoveryCodes(false);
+        }
     };
 
     const passwordStrength = (password) => {
@@ -310,6 +348,52 @@ const SecurityTab = ({ user, twoFactorEnabled, recoveryCodes }) => {
                 </Box>
             </Paper>
 
+            {/* Password Verification Modal for Recovery Codes */}
+            <Dialog open={verifyPasswordModalOpen} onClose={() => setVerifyPasswordModalOpen(false)} maxWidth="sm" fullWidth>
+                <DialogTitle>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <LockIcon color="primary" />
+                        Verificar Contraseña
+                    </Box>
+                </DialogTitle>
+                <DialogContent>
+                    <Alert severity="info" sx={{ mb: 3 }}>
+                        Por seguridad, necesitamos verificar tu contraseña antes de mostrar los códigos de recuperación.
+                    </Alert>
+                    <TextField
+                        fullWidth
+                        type="password"
+                        label="Contraseña"
+                        value={verifyPassword}
+                        onChange={(e) => {
+                            setVerifyPassword(e.target.value);
+                            setVerifyPasswordError('');
+                        }}
+                        error={!!verifyPasswordError}
+                        helperText={verifyPasswordError}
+                        autoFocus
+                        onKeyPress={(e) => {
+                            if (e.key === 'Enter') {
+                                confirmShowRecoveryCodes();
+                            }
+                        }}
+                    />
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setVerifyPasswordModalOpen(false)} disabled={loadingRecoveryCodes}>
+                        Cancelar
+                    </Button>
+                    <Button
+                        onClick={confirmShowRecoveryCodes}
+                        variant="contained"
+                        disabled={loadingRecoveryCodes}
+                        startIcon={loadingRecoveryCodes ? <CircularProgress size={20} /> : <KeyIcon />}
+                    >
+                        {loadingRecoveryCodes ? 'Verificando...' : 'Ver Códigos'}
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
             {/* Recovery Codes Dialog */}
             <Dialog open={showRecoveryCodes} onClose={() => setShowRecoveryCodes(false)} maxWidth="sm" fullWidth>
                 <DialogTitle>
@@ -337,7 +421,10 @@ const SecurityTab = ({ user, twoFactorEnabled, recoveryCodes }) => {
                     </Paper>
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={() => setShowRecoveryCodes(false)}>
+                    <Button onClick={() => {
+                        setShowRecoveryCodes(false);
+                        setRecoveryCodes(null); // Clear codes when closing
+                    }}>
                         Cerrar
                     </Button>
                 </DialogActions>

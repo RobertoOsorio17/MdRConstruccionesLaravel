@@ -3,8 +3,10 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Traits\HasPermissions;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
@@ -13,13 +15,14 @@ use App\Notifications\ResetPasswordNotification;
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable, TwoFactorAuthenticatable;
+    use HasFactory, Notifiable, TwoFactorAuthenticatable, SoftDeletes, HasPermissions;
 
     /**
      * The attributes that are mass assignable.
      *
      * @var list<string>
      */
+    // ✅ Only safe fields that users can mass-assign
     protected $fillable = [
         'name',
         'email',
@@ -40,8 +43,16 @@ class User extends Authenticatable
         'provider_id',
         'provider_token',
         'provider_refresh_token',
-        'email_verified_at',
-        'role',
+    ];
+
+    // ✅ Protected fields that should NOT be mass-assignable
+    protected $guarded = [
+        'id',
+        'role', // ✅ CRITICAL: Prevent privilege escalation
+        'email_verified_at', // ✅ CRITICAL: Prevent bypassing email verification
+        'remember_token',
+        'created_at',
+        'updated_at',
     ];
 
     /**
@@ -157,6 +168,22 @@ class User extends Authenticatable
     public function adminNotifications(): HasMany
     {
         return $this->hasMany(AdminNotification::class);
+    }
+
+    /**
+     * Get the user's notifications
+     */
+    public function notifications(): HasMany
+    {
+        return $this->hasMany(Notification::class);
+    }
+
+    /**
+     * Get unread notifications count
+     */
+    public function unreadNotificationsCount(): int
+    {
+        return $this->notifications()->whereNull('read_at')->count();
     }
 
     /**

@@ -268,7 +268,7 @@ class SettingController extends Controller
                 'type' => 'integer',
                 'group' => 'security',
                 'label' => 'Maximum Login Attempts',
-                'descriptioMaximum number of failed login attempts',
+                'description' => 'Maximum number of failed login attempts',
                 'validation_rules' => ['required', 'integer', 'min:3', 'max:10'],
                 'is_public' => false,
                 'sort_order' => 2,

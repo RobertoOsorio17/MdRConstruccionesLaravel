@@ -16,8 +16,11 @@ class CommentInteractionController extends Controller
      */
     public function like(Request $request, Comment $comment): JsonResponse
     {
+        // ✅ Authorize the action using policy
+        $this->authorize('like', $comment);
+
         $user = Auth::user();
-        
+
         // Check whether an interaction of the same type already exists.
         $existingInteraction = CommentInteraction::where('user_id', $user->id)
             ->where('comment_id', $comment->id)
@@ -65,8 +68,11 @@ class CommentInteractionController extends Controller
      */
     public function dislike(Request $request, Comment $comment): JsonResponse
     {
+        // ✅ Authorize the action using policy (same rules as like)
+        $this->authorize('like', $comment);
+
         $user = Auth::user();
-        
+
         // Check whether an interaction of the same type already exists.
         $existingInteraction = CommentInteraction::where('user_id', $user->id)
             ->where('comment_id', $comment->id)

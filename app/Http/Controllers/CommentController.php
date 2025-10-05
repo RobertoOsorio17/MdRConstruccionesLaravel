@@ -68,10 +68,28 @@ class CommentController extends Controller
                 ], 403);
             }
 
-            // Authenticated user validation.
+            // ✅ Authenticated user validation with enhanced security
             $validated = $request->validate([
-                'body' => 'required|string|min:10|max:2000',
-                'parent_id' => 'nullable|exists:comments,id'
+                'body' => [
+                    'required',
+                    'string',
+                    'min:10',
+                    'max:2000',
+                    'regex:/^[^<>]*$/', // ✅ Prevent HTML tags
+                ],
+                'parent_id' => [
+                    'nullable',
+                    'exists:comments,id',
+                    function ($attribute, $value, $fail) use ($post) {
+                        // ✅ Verify parent comment belongs to same post
+                        if ($value) {
+                            $parent = Comment::find($value);
+                            if ($parent && $parent->post_id !== $post->id) {
+                                $fail('The parent comment does not belong to this post.');
+                            }
+                        }
+                    },
+                ]
             ]);
 
             $validated['user_id'] = Auth::id();
@@ -102,12 +120,41 @@ class CommentController extends Controller
                 ], 429);
             }
 
-            // Guest user validation.
+            // ✅ Guest user validation with enhanced security
             $validated = $request->validate([
-                'body' => 'required|string|min:10|max:2000',
-                'author_name' => 'required|string|min:2|max:100',
-                'author_email' => 'required|email|max:255',
-                'parent_id' => 'nullable|exists:comments,id'
+                'body' => [
+                    'required',
+                    'string',
+                    'min:10',
+                    'max:2000',
+                    'regex:/^[^<>]*$/', // ✅ Prevent HTML tags
+                ],
+                'author_name' => [
+                    'required',
+                    'string',
+                    'min:2',
+                    'max:100',
+                    'regex:/^[a-zA-Z\s\-\'\.]+$/', // ✅ Only letters, spaces, hyphens, apostrophes, dots
+                ],
+                'author_email' => [
+                    'required',
+                    'email',
+                    'max:255',
+                    'regex:/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/', // ✅ Strict email format
+                ],
+                'parent_id' => [
+                    'nullable',
+                    'exists:comments,id',
+                    function ($attribute, $value, $fail) use ($post) {
+                        // ✅ Verify parent comment belongs to same post
+                        if ($value) {
+                            $parent = Comment::find($value);
+                            if ($parent && $parent->post_id !== $post->id) {
+                                $fail('The parent comment does not belong to this post.');
+                            }
+                        }
+                    },
+                ]
             ]);
 
             $validated['user_id'] = null;
@@ -363,23 +410,8 @@ class CommentController extends Controller
      */
     public function destroy(Comment $comment)
     {
-        // Check if user is authenticated.
-        if (!Auth::check()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'You do not have permission to perform this action.'
-            ], 403);
-        }
-
-        $user = Auth::user();
-
-        // Check if user is admin.
-        if (!$user->hasRole('admin')) {
-            return response()->json([
-                'success' => false,
-                'message' => 'You do not have permission to delete comments.'
-            ], 403);
-        }
+        // ✅ Use policy for authorization
+        $this->authorize('delete', $comment);
 
         try {
             // Store comment info for response.
@@ -396,7 +428,7 @@ class CommentController extends Controller
         } catch (\Exception $e) {
             \Log::error('Error deleting comment', [
                 'comment_id' => $comment->id,
-                'admin_user_id' => $user->id,
+                'user_id' => Auth::id(),
                 'error' => $e->getMessage()
             ]);
 

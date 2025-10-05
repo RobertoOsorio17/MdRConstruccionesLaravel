@@ -7,7 +7,10 @@ use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\PostController;
 use App\Http\Controllers\PageController;
 use App\Http\Controllers\ContactController;
+use App\Http\Controllers\SearchController;
+use App\Http\Controllers\TestimonialController;
 use App\Http\Controllers\Admin\ServiceController as AdminServiceController;
+use App\Http\Controllers\Auth\SocialAuthController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -28,6 +31,40 @@ Route::get('/proyectos/{project:slug}', [ProjectController::class, 'show'])->nam
 Route::get('/blog', [PostController::class, 'enhancedIndex'])->name('blog.index');
 Route::get('/blog/classic', [PostController::class, 'index'])->name('blog.classic'); // Vista clásica como backup
 Route::get('/blog/{post:slug}', [PostController::class, 'show'])->name('blog.show');
+
+// ✅ Search Routes (with rate limiting)
+Route::middleware(['throttle:60,1'])->group(function () {
+    Route::get('/search', [SearchController::class, 'index'])->name('search.index');
+});
+
+// ✅ Testimonials Routes
+Route::get('/testimonials', [TestimonialController::class, 'index'])->name('testimonials.index');
+Route::get('/testimonials/create', [TestimonialController::class, 'create'])->name('testimonials.create');
+Route::post('/testimonials', [TestimonialController::class, 'store'])->name('testimonials.store')->middleware('throttle:5,60');
+Route::get('/testimonials/{testimonial}', [TestimonialController::class, 'show'])->name('testimonials.show');
+
+// ✅ Newsletter Routes (with rate limiting)
+Route::post('/newsletter/subscribe', [App\Http\Controllers\NewsletterController::class, 'subscribe'])
+    ->name('newsletter.subscribe')
+    ->middleware('throttle:3,60');
+Route::get('/newsletter/verify/{token}', [App\Http\Controllers\NewsletterController::class, 'verify'])
+    ->name('newsletter.verify');
+Route::get('/newsletter/unsubscribe/{token}', [App\Http\Controllers\NewsletterController::class, 'unsubscribe'])
+    ->name('newsletter.unsubscribe');
+Route::post('/newsletter/preferences/{token}', [App\Http\Controllers\NewsletterController::class, 'updatePreferences'])
+    ->name('newsletter.preferences')
+    ->middleware('throttle:10,60');
+
+// ✅ Notification Routes (authenticated users only)
+Route::middleware(['auth', 'verified'])->prefix('notifications')->name('notifications.')->group(function () {
+    Route::get('/', [App\Http\Controllers\NotificationController::class, 'index'])->name('index');
+    Route::get('/unread-count', [App\Http\Controllers\NotificationController::class, 'getUnreadCount'])->name('unread-count');
+    Route::get('/recent', [App\Http\Controllers\NotificationController::class, 'getRecent'])->name('recent');
+    Route::post('/{notification}/read', [App\Http\Controllers\NotificationController::class, 'markAsRead'])->name('mark-read');
+    Route::post('/mark-all-read', [App\Http\Controllers\NotificationController::class, 'markAllAsRead'])->name('mark-all-read');
+    Route::delete('/{notification}', [App\Http\Controllers\NotificationController::class, 'destroy'])->name('destroy');
+    Route::delete('/read/all', [App\Http\Controllers\NotificationController::class, 'deleteAllRead'])->name('delete-all-read');
+});
 
 // Guest recommendations for personalized suggestions (throttled)
 Route::post('/api/guest-recommendations', [PostController::class, 'getGuestRecommendations'])
@@ -76,15 +113,25 @@ Route::prefix('api/services')->name('api.services.')->group(function () {
 // Post Interaction Status (available for all users)
 Route::get('/posts/{post}/interaction-status', [App\Http\Controllers\UserInteractionController::class, 'getInteractionStatus'])->name('posts.interaction-status');
 
-// Comment Routes (with rate limiting and IP ban protection)
-Route::middleware(['throttle:10,1', 'check.ip.ban'])->group(function () {
+// ✅ Comment Routes (with granular rate limiting and IP ban protection)
+Route::middleware(['throttle:comments-auth', 'check.ip.ban'])->group(function () {
     Route::post('/blog/{post:slug}/comments', [App\Http\Controllers\CommentController::class, 'store'])->name('comments.store');
     Route::get('/blog/{post:slug}/comments', [App\Http\Controllers\CommentController::class, 'getComments'])->name('comments.get');
 });
 
-// Comment Reports (accessible to all users, protected by IP ban check and rate limiting)
-Route::middleware(['throttle:5,10', 'check.ip.ban'])->group(function () {
+// ✅ Comment Reports (with dedicated rate limiting)
+Route::middleware(['throttle:comment-reports', 'check.ip.ban'])->group(function () {
     Route::post('/comments/{comment}/report', [App\Http\Controllers\CommentInteractionController::class, 'report'])->name('comments.report');
+});
+
+// Social Authentication Routes
+Route::prefix('auth')->name('auth.social.')->group(function () {
+    Route::get('/{provider}/redirect', [SocialAuthController::class, 'redirect'])->name('redirect');
+    Route::get('/{provider}/callback', [SocialAuthController::class, 'callback'])->name('callback');
+
+    Route::middleware(['auth', 'auth.enhanced'])->group(function () {
+        Route::delete('/{provider}/unlink', [SocialAuthController::class, 'unlink'])->name('unlink');
+    });
 });
 
 // Institutional Pages
@@ -92,7 +139,9 @@ Route::get('/empresa', [PageController::class, 'about'])->name('pages.about');
 Route::get('/contacto', [PageController::class, 'contact'])->name('pages.contact');
 
 // Admin Routes
-Route::prefix('admin')->name('admin.')->group(base_path('routes/admin.php'));
+Route::prefix('admin')->name('admin.')->group(function () {
+    require base_path('routes/admin.php');
+});
 
 // Legal Pages
 Route::get('/aviso-legal', [PageController::class, 'legal'])->name('pages.legal');

@@ -327,4 +327,33 @@ class CommentManagementController extends Controller
             'comments' => $comments
         ]);
     }
+
+    /**
+     * Export comments to Excel/CSV using Laravel Excel.
+     */
+    public function export(Request $request)
+    {
+        $filters = [
+            'search' => $request->get('search'),
+            'status' => $request->get('status'),
+            'post_id' => $request->get('post_id'),
+        ];
+
+        $format = $request->get('format', 'xlsx'); // xlsx, csv
+        $filename = 'comentarios_' . now()->format('Y-m-d_H-i-s');
+
+        try {
+            return \Maatwebsite\Excel\Facades\Excel::download(
+                new \App\Exports\CommentsExport($filters),
+                $filename . '.' . $format
+            );
+        } catch (\Exception $e) {
+            \Log::error('Comment export failed', [
+                'user_id' => auth()->id(),
+                'error' => $e->getMessage(),
+            ]);
+
+            return back()->with('error', 'Error al exportar comentarios: ' . $e->getMessage());
+        }
+    }
 }

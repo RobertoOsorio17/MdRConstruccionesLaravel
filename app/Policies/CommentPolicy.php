@@ -114,4 +114,54 @@ class CommentPolicy
         // Anyone can reply (including guests)
         return true;
     }
+
+    /**
+     * Determine whether the user can approve comments.
+     */
+    public function approve(User $user): bool
+    {
+        // Only admins and moderators can approve comments
+        return $user->hasRole('admin') || $user->hasRole('moderator') || $user->hasRole('editor');
+    }
+
+    /**
+     * Determine whether the user can reject comments.
+     */
+    public function reject(User $user): bool
+    {
+        // Only admins and moderators can reject comments
+        return $user->hasRole('admin') || $user->hasRole('moderator') || $user->hasRole('editor');
+    }
+
+    /**
+     * Determine whether the user can mark comments as spam.
+     */
+    public function markAsSpam(User $user): bool
+    {
+        // Only admins and moderators can mark as spam
+        return $user->hasRole('admin') || $user->hasRole('moderator') || $user->hasRole('editor');
+    }
+
+    /**
+     * Determine whether the user can like a comment.
+     */
+    public function like(User $user, Comment $comment): bool
+    {
+        // Users cannot like their own comments
+        if ($user->id === $comment->user_id) {
+            return false;
+        }
+
+        // Can only like approved comments
+        return $comment->status === 'approved';
+    }
+
+    /**
+     * Determine whether the user can unlike a comment.
+     */
+    public function unlike(User $user, Comment $comment): bool
+    {
+        // Same rules as like
+        return $this->like($user, $comment);
+    }
 }

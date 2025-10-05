@@ -518,34 +518,43 @@ class UserManagementController extends Controller
     }
 
     /**
-     * Export user data based on the current filter selection.
+     * Export user data based on the current filter selection using Laravel Excel.
      *
      * @param Request $request The request containing export filters.
-     * @return \Symfony\Component\HttpFoundation\StreamedResponse Streamed CSV response of user data.
+     * @return \Symfony\Component\HttpFoundation\BinaryFileResponse Excel file download.
      */
     public function export(Request $request)
     {
-        $query = User::with(['roles']);
+        $filters = [
+            'search' => $request->get('search'),
+            'role' => $request->get('role'),
+            'status' => $request->get('status'),
+        ];
 
-        // Apply the same filters used by the index listing.
-        if ($request->filled('search')) {
-            $search = $request->search;
-            $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('email', 'like', "%{$search}%");
-            });
+        $format = $request->get('format', 'xlsx'); // xlsx, csv
+        $filename = 'usuarios_' . now()->format('Y-m-d_H-i-s');
+
+        try {
+            return \Maatwebsite\Excel\Facades\Excel::download(
+                new \App\Exports\UsersExport($filters),
+                $filename . '.' . $format
+            );
+        } catch (\Exception $e) {
+            \Log::error('User export failed', [
+                'user_id' => auth()->id(),
+                'error' => $e->getMessage(),
+            ]);
+
+            return back()->with('error', 'Error al exportar usuarios: ' . $e->getMessage());
         }
+    }
 
-        if ($request->filled('role')) {
-            if ($request->role === 'simple_role') {
-                $query->where('role', '!=', null);
-            } else {
-                $query->whereHas('roles', function ($q) use ($request) {
-                    $q->where('name', $request->role);
-                });
-            }
-        }
-
+    /**
+     * Legacy export method - keeping for backwards compatibility.
+     * @deprecated Use export() method instead.
+     */
+    private function legacyExport($query)
+    {
         $users = $query->get();
 
         $csvData = [];

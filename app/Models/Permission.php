@@ -11,8 +11,13 @@ class Permission extends Model
         'name',
         'display_name',
         'description',
-        'module',
-        'action',
+        'group',
+    ];
+
+    protected $guarded = [
+        'id',
+        'created_at',
+        'updated_at',
     ];
 
     /**
@@ -20,39 +25,42 @@ class Permission extends Model
      */
     public function roles(): BelongsToMany
     {
-        return $this->belongsToMany(Role::class, 'role_permission')
+        return $this->belongsToMany(Role::class, 'permission_role')
                     ->withTimestamps();
     }
 
     /**
-     * Scope para filtrar por mÃƒÆ’Ã‚Â³dulo
+     * Usuarios que tienen este permiso directamente
      */
-    public function scopeByModule($query, string $module)
+    public function users(): BelongsToMany
     {
-        return $query->where('module', $module);
+        return $this->belongsToMany(User::class, 'permission_user')
+                    ->withPivot('granted')
+                    ->withTimestamps();
     }
 
     /**
-     * Scope para filtrar por acciÃƒÆ’Ã‚Â³n
+     * Scope para filtrar por grupo
      */
-    public function scopeByAction($query, string $action)
+    public function scopeByGroup($query, string $group)
     {
-        return $query->where('action', $action);
+        return $query->where('group', $group);
     }
 
     /**
-     * Obtener permisos agrupados por mÃƒÆ’Ã‚Â³dulo
+     * Obtener permisos agrupados por grupo
      */
-    public static function getByModules()
+    public static function getByGroups()
     {
-        return static::all()->groupBy('module');
+        return static::all()->groupBy('group');
     }
 
     /**
-     * Obtener nombre completo del permiso
+     * Verificar si un usuario tiene este permiso
      */
-    public function getFullNameAttribute()
+    public function hasUser(User $user): bool
     {
-        return $this->module . '.' . $this->action;
+        return $this->users()->where('user_id', $user->id)->exists();
     }
 }
+

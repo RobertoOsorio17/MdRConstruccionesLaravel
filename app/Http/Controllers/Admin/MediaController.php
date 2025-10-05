@@ -82,7 +82,7 @@ class MediaController extends Controller
     }
 
     /**
-     * Upload a new media file.
+     * Upload a new media file with enhanced security validation.
      */
     public function upload(Request $request)
     {
@@ -105,6 +105,14 @@ class MediaController extends Controller
             $file = $request->file('file');
             $folder = $request->get('folder', 'uploads');
 
+            // Enhanced security: Validate file content by magic bytes
+            if (!$this->validateFileContent($file)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'File validation failed: Invalid file content detected.'
+                ], 422);
+            }
+
             // Validate file type
             $allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml', 'video/mp4', 'video/webm', 'application/pdf'];
             if (!in_array($file->getMimeType(), $allowedTypes)) {
@@ -114,12 +122,22 @@ class MediaController extends Controller
                 ], 422);
             }
 
-            // Generate unique filename
-            $filename = time() . '_' . Str::slug(pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME)) . '.' . $file->getClientOriginalExtension();
+            // Robust filename sanitization
+            $sanitizedName = $this->sanitizeFilename(pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME));
+            $filename = time() . '_' . $sanitizedName . '_' . Str::random(8) . '.' . $file->getClientOriginalExtension();
 
             // Store file
             $path = $file->storeAs($folder, $filename, 'public');
             $url = Storage::disk('public')->url($path);
+
+            // Log upload for audit
+            \Log::info('Media uploaded', [
+                'user_id' => auth()->id(),
+                'filename' => $filename,
+                'original_name' => $file->getClientOriginalName(),
+                'size' => $file->getSize(),
+                'mime_type' => $file->getMimeType(),
+            ]);
 
             return response()->json([
                 'success' => true,
@@ -139,11 +157,86 @@ class MediaController extends Controller
                 ]
             ]);
         } catch (\Exception $e) {
+            \Log::error('Media upload failed', [
+                'user_id' => auth()->id(),
+                'error' => $e->getMessage(),
+            ]);
+
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to upload file: ' . $e->getMessage()
             ], 500);
         }
+    }
+
+    /**
+     * Validate file content by checking magic bytes.
+     */
+    private function validateFileContent($file): bool
+    {
+        $allowedMagicBytes = [
+            // JPEG
+            'ffd8ff',
+            // PNG
+            '89504e47',
+            // GIF
+            '474946',
+            // PDF
+            '25504446',
+            // WebP
+            '52494646',
+            // MP4
+            '66747970',
+            // WebM
+            '1a45dfa3',
+        ];
+
+        try {
+            $handle = fopen($file->getRealPath(), 'rb');
+            if (!$handle) {
+                return false;
+            }
+
+            $bytes = bin2hex(fread($handle, 8));
+            fclose($handle);
+
+            foreach ($allowedMagicBytes as $magic) {
+                if (strpos($bytes, $magic) !== false) {
+                    return true;
+                }
+            }
+        } catch (\Exception $e) {
+            \Log::warning('File content validation failed', ['error' => $e->getMessage()]);
+            return false;
+        }
+
+        return false;
+    }
+
+    /**
+     * Sanitize filename to prevent security issues.
+     */
+    private function sanitizeFilename(string $filename): string
+    {
+        // Remove any path traversal attempts
+        $filename = basename($filename);
+
+        // Remove special characters except alphanumeric, dash, and underscore
+        $filename = preg_replace('/[^a-zA-Z0-9\-_]/', '_', $filename);
+
+        // Remove multiple consecutive underscores
+        $filename = preg_replace('/_+/', '_', $filename);
+
+        // Trim underscores from start and end
+        $filename = trim($filename, '_');
+
+        // Ensure filename is not empty
+        if (empty($filename)) {
+            $filename = 'file';
+        }
+
+        // Limit length
+        return Str::limit($filename, 100, '');
     }
 
     /**
@@ -218,43 +311,103 @@ class MediaController extends Controller
     }
 
     /**
-     * Bulk delete media files.
+     * Bulk delete media files with enhanced security.
      */
     public function bulkDelete(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'files' => 'required|array',
+            'files' => 'required|array|max:100', // Limit to 100 files per operation
             'files.*' => 'string',
         ]);
 
         if ($validator->fails()) {
             return response()->json([
                 'success' => false,
-                'message' => 'A list of files is required.'
+                'message' => 'Validation failed.',
+                'errors' => $validator->errors()
             ], 422);
         }
 
         try {
             $files = $request->get('files');
             $deletedCount = 0;
+            $failedFiles = [];
 
             foreach ($files as $path) {
+                // Validate path to prevent path traversal
+                if (!$this->isValidPath($path)) {
+                    $failedFiles[] = $path;
+                    continue;
+                }
+
                 if (Storage::disk('public')->exists($path)) {
                     Storage::disk('public')->delete($path);
                     $deletedCount++;
+                } else {
+                    $failedFiles[] = $path;
                 }
+            }
+
+            // Log bulk delete operation
+            \Log::info('Bulk media delete', [
+                'user_id' => auth()->id(),
+                'deleted_count' => $deletedCount,
+                'failed_count' => count($failedFiles),
+            ]);
+
+            $message = "{$deletedCount} file(s) deleted successfully.";
+            if (count($failedFiles) > 0) {
+                $message .= " " . count($failedFiles) . " file(s) failed.";
             }
 
             return response()->json([
                 'success' => true,
-                'message' => "{$deletedCount} file(s) deleted successfully."
+                'message' => $message,
+                'deleted_count' => $deletedCount,
+                'failed_count' => count($failedFiles),
             ]);
         } catch (\Exception $e) {
+            \Log::error('Bulk media delete failed', [
+                'user_id' => auth()->id(),
+                'error' => $e->getMessage(),
+            ]);
+
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to delete files: ' . $e->getMessage()
             ], 500);
         }
+    }
+
+    /**
+     * Validate path to prevent path traversal attacks.
+     */
+    private function isValidPath(string $path): bool
+    {
+        // Normalize path
+        $normalizedPath = str_replace('\\', '/', $path);
+
+        // Check for path traversal attempts
+        if (strpos($normalizedPath, '..') !== false) {
+            return false;
+        }
+
+        // Check for absolute paths
+        if (strpos($normalizedPath, '/') === 0 || preg_match('/^[a-zA-Z]:/', $normalizedPath)) {
+            return false;
+        }
+
+        // Ensure path starts with allowed directories
+        $allowedPrefixes = ['uploads/', 'media/', 'images/'];
+        $isAllowed = false;
+        foreach ($allowedPrefixes as $prefix) {
+            if (strpos($normalizedPath, $prefix) === 0) {
+                $isAllowed = true;
+                break;
+            }
+        }
+
+        return $isAllowed;
     }
 
     /**

@@ -344,84 +344,32 @@ class ServiceManagementController extends Controller
     }
 
     /**
-     * Export services to CSV.
+     * Export services to Excel/CSV using Laravel Excel.
      */
     public function export(Request $request)
     {
-        $query = Service::with(['category']);
-
-        // Apply the same filters used by the index view.
-        if ($request->filled('search')) {
-            $search = $request->search;
-            $query->where(function ($q) use ($search) {
-                $q->where('title', 'like', "%{$search}%")
-                  ->orWhere('description', 'like', "%{$search}%")
-                  ->orWhere('short_description', 'like', "%{$search}%");
-            });
-        }
-
-        if ($request->filled('category')) {
-            $query->where('category_id', $request->category);
-        }
-
-        if ($request->filled('status')) {
-            if ($request->status === 'active') {
-                $query->where('is_active', true);
-            } elseif ($request->status === 'inactive') {
-                $query->where('is_active', false);
-            }
-        }
-
-        if ($request->filled('featured')) {
-            if ($request->featured === 'yes') {
-                $query->where('is_featured', true);
-            } elseif ($request->featured === 'no') {
-                $query->where('is_featured', false);
-            }
-        }
-
-        $services = $query->get();
-
-        $csvData = [];
-        $csvData[] = [
-            'ID', 'Title', 'Slug', 'Short Description', 'Category',
-            'Price', 'Price Type', 'Duration', 'Active', 'Featured',
-            'Views', 'Created At'
+        $filters = [
+            'search' => $request->get('search'),
+            'status' => $request->get('status'),
+            'featured' => $request->get('featured'),
         ];
 
-        foreach ($services as $service) {
-            $csvData[] = [
-                $service->id,
-                $service->title,
-                $service->slug,
-                $service->short_description,
-                $service->category ? $service->category->name : 'No category',
-                $service->price ?? 'N/A',
-                $service->price_type ?? 'N/A',
-                $service->duration ?? 'N/A',
-                $service->is_active ? 'Yes' : 'No',
-                $service->is_featured ? 'Yes' : 'No',
-                $service->views_count ?? 0,
-                $service->created_at->format('Y-m-d H:i:s'),
-            ];
+        $format = $request->get('format', 'xlsx'); // xlsx, csv
+        $filename = 'servicios_' . now()->format('Y-m-d_H-i-s');
+
+        try {
+            return \Maatwebsite\Excel\Facades\Excel::download(
+                new \App\Exports\ServicesExport($filters),
+                $filename . '.' . $format
+            );
+        } catch (\Exception $e) {
+            \Log::error('Service export failed', [
+                'user_id' => auth()->id(),
+                'error' => $e->getMessage(),
+            ]);
+
+            return back()->with('error', 'Error al exportar servicios: ' . $e->getMessage());
         }
-
-        $filename = 'services_' . date('Y-m-d_H-i-s') . '.csv';
-
-        $headers = [
-            'Content-Type' => 'text/csv',
-            'Content-Disposition' => "attachment; filename=\"$filename\"",
-        ];
-
-        $callback = function() use ($csvData) {
-            $file = fopen('php://output', 'w');
-            foreach ($csvData as $row) {
-                fputcsv($file, $row);
-            }
-            fclose($file);
-        };
-
-        return response()->stream($callback, 200, $headers);
     }
 
     /**

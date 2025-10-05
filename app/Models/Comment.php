@@ -6,16 +6,29 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Comment extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
     protected $fillable = [
         'post_id',
         'parent_id',
         'body',
         'author_name',
         'author_email',
+        'user_id', // Allow setting (will be validated)
+        'status', // Allow setting (will be validated by policies)
+        'ip_address',
+        'user_agent',
+    ];
+
+    // ✅ Protected fields that should NOT be mass-assignable
+    protected $guarded = [
+        'id',
+        'spam_score', // ✅ CRITICAL: Prevent manipulation of spam scores
+        'created_at',
+        'updated_at',
     ];
 
     /**
@@ -26,6 +39,7 @@ class Comment extends Model
         'status',
         'ip_address',
         'user_agent',
+        'spam_score',
     ];
 
     protected $casts = [

@@ -729,7 +729,7 @@ const UserManagement = () => {
                                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                                     {getRoleIcon(user.role, user.roles)}
                                                     <Chip
-                                                        label={user.role || user.roles.join(', ') || 'Usuario'}
+                                                        label={user.roles.length > 0 ? user.roles.join(', ') : (user.role || 'Usuario')}
                                                         size="small"
                                                         sx={{
                                                             textTransform: 'capitalize',

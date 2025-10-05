@@ -46,6 +46,16 @@ Route::middleware(['auth', 'verified', 'auth.enhanced', 'role:admin,editor', 'ad
     Route::get('/dashboard', [App\Http\Controllers\Admin\DashboardController::class, 'index'])
         ->name('dashboard');
 
+    // Export Routes
+    Route::prefix('export')->name('export.')->group(function () {
+        Route::get('/', [App\Http\Controllers\ExportController::class, 'index'])->name('index');
+        Route::get('/posts', [App\Http\Controllers\ExportController::class, 'exportPosts'])->name('posts');
+        Route::get('/posts/pdf', [App\Http\Controllers\ExportController::class, 'exportPostsPdf'])->name('posts.pdf');
+        Route::get('/comments', [App\Http\Controllers\ExportController::class, 'exportComments'])->name('comments');
+        Route::get('/comments/pdf', [App\Http\Controllers\ExportController::class, 'exportCommentsPdf'])->name('comments.pdf');
+        Route::get('/users', [App\Http\Controllers\ExportController::class, 'exportUsers'])->name('users');
+    });
+
     // Admin Notifications API
     Route::prefix('api')->group(function () {
         Route::get('/notifications', [App\Http\Controllers\Admin\NotificationController::class, 'index'])->name('api.notifications.index');
@@ -60,11 +70,11 @@ Route::middleware(['auth', 'verified', 'auth.enhanced', 'role:admin,editor', 'ad
 
     // Audit Logs
     Route::get('/audit-logs', [App\Http\Controllers\Admin\AuditLogController::class, 'index'])->name('audit-logs.index');
+    Route::get('/audit-logs/export', [App\Http\Controllers\Admin\AuditLogController::class, 'export'])->name('audit-logs.export');
     Route::get('/audit-logs/data', [App\Http\Controllers\Admin\AuditLogController::class, 'data'])->name('audit-logs.data');
     Route::get('/audit-logs/stats', [App\Http\Controllers\Admin\AuditLogController::class, 'stats'])->name('audit-logs.stats');
     Route::get('/audit-logs/filter-options', [App\Http\Controllers\Admin\AuditLogController::class, 'filterOptions'])->name('audit-logs.filter-options');
     Route::get('/audit-logs/{auditLog}', [App\Http\Controllers\Admin\AuditLogController::class, 'show'])->name('audit-logs.show');
-    Route::post('/audit-logs/export', [App\Http\Controllers\Admin\AuditLogController::class, 'export'])->name('audit-logs.export');
 
     // User Management
     Route::resource('users', App\Http\Controllers\Admin\UserManagementController::class)
@@ -77,7 +87,10 @@ Route::middleware(['auth', 'verified', 'auth.enhanced', 'role:admin,editor', 'ad
             'update' => 'users.update',
             'destroy' => 'users.destroy',
         ]);
-    Route::post('/users/bulk-action', [App\Http\Controllers\Admin\UserManagementController::class, 'bulkAction'])->name('users.bulk-action');
+    // ✅ Bulk action with dedicated rate limiting
+    Route::post('/users/bulk-action', [App\Http\Controllers\Admin\UserManagementController::class, 'bulkAction'])
+        ->middleware('throttle:bulk-operations')
+        ->name('users.bulk-action');
     Route::get('/users/export', [App\Http\Controllers\Admin\UserManagementController::class, 'export'])->name('users.export');
 
     // User Ban Management
@@ -107,7 +120,10 @@ Route::middleware(['auth', 'verified', 'auth.enhanced', 'role:admin,editor', 'ad
             'update' => 'services.update',
             'destroy' => 'services.destroy',
         ]);
-    Route::post('/services/bulk-action', [App\Http\Controllers\Admin\ServiceManagementController::class, 'bulkAction'])->name('services.bulk-action');
+    // ✅ Bulk action with dedicated rate limiting
+    Route::post('/services/bulk-action', [App\Http\Controllers\Admin\ServiceManagementController::class, 'bulkAction'])
+        ->middleware('throttle:bulk-operations')
+        ->name('services.bulk-action');
     Route::get('/services/analytics', [App\Http\Controllers\Admin\ServiceManagementController::class, 'analytics'])->name('services.analytics');
     Route::get('/services/export', [App\Http\Controllers\Admin\ServiceManagementController::class, 'export'])->name('services.export');
 
@@ -122,9 +138,33 @@ Route::middleware(['auth', 'verified', 'auth.enhanced', 'role:admin,editor', 'ad
             'update' => 'projects.update',
             'destroy' => 'projects.destroy',
         ]);
-    Route::post('/projects/bulk-action', [App\Http\Controllers\Admin\ProjectManagementController::class, 'bulkAction'])->name('projects.bulk-action');
+    // ✅ Bulk action with dedicated rate limiting
+    Route::post('/projects/bulk-action', [App\Http\Controllers\Admin\ProjectManagementController::class, 'bulkAction'])
+        ->middleware('throttle:bulk-operations')
+        ->name('projects.bulk-action');
     Route::get('/projects/analytics', [App\Http\Controllers\Admin\ProjectManagementController::class, 'analytics'])->name('projects.analytics');
     Route::get('/projects/export', [App\Http\Controllers\Admin\ProjectManagementController::class, 'export'])->name('projects.export');
+
+    // Testimonials Management
+    Route::resource('testimonials', App\Http\Controllers\Admin\TestimonialController::class);
+    Route::post('/testimonials/{testimonial}/approve', [App\Http\Controllers\Admin\TestimonialController::class, 'approve'])->name('testimonials.approve');
+    Route::post('/testimonials/{testimonial}/reject', [App\Http\Controllers\Admin\TestimonialController::class, 'reject'])->name('testimonials.reject');
+
+    // Newsletter Management
+    Route::get('/newsletter', [App\Http\Controllers\Admin\NewsletterController::class, 'index'])->name('newsletter.index');
+    Route::post('/newsletter/send-campaign', [App\Http\Controllers\Admin\NewsletterController::class, 'sendCampaign'])->name('newsletter.send-campaign');
+    Route::get('/newsletter/export', [App\Http\Controllers\Admin\NewsletterController::class, 'export'])->name('newsletter.export');
+    Route::delete('/newsletter/{newsletter}', [App\Http\Controllers\Admin\NewsletterController::class, 'destroy'])->name('newsletter.destroy');
+    Route::post('/newsletter/bulk-action', [App\Http\Controllers\Admin\NewsletterController::class, 'bulkAction'])
+        ->middleware('throttle:bulk-operations')
+        ->name('newsletter.bulk-action');
+
+    // Backup Management
+    Route::get('/backup', [App\Http\Controllers\Admin\BackupController::class, 'index'])->name('backup.index');
+    Route::post('/backup/create', [App\Http\Controllers\Admin\BackupController::class, 'create'])->name('backup.create');
+    Route::get('/backup/download/{filename}', [App\Http\Controllers\Admin\BackupController::class, 'download'])->name('backup.download');
+    Route::delete('/backup/{filename}', [App\Http\Controllers\Admin\BackupController::class, 'destroy'])->name('backup.destroy');
+    Route::post('/backup/clean', [App\Http\Controllers\Admin\BackupController::class, 'clean'])->name('backup.clean');
 
     // Posts Management
     Route::resource('posts', App\Http\Controllers\Admin\PostController::class)
@@ -145,7 +185,9 @@ Route::middleware(['auth', 'verified', 'auth.enhanced', 'role:admin,editor', 'ad
         ->name('posts.change-status');
     Route::post('posts/{post}/duplicate', [App\Http\Controllers\Admin\PostController::class, 'duplicate'])
         ->name('posts.duplicate');
+    // ✅ Bulk action with dedicated rate limiting
     Route::post('posts/bulk-action', [App\Http\Controllers\Admin\PostController::class, 'bulkAction'])
+        ->middleware('throttle:bulk-operations')
         ->name('posts.bulk-action');
     Route::get('posts/analytics', [App\Http\Controllers\Admin\PostController::class, 'analytics'])
         ->name('posts.analytics');
@@ -231,35 +273,9 @@ Route::middleware(['auth', 'verified', 'auth.enhanced', 'role:admin,editor', 'ad
         ->name('comment-management.spam');
     Route::get('comment-management/pending', [App\Http\Controllers\Admin\CommentManagementController::class, 'getPendingComments'])
         ->name('comment-management.pending');
-    
-    // Projects Management (TODO: Create ProjectController)
-    /*
-    Route::resource('projects', App\Http\Controllers\Admin\ProjectController::class)
-        ->names([
-            'index' => 'admin.projects.index',
-            'create' => 'admin.projects.create',
-            'store' => 'admin.projects.store',
-            'show' => 'admin.projects.show',
-            'edit' => 'admin.projects.edit',
-            'update' => 'admin.projects.update',
-            'destroy' => 'admin.projects.destroy',
-        ]);
-    */
-    
-    // Services Management (TODO: Create ServiceController for admin)
-    /*
-    Route::resource('services', App\Http\Controllers\Admin\ServiceController::class)
-        ->names([
-            'index' => 'admin.services.index',
-            'create' => 'admin.services.create',
-            'store' => 'admin.services.store',
-            'show' => 'admin.services.show',
-            'edit' => 'admin.services.edit',
-            'update' => 'admin.services.update',
-            'destroy' => 'admin.services.destroy',
-        ]);
-    */
-    
+    Route::get('comment-management/export', [App\Http\Controllers\Admin\CommentManagementController::class, 'export'])
+        ->name('comment-management.export');
+
     // Settings Management
     Route::get('/settings', [App\Http\Controllers\Admin\SettingController::class, 'index'])
         ->name('settings.index');
@@ -273,11 +289,18 @@ Route::middleware(['auth', 'verified', 'auth.enhanced', 'role:admin,editor', 'ad
         ->name('media.index');
     Route::get('/media/list', [App\Http\Controllers\Admin\MediaController::class, 'list'])
         ->name('media.list');
+
+    // Media upload with rate limiting (20 uploads per minute)
     Route::post('/media/upload', [App\Http\Controllers\Admin\MediaController::class, 'upload'])
+        ->middleware('throttle:20,1')
         ->name('media.upload');
+
     Route::delete('/media/delete', [App\Http\Controllers\Admin\MediaController::class, 'destroy'])
         ->name('media.destroy');
+
+    // Bulk delete with rate limiting (10 operations per minute)
     Route::delete('/media/bulk-delete', [App\Http\Controllers\Admin\MediaController::class, 'bulkDelete'])
+        ->middleware('throttle:10,1')
         ->name('media.bulk-delete');
 });
 
@@ -298,6 +321,13 @@ Route::middleware(['auth', 'verified', 'auth.enhanced', 'role:admin', 'admin.sec
     Route::prefix('analytics')->name('analytics.')->group(function () {
         Route::get('/', [App\Http\Controllers\Admin\AnalyticsController::class, 'index'])
             ->name('index');
+        Route::get('/dashboard', function () {
+            return \Inertia\Inertia::render('Admin/Analytics/Dashboard');
+        })->name('dashboard');
+    });
+
+    // Analytics API Routes
+    Route::prefix('api/analytics')->name('api.analytics.')->group(function () {
         Route::get('/users', [App\Http\Controllers\Admin\AnalyticsController::class, 'getUserAnalytics'])
             ->name('users');
         Route::get('/content', [App\Http\Controllers\Admin\AnalyticsController::class, 'getContentAnalytics'])
@@ -308,5 +338,27 @@ Route::middleware(['auth', 'verified', 'auth.enhanced', 'role:admin', 'admin.sec
             ->name('projects');
         Route::get('/system', [App\Http\Controllers\Admin\AnalyticsController::class, 'getSystemAnalytics'])
             ->name('system');
+    });
+
+    // Contact Requests Management
+    Route::prefix('contact-requests')->name('contact-requests.')->group(function () {
+        Route::get('/', [App\Http\Controllers\Admin\ContactRequestController::class, 'index'])
+            ->name('index');
+        Route::get('/{contactRequest}', [App\Http\Controllers\Admin\ContactRequestController::class, 'show'])
+            ->name('show');
+        Route::post('/{contactRequest}/mark-read', [App\Http\Controllers\Admin\ContactRequestController::class, 'markAsRead'])
+            ->name('mark-read');
+        Route::post('/{contactRequest}/mark-responded', [App\Http\Controllers\Admin\ContactRequestController::class, 'markAsResponded'])
+            ->name('mark-responded');
+        Route::post('/{contactRequest}/archive', [App\Http\Controllers\Admin\ContactRequestController::class, 'archive'])
+            ->name('archive');
+        Route::post('/{contactRequest}/notes', [App\Http\Controllers\Admin\ContactRequestController::class, 'addNotes'])
+            ->name('add-notes');
+        Route::get('/{contactRequest}/attachment/{index}', [App\Http\Controllers\Admin\ContactRequestController::class, 'downloadAttachment'])
+            ->name('download-attachment');
+        Route::delete('/{contactRequest}', [App\Http\Controllers\Admin\ContactRequestController::class, 'destroy'])
+            ->name('destroy');
+        Route::post('/bulk-action', [App\Http\Controllers\Admin\ContactRequestController::class, 'bulkAction'])
+            ->name('bulk-action');
     });
 });

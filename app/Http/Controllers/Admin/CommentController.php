@@ -15,6 +15,9 @@ class CommentController extends Controller
      */
     public function index(Request $request)
     {
+        // ✅ Authorize action
+        $this->authorize('viewAny', Comment::class);
+
         $query = Comment::with(['post:id,title,slug', 'user:id,name', 'parent:id']);
 
         // Filter by moderation status when provided.
@@ -80,6 +83,9 @@ class CommentController extends Controller
      */
     public function show(Comment $comment)
     {
+        // ✅ Authorize action
+        $this->authorize('view', $comment);
+
         $comment->load(['post:id,title,slug', 'user:id,name', 'parent:id,content,author_name', 'replies']);
 
         return Inertia::render('Admin/Comments/Show', [
@@ -106,6 +112,9 @@ class CommentController extends Controller
      */
     public function update(Request $request, Comment $comment)
     {
+        // ✅ Authorize action
+        $this->authorize('update', $comment);
+
         $validated = $request->validate([
             'status' => 'required|in:pending,approved,spam',
             'body' => 'sometimes|required|string',
@@ -125,9 +134,12 @@ class CommentController extends Controller
      */
     public function destroy(Comment $comment)
     {
+        // ✅ Authorize action
+        $this->authorize('delete', $comment);
+
         // Delete all replies first to avoid orphaned records.
         $comment->replies()->delete();
-        
+
         $comment->delete();
 
         return response()->json([
@@ -141,6 +153,9 @@ class CommentController extends Controller
      */
     public function approve(Comment $comment)
     {
+        // ✅ Authorize action
+        $this->authorize('moderate', $comment);
+
         $comment->update(['status' => 'approved']);
 
         return response()->json([
@@ -155,6 +170,9 @@ class CommentController extends Controller
      */
     public function markAsSpam(Comment $comment)
     {
+        // ✅ Authorize action
+        $this->authorize('moderate', $comment);
+
         $comment->update(['status' => 'spam']);
 
         return response()->json([
@@ -169,10 +187,19 @@ class CommentController extends Controller
      */
     public function bulkApprove(Request $request)
     {
+        // ✅ Authorize bulk action capability
+        $this->authorize('moderate', Comment::class);
+
         $validated = $request->validate([
-            'comment_ids' => 'required|array',
+            'comment_ids' => 'required|array|max:100', // ✅ Limit to 100
             'comment_ids.*' => 'exists:comments,id',
         ]);
+
+        // ✅ Verify authorization for each comment
+        $comments = Comment::whereIn('id', $validated['comment_ids'])->get();
+        foreach ($comments as $comment) {
+            $this->authorize('moderate', $comment);
+        }
 
         $count = Comment::whereIn('id', $validated['comment_ids'])
             ->update(['status' => 'approved']);
@@ -189,10 +216,19 @@ class CommentController extends Controller
      */
     public function bulkDelete(Request $request)
     {
+        // ✅ Authorize bulk action capability
+        $this->authorize('moderate', Comment::class);
+
         $validated = $request->validate([
-            'comment_ids' => 'required|array',
+            'comment_ids' => 'required|array|max:100', // ✅ Limit to 100
             'comment_ids.*' => 'exists:comments,id',
         ]);
+
+        // ✅ Verify authorization for each comment
+        $comments = Comment::whereIn('id', $validated['comment_ids'])->get();
+        foreach ($comments as $comment) {
+            $this->authorize('delete', $comment);
+        }
 
         $count = Comment::whereIn('id', $validated['comment_ids'])->count();
         Comment::whereIn('id', $validated['comment_ids'])->delete();
@@ -209,10 +245,19 @@ class CommentController extends Controller
      */
     public function bulkMarkAsSpam(Request $request)
     {
+        // ✅ Authorize bulk action capability
+        $this->authorize('moderate', Comment::class);
+
         $validated = $request->validate([
-            'comment_ids' => 'required|array',
+            'comment_ids' => 'required|array|max:100', // ✅ Limit to 100
             'comment_ids.*' => 'exists:comments,id',
         ]);
+
+        // ✅ Verify authorization for each comment
+        $comments = Comment::whereIn('id', $validated['comment_ids'])->get();
+        foreach ($comments as $comment) {
+            $this->authorize('moderate', $comment);
+        }
 
         $count = Comment::whereIn('id', $validated['comment_ids'])
             ->update(['status' => 'spam']);

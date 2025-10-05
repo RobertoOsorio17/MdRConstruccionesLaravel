@@ -7,15 +7,20 @@
     "license": "MIT",
     "require": {
         "php": "^8.2",
+        "barryvdh/laravel-dompdf": "^3.1",
         "inertiajs/inertia-laravel": "^2.0",
+        "intervention/image": "^3.11",
         "jenssegers/agent": "^2.6",
         "laravel/fortify": "^1.31",
         "laravel/framework": "^12.0",
         "laravel/sanctum": "^4.0",
         "laravel/socialite": "^5.23",
         "laravel/tinker": "^2.10.1",
+        "maatwebsite/excel": "^3.1",
         "mews/purifier": "^3.4",
         "pragmarx/google2fa-laravel": "^2.3",
+        "predis/predis": "^3.2",
+        "spatie/laravel-backup": "^9.3",
         "tightenco/ziggy": "^2.0"
     },
     "require-dev": {

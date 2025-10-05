@@ -107,4 +107,14 @@ class PostPolicy
         return $user->hasRole('admin') ||
                $user->hasRole('editor');
     }
+
+    /**
+     * Determine whether the user can perform bulk actions.
+     */
+    public function bulkAction(User $user): bool
+    {
+        // Only admins and editors can perform bulk actions
+        return $user->hasRole('admin') || $user->hasRole('editor');
+    }
 }
+

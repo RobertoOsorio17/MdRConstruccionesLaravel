@@ -7,11 +7,12 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
 
 class Post extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
     protected $fillable = [
         'title',
         'slug',
@@ -21,6 +22,17 @@ class Post extends Model
         'published_at',
         'seo_title',
         'seo_description',
+        'user_id', // Allow setting user_id (will be validated by policies)
+        'status',
+        'featured',
+    ];
+
+    // ✅ Protected fields that should NOT be mass-assignable
+    protected $guarded = [
+        'id',
+        'views_count', // ✅ CRITICAL: Prevent manipulation of view counts
+        'created_at',
+        'updated_at',
     ];
 
     /**

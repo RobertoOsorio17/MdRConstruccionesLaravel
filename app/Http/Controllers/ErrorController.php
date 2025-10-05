@@ -72,7 +72,7 @@ class ErrorController extends Controller
                         'slug' => $category->slug,
                         'description' => $category->description ?? '',
                         'posts_count' => $category->posts_count ?? 0,
-                        'url' => route('blog.category', $category->slug)
+                        'url' => route('blog.index') . '?category=' . $category->slug
                     ];
                 });
         } catch (\Exception $e) {

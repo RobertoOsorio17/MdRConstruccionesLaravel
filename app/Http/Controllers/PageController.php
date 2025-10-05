@@ -71,12 +71,12 @@ class PageController extends Controller
             ->ordered()
             ->get(['id', 'title', 'slug', 'excerpt', 'icon']);
 
-        return Inertia::render('Pages/Contact', [
+        return Inertia::render('Pages/ContactNew', [
             'contactInfo' => $contactInfo,
             'services' => $services,
             'seo' => [
-                'title' => 'Contact - MDR Construcciones',
-                'description' => 'Get in touch with MDR Construcciones for your renovation. Receive a free quote and personalized guidance.',
+                'title' => 'Contacto - MDR Construcciones',
+                'description' => 'Contacta con MDR Construcciones para tu proyecto de reforma o construcción. Presupuesto gratuito en 24-48 horas.',
             ],
         ]);
     }

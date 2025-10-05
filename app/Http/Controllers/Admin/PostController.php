@@ -384,46 +384,79 @@ class PostController extends Controller
      */
     public function bulkAction(Request $request)
     {
+        // ✅ Authorize bulk action capability
+        $this->authorize('bulkAction', Post::class);
+
         $request->validate([
             'action' => 'required|in:delete,publish,draft,feature,unfeature',
-            'posts' => 'required|array',
+            'posts' => 'required|array|max:100', // ✅ Limit to 100 posts
             'posts.*' => 'exists:posts,id'
         ]);
 
         try {
-            $posts = Post::whereIn('id', $request->posts);
-            $count = $posts->count();
+            // ✅ Get posts as collection to verify authorization for each
+            $posts = Post::whereIn('id', $request->posts)->get();
 
-            switch ($request->action) {
-                case 'delete':
-                    $posts->delete();
-                    $message = "{$count} post(s) deleted successfully.";
-                    break;
-                case 'publish':
-                    $posts->update([
-                        'status' => 'published',
-                        'published_at' => now()
-                    ]);
-                    $message = "{$count} post(s) published successfully.";
-                    break;
-                case 'draft':
-                    $posts->update(['status' => 'draft']);
-                    $message = "{$count} post(s) set to draft.";
-                    break;
-                case 'feature':
-                    $posts->update(['featured' => true]);
-                    $message = "{$count} post(s) marked as featured.";
-                    break;
-                case 'unfeature':
-                    $posts->update(['featured' => false]);
-                    $message = "{$count} post(s) unmarked as featured.";
-                    break;
+            // ✅ Verify authorization for each post individually
+            foreach ($posts as $post) {
+                switch ($request->action) {
+                    case 'delete':
+                        $this->authorize('delete', $post);
+                        break;
+                    case 'publish':
+                        $this->authorize('publish', $post);
+                        break;
+                    case 'draft':
+                        $this->authorize('update', $post);
+                        break;
+                    case 'feature':
+                    case 'unfeature':
+                        $this->authorize('feature', $post);
+                        break;
+                }
             }
+
+            // ✅ Execute action only after all authorizations pass
+            $count = 0;
+            foreach ($posts as $post) {
+                switch ($request->action) {
+                    case 'delete':
+                        $post->delete();
+                        $count++;
+                        break;
+                    case 'publish':
+                        $post->update([
+                            'status' => 'published',
+                            'published_at' => now()
+                        ]);
+                        $count++;
+                        break;
+                    case 'draft':
+                        $post->update(['status' => 'draft']);
+                        $count++;
+                        break;
+                    case 'feature':
+                        $post->update(['featured' => true]);
+                        $count++;
+                        break;
+                    case 'unfeature':
+                        $post->update(['featured' => false]);
+                        $count++;
+                        break;
+                }
+            }
+
+            $message = "{$count} post(s) processed successfully.";
 
             return response()->json([
                 'success' => true,
                 'message' => $message
             ]);
+        } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'You do not have permission to perform this action on one or more posts.',
+            ], 403);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
@@ -479,64 +512,32 @@ class PostController extends Controller
     }
 
     /**
-     * Export posts to CSV.
+     * Export posts to Excel/CSV using Laravel Excel.
      */
     public function export(Request $request)
     {
+        $filters = [
+            'search' => $request->get('search'),
+            'status' => $request->get('status'),
+            'category_id' => $request->get('category'),
+            'featured' => $request->get('featured'),
+        ];
+
+        $format = $request->get('format', 'xlsx'); // xlsx, csv
+        $filename = 'posts_' . now()->format('Y-m-d_H-i-s');
+
         try {
-            $query = Post::with(['author:id,name', 'categories:id,name', 'tags:id,name']);
-
-            // Apply filters
-            if ($request->has('status') && !empty($request->status)) {
-                $query->where('status', $request->status);
-            }
-
-            if ($request->has('category') && !empty($request->category)) {
-                $query->whereHas('categories', function ($q) use ($request) {
-                    $q->where('id', $request->category);
-                });
-            }
-
-            if ($request->has('search') && !empty($request->search)) {
-                $query->where(function ($q) use ($request) {
-                    $q->where('title', 'like', '%' . $request->search . '%')
-                      ->orWhere('content', 'like', '%' . $request->search . '%');
-                });
-            }
-
-            $posts = $query->get();
-
-            $csvData = [];
-            $csvData[] = ['ID', 'Title', 'Slug', 'Status', 'Featured', 'Author', 'Categories', 'Tags', 'Views', 'Published At', 'Created At'];
-
-            foreach ($posts as $post) {
-                $csvData[] = [
-                    $post->id,
-                    $post->title,
-                    $post->slug,
-                    $post->status,
-                    $post->featured ? 'Yes' : 'No',
-                    $post->author->name ?? 'N/A',
-                    $post->categories->pluck('name')->join(', '),
-                    $post->tags->pluck('name')->join(', '),
-                    $post->views_count,
-                    $post->published_at ? $post->published_at->format('d/m/Y H:i') : 'N/A',
-                    $post->created_at->format('d/m/Y H:i'),
-                ];
-            }
-
-            $filename = 'posts_export_' . now()->format('Y-m-d_H-i-s') . '.csv';
-
-            return response()->json([
-                'success' => true,
-                'data' => $csvData,
-                'filename' => $filename
-            ]);
+            return \Maatwebsite\Excel\Facades\Excel::download(
+                new \App\Exports\PostsExport($filters),
+                $filename . '.' . $format
+            );
         } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to export posts: ' . $e->getMessage(),
-            ], 500);
+            \Log::error('Post export failed', [
+                'user_id' => auth()->id(),
+                'error' => $e->getMessage(),
+            ]);
+
+            return back()->with('error', 'Error al exportar posts: ' . $e->getMessage());
         }
     }
 }

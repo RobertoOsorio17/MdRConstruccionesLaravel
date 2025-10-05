@@ -16,6 +16,9 @@ class CategoryController extends Controller
      */
     public function index(Request $request)
     {
+        // ✅ Authorize action
+        $this->authorize('viewAny', Category::class);
+
         $query = Category::withCount('posts');
 
         // Apply keyword search across name and description.
@@ -72,6 +75,9 @@ class CategoryController extends Controller
      */
     public function create()
     {
+        // ✅ Authorize action
+        $this->authorize('create', Category::class);
+
         return Inertia::render('Admin/Categories/Create');
     }
 
@@ -80,11 +86,14 @@ class CategoryController extends Controller
      */
     public function store(Request $request)
     {
+        // ✅ Authorize action
+        $this->authorize('create', Category::class);
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'slug' => 'nullable|string|max:255|unique:categories,slug',
             'description' => 'nullable|string|max:500',
-            'color' => 'required|string|regex:/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/',
+            'color' => ['required', 'string', 'regex:/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/'],
             'sort_order' => 'nullable|integer|min:0',
             'is_active' => 'boolean',
         ]);
@@ -118,6 +127,9 @@ class CategoryController extends Controller
      */
     public function show(Category $category)
     {
+        // ✅ Authorize action
+        $this->authorize('view', $category);
+
         $category->loadCount('posts');
 
         return Inertia::render('Admin/Categories/Show', [
@@ -141,6 +153,9 @@ class CategoryController extends Controller
      */
     public function edit(Category $category)
     {
+        // ✅ Authorize action
+        $this->authorize('update', $category);
+
         return Inertia::render('Admin/Categories/Edit', [
             'category' => [
                 'id' => $category->id,
@@ -159,11 +174,14 @@ class CategoryController extends Controller
      */
     public function update(Request $request, Category $category)
     {
+        // ✅ Authorize action
+        $this->authorize('update', $category);
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'slug' => ['nullable', 'string', 'max:255', Rule::unique('categories')->ignore($category->id)],
             'description' => 'nullable|string|max:500',
-            'color' => 'required|string|regex:/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/',
+            'color' => ['required', 'string', 'regex:/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/'],
             'sort_order' => 'nullable|integer|min:0',
             'is_active' => 'boolean',
         ]);
@@ -192,6 +210,9 @@ class CategoryController extends Controller
      */
     public function destroy(Category $category)
     {
+        // ✅ Authorize action
+        $this->authorize('delete', $category);
+
         // Prevent deletion when the category still has related posts.
         if ($category->posts()->count() > 0) {
             return redirect()->route('admin.categories.index')
@@ -209,6 +230,9 @@ class CategoryController extends Controller
      */
     public function toggleStatus(Category $category)
     {
+        // ✅ Authorize action
+        $this->authorize('toggleStatus', $category);
+
         $category->update(['is_active' => !$category->is_active]);
 
         return response()->json([
@@ -223,6 +247,9 @@ class CategoryController extends Controller
      */
     public function updateOrder(Request $request)
     {
+        // ✅ Authorize action
+        $this->authorize('updateOrder', Category::class);
+
         $validated = $request->validate([
             'categories' => 'required|array',
             'categories.*.id' => 'required|exists:categories,id',

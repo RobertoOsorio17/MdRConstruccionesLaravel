@@ -18,8 +18,63 @@ class AuditLogController extends Controller
      */
     public function index(Request $request): Response
     {
-        return Inertia::render('Admin/AuditLogs', [
-            'filters' => $request->only(['search', 'action', 'user_id', 'severity', 'date_from', 'date_to']),
+        $query = AdminAuditLog::with('user:id,name,email')
+            ->orderBy('created_at', 'desc');
+
+        // Apply search filter
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('action', 'like', "%{$search}%")
+                    ->orWhere('description', 'like', "%{$search}%")
+                    ->orWhere('ip_address', 'like', "%{$search}%")
+                    ->orWhereHas('user', function ($userQuery) use ($search) {
+                        $userQuery->where('name', 'like', "%{$search}%")
+                            ->orWhere('email', 'like', "%{$search}%");
+                    });
+            });
+        }
+
+        // Filter by user
+        if ($request->filled('user_id')) {
+            $query->where('user_id', $request->user_id);
+        }
+
+        // Filter by action
+        if ($request->filled('action')) {
+            $query->where('action', $request->action);
+        }
+
+        // Filter by date range
+        if ($request->filled('date_from')) {
+            $query->whereDate('created_at', '>=', $request->date_from);
+        }
+
+        if ($request->filled('date_to')) {
+            $query->whereDate('created_at', '<=', $request->date_to);
+        }
+
+        // Filter by severity
+        if ($request->filled('severity')) {
+            $query->where('severity', $request->severity);
+        }
+
+        // Pagination
+        $perPage = $request->get('per_page', 15);
+        $logs = $query->paginate($perPage)->withQueryString();
+
+        // Calculate statistics
+        $stats = [
+            'total' => AdminAuditLog::count(),
+            'today' => AdminAuditLog::whereDate('created_at', Carbon::today())->count(),
+            'week' => AdminAuditLog::where('created_at', '>=', Carbon::now()->subWeek())->count(),
+            'month' => AdminAuditLog::where('created_at', '>=', Carbon::now()->subMonth())->count(),
+        ];
+
+        return Inertia::render('Admin/AuditLogs/Index', [
+            'logs' => $logs,
+            'filters' => $request->only(['search', 'user_id', 'action', 'date_from', 'date_to', 'severity']),
+            'stats' => $stats,
         ]);
     }
 
@@ -174,17 +229,35 @@ class AuditLogController extends Controller
     }
 
     /**
-     * Stub endpoint for exporting audit logs.
+     * Export audit logs to Excel/CSV format.
      */
-    public function export(Request $request): JsonResponse
+    public function export(Request $request)
     {
-        // This would typically generate a CSV or Excel file.
-        // For now, return a JSON response indicating the feature is available.
-        
-        return response()->json([
-            'message' => 'Export function available',
-            'note' => 'This function will be implemented to generate CSV/Excel files',
-        ]);
+        $filters = [
+            'search' => $request->get('search'),
+            'user_id' => $request->get('user_id'),
+            'action' => $request->get('action'),
+            'date_from' => $request->get('date_from'),
+            'date_to' => $request->get('date_to'),
+            'severity' => $request->get('severity'),
+        ];
+
+        $format = $request->get('format', 'xlsx');
+        $filename = 'audit_logs_' . now()->format('Y-m-d_H-i-s');
+
+        try {
+            return \Maatwebsite\Excel\Facades\Excel::download(
+                new \App\Exports\AuditLogsExport($filters),
+                $filename . '.' . $format
+            );
+        } catch (\Exception $e) {
+            \Log::error('Audit logs export failed', [
+                'user_id' => auth()->id(),
+                'error' => $e->getMessage(),
+            ]);
+
+            return back()->with('error', 'Error al exportar logs: ' . $e->getMessage());
+        }
     }
 
     /**

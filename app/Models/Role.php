@@ -11,14 +11,17 @@ class Role extends Model
         'name',
         'display_name',
         'description',
-        'color',
         'level',
-        'is_active',
+    ];
+
+    protected $guarded = [
+        'id',
+        'created_at',
+        'updated_at',
     ];
 
     protected $casts = [
         'level' => 'integer',
-        'is_active' => 'boolean',
     ];
 
     /**
@@ -27,7 +30,6 @@ class Role extends Model
     public function users(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'role_user')
-                    ->withPivot(['assigned_at', 'assigned_by'])
                     ->withTimestamps();
     }
 
@@ -36,20 +38,12 @@ class Role extends Model
      */
     public function permissions(): BelongsToMany
     {
-        return $this->belongsToMany(Permission::class, 'role_permission')
+        return $this->belongsToMany(Permission::class, 'permission_role')
                     ->withTimestamps();
     }
 
     /**
-     * Scope para roles activos
-     */
-    public function scopeActive($query)
-    {
-        return $query->where('is_active', true);
-    }
-
-    /**
-     * Scope para ordenar por nivel jerÃƒÆ’Ã‚Â¡rquico
+     * Scope para ordenar por nivel jerarquico
      */
     public function scopeByLevel($query)
     {
@@ -57,7 +51,7 @@ class Role extends Model
     }
 
     /**
-     * Verificar si el rol tiene un permiso especÃƒÆ’Ã‚Â­fico
+     * Verificar si el rol tiene un permiso especifico
      */
     public function hasPermission(string $permission): bool
     {
@@ -65,18 +59,60 @@ class Role extends Model
     }
 
     /**
-     * Verificar si el rol tiene permisos en un mÃƒÆ’Ã‚Â³dulo
+     * Verificar si el rol tiene permisos en un grupo
      */
-    public function hasModuleAccess(string $module): bool
+    public function hasGroupAccess(string $group): bool
     {
-        return $this->permissions()->where('module', $module)->exists();
+        return $this->permissions()->where('group', $group)->exists();
     }
 
     /**
-     * Obtener permisos agrupados por mÃƒÆ’Ã‚Â³dulo
+     * Obtener permisos agrupados por grupo
      */
-    public function getPermissionsByModule()
+    public function getPermissionsByGroup()
     {
-        return $this->permissions()->get()->groupBy('module');
+        return $this->permissions()->get()->groupBy('group');
+    }
+
+    /**
+     * Asignar permiso al rol
+     */
+    public function givePermissionTo(Permission|string $permission): void
+    {
+        if (is_string($permission)) {
+            $permission = Permission::where('name', $permission)->firstOrFail();
+        }
+
+        if (!$this->hasPermission($permission->name)) {
+            $this->permissions()->attach($permission->id);
+        }
+    }
+
+    /**
+     * Revocar permiso del rol
+     */
+    public function revokePermissionTo(Permission|string $permission): void
+    {
+        if (is_string($permission)) {
+            $permission = Permission::where('name', $permission)->firstOrFail();
+        }
+
+        $this->permissions()->detach($permission->id);
+    }
+
+    /**
+     * Sincronizar permisos del rol
+     */
+    public function syncPermissions(array $permissions): void
+    {
+        $permissionIds = collect($permissions)->map(function ($permission) {
+            if ($permission instanceof Permission) {
+                return $permission->id;
+            }
+            return Permission::where('name', $permission)->firstOrFail()->id;
+        })->toArray();
+
+        $this->permissions()->sync($permissionIds);
     }
 }
+

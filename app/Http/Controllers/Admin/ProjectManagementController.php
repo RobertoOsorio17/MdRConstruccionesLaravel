@@ -242,73 +242,32 @@ class ProjectManagementController extends Controller
     }
 
     /**
-     * Export projects to CSV.
+     * Export projects to Excel/CSV using Laravel Excel.
      */
     public function export(Request $request)
     {
-        $query = Project::query();
-
-        // Apply same filters as index.
-        if ($request->filled('search')) {
-            $search = $request->search;
-            $query->where(function ($q) use ($search) {
-                $q->where('title', 'like', "%{$search}%")
-                  ->orWhere('summary', 'like', "%{$search}%")
-                  ->orWhere('location', 'like', "%{$search}%");
-            });
-        }
-
-        if ($request->filled('status')) {
-            $query->where('status', $request->status);
-        }
-
-        if ($request->filled('featured')) {
-            $featured = $request->featured === 'true';
-            $query->where('featured', $featured);
-        }
-
-        $projects = $query->orderBy('created_at', 'desc')->get();
-
-        $csvData = [];
-        $csvData[] = [
-            'ID', 'Title', 'Summary', 'Location', 'Budget',
-            'Start Date', 'End Date', 'Status', 'Featured',
-            'Views', 'Created At', 'Updated At'
+        $filters = [
+            'search' => $request->get('search'),
+            'status' => $request->get('status'),
+            'featured' => $request->get('featured'),
         ];
 
-        foreach ($projects as $project) {
-            $csvData[] = [
-                $project->id,
-                $project->title,
-                $project->summary,
-                $project->location ?? 'N/A',
-                $project->budget_estimate ? 'â‚¬' . number_format($project->budget_estimate, 2) : 'N/A',
-                $project->start_date ? $project->start_date->format('Y-m-d') : 'N/A',
-                $project->end_date ? $project->end_date->format('Y-m-d') : 'N/A',
-                $this->getStatusLabel($project->status),
-                $project->featured ? 'Yes' : 'No',
-                $project->views_count,
-                $project->created_at->format('Y-m-d H:i:s'),
-                $project->updated_at->format('Y-m-d H:i:s'),
-            ];
+        $format = $request->get('format', 'xlsx'); // xlsx, csv
+        $filename = 'proyectos_' . now()->format('Y-m-d_H-i-s');
+
+        try {
+            return \Maatwebsite\Excel\Facades\Excel::download(
+                new \App\Exports\ProjectsExport($filters),
+                $filename . '.' . $format
+            );
+        } catch (\Exception $e) {
+            \Log::error('Project export failed', [
+                'user_id' => auth()->id(),
+                'error' => $e->getMessage(),
+            ]);
+
+            return back()->with('error', 'Error al exportar proyectos: ' . $e->getMessage());
         }
-
-        $filename = 'projects_' . now()->format('Y-m-d_H-i-s') . '.csv';
-
-        $headers = [
-            'Content-Type' => 'text/csv',
-            'Content-Disposition' => "attachment; filename=\"{$filename}\"",
-        ];
-
-        $callback = function() use ($csvData) {
-            $file = fopen('php://output', 'w');
-            foreach ($csvData as $row) {
-                fputcsv($file, $row);
-            }
-            fclose($file);
-        };
-
-        return response()->stream($callback, 200, $headers);
     }
 
     /**

@@ -41,12 +41,14 @@ import {
     Article as BlogIcon,
     Info as CompanyIcon,
     ContactMail as ContactIcon,
-    Close as CloseIcon
+    Close as CloseIcon,
+    Search as SearchIcon
 } from '@mui/icons-material';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link, usePage, router } from '@inertiajs/react';
 import { AuthProvider, useAuth } from '@/Components/AuthGuard';
 import PremiumFooter from '@/Components/Layout/PremiumFooter';
+import GlobalSearch from '@/Components/GlobalSearch';
 
 // Componente de menú de usuario
 const UserMenu = () => {
@@ -191,6 +193,35 @@ const UserMenu = () => {
                     Configuración
                 </MenuItem>
 
+                {/* Admin Panel Access - Only for admin/editor roles */}
+                {(auth.user?.role === 'admin' || auth.user?.role === 'editor' ||
+                  auth.user?.roles?.some(r => r.name === 'admin' || r.name === 'editor')) && (
+                    <>
+                        <Divider sx={{ my: 1 }} />
+                        <MenuItem
+                            component={Link}
+                            href="/admin/dashboard"
+                            onClick={handleClose}
+                            sx={{
+                                background: 'linear-gradient(135deg, rgba(11, 107, 203, 0.1), rgba(11, 107, 203, 0.05))',
+                                '&:hover': {
+                                    background: 'linear-gradient(135deg, rgba(11, 107, 203, 0.2), rgba(11, 107, 203, 0.1))',
+                                }
+                            }}
+                        >
+                            <DashboardIcon sx={{ mr: 2, color: 'primary.main' }} />
+                            <Box>
+                                <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                    Panel de Administración
+                                </Typography>
+                                <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                                    Gestionar contenido
+                                </Typography>
+                            </Box>
+                        </MenuItem>
+                    </>
+                )}
+
                 <Divider sx={{ my: 1 }} />
 
                 <MenuItem
@@ -216,8 +247,17 @@ const MainLayoutContent = ({ children }) => {
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
     const [mobileOpen, setMobileOpen] = useState(false);
+    const [searchOpen, setSearchOpen] = useState(false);
     const { url } = usePage();
     const auth = useAuth();
+
+    const handleSearchOpen = () => {
+        setSearchOpen(true);
+    };
+
+    const handleSearchClose = () => {
+        setSearchOpen(false);
+    };
 
     const navigationItems = [
         { title: 'Inicio', href: '/', icon: <HomeIcon /> },
@@ -518,6 +558,18 @@ const MainLayoutContent = ({ children }) => {
                                         {item.title}
                                     </Button>
                                 ))}
+                                <IconButton
+                                    onClick={handleSearchOpen}
+                                    color="inherit"
+                                    sx={{
+                                        ml: 1,
+                                        '&:hover': {
+                                            backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                                        }
+                                    }}
+                                >
+                                    <SearchIcon />
+                                </IconButton>
                                 <Button
                                     variant="contained"
                                     color="warning"
@@ -580,6 +632,9 @@ const MainLayoutContent = ({ children }) => {
 
             {/* Premium Footer */}
             <PremiumFooter />
+
+            {/* Global Search Dialog */}
+            <GlobalSearch open={searchOpen} onClose={handleSearchClose} />
         </Box>
     );
 };

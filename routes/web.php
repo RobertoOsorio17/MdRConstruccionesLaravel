@@ -56,7 +56,7 @@ Route::post('/newsletter/preferences/{token}', [App\Http\Controllers\NewsletterC
     ->middleware('throttle:10,60');
 
 // ✅ Notification Routes (authenticated users only)
-Route::middleware(['auth', 'verified'])->prefix('notifications')->name('notifications.')->group(function () {
+Route::middleware(['auth'])->prefix('notifications')->name('notifications.')->group(function () {
     Route::get('/', [App\Http\Controllers\NotificationController::class, 'index'])->name('index');
     Route::get('/unread-count', [App\Http\Controllers\NotificationController::class, 'getUnreadCount'])->name('unread-count');
     Route::get('/recent', [App\Http\Controllers\NotificationController::class, 'getRecent'])->name('recent');
@@ -117,6 +117,12 @@ Route::get('/posts/{post}/interaction-status', [App\Http\Controllers\UserInterac
 Route::middleware(['throttle:comments-auth', 'check.ip.ban'])->group(function () {
     Route::post('/blog/{post:slug}/comments', [App\Http\Controllers\CommentController::class, 'store'])->name('comments.store');
     Route::get('/blog/{post:slug}/comments', [App\Http\Controllers\CommentController::class, 'getComments'])->name('comments.get');
+});
+
+// ✅ Comment Edit Routes (authenticated users only)
+Route::middleware(['auth'])->group(function () {
+    Route::put('/comments/{comment}', [App\Http\Controllers\CommentController::class, 'update'])->name('comments.update');
+    Route::get('/comments/{comment}/edit-history', [App\Http\Controllers\CommentController::class, 'editHistory'])->name('comments.edit-history');
 });
 
 // ✅ Comment Reports (with dedicated rate limiting)

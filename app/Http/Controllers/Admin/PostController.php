@@ -7,11 +7,15 @@ use App\Models\Post;
 use App\Models\Category;
 use App\Models\Tag;
 use App\Models\User;
+use App\Models\PostRevision;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Storage;
+use Carbon\Carbon;
 
 class PostController extends Controller
 {
@@ -180,8 +184,23 @@ class PostController extends Controller
             $post->tags()->attach($validated['tags']);
         }
 
-        return redirect()->route('admin.posts.index')
-            ->with('success', 'Post created successfully.');
+        // Generate success message with post details
+        $statusText = match($post->status) {
+            'published' => 'publicada',
+            'draft' => 'borrador',
+            'scheduled' => 'programada',
+            default => $post->status,
+        };
+
+        $truncatedTitle = \Illuminate\Support\Str::limit($post->title, 50);
+        $message = sprintf(
+            "La publicación '%s' ha sido creada exitosamente como %s",
+            $truncatedTitle,
+            $statusText
+        );
+
+        session()->flash('success', $message);
+        return redirect()->route('admin.posts.index');
     }
 
     /**
@@ -299,8 +318,15 @@ class PostController extends Controller
         $post->categories()->sync($validated['categories'] ?? []);
         $post->tags()->sync($validated['tags'] ?? []);
 
+        // Generate success message with post details
+        $truncatedTitle = \Illuminate\Support\Str::limit($post->title, 50);
+        $message = sprintf(
+            "La publicaciÃ³n '%s' ha sido actualizada exitosamente",
+            $truncatedTitle
+        );
+
         return redirect()->route('admin.posts.index')
-            ->with('success', 'Post updated successfully.');
+            ->with('success', $message);
     }
 
     /**
@@ -340,20 +366,174 @@ class PostController extends Controller
     {
         $validated = $request->validate([
             'status' => 'required|in:draft,published,scheduled',
-            'published_at' => 'nullable|date'
+            'published_at' => 'nullable|date',
         ]);
 
-        if ($validated['status'] === 'published' && !$post->published_at) {
+        if ($validated['status'] === 'published' && !$post->published_at && empty($validated['published_at'])) {
             $validated['published_at'] = now();
         }
 
-        $post->update($validated);
+        $incomingPublishedAt = $validated['published_at'] ?? null;
+        if ($incomingPublishedAt) {
+            $incomingPublishedAt = Carbon::parse($incomingPublishedAt)->toDateTimeString();
+            $validated['published_at'] = $incomingPublishedAt;
+        }
+
+        $currentPublishedAt = $post->published_at ? $post->published_at->toDateTimeString() : null;
+        if ($post->status === $validated['status'] && $incomingPublishedAt === $currentPublishedAt) {
+            return response()->json([
+                'success' => true,
+                'status' => $post->status,
+                'message' => 'El post ya se encuentra en el estado solicitado.',
+            ]);
+        }
+
+        $revision = null;
+        $attributeChanges = false;
+
+        DB::transaction(function () use (&$revision, &$attributeChanges, $post, $validated) {
+            $revision = $post->captureRevision('Estado anterior al cambio de estado');
+
+            $post->update($validated);
+
+            $attributeChanges = $post->wasChanged(['status', 'published_at']);
+        });
+
+        if (!$attributeChanges && $revision) {
+            $revision->delete();
+        }
+
+        $post->refresh();
 
         return response()->json([
             'success' => true,
             'status' => $post->status,
             'message' => 'Post status updated.',
         ]);
+    }
+
+    public function revisions(Post $post)
+    {
+        $revisions = $post->revisions()
+            ->with('author:id,name')
+            ->latest()
+            ->get()
+            ->map(function (PostRevision $revision) {
+                return [
+                    'id' => $revision->id,
+                    'summary' => $revision->summary,
+                    'author' => $revision->author?->name,
+                    'created_at' => $revision->created_at->toIso8601String(),
+                    'data' => $revision->data,
+                ];
+            });
+
+        return response()->json([
+            'revisions' => $revisions,
+        ]);
+    }
+
+    public function restoreRevision(Request $request, Post $post, PostRevision $revision)
+    {
+        if ($revision->post_id !== $post->id) {
+            abort(404);
+        }
+
+        $revisionData = $revision->data ?? [];
+
+        if (empty($revisionData)) {
+            return redirect()
+                ->route('admin.posts.edit', $post->slug)
+                ->with('error', 'La revisión seleccionada no contiene datos válidos para restaurar.');
+        }
+
+        $syncCategories = collect($revisionData['categories'] ?? [])
+            ->filter()
+            ->map(fn ($id) => (int) $id)
+            ->values()
+            ->all();
+
+        $syncTags = collect($revisionData['tags'] ?? [])
+            ->filter()
+            ->map(fn ($id) => (int) $id)
+            ->values()
+            ->all();
+
+        $payload = array_merge([
+            'title' => $post->title,
+            'slug' => $post->slug,
+            'excerpt' => $post->excerpt,
+            'content' => $post->content,
+            'cover_image' => $post->cover_image,
+            'status' => $post->status,
+            'featured' => $post->featured,
+            'published_at' => $post->published_at ? $post->published_at->toDateTimeString() : null,
+            'seo_title' => $post->seo_title,
+            'seo_description' => $post->seo_description,
+            'user_id' => $post->user_id,
+        ], Arr::only($revisionData, [
+            'title',
+            'slug',
+            'excerpt',
+            'content',
+            'cover_image',
+            'status',
+            'featured',
+            'published_at',
+            'seo_title',
+            'seo_description',
+            'user_id',
+        ]));
+
+        if (!empty($payload['published_at'])) {
+            $payload['published_at'] = Carbon::parse($payload['published_at'])->toDateTimeString();
+        }
+
+        $payload['slug'] = $this->ensureUniqueSlug($payload['slug'] ?? $post->slug, $post->id);
+        $payload['featured'] = (bool) ($payload['featured'] ?? false);
+
+        $existingCategories = $post->categories()->pluck('id')->sort()->values()->all();
+        $existingTags = $post->tags()->pluck('id')->sort()->values()->all();
+
+        $revisionSnapshot = null;
+        $attributeChanges = false;
+        $categoriesChanged = false;
+        $tagsChanged = false;
+
+        DB::transaction(function () use (&$revisionSnapshot, &$attributeChanges, &$categoriesChanged, &$tagsChanged, $post, $payload, $syncCategories, $syncTags, $revision, $existingCategories, $existingTags) {
+            $revisionSnapshot = $post->captureRevision('Estado anterior a restaurar la revisión #' . $revision->id);
+
+            $post->update($payload);
+            $post->categories()->sync($syncCategories);
+            $post->tags()->sync($syncTags);
+
+            $attributeChanges = $post->wasChanged([
+                'title',
+                'slug',
+                'excerpt',
+                'content',
+                'cover_image',
+                'status',
+                'featured',
+                'published_at',
+                'seo_title',
+                'seo_description',
+                'user_id',
+            ]);
+
+            $newCategories = $post->categories()->pluck('id')->sort()->values()->all();
+            $newTags = $post->tags()->pluck('id')->sort()->values()->all();
+
+            $categoriesChanged = $existingCategories !== $newCategories;
+            $tagsChanged = $existingTags !== $newTags;
+        });
+
+        if (!$attributeChanges && !$categoriesChanged && !$tagsChanged && $revisionSnapshot) {
+            $revisionSnapshot->delete();
+        }
+
+        return redirect()->route('admin.posts.edit', $post->slug)
+            ->with('success', 'La revisión seleccionada fue restaurada correctamente.');
     }
 
     /**
@@ -384,20 +564,20 @@ class PostController extends Controller
      */
     public function bulkAction(Request $request)
     {
-        // ✅ Authorize bulk action capability
+        // âœ… Authorize bulk action capability
         $this->authorize('bulkAction', Post::class);
 
         $request->validate([
             'action' => 'required|in:delete,publish,draft,feature,unfeature',
-            'posts' => 'required|array|max:100', // ✅ Limit to 100 posts
+            'posts' => 'required|array|max:100', // âœ… Limit to 100 posts
             'posts.*' => 'exists:posts,id'
         ]);
 
         try {
-            // ✅ Get posts as collection to verify authorization for each
+            // âœ… Get posts as collection to verify authorization for each
             $posts = Post::whereIn('id', $request->posts)->get();
 
-            // ✅ Verify authorization for each post individually
+            // âœ… Verify authorization for each post individually
             foreach ($posts as $post) {
                 switch ($request->action) {
                     case 'delete':
@@ -416,7 +596,7 @@ class PostController extends Controller
                 }
             }
 
-            // ✅ Execute action only after all authorizations pass
+            // âœ… Execute action only after all authorizations pass
             $count = 0;
             foreach ($posts as $post) {
                 switch ($request->action) {
@@ -540,4 +720,22 @@ class PostController extends Controller
             return back()->with('error', 'Error al exportar posts: ' . $e->getMessage());
         }
     }
+    private function ensureUniqueSlug(?string $slug, ?int $ignoreId = null): string
+    {
+        $slug = $slug ?: Str::slug(Str::random(8));
+        $baseSlug = $slug;
+        $counter = 1;
+
+        while (
+            Post::where('slug', $slug)
+                ->when($ignoreId, fn ($query) => $query->where('id', '!=', $ignoreId))
+                ->exists()
+        ) {
+            $slug = $baseSlug . '-' . $counter;
+            $counter++;
+        }
+
+        return $slug;
+    }
+
 }

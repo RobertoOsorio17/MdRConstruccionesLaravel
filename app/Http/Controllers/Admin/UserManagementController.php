@@ -11,6 +11,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Carbon\Carbon;
 
@@ -228,8 +229,8 @@ class UserManagementController extends Controller
             // TODO: Implement welcome email.
         }
 
-        return redirect()->route('admin.users.index')
-            ->with('success', 'Usuario creado exitosamente.');
+        session()->flash('success', 'Usuario creado exitosamente.');
+        return redirect()->route('admin.users.index');
     }
 
     /**
@@ -632,13 +633,15 @@ class UserManagementController extends Controller
         // Security check: prevent administrators from banning themselves.
         if ($user->id === auth()->id()) {
             \Log::warning('Self-ban attempt blocked', ['user_id' => $user->id]);
-            return back()->withErrors(['error' => 'You cannot ban yourself.']);
+            throw ValidationException::withMessages(['error' => 'You cannot ban yourself.']);
         }
 
         // Security check: require administrative privileges for ban actions.
         if (!auth()->user()->hasRole('admin')) {
             \Log::warning('Unauthorized ban attempt', ['user_id' => auth()->id(), 'target_user' => $user->id]);
-            return back()->withErrors(['error' => 'Unauthorized action.']);
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'error' => 'Unauthorized action.'
+            ]);
         }
 
         // Validate the incoming ban request data.
@@ -651,7 +654,7 @@ class UserManagementController extends Controller
 
         if ($validator->fails()) {
             \Log::error('Ban validation failed', ['errors' => $validator->errors()->toArray()]);
-            return back()->withErrors($validator->errors());
+            throw \Illuminate\Validation\ValidationException::withMessages($validator->errors()->toArray());
         }
 
         // Abort if the target user already has an active ban.
@@ -693,14 +696,17 @@ class UserManagementController extends Controller
                 'expires_at' => $expiresAt
             ]);
 
-            return back()->with('success', 'User has been banned successfully.');
+            session()->flash('success', 'User has been banned successfully.');
+            return redirect()->back();
         } catch (\Exception $e) {
             \Log::error('Failed to create ban record', [
                 'user_id' => $user->id,
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
-            return back()->withErrors(['error' => 'Failed to ban user: ' . $e->getMessage()]);
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'error' => 'Failed to ban user: ' . $e->getMessage()
+            ]);
         }
     }
 
@@ -818,7 +824,8 @@ class UserManagementController extends Controller
         // Deactivate the active ban entries instead of deleting their history.
         $user->bans()->active()->update(['is_active' => false]);
 
-        return back()->with('success', 'User has been unbanned successfully.');
+        session()->flash('success', 'User has been unbanned successfully.');
+        return redirect()->back();
     }
 
     /**

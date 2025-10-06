@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
     Snackbar,
     Alert,
@@ -37,8 +37,10 @@ import {
     Build as SystemIcon,
     Delete as DeleteIcon,
     MarkAsUnread as MarkUnreadIcon,
-    MarkEmailRead as MarkReadIcon
+    MarkEmailRead as MarkReadIcon,
+    NotificationsOff as NotificationsOffIcon
 } from '@mui/icons-material';
+import Tooltip from '@mui/material/Tooltip';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const NotificationSystem = ({ 
@@ -46,27 +48,43 @@ const NotificationSystem = ({
     onMarkAsRead, 
     onMarkAllAsRead, 
     onDeleteNotification,
-    maxToastNotifications = 3 
+    maxToastNotifications = 3,
+    dndEnabled = false,
+    onToggleDnd,
+    unreadCountOverride
 }) => {
     const theme = useTheme();
     const [anchorEl, setAnchorEl] = useState(null);
     const [toastNotifications, setToastNotifications] = useState([]);
     const [unreadCount, setUnreadCount] = useState(0);
+    const shownToastIdsRef = useRef(new Set());
 
-    // Calculate unread count
+    // Calculate unread count (allow override from backend)
     useEffect(() => {
-        const unread = notifications.filter(n => !n.read).length;
-        setUnreadCount(unread);
-    }, [notifications]);
+        if (typeof unreadCountOverride === 'number') {
+            setUnreadCount(unreadCountOverride);
+        } else {
+            const unread = notifications.filter(n => !n.read).length;
+            setUnreadCount(unread);
+        }
+    }, [notifications, unreadCountOverride]);
 
-    // Handle new notifications for toast display
+    // Handle new notifications for toast display (show once, respect DND)
     useEffect(() => {
-        const newNotifications = notifications
-            .filter(n => !n.read && n.showAsToast)
+        if (dndEnabled) {
+            setToastNotifications([]);
+            return;
+        }
+
+        const unseen = notifications
+            .filter(n => !n.read && n.showAsToast && !shownToastIdsRef.current.has(n.id))
             .slice(0, maxToastNotifications);
-        
-        setToastNotifications(newNotifications);
-    }, [notifications, maxToastNotifications]);
+
+        if (unseen.length > 0) {
+            unseen.forEach(n => shownToastIdsRef.current.add(n.id));
+            setToastNotifications(unseen);
+        }
+    }, [notifications, maxToastNotifications, dndEnabled]);
 
     const handleMenuOpen = (event) => {
         setAnchorEl(event.currentTarget);
@@ -189,18 +207,25 @@ const NotificationSystem = ({
                         <Typography variant="h6" sx={{ fontWeight: 600 }}>
                             Notificaciones
                         </Typography>
-                        {unreadCount > 0 && (
-                            <Button
-                                size="small"
-                                onClick={handleMarkAllAsRead}
-                                sx={{ 
-                                    textTransform: 'none',
-                                    fontSize: '0.75rem'
-                                }}
-                            >
-                                Marcar todas como leídas
-                            </Button>
-                        )}
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Tooltip title={dndEnabled ? 'No molestar activado' : 'No molestar desactivado'}>
+                                <IconButton size="small" onClick={onToggleDnd}>
+                                    {dndEnabled ? <NotificationsOffIcon fontSize="small" /> : <NotificationsIcon fontSize="small" />}
+                                </IconButton>
+                            </Tooltip>
+                            {unreadCount > 0 && (
+                                <Button
+                                    size="small"
+                                    onClick={handleMarkAllAsRead}
+                                    sx={{ 
+                                        textTransform: 'none',
+                                        fontSize: '0.75rem'
+                                    }}
+                                >
+                                    Marcar todas como leídas
+                                </Button>
+                            )}
+                        </Box>
                     </Box>
                     {unreadCount > 0 && (
                         <Typography variant="body2" color="text.secondary">
@@ -236,6 +261,15 @@ const NotificationSystem = ({
                                             : '3px solid transparent',
                                         '&:hover': {
                                             backgroundColor: alpha(theme.palette.action.hover, 0.1)
+                                        },
+                                        cursor: notification.action_url ? 'pointer' : 'default'
+                                    }}
+                                    onClick={() => {
+                                        if (!notification.read) {
+                                            handleMarkAsRead(notification.id);
+                                        }
+                                        if (notification.action_url) {
+                                            window.location.href = notification.action_url;
                                         }
                                     }}
                                 >

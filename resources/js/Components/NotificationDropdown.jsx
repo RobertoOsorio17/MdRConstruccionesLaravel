@@ -247,26 +247,23 @@ function NotificationMenuItem({ notification, onClick }) {
                 </Avatar>
             </ListItemIcon>
             <ListItemText
-                primary={
-                    <Typography
-                        variant="body2"
-                        fontWeight={notification.is_read ? 400 : 600}
-                        sx={{
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            display: '-webkit-box',
-                            WebkitLineClamp: 2,
-                            WebkitBoxOrient: 'vertical',
-                        }}
-                    >
-                        {notification.data.title}
-                    </Typography>
-                }
-                secondary={
-                    <Typography variant="caption" color="text.secondary">
-                        {notification.created_at_human}
-                    </Typography>
-                }
+                primary={notification.data.title}
+                secondary={notification.created_at_human}
+                primaryTypographyProps={{
+                    variant: 'body2',
+                    fontWeight: notification.is_read ? 400 : 600,
+                    sx: {
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        display: '-webkit-box',
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: 'vertical',
+                    }
+                }}
+                secondaryTypographyProps={{
+                    variant: 'caption',
+                    color: 'text.secondary'
+                }}
             />
             {!notification.is_read && (
                 <Box

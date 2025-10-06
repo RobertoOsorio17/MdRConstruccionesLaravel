@@ -146,8 +146,8 @@ class TestimonialController extends Controller
             'admin_id' => auth()->id(),
         ]);
 
-        return redirect()->route('admin.testimonials.index')
-            ->with('success', 'Testimonial created successfully.');
+        session()->flash('success', 'Testimonial created successfully.');
+        return redirect()->route('admin.testimonials.index');
     }
 
     /**

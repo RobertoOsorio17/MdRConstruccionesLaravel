@@ -14,6 +14,91 @@ use Illuminate\Validation\Rule;
 class NotificationController extends Controller
 {
     /**
+     * Return a lightweight unread count for the authenticated admin.
+     */
+    public function unreadCount(): JsonResponse
+    {
+        $count = AdminNotification::forUser(auth()->id())
+            ->active()
+            ->unread()
+            ->count();
+
+        return response()->json(['count' => $count]);
+    }
+
+    /**
+     * Return the most recent notifications for the authenticated admin.
+     */
+    public function recent(Request $request): JsonResponse
+    {
+        $limit = (int) $request->get('limit', 10);
+
+        $items = AdminNotification::forUser(auth()->id())
+            ->active()
+            ->orderBy('created_at', 'desc')
+            ->limit($limit)
+            ->get();
+
+        $notifications = $items->map(fn ($n) => $this->transform($n));
+
+        return response()->json([
+            'notifications' => $notifications,
+            'unread_count' => AdminNotification::forUser(auth()->id())->active()->unread()->count(),
+            'last_id' => (int) ($items->first()->id ?? 0),
+        ]);
+    }
+
+    /**
+     * Long-poll endpoint that waits for new notifications or unread changes.
+     * The client supplies the last seen notification id.
+     */
+    public function waitUpdates(Request $request): JsonResponse
+    {
+        $userId = auth()->id();
+        $lastId = (int) $request->get('last_id', 0);
+        $timeoutSeconds = min((int) $request->get('timeout', 25), 60);
+        $started = time();
+
+        // Capture initial unread count to detect changes
+        $initialUnread = AdminNotification::forUser($userId)->active()->unread()->count();
+
+        // Basic long-poll loop
+        while (true) {
+            // New notifications since last id
+            $newItems = AdminNotification::forUser($userId)
+                ->active()
+                ->where('id', '>', $lastId)
+                ->orderBy('created_at', 'desc')
+                ->limit(10)
+                ->get();
+
+            $currentUnread = AdminNotification::forUser($userId)->active()->unread()->count();
+
+            if ($newItems->isNotEmpty() || $currentUnread !== $initialUnread) {
+                $transformed = $newItems->map(fn ($n) => $this->transform($n));
+                return response()->json([
+                    'changed' => true,
+                    'new_notifications' => $transformed,
+                    'unread_count' => $currentUnread,
+                    'last_id' => (int) ($newItems->first()->id ?? $lastId),
+                ]);
+            }
+
+            if ((time() - $started) >= $timeoutSeconds) {
+                return response()->json([
+                    'changed' => false,
+                    'new_notifications' => [],
+                    'unread_count' => $currentUnread,
+                    'last_id' => $lastId,
+                ]);
+            }
+
+            // Sleep briefly to reduce load
+            usleep(500000); // 500ms
+        }
+    }
+
+    /**
      * Retrieve paginated notifications for the authenticated administrator.
      *
      * @param Request $request The request containing filter parameters.
@@ -21,7 +106,31 @@ class NotificationController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
+        // If limit parameter is provided, return simple list (for dropdown)
+        if ($request->has('limit')) {
+            $limit = (int) $request->get('limit', 10);
+
+            $notifications = AdminNotification::forUser(auth()->id())
+                ->active()
+                ->orderBy('created_at', 'desc')
+                ->limit($limit)
+                ->get();
+
+            $unreadCount = AdminNotification::forUser(auth()->id())
+                ->active()
+                ->unread()
+                ->count();
+
+            return response()->json([
+                'success' => true,
+                'notifications' => $notifications,
+                'unread_count' => $unreadCount,
+            ]);
+        }
+
+        // Otherwise, return paginated list
         $query = AdminNotification::forUser(auth()->id())
+            ->active()
             ->orderBy('priority', 'desc')
             ->orderBy('created_at', 'desc');
 
@@ -43,6 +152,7 @@ class NotificationController extends Controller
         $notifications = $query->paginate($request->get('per_page', 15));
 
         return response()->json([
+            'success' => true,
             'notifications' => $notifications->items(),
             'pagination' => [
                 'current_page' => $notifications->currentPage(),
@@ -162,7 +272,7 @@ class NotificationController extends Controller
 
         return response()->json([
             'message' => 'Notification created successfully.',
-            'notification' => $notification,
+            'notification' => $this->transform($notification),
         ], 201);
     }
 
@@ -207,5 +317,25 @@ class NotificationController extends Controller
             'message' => "{$count} expired notification(s) removed.",
             'count' => $count,
         ]);
+    }
+
+    /**
+     * Normalize notification structure for the admin UI.
+     */
+    protected function transform(AdminNotification $n): array
+    {
+        return [
+            'id' => (int) $n->id,
+            'type' => $n->type,
+            'title' => $n->title,
+            'message' => $n->message,
+            'timestamp' => optional($n->created_at)->toIso8601String(),
+            'read' => (bool) $n->read_at,
+            'is_dismissible' => (bool) $n->is_dismissible,
+            'action_url' => $n->action_url,
+            'action_text' => $n->action_text,
+            'priority' => $n->priority,
+            'is_system' => (bool) $n->is_system,
+        ];
     }
 }

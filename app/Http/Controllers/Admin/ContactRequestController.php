@@ -4,8 +4,12 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\ContactRequest;
+use App\Models\ContactRequestAttachment;
+use App\Models\AdminAuditLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\RateLimiter;
 use Inertia\Inertia;
 
 class ContactRequestController extends Controller
@@ -15,12 +19,11 @@ class ContactRequestController extends Controller
      */
     public function index(Request $request)
     {
-        // ✅ Authorize
-        if (!auth()->user()->hasPermission('contact.view')) {
-            abort(403, 'Unauthorized action.');
-        }
+        // ✅ Authorize using Policy
+        Gate::authorize('viewAny', ContactRequest::class);
 
-        $query = ContactRequest::with('respondedBy:id,name');
+        $query = ContactRequest::with('respondedBy:id,name')
+            ->withCount('attachments');
 
         // Search
         if ($request->filled('search')) {
@@ -73,20 +76,41 @@ class ContactRequestController extends Controller
      */
     public function show(ContactRequest $contactRequest)
     {
-        // ✅ Authorize
-        if (!auth()->user()->hasPermission('contact.view')) {
-            abort(403, 'Unauthorized action.');
-        }
+        // ✅ Authorize using Policy
+        Gate::authorize('view', $contactRequest);
 
-        $contactRequest->load('respondedBy:id,name');
+        $contactRequest->load([
+            'respondedBy:id,name',
+            'attachments' => function ($query) {
+                $query->orderBy('created_at', 'asc');
+            }
+        ]);
 
         // Auto-mark as read if it's new
         if ($contactRequest->status === 'new') {
             $contactRequest->markAsRead();
         }
 
+        // Format attachments for frontend (handle null case)
+        $formattedAttachments = $contactRequest->attachments
+            ? $contactRequest->attachments->map(function ($attachment) {
+                return [
+                    'id' => $attachment->id,
+                    'original_filename' => $attachment->original_filename,
+                    'mime_type' => $attachment->mime_type,
+                    'file_size' => $attachment->file_size,
+                    'formatted_size' => $attachment->formatted_size,
+                    'extension' => $attachment->extension,
+                    'downloaded_count' => $attachment->downloaded_count,
+                    'last_downloaded_at' => $attachment->last_downloaded_at,
+                    'created_at' => $attachment->created_at,
+                ];
+            })
+            : collect([]);
+
         return Inertia::render('Admin/ContactRequests/Show', [
             'request' => $contactRequest,
+            'attachments' => $formattedAttachments,
         ]);
     }
 
@@ -95,10 +119,8 @@ class ContactRequestController extends Controller
      */
     public function markAsRead(ContactRequest $contactRequest)
     {
-        // ✅ Authorize
-        if (!auth()->user()->hasPermission('contact.manage')) {
-            abort(403, 'Unauthorized action.');
-        }
+        // ✅ Authorize using Policy
+        Gate::authorize('markAsRead', $contactRequest);
 
         $contactRequest->markAsRead();
 
@@ -110,10 +132,8 @@ class ContactRequestController extends Controller
      */
     public function markAsResponded(ContactRequest $contactRequest)
     {
-        // ✅ Authorize
-        if (!auth()->user()->hasPermission('contact.manage')) {
-            abort(403, 'Unauthorized action.');
-        }
+        // ✅ Authorize using Policy
+        Gate::authorize('markAsResponded', $contactRequest);
 
         $contactRequest->markAsResponded(auth()->id());
 
@@ -125,10 +145,8 @@ class ContactRequestController extends Controller
      */
     public function archive(ContactRequest $contactRequest)
     {
-        // ✅ Authorize
-        if (!auth()->user()->hasPermission('contact.manage')) {
-            abort(403, 'Unauthorized action.');
-        }
+        // ✅ Authorize using Policy
+        Gate::authorize('archive', $contactRequest);
 
         $contactRequest->archive();
 
@@ -140,10 +158,8 @@ class ContactRequestController extends Controller
      */
     public function addNotes(Request $request, ContactRequest $contactRequest)
     {
-        // ✅ Authorize
-        if (!auth()->user()->hasPermission('contact.manage')) {
-            abort(403, 'Unauthorized action.');
-        }
+        // ✅ Authorize using Policy
+        Gate::authorize('addNotes', $contactRequest);
 
         // ✅ Validate
         $validated = $request->validate([
@@ -163,14 +179,41 @@ class ContactRequestController extends Controller
      */
     public function destroy(ContactRequest $contactRequest)
     {
-        // ✅ Authorize
-        if (!auth()->user()->hasPermission('contact.delete')) {
-            abort(403, 'Unauthorized action.');
+        // ✅ Authorize using Policy
+        Gate::authorize('delete', $contactRequest);
+
+        // Count attachments before deletion
+        $attachmentCount = $contactRequest->attachments()->count();
+
+        // ✅ Delete encrypted attachments (uses delete() method in ContactRequestAttachment model)
+        foreach ($contactRequest->attachments as $attachment) {
+            $attachment->delete(); // This deletes both DB record and encrypted file
         }
 
+        // ✅ Log deletion in audit logs
+        AdminAuditLog::create([
+            'user_id' => auth()->id(),
+            'action' => 'delete',
+            'model_type' => ContactRequest::class,
+            'model_id' => $contactRequest->id,
+            'description' => "Eliminó solicitud de contacto #{$contactRequest->id} de {$contactRequest->name} ({$contactRequest->email})" .
+                            ($attachmentCount > 0 ? " con {$attachmentCount} archivo(s) adjunto(s)" : ""),
+            'ip_address' => request()->ip(),
+            'user_agent' => request()->userAgent(),
+            'severity' => 'high',
+            'changes' => [
+                'contact_request_id' => $contactRequest->id,
+                'name' => $contactRequest->name,
+                'email' => $contactRequest->email,
+                'attachments_deleted' => $attachmentCount,
+            ],
+        ]);
+
+        // ✅ Delete contact request
         $contactRequest->delete();
 
-        return back()->with('success', 'Solicitud eliminada exitosamente.');
+        return redirect()->route('admin.contact-requests.index')
+            ->with('success', 'Solicitud eliminada correctamente.');
     }
 
     /**
@@ -178,10 +221,8 @@ class ContactRequestController extends Controller
      */
     public function bulkAction(Request $request)
     {
-        // ✅ Authorize
-        if (!auth()->user()->hasPermission('contact.manage')) {
-            abort(403, 'Unauthorized action.');
-        }
+        // ✅ Authorize using Policy
+        Gate::authorize('bulkAction', ContactRequest::class);
 
         // ✅ Validate
         $validated = $request->validate([
@@ -230,31 +271,79 @@ class ContactRequestController extends Controller
     }
 
     /**
-     * Download attachment from contact request
+     * Download an encrypted attachment securely.
+     *
+     * @param ContactRequest $contactRequest
+     * @param ContactRequestAttachment $attachment
+     * @return \Symfony\Component\HttpFoundation\StreamedResponse
      */
-    public function downloadAttachment(ContactRequest $contactRequest, int $index)
+    public function downloadAttachment(ContactRequest $contactRequest, ContactRequestAttachment $attachment)
     {
-        // ✅ Authorize
-        if (!auth()->user()->hasPermission('contact.view')) {
-            abort(403, 'Unauthorized action.');
+        // ✅ Authorize using Policy
+        Gate::authorize('view', $contactRequest);
+
+        // ✅ Verify attachment belongs to this contact request
+        if ($attachment->contact_request_id !== $contactRequest->id) {
+            abort(403, 'Este archivo no pertenece a esta solicitud.');
         }
 
-        // Check if attachments exist
-        if (!$contactRequest->attachments || !isset($contactRequest->attachments[$index])) {
-            abort(404, 'Archivo no encontrado.');
+        // ✅ Rate limiting: 20 downloads per minute per user
+        $key = 'attachment-download:' . auth()->id();
+
+        if (RateLimiter::tooManyAttempts($key, 20)) {
+            $seconds = RateLimiter::availableIn($key);
+            abort(429, "Demasiadas descargas. Por favor espera {$seconds} segundos.");
         }
 
-        $attachment = $contactRequest->attachments[$index];
+        RateLimiter::hit($key, 60);
 
-        // Verify file exists in storage
-        if (!Storage::disk('private')->exists($attachment['path'])) {
-            abort(404, 'Archivo no encontrado en el almacenamiento.');
+        // ✅ Decrypt file contents
+        $decryptedContents = $attachment->getDecryptedContents();
+
+        if ($decryptedContents === false) {
+            \Log::error('Failed to decrypt attachment for download', [
+                'attachment_id' => $attachment->id,
+                'contact_request_id' => $contactRequest->id,
+                'user_id' => auth()->id(),
+            ]);
+            abort(500, 'Error al descargar el archivo. Por favor contacta al administrador.');
         }
 
-        // Return file download response
-        return Storage::disk('private')->download(
-            $attachment['path'],
-            $attachment['original_name']
+        // ✅ Increment download counter
+        $attachment->incrementDownloadCount();
+
+        // ✅ Log download in audit logs
+        AdminAuditLog::create([
+            'user_id' => auth()->id(),
+            'action' => 'download',
+            'model_type' => ContactRequestAttachment::class,
+            'model_id' => $attachment->id,
+            'description' => "Descargó archivo adjunto: {$attachment->original_filename} de solicitud #{$contactRequest->id}",
+            'ip_address' => request()->ip(),
+            'user_agent' => request()->userAgent(),
+            'severity' => 'low',
+            'changes' => [
+                'contact_request_id' => $contactRequest->id,
+                'attachment_id' => $attachment->id,
+                'filename' => $attachment->original_filename,
+                'download_count' => $attachment->downloaded_count,
+            ],
+        ]);
+
+        // ✅ Return file as download (decrypted in memory, not saved to disk)
+        return response()->streamDownload(
+            function () use ($decryptedContents) {
+                echo $decryptedContents;
+            },
+            $attachment->original_filename,
+            [
+                'Content-Type' => $attachment->mime_type,
+                'Content-Disposition' => 'attachment; filename="' . $attachment->original_filename . '"',
+                'Content-Length' => strlen($decryptedContents),
+                'Cache-Control' => 'no-cache, no-store, must-revalidate',
+                'Pragma' => 'no-cache',
+                'Expires' => '0',
+            ]
         );
     }
 }

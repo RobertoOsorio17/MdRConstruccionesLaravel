@@ -3,10 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Models\Comment;
+use App\Models\CommentEdit;
 use App\Models\Post;
+use App\Http\Requests\UpdateCommentRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -399,6 +402,161 @@ class CommentController extends Controller
         return response()->json([
             'comments' => $formattedComments,
             'count' => $formattedComments->count()
+        ]);
+    }
+
+    /**
+     * Update a comment's content (authenticated users only).
+     *
+     * @param UpdateCommentRequest $request The validated request containing updated content.
+     * @param Comment $comment The comment instance to update.
+     * @return \Illuminate\Http\JsonResponse JSON response indicating the outcome.
+     */
+    public function update(UpdateCommentRequest $request, Comment $comment)
+    {
+        // Authorize the action using policy
+        $this->authorize('update', $comment);
+
+        // Check if comment can be edited (24-hour window)
+        if (!$comment->canBeEditedBy($request->user())) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Los comentarios solo pueden editarse dentro de las 24 horas posteriores a su publicación.',
+                'error' => 'EDIT_WINDOW_EXPIRED'
+            ], 403);
+        }
+
+        // Check edit limit (maximum 5 edits for regular users)
+        if ($comment->hasReachedEditLimit($request->user())) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Has alcanzado el límite máximo de 5 ediciones para este comentario.',
+                'error' => 'EDIT_LIMIT_REACHED'
+            ], 403);
+        }
+
+        // Store original content for history
+        $originalContent = $comment->body;
+        $newContent = $this->sanitizeCommentBody($request->body);
+
+        // Check if content actually changed
+        if ($originalContent === $newContent) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No se detectaron cambios en el contenido del comentario.',
+                'error' => 'NO_CHANGES'
+            ], 400);
+        }
+
+        try {
+            DB::transaction(function () use ($comment, $originalContent, $newContent, $request) {
+                // Create edit history record
+                $comment->captureEdit(
+                    $originalContent,
+                    $newContent,
+                    $request->user(),
+                    $request->edit_reason
+                );
+
+                // Update comment
+                $comment->update([
+                    'body' => $newContent,
+                    'edited_at' => now(),
+                    'edit_reason' => $request->edit_reason,
+                    'edit_count' => $comment->edit_count + 1,
+                ]);
+            });
+
+            // Reload comment with relationships
+            $comment->refresh();
+            $comment->load(['user:id,name,avatar,is_verified']);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Comentario actualizado exitosamente.',
+                'comment' => [
+                    'id' => $comment->id,
+                    'body' => $comment->body,
+                    'edited_at' => $comment->edited_at?->format('d/m/Y H:i'),
+                    'edited_at_human' => $comment->edited_at_human,
+                    'edit_reason' => $comment->edit_reason,
+                    'edit_count' => $comment->edit_count,
+                    'is_edited' => $comment->isEdited(),
+                    'author_name' => $comment->user ? $comment->user->name : $comment->author_name,
+                    'user' => $comment->user,
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Error updating comment', [
+                'comment_id' => $comment->id,
+                'user_id' => Auth::id(),
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al actualizar el comentario. Por favor, inténtalo de nuevo.',
+                'error' => 'UPDATE_FAILED'
+            ], 500);
+        }
+    }
+
+    /**
+     * Get edit history for a comment.
+     *
+     * @param Comment $comment The comment whose history is being retrieved.
+     * @return \Illuminate\Http\JsonResponse JSON response containing edit history.
+     */
+    public function editHistory(Comment $comment)
+    {
+        // Only the comment author or admins can view edit history
+        if (!Auth::check()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Debes iniciar sesión para ver el historial de ediciones.',
+                'error' => 'UNAUTHORIZED'
+            ], 401);
+        }
+
+        $user = Auth::user();
+        $canView = $user->id === $comment->user_id ||
+                   $user->hasRole('admin') ||
+                   $user->hasRole('moderator');
+
+        if (!$canView) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No tienes permiso para ver el historial de ediciones de este comentario.',
+                'error' => 'FORBIDDEN'
+            ], 403);
+        }
+
+        // Get edit history with user information
+        $history = $comment->edits()
+            ->with('user:id,name,avatar')
+            ->orderBy('edited_at', 'desc')
+            ->get()
+            ->map(function ($edit) {
+                return [
+                    'id' => $edit->id,
+                    'original_content' => $edit->original_content,
+                    'new_content' => $edit->new_content,
+                    'edit_reason' => $edit->edit_reason,
+                    'edited_at' => $edit->edited_at->format('d/m/Y H:i'),
+                    'edited_at_human' => $edit->edited_at->locale('es')->diffForHumans(),
+                    'editor' => [
+                        'id' => $edit->user->id,
+                        'name' => $edit->user->name,
+                        'avatar' => $edit->user->avatar,
+                    ],
+                ];
+            });
+
+        return response()->json([
+            'success' => true,
+            'history' => $history,
+            'total_edits' => $history->count(),
         ]);
     }
 

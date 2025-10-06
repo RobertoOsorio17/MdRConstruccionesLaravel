@@ -177,24 +177,16 @@ class AdminNotification extends Model
     }
 
     /**
-     * Create a new notification
-     */
-    public static function create(array $attributes = []): static
-    {
-        // Set default expires_at if not provided
-        if (!isset($attributes['expires_at']) && !isset($attributes['is_system'])) {
-            $attributes['expires_at'] = Carbon::now()->addDays(30);
-        }
-
-        return parent::create($attributes);
-    }
-
-    /**
      * Create system notification
      */
     public static function createSystem(array $attributes): static
     {
-        return static::create(array_merge($attributes, [
+        // Set default expires_at if not provided
+        if (!isset($attributes['expires_at'])) {
+            $attributes['expires_at'] = Carbon::now()->addDays(30);
+        }
+
+        return parent::create(array_merge($attributes, [
             'user_id' => null,
             'is_system' => true,
         ]));
@@ -205,7 +197,12 @@ class AdminNotification extends Model
      */
     public static function createForUser(int $userId, array $attributes): static
     {
-        return static::create(array_merge($attributes, [
+        // Set default expires_at if not provided
+        if (!isset($attributes['expires_at'])) {
+            $attributes['expires_at'] = Carbon::now()->addDays(30);
+        }
+
+        return parent::create(array_merge($attributes, [
             'user_id' => $userId,
             'is_system' => false,
         ]));

@@ -21,6 +21,9 @@ class Comment extends Model
         'status', // Allow setting (will be validated by policies)
         'ip_address',
         'user_agent',
+        'edited_at',
+        'edit_reason',
+        'edit_count',
     ];
 
     // ✅ Protected fields that should NOT be mass-assignable
@@ -46,6 +49,8 @@ class Comment extends Model
         'post_id' => 'integer',
         'user_id' => 'integer',
         'parent_id' => 'integer',
+        'edited_at' => 'datetime',
+        'edit_count' => 'integer',
     ];
 
     /**
@@ -241,6 +246,114 @@ class Comment extends Model
         return $this->update([
             'ip_address' => $ipAddress,
             'user_agent' => $userAgent,
+        ]);
+    }
+
+    /**
+     * Get the edit history for this comment.
+     */
+    public function edits(): HasMany
+    {
+        return $this->hasMany(CommentEdit::class);
+    }
+
+    /**
+     * Check if the comment can be edited by the given user.
+     * Users can edit their own comments within 24 hours.
+     * Admins can always edit.
+     *
+     * @param User $user The user attempting to edit
+     * @return bool
+     */
+    public function canBeEditedBy(User $user): bool
+    {
+        // Admins can always edit
+        if ($user->hasRole('admin') || $user->hasRole('moderator')) {
+            return true;
+        }
+
+        // User must be the author
+        if ($user->id !== $this->user_id) {
+            return false;
+        }
+
+        // Must be within 24 hours of creation
+        return $this->created_at->diffInHours(now()) < 24;
+    }
+
+    /**
+     * Check if the comment has been edited.
+     *
+     * @return bool
+     */
+    public function isEdited(): bool
+    {
+        return $this->edited_at !== null;
+    }
+
+    /**
+     * Get formatted edit timestamp.
+     *
+     * @return string|null
+     */
+    public function getEditedAtFormattedAttribute(): ?string
+    {
+        if (!$this->edited_at) {
+            return null;
+        }
+
+        return $this->edited_at->locale('es')->isoFormat('D [de] MMMM [de] YYYY, HH:mm');
+    }
+
+    /**
+     * Get human-readable time since last edit.
+     *
+     * @return string|null
+     */
+    public function getEditedAtHumanAttribute(): ?string
+    {
+        if (!$this->edited_at) {
+            return null;
+        }
+
+        return $this->edited_at->locale('es')->diffForHumans();
+    }
+
+    /**
+     * Check if the user has reached the edit limit.
+     * Regular users: 5 edits maximum
+     * Admins: unlimited
+     *
+     * @param User $user
+     * @return bool
+     */
+    public function hasReachedEditLimit(User $user): bool
+    {
+        // Admins have no limit
+        if ($user->hasRole('admin') || $user->hasRole('moderator')) {
+            return false;
+        }
+
+        // Regular users limited to 5 edits
+        return $this->edit_count >= 5;
+    }
+
+    /**
+     * Capture the current state before editing.
+     * Similar to Post::captureRevision()
+     *
+     * @param string|null $reason
+     * @return CommentEdit
+     */
+    public function captureEdit(string $originalContent, string $newContent, User $user, ?string $reason = null): CommentEdit
+    {
+        return CommentEdit::create([
+            'comment_id' => $this->id,
+            'user_id' => $user->id,
+            'original_content' => $originalContent,
+            'new_content' => $newContent,
+            'edit_reason' => $reason,
+            'edited_at' => now(),
         ]);
     }
 }

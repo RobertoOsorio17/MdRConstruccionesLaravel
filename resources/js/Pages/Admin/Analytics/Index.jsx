@@ -1,6 +1,6 @@
 import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { Head } from '@inertiajs/react';
-import AdminLayout from '@/Layouts/AdminLayout';
+import AdminLayoutNew from '@/Layouts/AdminLayoutNew';
 import {
     Box,
     Typography,
@@ -18,7 +18,11 @@ import {
     CircularProgress,
     Alert,
     useTheme,
-    alpha
+    alpha,
+    Select,
+    MenuItem,
+    FormControl,
+    InputLabel,
 } from '@mui/material';
 import {
     Analytics as AnalyticsIcon,
@@ -37,6 +41,7 @@ import { LazySectionWrapper, LazyDataWrapper } from '@/Components/Admin/LazyWrap
 import { DashboardStatsSkeleton, ChartSkeleton, TableSkeleton } from '@/Components/Admin/SkeletonLoaders';
 import cacheManager, { useCachedData } from '@/Utils/CacheManager';
 import { usePerformanceMonitor } from '@/Hooks/useLazyLoading';
+import { motion } from 'framer-motion';
 
 const AnalyticsIndex = ({ title, description }) => {
     const theme = useTheme();
@@ -50,6 +55,52 @@ const AnalyticsIndex = ({ title, description }) => {
         projects: null,
         system: null
     });
+
+    // Glassmorphism styles
+    const glassStyle = {
+        background: 'rgba(255, 255, 255, 0.25)',
+        backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)',
+        border: '1px solid rgba(255, 255, 255, 0.18)',
+        boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.37)',
+        borderRadius: '16px',
+    };
+
+    const glassStatCard = {
+        background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0.1) 100%)',
+        backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)',
+        border: '1px solid rgba(255, 255, 255, 0.18)',
+        boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.37)',
+        borderRadius: '16px',
+        transition: 'all 0.3s ease',
+        '&:hover': {
+            transform: 'translateY(-4px)',
+            boxShadow: '0 12px 40px 0 rgba(31, 38, 135, 0.45)',
+        },
+    };
+
+    // Animation variants
+    const containerVariants = {
+        hidden: { opacity: 0 },
+        visible: {
+            opacity: 1,
+            transition: {
+                staggerChildren: 0.1,
+            },
+        },
+    };
+
+    const itemVariants = {
+        hidden: { opacity: 0, y: 20 },
+        visible: {
+            opacity: 1,
+            y: 0,
+            transition: {
+                duration: 0.5,
+            },
+        },
+    };
 
     // Performance monitoring
     const { startMeasure, endMeasure, duration } = usePerformanceMonitor('analytics-page');
@@ -175,48 +226,32 @@ const AnalyticsIndex = ({ title, description }) => {
                     {overviewData.map((item, index) => (
                     <Grid item xs={12} sm={6} md={3} key={index}>
                         <Card
+                            component={motion.div}
+                            variants={itemVariants}
                             sx={{
-                                background: `linear-gradient(135deg, ${alpha(item.color, 0.1)} 0%, ${alpha(item.color, 0.05)} 100%)`,
-                                backdropFilter: 'blur(20px)',
-                                border: `1px solid ${alpha(item.color, 0.2)}`,
-                                borderRadius: 3,
-                                transition: 'all 0.3s ease',
-                                '&:hover': {
-                                    transform: 'translateY(-4px)',
-                                    boxShadow: `0 8px 32px ${alpha(item.color, 0.3)}`
-                                }
+                                ...glassStatCard,
+                                background: `linear-gradient(135deg, ${alpha(item.color, 0.2)} 0%, ${alpha(item.color, 0.05)} 100%)`,
                             }}
                         >
-                            <CardContent>
-                                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                    <Box>
-                                        <Typography variant="h4" sx={{ fontWeight: 'bold', color: item.color }}>
-                                            {item.value}
-                                        </Typography>
-                                        <Typography variant="body2" color="text.secondary">
-                                            {item.title}
-                                        </Typography>
-                                        <Chip
-                                            label={item.change}
-                                            size="small"
-                                            sx={{
-                                                mt: 1,
-                                                backgroundColor: alpha(theme.palette.success.main, 0.1),
-                                                color: theme.palette.success.main
-                                            }}
-                                        />
-                                    </Box>
-                                    <Avatar
-                                        sx={{
-                                            backgroundColor: alpha(item.color, 0.1),
-                                            color: item.color,
-                                            width: 56,
-                                            height: 56
-                                        }}
-                                    >
-                                        {item.icon}
-                                    </Avatar>
+                            <CardContent sx={{ textAlign: 'center', py: 3 }}>
+                                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 2, color: item.color }}>
+                                    {React.cloneElement(item.icon, { sx: { fontSize: 40 } })}
                                 </Box>
+                                <Typography variant="h3" fontWeight="bold" sx={{ color: '#2D3748', mb: 1 }}>
+                                    {item.value}
+                                </Typography>
+                                <Typography variant="body1" sx={{ color: '#718096', fontWeight: 500, mb: 1 }}>
+                                    {item.title}
+                                </Typography>
+                                <Chip
+                                    label={item.change}
+                                    size="small"
+                                    sx={{
+                                        mt: 1,
+                                        backgroundColor: alpha(theme.palette.success.main, 0.1),
+                                        color: theme.palette.success.main
+                                    }}
+                                />
                             </CardContent>
                         </Card>
                     </Grid>
@@ -375,40 +410,67 @@ const AnalyticsIndex = ({ title, description }) => {
     };
 
     return (
-        <AdminLayout>
+        <AdminLayoutNew title="Analytics & Reporting">
             <Head title={title} />
-            
-            <Box sx={{ p: 3 }}>
+
+            <Box
+                component={motion.div}
+                variants={containerVariants}
+                initial="hidden"
+                animate="visible"
+            >
                 {/* Header */}
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
-                    <Box>
-                        <Typography variant="h4" sx={{ fontWeight: 'bold', mb: 1 }}>
-                            {title}
-                        </Typography>
-                        <Typography variant="body1" color="text.secondary">
-                            {description}
-                        </Typography>
-                    </Box>
-                    <Box sx={{ display: 'flex', gap: 2 }}>
-                        <ButtonGroup variant="outlined">
-                            {timeRanges.map((range) => (
-                                <Button
-                                    key={range.value}
-                                    variant={timeRange === range.value ? 'contained' : 'outlined'}
-                                    onClick={() => handleTimeRangeChange(range.value)}
+                <Box sx={{ mb: 4 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
+                        <Box>
+                            <Typography variant="h4" fontWeight="bold" gutterBottom>
+                                {title}
+                            </Typography>
+                            <Typography variant="body1" color="text.secondary">
+                                {description}
+                            </Typography>
+                        </Box>
+                        <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                            <FormControl sx={{ minWidth: 150 }}>
+                                <InputLabel>Período</InputLabel>
+                                <Select
+                                    value={timeRange}
+                                    onChange={(e) => handleTimeRangeChange(e.target.value)}
+                                    label="Período"
+                                    sx={{
+                                        background: 'rgba(255, 255, 255, 0.15)',
+                                        backdropFilter: 'blur(10px)',
+                                        borderRadius: '12px',
+                                    }}
                                 >
-                                    {range.label}
-                                </Button>
-                            ))}
-                        </ButtonGroup>
-                        <Button
-                            variant="outlined"
-                            startIcon={<Refresh />}
-                            onClick={loadAnalyticsData}
-                            disabled={loading}
-                        >
-                            Actualizar
-                        </Button>
+                                    {timeRanges.map((range) => (
+                                        <MenuItem key={range.value} value={range.value}>
+                                            {range.label}
+                                        </MenuItem>
+                                    ))}
+                                </Select>
+                            </FormControl>
+                            <Button
+                                variant="contained"
+                                startIcon={<Refresh />}
+                                onClick={loadAnalyticsData}
+                                disabled={loading}
+                                sx={{
+                                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                                    borderRadius: '12px',
+                                    px: 3,
+                                    fontWeight: 600,
+                                    textTransform: 'none',
+                                    boxShadow: '0 8px 24px rgba(102, 126, 234, 0.4)',
+                                    '&:hover': {
+                                        transform: 'translateY(-2px)',
+                                        boxShadow: '0 12px 32px rgba(102, 126, 234, 0.5)',
+                                    },
+                                }}
+                            >
+                                Actualizar
+                            </Button>
+                        </Box>
                     </Box>
                 </Box>
 
@@ -416,13 +478,33 @@ const AnalyticsIndex = ({ title, description }) => {
                 {renderOverviewCards()}
 
                 {/* Analytics Tabs */}
-                <Paper sx={{ borderRadius: 3, backdropFilter: 'blur(20px)' }}>
+                <Paper
+                    component={motion.div}
+                    variants={itemVariants}
+                    sx={{
+                        ...glassStyle,
+                        mb: 4
+                    }}
+                >
                     <Tabs
                         value={selectedTab}
                         onChange={handleTabChange}
                         variant="scrollable"
                         scrollButtons="auto"
-                        sx={{ borderBottom: 1, borderColor: 'divider' }}
+                        sx={{
+                            borderBottom: 1,
+                            borderColor: 'rgba(255, 255, 255, 0.2)',
+                            '& .MuiTab-root': {
+                                color: '#718096',
+                                fontWeight: 500,
+                                '&.Mui-selected': {
+                                    color: '#667eea',
+                                },
+                            },
+                            '& .MuiTabs-indicator': {
+                                backgroundColor: '#667eea',
+                            },
+                        }}
                     >
                         {tabs.map((tab, index) => (
                             <Tab
@@ -433,11 +515,11 @@ const AnalyticsIndex = ({ title, description }) => {
                             />
                         ))}
                     </Tabs>
-                    
+
                     <Box sx={{ p: 3 }}>
                         {loading ? (
                             <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-                                <CircularProgress />
+                                <CircularProgress sx={{ color: '#667eea' }} />
                             </Box>
                         ) : (
                             renderTabContent()
@@ -445,7 +527,7 @@ const AnalyticsIndex = ({ title, description }) => {
                     </Box>
                 </Paper>
             </Box>
-        </AdminLayout>
+        </AdminLayoutNew>
     );
 };
 

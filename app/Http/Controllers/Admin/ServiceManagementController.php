@@ -157,8 +157,8 @@ class ServiceManagementController extends Controller
 
         $service = Service::create($data);
 
-        return redirect()->route('admin.admin.services.index')
-            ->with('success', 'Service created successfully.');
+        session()->flash('success', 'Service created successfully.');
+        return redirect()->route('admin.admin.services.index');
     }
 
     /**

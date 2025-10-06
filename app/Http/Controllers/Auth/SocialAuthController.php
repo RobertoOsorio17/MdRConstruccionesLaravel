@@ -25,13 +25,17 @@ class SocialAuthController extends Controller
     public function redirect(string $provider)
     {
         if (!in_array($provider, self::SUPPORTED_PROVIDERS)) {
-            return redirect()->route('login')->with('error', 'Proveedor de autenticación no soportado.');
+            // Flash error to session for Inertia to pick up
+            session()->flash('error', 'Proveedor de autenticación no soportado.');
+            return redirect()->route('login');
         }
 
         try {
             return Socialite::driver($provider)->redirect();
         } catch (Exception $e) {
-            return redirect()->route('login')->with('error', 'Error al conectar con ' . ucfirst($provider) . '. Por favor, intenta de nuevo.');
+            // Flash error to session for Inertia to pick up
+            session()->flash('error', 'Error al conectar con ' . ucfirst($provider) . '. Por favor, intenta de nuevo.');
+            return redirect()->route('login');
         }
     }
 
@@ -41,13 +45,15 @@ class SocialAuthController extends Controller
     public function callback(string $provider)
     {
         if (!in_array($provider, self::SUPPORTED_PROVIDERS)) {
-            return redirect()->route('login')->with('error', 'Proveedor de autenticación no soportado.');
+            session()->flash('error', 'Proveedor de autenticación no soportado.');
+            return redirect()->route('login');
         }
 
         try {
             $socialUser = Socialite::driver($provider)->user();
         } catch (Exception $e) {
-            return redirect()->route('login')->with('error', 'Error al autenticar con ' . ucfirst($provider) . '. Por favor, intenta de nuevo.');
+            session()->flash('error', 'Error al autenticar con ' . ucfirst($provider) . '. Por favor, intenta de nuevo.');
+            return redirect()->route('login');
         }
 
         // Find or create user
@@ -58,10 +64,12 @@ class SocialAuthController extends Controller
 
         // Redirect based on role
         if ($user->role === 'admin') {
-            return redirect()->route('admin.dashboard')->with('success', '¡Bienvenido de vuelta, ' . $user->name . '!');
+            session()->flash('success', '¡Bienvenido de vuelta, ' . $user->name . '!');
+            return redirect()->route('admin.dashboard');
         }
 
-        return redirect()->route('dashboard')->with('success', '¡Bienvenido de vuelta, ' . $user->name . '!');
+        session()->flash('success', '¡Bienvenido de vuelta, ' . $user->name . '!');
+        return redirect()->route('dashboard');
     }
 
     /**
@@ -123,12 +131,14 @@ class SocialAuthController extends Controller
 
         // Check if user has a password set (can't unlink if it's the only auth method)
         if (!$user->password) {
-            return back()->with('error', 'No puedes desvincular tu cuenta de ' . ucfirst($provider) . ' sin establecer una contraseña primero.');
+            session()->flash('error', 'No puedes desvincular tu cuenta de ' . ucfirst($provider) . ' sin establecer una contraseña primero.');
+            return redirect()->back();
         }
 
         // Check if this is the correct provider
         if ($user->provider !== $provider) {
-            return back()->with('error', 'Esta cuenta no está vinculada con ' . ucfirst($provider) . '.');
+            session()->flash('error', 'Esta cuenta no está vinculada con ' . ucfirst($provider) . '.');
+            return redirect()->back();
         }
 
         // Unlink provider
@@ -139,7 +149,8 @@ class SocialAuthController extends Controller
             'provider_refresh_token' => null,
         ]);
 
-        return back()->with('success', 'Cuenta de ' . ucfirst($provider) . ' desvinculada exitosamente.');
+        session()->flash('success', 'Cuenta de ' . ucfirst($provider) . ' desvinculada exitosamente.');
+        return redirect()->back();
     }
 
     /**

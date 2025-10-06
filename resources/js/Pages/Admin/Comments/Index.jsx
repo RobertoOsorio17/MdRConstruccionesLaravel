@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Head, router } from '@inertiajs/react';
-import AdminLayout from '@/Layouts/AdminLayout';
+import AdminLayoutNew from '@/Layouts/AdminLayoutNew';
 import {
     Box, Paper, Typography, Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, IconButton,
     Chip, TextField, InputAdornment, Select, MenuItem, FormControl, InputLabel, Dialog, DialogTitle, DialogContent,
@@ -10,7 +10,8 @@ import {
 import {
     Search as SearchIcon, FilterList as FilterIcon, Delete as DeleteIcon, Check as ApproveIcon, Block as RejectIcon,
     Comment as CommentIcon, ThumbUp as LikeIcon, ThumbDown as DislikeIcon, Flag as ReportIcon, Person as PersonIcon,
-    Article as ArticleIcon, Clear as ClearIcon, Refresh as RefreshIcon
+    Article as ArticleIcon, Clear as ClearIcon, Refresh as RefreshIcon, TrendingUp as TrendingIcon,
+    CheckCircle as CheckCircleIcon
 } from '@mui/icons-material';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -24,6 +25,52 @@ const CommentsIndex = ({ comments, posts, stats, filters }) => {
     const [selectAll, setSelectAll] = useState(false);
     const [loading, setLoading] = useState(false);
     const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
+
+    // Glassmorphism styles
+    const glassStyle = {
+        background: 'rgba(255, 255, 255, 0.25)',
+        backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)',
+        border: '1px solid rgba(255, 255, 255, 0.18)',
+        borderRadius: '16px',
+        boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.37)',
+    };
+
+    const glassStatCard = {
+        background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0.1) 100%)',
+        backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)',
+        border: '1px solid rgba(255, 255, 255, 0.2)',
+        borderRadius: '20px',
+        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)',
+        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+        '&:hover': {
+            transform: 'translateY(-4px)',
+            boxShadow: '0 12px 40px rgba(0, 0, 0, 0.15)',
+        },
+    };
+
+    // Animation variants
+    const containerVariants = {
+        hidden: { opacity: 0 },
+        visible: {
+            opacity: 1,
+            transition: {
+                staggerChildren: 0.1,
+            },
+        },
+    };
+
+    const itemVariants = {
+        hidden: { opacity: 0, y: 20 },
+        visible: {
+            opacity: 1,
+            y: 0,
+            transition: {
+                duration: 0.5,
+            },
+        },
+    };
 
     const commentsData = comments?.data || [];
     const pendingComments = commentsData.filter(c => c.status === 'pending');
@@ -278,9 +325,15 @@ const CommentsIndex = ({ comments, posts, stats, filters }) => {
     };
 
     return (
-        <AdminLayout title="Gestión de Comentarios">
+        <AdminLayoutNew title="Gestión de Comentarios">
             <Head title="Comentarios - Admin" />
-            <Box sx={{ py: 4 }}>
+
+            <Box
+                component={motion.div}
+                variants={containerVariants}
+                initial="hidden"
+                animate="visible"
+            >
                 {/* Header */}
                 <Box sx={{ mb: 4 }}>
                     <Typography variant="h4" fontWeight="bold" gutterBottom>
@@ -290,56 +343,192 @@ const CommentsIndex = ({ comments, posts, stats, filters }) => {
                         Administra todos los comentarios del blog y su estado de moderación
                     </Typography>
 
-                    {/* Estadísticas - MUI Grid v2 CORREGIDO */}
+                    {/* Estadísticas con Glassmorphism */}
                     <Grid container spacing={3} sx={{ mb: 4 }}>
                         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                            <Card component={motion.div} whileHover={{ y: -4 }} sx={{ height: '100%' }}>
+                            <Card
+                                component={motion.div}
+                                variants={itemVariants}
+                                sx={glassStatCard}
+                            >
                                 <CardContent sx={{ textAlign: 'center', py: 3 }}>
-                                    <CommentIcon sx={{ fontSize: 40, color: 'primary.main', mb: 1 }} />
-                                    <Typography variant="h4" fontWeight="bold" color="primary.main">
+                                    <Box sx={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        mb: 2,
+                                        color: '#667eea'
+                                    }}>
+                                        <CommentIcon sx={{ fontSize: 40 }} />
+                                    </Box>
+                                    <Typography variant="h3" fontWeight="bold" sx={{ color: '#2D3748', mb: 1 }}>
                                         {allComments.length}
                                     </Typography>
-                                    <Typography variant="body2" color="text.secondary">
+                                    <Typography variant="body1" sx={{ color: '#718096', fontWeight: 500 }}>
                                         Total Comentarios
                                     </Typography>
                                 </CardContent>
                             </Card>
                         </Grid>
                         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                            <Card component={motion.div} whileHover={{ y: -4 }} sx={{ height: '100%' }}>
+                            <Card
+                                component={motion.div}
+                                variants={itemVariants}
+                                sx={glassStatCard}
+                            >
                                 <CardContent sx={{ textAlign: 'center', py: 3 }}>
-                                    <ApproveIcon sx={{ fontSize: 40, color: 'success.main', mb: 1 }} />
-                                    <Typography variant="h4" fontWeight="bold" color="success.main">
+                                    <Box sx={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        mb: 2,
+                                        color: '#48BB78'
+                                    }}>
+                                        <ApproveIcon sx={{ fontSize: 40 }} />
+                                    </Box>
+                                    <Typography variant="h3" fontWeight="bold" sx={{ color: '#2D3748', mb: 1 }}>
                                         {approvedComments.length}
                                     </Typography>
-                                    <Typography variant="body2" color="text.secondary">
+                                    <Typography variant="body1" sx={{ color: '#718096', fontWeight: 500 }}>
                                         Aprobados
                                     </Typography>
                                 </CardContent>
                             </Card>
                         </Grid>
                         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                            <Card component={motion.div} whileHover={{ y: -4 }} sx={{ height: '100%' }}>
+                            <Card
+                                component={motion.div}
+                                variants={itemVariants}
+                                sx={glassStatCard}
+                            >
                                 <CardContent sx={{ textAlign: 'center', py: 3 }}>
-                                    <RefreshIcon sx={{ fontSize: 40, color: 'warning.main', mb: 1 }} />
-                                    <Typography variant="h4" fontWeight="bold" color="warning.main">
+                                    <Box sx={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        mb: 2,
+                                        color: '#F6AD55'
+                                    }}>
+                                        <RefreshIcon sx={{ fontSize: 40 }} />
+                                    </Box>
+                                    <Typography variant="h3" fontWeight="bold" sx={{ color: '#2D3748', mb: 1 }}>
                                         {pendingComments.length}
                                     </Typography>
-                                    <Typography variant="body2" color="text.secondary">
+                                    <Typography variant="body1" sx={{ color: '#718096', fontWeight: 500 }}>
                                         Pendientes
                                     </Typography>
                                 </CardContent>
                             </Card>
                         </Grid>
                         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                            <Card component={motion.div} whileHover={{ y: -4 }} sx={{ height: '100%' }}>
+                            <Card
+                                component={motion.div}
+                                variants={itemVariants}
+                                sx={glassStatCard}
+                            >
                                 <CardContent sx={{ textAlign: 'center', py: 3 }}>
-                                    <RejectIcon sx={{ fontSize: 40, color: 'error.main', mb: 1 }} />
-                                    <Typography variant="h4" fontWeight="bold" color="error.main">
+                                    <Box sx={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        mb: 2,
+                                        color: '#E53E3E'
+                                    }}>
+                                        <RejectIcon sx={{ fontSize: 40 }} />
+                                    </Box>
+                                    <Typography variant="h3" fontWeight="bold" sx={{ color: '#2D3748', mb: 1 }}>
                                         {rejectedComments.length}
                                     </Typography>
-                                    <Typography variant="body2" color="text.secondary">
+                                    <Typography variant="body1" sx={{ color: '#718096', fontWeight: 500 }}>
                                         Rechazados
+                                    </Typography>
+                                </CardContent>
+                            </Card>
+                        </Grid>
+                    </Grid>
+
+                    {/* Engagement Stats - Segunda Fila */}
+                    <Grid container spacing={3} sx={{ mb: 4 }}>
+                        <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+                            <Card
+                                component={motion.div}
+                                variants={itemVariants}
+                                sx={{
+                                    ...glassStatCard,
+                                    background: 'linear-gradient(135deg, rgba(72, 187, 120, 0.2) 0%, rgba(72, 187, 120, 0.05) 100%)',
+                                }}
+                            >
+                                <CardContent sx={{ textAlign: 'center', py: 2.5 }}>
+                                    <Box sx={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        mb: 1.5,
+                                        color: '#48BB78'
+                                    }}>
+                                        <CheckCircleIcon sx={{ fontSize: 32 }} />
+                                    </Box>
+                                    <Typography variant="h4" fontWeight="bold" sx={{ color: '#2D3748', mb: 0.5 }}>
+                                        {approvedComments.length > 0 ? Math.round((approvedComments.length / allComments.length) * 100) : 0}%
+                                    </Typography>
+                                    <Typography variant="body2" sx={{ color: '#718096', fontWeight: 500 }}>
+                                        Tasa de Aprobación
+                                    </Typography>
+                                </CardContent>
+                            </Card>
+                        </Grid>
+                        <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+                            <Card
+                                component={motion.div}
+                                variants={itemVariants}
+                                sx={{
+                                    ...glassStatCard,
+                                    background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.2) 0%, rgba(102, 126, 234, 0.05) 100%)',
+                                }}
+                            >
+                                <CardContent sx={{ textAlign: 'center', py: 2.5 }}>
+                                    <Box sx={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        mb: 1.5,
+                                        color: '#667eea'
+                                    }}>
+                                        <TrendingIcon sx={{ fontSize: 32 }} />
+                                    </Box>
+                                    <Typography variant="h4" fontWeight="bold" sx={{ color: '#2D3748', mb: 0.5 }}>
+                                        {commentsData.filter(c => new Date(c.created_at) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)).length}
+                                    </Typography>
+                                    <Typography variant="body2" sx={{ color: '#718096', fontWeight: 500 }}>
+                                        Esta Semana
+                                    </Typography>
+                                </CardContent>
+                            </Card>
+                        </Grid>
+                        <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+                            <Card
+                                component={motion.div}
+                                variants={itemVariants}
+                                sx={{
+                                    ...glassStatCard,
+                                    background: 'linear-gradient(135deg, rgba(159, 122, 234, 0.2) 0%, rgba(159, 122, 234, 0.05) 100%)',
+                                }}
+                            >
+                                <CardContent sx={{ textAlign: 'center', py: 2.5 }}>
+                                    <Box sx={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        mb: 1.5,
+                                        color: '#9F7AEA'
+                                    }}>
+                                        <PersonIcon sx={{ fontSize: 32 }} />
+                                    </Box>
+                                    <Typography variant="h4" fontWeight="bold" sx={{ color: '#2D3748', mb: 0.5 }}>
+                                        {new Set(commentsData.map(c => c.user_email || c.guest_email)).size}
+                                    </Typography>
+                                    <Typography variant="body2" sx={{ color: '#718096', fontWeight: 500 }}>
+                                        Usuarios Únicos
                                     </Typography>
                                 </CardContent>
                             </Card>
@@ -348,65 +537,133 @@ const CommentsIndex = ({ comments, posts, stats, filters }) => {
                 </Box>
 
                 {/* Pestañas */}
-                <Paper sx={{ mb: 3 }}>
-                    <Tabs 
-                        value={currentTab} 
-                        onChange={(e, newValue) => setCurrentTab(newValue)} 
+                <Paper
+                    component={motion.div}
+                    variants={itemVariants}
+                    sx={{
+                        ...glassStyle,
+                        mb: 3
+                    }}
+                >
+                    <Tabs
+                        value={currentTab}
+                        onChange={(e, newValue) => setCurrentTab(newValue)}
                         variant="fullWidth"
-                        sx={{ borderBottom: 1, borderColor: 'divider' }}
+                        sx={{
+                            borderBottom: 1,
+                            borderColor: 'rgba(255, 255, 255, 0.2)',
+                            '& .MuiTab-root': {
+                                fontWeight: 600,
+                                textTransform: 'none',
+                                fontSize: '1rem',
+                                transition: 'all 0.3s ease',
+                                '&:hover': {
+                                    background: 'rgba(255, 255, 255, 0.1)',
+                                },
+                                '&.Mui-selected': {
+                                    color: '#667eea',
+                                },
+                            },
+                            '& .MuiTabs-indicator': {
+                                backgroundColor: '#667eea',
+                                height: 3,
+                                borderRadius: '3px 3px 0 0',
+                            },
+                        }}
                     >
-                        <Tab 
-                            label={`Todos (${allComments.length})`} 
-                            icon={<CommentIcon />} 
-                            iconPosition="start" 
+                        <Tab
+                            label={`Todos (${allComments.length})`}
+                            icon={<CommentIcon />}
+                            iconPosition="start"
                         />
-                        <Tab 
-                            label={`Pendientes (${pendingComments.length})`} 
-                            icon={<RefreshIcon />} 
-                            iconPosition="start" 
+                        <Tab
+                            label={`Pendientes (${pendingComments.length})`}
+                            icon={<RefreshIcon />}
+                            iconPosition="start"
                         />
-                        <Tab 
-                            label={`Aprobados (${approvedComments.length})`} 
-                            icon={<ApproveIcon />} 
-                            iconPosition="start" 
+                        <Tab
+                            label={`Aprobados (${approvedComments.length})`}
+                            icon={<ApproveIcon />}
+                            iconPosition="start"
                         />
-                        <Tab 
-                            label={`Rechazados (${rejectedComments.length})`} 
-                            icon={<RejectIcon />} 
-                            iconPosition="start" 
+                        <Tab
+                            label={`Rechazados (${rejectedComments.length})`}
+                            icon={<RejectIcon />}
+                            iconPosition="start"
                         />
                     </Tabs>
                 </Paper>
 
                 {/* Acciones Masivas */}
                 {selectedComments.size > 0 && (
-                    <Paper sx={{ p: 2, mb: 3, backgroundColor: alpha(theme.palette.primary.main, 0.1) }}>
-                        <Stack direction="row" spacing={2} alignItems="center">
-                            <Typography variant="body1" fontWeight="medium">
+                    <Paper
+                        component={motion.div}
+                        variants={itemVariants}
+                        sx={{
+                            ...glassStyle,
+                            p: 2,
+                            mb: 3
+                        }}
+                    >
+                        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems="center">
+                            <Typography variant="body1" fontWeight="600" sx={{ color: '#2D3748' }}>
                                 {selectedComments.size} comentario(s) seleccionado(s)
                             </Typography>
-                            <Button 
-                                size="small" 
-                                color="success" 
+                            <Button
+                                size="small"
+                                variant="contained"
                                 onClick={() => handleBulkAction('approved')}
                                 disabled={loading}
+                                sx={{
+                                    background: 'linear-gradient(135deg, #48BB78 0%, #38A169 100%)',
+                                    borderRadius: '12px',
+                                    px: 2,
+                                    fontWeight: 600,
+                                    textTransform: 'none',
+                                    boxShadow: '0 4px 16px rgba(72, 187, 120, 0.3)',
+                                    '&:hover': {
+                                        boxShadow: '0 6px 20px rgba(72, 187, 120, 0.4)',
+                                    },
+                                }}
                             >
                                 Aprobar Seleccionados
                             </Button>
-                            <Button 
-                                size="small" 
-                                color="error" 
+                            <Button
+                                size="small"
+                                variant="contained"
                                 onClick={() => handleBulkAction('rejected')}
                                 disabled={loading}
+                                sx={{
+                                    background: 'linear-gradient(135deg, #F6AD55 0%, #ED8936 100%)',
+                                    borderRadius: '12px',
+                                    px: 2,
+                                    fontWeight: 600,
+                                    textTransform: 'none',
+                                    boxShadow: '0 4px 16px rgba(246, 173, 85, 0.3)',
+                                    '&:hover': {
+                                        boxShadow: '0 6px 20px rgba(246, 173, 85, 0.4)',
+                                    },
+                                }}
                             >
                                 Rechazar Seleccionados
                             </Button>
-                            <Button 
-                                size="small" 
-                                color="error" 
+                            <Button
+                                size="small"
                                 variant="outlined"
                                 onClick={() => handleBulkAction('delete')}
                                 disabled={loading}
+                                sx={{
+                                    borderColor: '#E53E3E',
+                                    color: '#E53E3E',
+                                    borderRadius: '12px',
+                                    px: 2,
+                                    fontWeight: 600,
+                                    textTransform: 'none',
+                                    '&:hover': {
+                                        borderColor: '#C53030',
+                                        background: 'rgba(229, 62, 62, 0.1)',
+                                    },
+                                }}
                             >
                                 Eliminar Seleccionados
                             </Button>
@@ -415,28 +672,66 @@ const CommentsIndex = ({ comments, posts, stats, filters }) => {
                 )}
 
                 {/* Filtros */}
-                <Paper sx={{ p: 3, mb: 3 }}>
-                    <Typography variant="h6" gutterBottom sx={{ mb: 3, display: 'flex', alignItems: 'center' }}>
-                        <FilterIcon sx={{ mr: 1, color: 'primary.main' }} />
+                <Paper
+                    component={motion.div}
+                    variants={itemVariants}
+                    sx={{
+                        ...glassStyle,
+                        p: 3,
+                        mb: 3
+                    }}
+                >
+                    <Typography variant="h6" gutterBottom sx={{ mb: 3, display: 'flex', alignItems: 'center', fontWeight: 700 }}>
+                        <FilterIcon sx={{ mr: 1, color: '#667eea' }} />
                         Filtros de Búsqueda
                     </Typography>
                     <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} sx={{ mb: 2 }}>
-                        <TextField 
-                            fullWidth 
-                            placeholder="Buscar por comentario, usuario, email..." 
+                        <TextField
+                            fullWidth
+                            placeholder="Buscar por comentario, usuario, email..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                             InputProps={{
                                 startAdornment: <InputAdornment position="start"><SearchIcon /></InputAdornment>
                             }}
-                            onKeyPress={(e) => e.key === 'Enter' && handleSearch()} 
+                            onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+                            sx={{
+                                '& .MuiOutlinedInput-root': {
+                                    background: 'rgba(255, 255, 255, 0.15)',
+                                    backdropFilter: 'blur(10px)',
+                                    borderRadius: '12px',
+                                    '& fieldset': {
+                                        borderColor: 'rgba(255, 255, 255, 0.2)',
+                                    },
+                                    '&:hover fieldset': {
+                                        borderColor: 'rgba(255, 255, 255, 0.3)',
+                                    },
+                                    '&.Mui-focused fieldset': {
+                                        borderColor: '#667eea',
+                                    },
+                                },
+                            }}
                         />
                         <FormControl fullWidth>
                             <InputLabel>Filtrar por Post</InputLabel>
-                            <Select 
-                                value={postFilter} 
-                                label="Filtrar por Post" 
+                            <Select
+                                value={postFilter}
+                                label="Filtrar por Post"
                                 onChange={(e) => setPostFilter(e.target.value)}
+                                sx={{
+                                    background: 'rgba(255, 255, 255, 0.15)',
+                                    backdropFilter: 'blur(10px)',
+                                    borderRadius: '12px',
+                                    '& fieldset': {
+                                        borderColor: 'rgba(255, 255, 255, 0.2)',
+                                    },
+                                    '&:hover fieldset': {
+                                        borderColor: 'rgba(255, 255, 255, 0.3)',
+                                    },
+                                    '&.Mui-focused fieldset': {
+                                        borderColor: '#667eea',
+                                    },
+                                }}
                             >
                                 <MenuItem value=""><em>Todos los posts</em></MenuItem>
                                 {posts && posts.map((post) => (
@@ -448,19 +743,41 @@ const CommentsIndex = ({ comments, posts, stats, filters }) => {
                         </FormControl>
                     </Stack>
                     <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} justifyContent="flex-end">
-                        <Button 
-                            variant="outlined" 
+                        <Button
+                            variant="outlined"
                             startIcon={<ClearIcon />}
-                            onClick={handleClearFilters} 
+                            onClick={handleClearFilters}
                             disabled={loading}
+                            sx={{
+                                borderRadius: '12px',
+                                px: 3,
+                                fontWeight: 600,
+                                textTransform: 'none',
+                                borderColor: 'rgba(255, 255, 255, 0.3)',
+                                '&:hover': {
+                                    borderColor: '#667eea',
+                                    background: 'rgba(102, 126, 234, 0.1)',
+                                },
+                            }}
                         >
                             Limpiar Filtros
                         </Button>
-                        <Button 
-                            variant="contained" 
-                            startIcon={<FilterIcon />} 
-                            onClick={handleSearch} 
+                        <Button
+                            variant="contained"
+                            startIcon={<FilterIcon />}
+                            onClick={handleSearch}
                             disabled={loading}
+                            sx={{
+                                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                                borderRadius: '12px',
+                                px: 3,
+                                fontWeight: 600,
+                                textTransform: 'none',
+                                boxShadow: '0 4px 16px rgba(102, 126, 234, 0.3)',
+                                '&:hover': {
+                                    boxShadow: '0 6px 20px rgba(102, 126, 234, 0.4)',
+                                },
+                            }}
                         >
                             Aplicar Filtros
                         </Button>
@@ -468,11 +785,17 @@ const CommentsIndex = ({ comments, posts, stats, filters }) => {
                 </Paper>
 
                 {/* Tabla */}
-                <Paper>
+                <Paper
+                    component={motion.div}
+                    variants={itemVariants}
+                    sx={glassStyle}
+                >
                     <TableContainer>
                         <Table>
                             <TableHead>
-                                <TableRow sx={{ backgroundColor: alpha(theme.palette.primary.main, 0.1) }}>
+                                <TableRow sx={{
+                                    background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1))',
+                                }}>
                                     <TableCell>
                                         <FormControlLabel
                                             control={
@@ -671,7 +994,7 @@ const CommentsIndex = ({ comments, posts, stats, filters }) => {
                     </Alert>
                 </Snackbar>
             </Box>
-        </AdminLayout>
+        </AdminLayoutNew>
     );
 };
 

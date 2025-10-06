@@ -252,6 +252,47 @@ class CacheService
     }
 
     /**
+     * Invalidate dashboard statistics cache.
+     *
+     * @return void
+     */
+    public function invalidateDashboardStats(): void
+    {
+        $keys = [
+            'dashboard:stats',
+            'dashboard:recent_posts',
+            'dashboard:recent_comments',
+            'dashboard:analytics',
+            'admin:dashboard:stats',
+        ];
+
+        foreach ($keys as $key) {
+            $this->forget($key);
+        }
+    }
+
+    /**
+     * Invalidate user statistics cache.
+     *
+     * @param int $userId
+     * @return void
+     */
+    public function invalidateUserStats(int $userId): void
+    {
+        $keys = [
+            "user:{$userId}:stats",
+            "user:{$userId}:posts",
+            "user:{$userId}:comments",
+            "user:{$userId}:followers",
+            "user:{$userId}:following",
+        ];
+
+        foreach ($keys as $key) {
+            $this->forget($key);
+        }
+    }
+
+    /**
      * Get cache statistics.
      *
      * @return array

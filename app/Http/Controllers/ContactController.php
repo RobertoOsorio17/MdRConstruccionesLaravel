@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\ContactRequest;
+use App\Models\ContactRequestAttachment;
 use App\Services\RecaptchaService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
@@ -29,6 +30,10 @@ class ContactController extends Controller
             'jpg' => ['FFD8FF'], // JPEG
             'jpeg' => ['FFD8FF'], // JPEG
             'png' => ['89504E47'], // PNG
+            'doc' => ['D0CF11E0'], // MS Office (old format)
+            'docx' => ['504B0304'], // ZIP-based (Office 2007+)
+            'xls' => ['D0CF11E0'], // MS Office (old format)
+            'xlsx' => ['504B0304'], // ZIP-based (Office 2007+)
         ];
 
         $fileHex = strtoupper(bin2hex($bytes));
@@ -89,8 +94,8 @@ class ContactController extends Controller
             ? 'required|email:rfc,dns|max:255|regex:/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/'
             : 'required|email:rfc|max:255|regex:/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/';
 
-        // reCAPTCHA es obligatorio en producción, opcional en desarrollo
-        $recaptchaValidation = app()->environment('production') ? 'required|string' : 'nullable|string';
+        // ✅ reCAPTCHA es OBLIGATORIO siempre (producción y desarrollo)
+        $recaptchaValidation = 'required|string';
 
         $validated = $request->validate([
             'name' => 'required|string|max:255|regex:/^[a-zA-Z\s\-\.áéíóúñÁÉÍÓÚÑ]+$/',
@@ -114,9 +119,9 @@ class ContactController extends Controller
             'service' => 'nullable|string|max:255|regex:/^[^<>]*$/',
             'message' => 'required|string|min:10|max:2000|regex:/^[^<>]*$/',
             'attachments' => 'nullable|array|max:5', // Máximo 5 archivos
-            'attachments.*' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120', // Max 5MB per file
+            'attachments.*' => 'nullable|file|mimes:pdf,jpg,jpeg,png,doc,docx,xls,xlsx|max:10240', // Max 10MB per file
             'privacy_accepted' => 'required|accepted',
-            'recaptcha_token' => $recaptchaValidation, // Obligatorio en producción, opcional en desarrollo
+            'recaptcha_token' => $recaptchaValidation, // ✅ OBLIGATORIO SIEMPRE
         ], [
             'name.required' => 'El nombre es obligatorio.',
             'name.regex' => 'El nombre solo puede contener letras.',
@@ -127,88 +132,66 @@ class ContactController extends Controller
             'message.required' => 'El mensaje es obligatorio.',
             'message.min' => 'El mensaje debe tener al menos 10 caracteres.',
             'attachments.max' => 'Máximo 5 archivos permitidos.',
-            'attachments.*.mimes' => 'Solo se permiten archivos PDF, JPG, JPEG o PNG.',
-            'attachments.*.max' => 'Cada archivo no debe superar los 5MB.',
+            'attachments.*.mimes' => 'Solo se permiten archivos PDF, imágenes, Word y Excel.',
+            'attachments.*.max' => 'Cada archivo no debe superar los 10MB.',
             'privacy_accepted.accepted' => 'Debes aceptar la política de privacidad.',
             'recaptcha_token.required' => 'Error de verificación de seguridad. Por favor, recarga la página.',
         ]);
 
-        // ✅ reCAPTCHA verification (MANDATORY in production, optional in development)
-        $recaptchaToken = $validated['recaptcha_token'] ?? null;
+        // ✅ reCAPTCHA verification (MANDATORY ALWAYS - production and development)
+        $recaptchaToken = $validated['recaptcha_token'];
 
         if (!$recaptcha->isEnabled()) {
-            if (app()->environment('production')) {
-                Log::error('reCAPTCHA is not enabled but form was submitted in production');
-                return back()->withErrors([
-                    'email' => 'Error de configuración del sistema. Por favor, contáctanos por teléfono.'
-                ]);
-            } else {
-                Log::warning('reCAPTCHA is not enabled - skipping verification in development');
-            }
-        } elseif (!empty($recaptchaToken)) {
-            // Solo verificar reCAPTCHA si hay un token
-            $recaptchaResult = $recaptcha->verify($recaptchaToken, 'contact_form', 0.5);
-
-            if (!$recaptchaResult['success']) {
-                // En desarrollo, solo loguear el error pero permitir el envío
-                if (app()->environment('production')) {
-                    Log::warning('reCAPTCHA verification failed for contact form', [
-                        'ip' => $request->ip(),
-                        'score' => $recaptchaResult['score'] ?? 0,
-                        'error' => $recaptchaResult['error'] ?? 'unknown',
-                    ]);
-
-                    return back()->withErrors([
-                        'email' => 'No pudimos verificar que eres humano. Por favor intenta de nuevo o contáctanos por teléfono.'
-                    ]);
-                } else {
-                    Log::warning('reCAPTCHA verification failed in development - allowing submission', [
-                        'ip' => $request->ip(),
-                        'score' => $recaptchaResult['score'] ?? 0,
-                        'error' => $recaptchaResult['error'] ?? 'unknown',
-                    ]);
-                }
-            } else {
-                // ✅ Log suspicious activity (low score)
-                if (isset($recaptchaResult['score']) && $recaptchaResult['score'] < 0.3) {
-                    Log::warning('Suspicious contact form submission - low reCAPTCHA score', [
-                        'ip' => $request->ip(),
-                        'score' => $recaptchaResult['score'],
-                        'email' => $validated['email'],
-                    ]);
-                }
-
-                Log::info('reCAPTCHA verification successful', [
-                    'score' => $recaptchaResult['score'],
-                    'ip' => $request->ip(),
-                ]);
-            }
-        } else {
-            // Token vacío en desarrollo - permitir
-            if (app()->environment('production')) {
-                Log::error('Empty reCAPTCHA token in production');
-                return back()->withErrors([
-                    'email' => 'Error de verificación de seguridad. Por favor, recarga la página.'
-                ]);
-            } else {
-                Log::warning('Empty reCAPTCHA token in development - allowing submission');
-            }
+            Log::error('reCAPTCHA is not enabled but form was submitted', [
+                'environment' => app()->environment(),
+                'ip' => $request->ip(),
+            ]);
+            return back()->withErrors([
+                'email' => 'Error de configuración del sistema. Por favor, contáctanos por teléfono.'
+            ]);
         }
 
-        try {
-            // ✅ Handle file uploads with ENHANCED security validation
-            $attachmentPaths = [];
-            if ($request->hasFile('attachments')) {
-                $fileCount = 0;
+        // ✅ Verify reCAPTCHA token (ALWAYS)
+        if (!$recaptcha->verify($recaptchaToken, $request->ip())) {
+            Log::warning('reCAPTCHA verification failed', [
+                'ip' => $request->ip(),
+                'user_agent' => $request->userAgent(),
+            ]);
+            return back()->withErrors([
+                'email' => 'Verificación de seguridad fallida. Por favor, intenta de nuevo.'
+            ]);
+        }
 
+
+
+        try {
+            // ✅ Create contact request in database FIRST
+            $contactRequest = ContactRequest::create([
+                'name' => strip_tags($validated['name']),
+                'email' => strip_tags($validated['email']),
+                'phone' => isset($validated['phone']) ? strip_tags($validated['phone']) : null,
+                'preferred_contact' => $validated['preferred_contact'] ?? null,
+                'contact_time' => $validated['contact_time'] ?? null,
+                'service' => isset($validated['service']) ? strip_tags($validated['service']) : null,
+                'message' => strip_tags($validated['message']),
+                'status' => 'new',
+                'ip_address' => $request->ip(),
+                'user_agent' => $request->userAgent(),
+            ]);
+
+            // ✅ Handle file uploads with ENCRYPTED storage
+            $attachmentCount = 0;
+            $totalSize = 0;
+
+            if ($request->hasFile('attachments')) {
                 foreach ($request->file('attachments') as $file) {
-                    $fileCount++;
+                    $attachmentCount++;
 
                     // Límite de archivos
-                    if ($fileCount > 5) {
+                    if ($attachmentCount > 5) {
                         Log::warning('Too many files uploaded', [
                             'ip' => $request->ip(),
-                            'count' => $fileCount,
+                            'count' => $attachmentCount,
                         ]);
                         return back()->withErrors([
                             'attachments' => 'Máximo 5 archivos permitidos.'
@@ -216,7 +199,7 @@ class ContactController extends Controller
                     }
 
                     // Validar extensión
-                    $allowedExtensions = ['pdf', 'jpg', 'jpeg', 'png'];
+                    $allowedExtensions = ['pdf', 'jpg', 'jpeg', 'png', 'doc', 'docx', 'xls', 'xlsx'];
                     $extension = strtolower($file->getClientOriginalExtension());
 
                     if (!in_array($extension, $allowedExtensions)) {
@@ -226,13 +209,22 @@ class ContactController extends Controller
                             'ip' => $request->ip(),
                         ]);
                         return back()->withErrors([
-                            'attachments' => "Extensión no permitida: {$extension}. Solo PDF, JPG, JPEG, PNG."
+                            'attachments' => "Extensión no permitida: {$extension}. Solo PDF, imágenes, Word y Excel."
                         ]);
                     }
 
                     // Validar MIME type
                     $mimeType = $file->getMimeType();
-                    $allowedMimes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
+                    $allowedMimes = [
+                        'application/pdf',
+                        'image/jpeg',
+                        'image/jpg',
+                        'image/png',
+                        'application/msword',
+                        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                        'application/vnd.ms-excel',
+                        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                    ];
 
                     if (!in_array($mimeType, $allowedMimes)) {
                         Log::warning('Invalid MIME type', [
@@ -241,7 +233,7 @@ class ContactController extends Controller
                             'ip' => $request->ip(),
                         ]);
                         return back()->withErrors([
-                            'attachments' => 'Tipo de archivo no permitido. Solo PDF, JPG, JPEG o PNG.'
+                            'attachments' => 'Tipo de archivo no permitido.'
                         ]);
                     }
 
@@ -270,47 +262,42 @@ class ContactController extends Controller
                         ]);
                     }
 
-                    // Sanitizar nombre de archivo
-                    $originalName = $this->sanitizeFilename($file->getClientOriginalName());
+                    // Validar tamaño máximo por archivo (10MB)
+                    if ($file->getSize() > 10485760) {
+                        return back()->withErrors([
+                            'attachments' => 'Cada archivo no debe superar los 10MB.'
+                        ]);
+                    }
 
-                    // Generar nombre único para evitar colisiones
-                    $uniqueName = Str::uuid() . '_' . time() . '.' . $extension;
+                    // Validar tamaño total (25MB)
+                    $totalSize += $file->getSize();
+                    if ($totalSize > 26214400) {
+                        return back()->withErrors([
+                            'attachments' => 'El tamaño total de archivos no debe superar los 25MB.'
+                        ]);
+                    }
 
-                    // Store file securely en disco privado
-                    $path = $file->storeAs('contact-attachments', $uniqueName, 'private');
+                    // ✅ Store file with ENCRYPTION
+                    try {
+                        $attachment = ContactRequestAttachment::storeEncrypted($file, $contactRequest->id);
 
-                    $attachmentPaths[] = [
-                        'path' => $path,
-                        'original_name' => $originalName,
-                        'mime_type' => $mimeType,
-                        'size' => $file->getSize(),
-                        'extension' => $extension,
-                        'uploaded_at' => now()->toIso8601String(),
-                    ];
-
-                    Log::info('File uploaded successfully', [
-                        'original_name' => $originalName,
-                        'stored_name' => $uniqueName,
-                        'size' => $file->getSize(),
-                        'mime' => $mimeType,
-                    ]);
+                        Log::info('File uploaded and encrypted successfully', [
+                            'attachment_id' => $attachment->id,
+                            'original_name' => $attachment->original_filename,
+                            'size' => $attachment->file_size,
+                            'mime' => $attachment->mime_type,
+                        ]);
+                    } catch (\Exception $e) {
+                        Log::error('Failed to encrypt and store attachment', [
+                            'error' => $e->getMessage(),
+                            'filename' => $file->getClientOriginalName(),
+                        ]);
+                        return back()->withErrors([
+                            'attachments' => 'Error al procesar el archivo. Por favor intenta de nuevo.'
+                        ]);
+                    }
                 }
             }
-
-            // ✅ Create contact request in database
-            $contactRequest = ContactRequest::create([
-                'name' => strip_tags($validated['name']),
-                'email' => strip_tags($validated['email']),
-                'phone' => isset($validated['phone']) ? strip_tags($validated['phone']) : null,
-                'preferred_contact' => $validated['preferred_contact'] ?? null,
-                'contact_time' => $validated['contact_time'] ?? null,
-                'service' => isset($validated['service']) ? strip_tags($validated['service']) : null,
-                'message' => strip_tags($validated['message']),
-                'attachments' => !empty($attachmentPaths) ? $attachmentPaths : null,
-                'status' => 'new',
-                'ip_address' => $request->ip(),
-                'user_agent' => $request->userAgent(),
-            ]);
 
             // ✅ Hit rate limiter
             RateLimiter::hit($key, 3600);
@@ -323,8 +310,9 @@ class ContactController extends Controller
                 'phone' => $contactRequest->phone,
                 'preferred_contact' => $contactRequest->preferred_contact,
                 'service' => $contactRequest->service,
-                'has_attachments' => !empty($attachmentPaths),
-                'attachment_count' => count($attachmentPaths),
+                'has_attachments' => $attachmentCount > 0,
+                'attachment_count' => $attachmentCount,
+                'total_size' => $totalSize,
                 'ip' => $request->ip(),
                 'user_agent' => $request->userAgent(),
             ]);
@@ -332,7 +320,8 @@ class ContactController extends Controller
             // TODO: Send email notification to admin
             // TODO: Send confirmation email to user
 
-            return back()->with('success', '¡Gracias por tu mensaje! Te contactaremos en las próximas 24 horas.');
+            session()->flash('success', '¡Gracias por tu mensaje! Te contactaremos en las próximas 24 horas.');
+            return redirect()->back();
 
         } catch (\Illuminate\Validation\ValidationException $e) {
             // Re-throw validation exceptions
@@ -351,9 +340,9 @@ class ContactController extends Controller
                 ],
             ]);
 
-            return back()->withErrors([
+            throw \Illuminate\Validation\ValidationException::withMessages([
                 'email' => 'Ocurrió un error al enviar tu mensaje. Por favor intenta de nuevo o contáctanos por teléfono.'
-            ])->withInput();
+            ]);
         }
     }
 
@@ -396,7 +385,8 @@ class ContactController extends Controller
             // For now, just log it
             Log::info('New budget request submission', $budgetData);
 
-            return back()->with('success', 'Budget request received! Our team will contact you in the next few hours to schedule a free visit.');
+            session()->flash('success', 'Budget request received! Our team will contact you in the next few hours to schedule a free visit.');
+            return redirect()->back();
 
         } catch (\Exception $e) {
             Log::error('Error processing budget request', [

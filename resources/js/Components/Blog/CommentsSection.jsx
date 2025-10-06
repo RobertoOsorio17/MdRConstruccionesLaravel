@@ -36,13 +36,18 @@ import {
     Favorite as LikeIcon,
     FavoriteBorder as LikeOutlineIcon,
     Delete as DeleteIcon,
-    HourglassTop as PendingIcon
+    HourglassTop as PendingIcon,
+    Edit as EditIcon,
+    History as HistoryIcon
 } from '@mui/icons-material';
 import { motion, AnimatePresence } from 'framer-motion';
 import { router, usePage } from '@inertiajs/react';
 import axios from 'axios';
 import { useAuth, AuthGuard, AuthSwitch } from '@/Components/AuthGuard';
 import CommentInteractions from '@/Components/Blog/CommentInteractions';
+import CommentEditForm from '@/Components/Blog/CommentEditForm';
+import CommentEditIndicator from '@/Components/Blog/CommentEditIndicator';
+import CommentEditHistoryModal from '@/Components/Blog/CommentEditHistoryModal';
 
 // Componente para invitar a usuarios no logados a registrarse
 const LoginPrompt = ({ onClose }) => {
@@ -144,12 +149,15 @@ const LoginPrompt = ({ onClose }) => {
     );
 };
 
-const CommentItem = ({ comment, onReply, onDelete, level = 0 }) => {
+const CommentItem = ({ comment, onReply, onDelete, onEdit, level = 0 }) => {
     const theme = useTheme();
     const { auth } = usePage().props;
     const [showReplyForm, setShowReplyForm] = useState(false);
+    const [showEditForm, setShowEditForm] = useState(false);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-    
+    const [historyModalOpen, setHistoryModalOpen] = useState(false);
+    const [currentComment, setCurrentComment] = useState(comment);
+
     const handleReply = () => {
         setShowReplyForm(true);
     };
@@ -157,6 +165,18 @@ const CommentItem = ({ comment, onReply, onDelete, level = 0 }) => {
     const handleReplySubmit = (replyData) => {
         onReply(comment.id, replyData);
         setShowReplyForm(false);
+    };
+
+    const handleEditClick = () => {
+        setShowEditForm(true);
+    };
+
+    const handleEditSuccess = (updatedComment) => {
+        setCurrentComment(updatedComment);
+        setShowEditForm(false);
+        if (onEdit) {
+            onEdit(updatedComment);
+        }
     };
 
     const handleDeleteClick = () => {
@@ -174,8 +194,15 @@ const CommentItem = ({ comment, onReply, onDelete, level = 0 }) => {
         setDeleteDialogOpen(false);
     };
 
+    const handleViewHistory = () => {
+        setHistoryModalOpen(true);
+    };
+
     // Verificar si el usuario es administrador
     const isAdmin = auth?.user?.role === 'admin';
+
+    // Verificar si el usuario puede editar este comentario
+    const canEdit = auth?.user && auth.user.id === currentComment.user_id;
 
     return (
         <Box
@@ -305,6 +332,18 @@ const CommentItem = ({ comment, onReply, onDelete, level = 0 }) => {
                                 <ReplyIcon fontSize="small" />
                             </IconButton>
                         )}
+                        {canEdit && !showEditForm && (
+                            <IconButton
+                                onClick={handleEditClick}
+                                size="small"
+                                sx={{
+                                    color: 'text.secondary',
+                                    '&:hover': { color: 'info.main' }
+                                }}
+                            >
+                                <EditIcon fontSize="small" />
+                            </IconButton>
+                        )}
                         {isAdmin && (
                             <IconButton
                                 onClick={handleDeleteClick}
@@ -320,17 +359,37 @@ const CommentItem = ({ comment, onReply, onDelete, level = 0 }) => {
                     </Box>
                 </Box>
 
-                {/* Contenido del comentario */}
-                <Typography 
-                    variant="body1" 
-                    sx={{ 
-                        lineHeight: 1.6,
-                        whiteSpace: 'pre-wrap',
-                        wordWrap: 'break-word'
-                    }}
-                >
-                    {comment.body}
-                </Typography>
+                {/* Contenido del comentario o formulario de edición */}
+                {showEditForm ? (
+                    <Box sx={{ mt: 2 }}>
+                        <CommentEditForm
+                            comment={currentComment}
+                            onCancel={() => setShowEditForm(false)}
+                            onSuccess={handleEditSuccess}
+                        />
+                    </Box>
+                ) : (
+                    <>
+                        <Typography
+                            variant="body1"
+                            sx={{
+                                lineHeight: 1.6,
+                                whiteSpace: 'pre-wrap',
+                                wordWrap: 'break-word'
+                            }}
+                        >
+                            {currentComment.body}
+                        </Typography>
+
+                        {/* Edit Indicator */}
+                        {currentComment.edited_at && (
+                            <CommentEditIndicator
+                                comment={currentComment}
+                                onViewHistory={canEdit || isAdmin ? handleViewHistory : null}
+                            />
+                        )}
+                    </>
+                )}
 
                 {comment.is_own_pending && (
                     <Box
@@ -383,11 +442,19 @@ const CommentItem = ({ comment, onReply, onDelete, level = 0 }) => {
                             comment={reply}
                             onReply={onReply}
                             onDelete={onDelete}
+                            onEdit={onEdit}
                             level={level + 1}
                         />
                     ))}
                 </Box>
             )}
+
+            {/* Edit History Modal */}
+            <CommentEditHistoryModal
+                open={historyModalOpen}
+                onClose={() => setHistoryModalOpen(false)}
+                commentId={currentComment.id}
+            />
 
             {/* Diálogo de confirmación de eliminación */}
             <Dialog

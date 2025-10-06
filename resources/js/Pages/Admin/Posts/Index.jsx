@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { Head, router } from '@inertiajs/react';
 import {
     Box,
@@ -28,7 +28,9 @@ import {
     alpha,
     Pagination,
     Stack,
-    Paper
+    Paper,
+    Snackbar,
+    Alert
 } from '@mui/material';
 import {
     Add as AddIcon,
@@ -44,10 +46,15 @@ import {
     Schedule as ScheduleIcon,
     Visibility as VisibilityIcon,
     Person as PersonIcon,
-    Category as CategoryIcon
+    Category as CategoryIcon,
+    TrendingUp as TrendingUpIcon,
+    Article as ArticleIcon,
+    Schedule as ScheduledIcon,
+    Comment as CommentIcon,
+    Favorite as FavoriteIcon,
 } from '@mui/icons-material';
 import { motion, AnimatePresence } from 'framer-motion';
-import AdminLayout from '@/Layouts/AdminLayout';
+import AdminLayoutNew from '@/Layouts/AdminLayoutNew';
 
 const PostsIndex = ({ posts, categories, tags, filters, stats }) => {
     const theme = useTheme();
@@ -61,6 +68,75 @@ const PostsIndex = ({ posts, categories, tags, filters, stats }) => {
     const [selectedPosts, setSelectedPosts] = useState([]);
     const [bulkActionDialogOpen, setBulkActionDialogOpen] = useState(false);
     const [bulkAction, setBulkAction] = useState('');
+    const [snackbar, setSnackbar] = useState({
+        open: false,
+        message: '',
+        severity: 'success',
+    });
+
+    const showSnackbar = (message, severity = 'success') => {
+        setSnackbar({
+            open: true,
+            message,
+            severity,
+        });
+    };
+
+    const handleSnackbarClose = (event, reason) => {
+        if (reason === 'clickaway') {
+            return;
+        }
+        setSnackbar(prev => ({
+            ...prev,
+            open: false,
+        }));
+    };
+
+    // Glassmorphism styles
+    const glassStyle = {
+        background: 'rgba(255, 255, 255, 0.25)',
+        backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)',
+        border: '1px solid rgba(255, 255, 255, 0.18)',
+        borderRadius: '16px',
+        boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.37)',
+    };
+
+    const glassStatCard = {
+        background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0.1) 100%)',
+        backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)',
+        border: '1px solid rgba(255, 255, 255, 0.2)',
+        borderRadius: '20px',
+        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)',
+        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+        '&:hover': {
+            transform: 'translateY(-4px)',
+            boxShadow: '0 12px 40px rgba(0, 0, 0, 0.15)',
+        },
+    };
+
+    // Animation variants
+    const containerVariants = {
+        hidden: { opacity: 0 },
+        visible: {
+            opacity: 1,
+            transition: {
+                staggerChildren: 0.1,
+            },
+        },
+    };
+
+    const itemVariants = {
+        hidden: { opacity: 0, y: 20 },
+        visible: {
+            opacity: 1,
+            y: 0,
+            transition: {
+                duration: 0.5,
+            },
+        },
+    };
 
     const handleSearch = () => {
         router.get('/admin/posts', {
@@ -96,7 +172,7 @@ const PostsIndex = ({ posts, categories, tags, filters, stats }) => {
 
     const handleToggleFeatured = async (post) => {
         try {
-            await fetch(`/admin/posts/${post.id}/toggle-featured`, {
+            await fetch(`/admin/posts/${post.slug}/toggle-featured`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -111,7 +187,7 @@ const PostsIndex = ({ posts, categories, tags, filters, stats }) => {
 
     const handleStatusChange = async (post, newStatus) => {
         try {
-            await fetch(`/admin/posts/${post.id}/status`, {
+            const response = await fetch(`/admin/posts/${post.slug}/status`, {
                 method: 'PATCH',
                 headers: {
                     'Content-Type': 'application/json',
@@ -119,23 +195,39 @@ const PostsIndex = ({ posts, categories, tags, filters, stats }) => {
                 },
                 body: JSON.stringify({ status: newStatus }),
             });
+
+            if (!response.ok) {
+                const data = await response.json().catch(() => null);
+                throw new Error(data?.message || 'No se pudo actualizar el estado del post.');
+            }
+
+            const successMessage = newStatus === 'published'
+                ? 'Post publicado correctamente.'
+                : newStatus === 'draft'
+                    ? 'El post se movio a borradores.'
+                    : 'Estado del post actualizado.';
+
+            showSnackbar(successMessage, 'success');
             router.reload({ only: ['posts'] });
         } catch (error) {
             console.error('Error changing status:', error);
+            showSnackbar(error.message || 'Ocurrio un error al cambiar el estado.', 'error');
+        } finally {
+            handleMenuClose();
         }
-        handleMenuClose();
     };
+
 
     const handleDuplicate = () => {
         if (selectedPost) {
-            router.post(`/admin/posts/${selectedPost.id}/duplicate`);
+            router.post(`/admin/posts/${selectedPost.slug}/duplicate`);
         }
         handleMenuClose();
     };
 
     const handleDeleteConfirm = () => {
         if (postToDelete) {
-            router.delete(`/admin/posts/${postToDelete.id}`);
+            router.delete(`/admin/posts/${postToDelete.slug}`);
         }
         setDeleteDialogOpen(false);
         setPostToDelete(null);
@@ -206,105 +298,285 @@ const PostsIndex = ({ posts, categories, tags, filters, stats }) => {
     };
 
     return (
-        <AdminLayout>
-            <Head title="Gestión de Posts - Admin" />
+        <AdminLayoutNew title="GestiÃ³n de Posts">
+            <Head title="GestiÃ³n de Posts - Admin" />
 
-            <Container maxWidth="xl" sx={{ py: 4 }}>
+            <Box
+                component={motion.div}
+                variants={containerVariants}
+                initial="hidden"
+                animate="visible"
+            >
                 {/* Header */}
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
-                    <Box>
-                        <Typography variant="h4" fontWeight="bold" gutterBottom>
-                            Gestión de Posts
-                        </Typography>
-                        <Typography variant="body1" color="text.secondary">
-                            Administra todos los artículos del blog
-                        </Typography>
+                <Box sx={{ mb: 4 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                        <Box>
+                            <Typography variant="h4" fontWeight="bold" gutterBottom>
+                                GestiÃ³n de Posts
+                            </Typography>
+                            <Typography variant="body1" color="text.secondary">
+                                Administra todos los artÃ­culos del blog
+                            </Typography>
+                        </Box>
+                        <Button
+                            variant="contained"
+                            startIcon={<AddIcon />}
+                            href="/admin/posts/create"
+                            size="large"
+                            sx={{
+                                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                                borderRadius: '12px',
+                                px: 3,
+                                py: 1.5,
+                                fontWeight: 600,
+                                textTransform: 'none',
+                                boxShadow: '0 8px 24px rgba(102, 126, 234, 0.4)',
+                                transition: 'all 0.3s ease',
+                                '&:hover': {
+                                    transform: 'translateY(-2px)',
+                                    boxShadow: '0 12px 32px rgba(102, 126, 234, 0.5)',
+                                },
+                            }}
+                        >
+                            Nuevo Post
+                        </Button>
                     </Box>
-                    <Button
-                        variant="contained"
-                        startIcon={<AddIcon />}
-                        href="/admin/posts/create"
-                        size="large"
-                        sx={{ borderRadius: 3 }}
-                    >
-                        Nuevo Post
-                    </Button>
                 </Box>
 
                 {/* Stats Cards */}
                 <Grid container spacing={3} sx={{ mb: 4 }}>
                     <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                         <Paper
+                            component={motion.div}
+                            variants={itemVariants}
                             sx={{
+                                ...glassStatCard,
                                 p: 3,
                                 textAlign: 'center',
-                                background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${alpha(theme.palette.primary.main, 0.8)} 100%)`,
-                                color: '#ffffff'
                             }}
                         >
-                            <Typography variant="h3" fontWeight="bold">
+                            <Box sx={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                mb: 2,
+                                color: '#667eea'
+                            }}>
+                                <ArticleIcon sx={{ fontSize: 40 }} />
+                            </Box>
+                            <Typography variant="h3" fontWeight="bold" sx={{ color: '#2D3748', mb: 1 }}>
                                 {stats.total}
                             </Typography>
-                            <Typography variant="body1">
+                            <Typography variant="body1" sx={{ color: '#718096', fontWeight: 500 }}>
                                 Total Posts
                             </Typography>
                         </Paper>
                     </Grid>
                     <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                         <Paper
+                            component={motion.div}
+                            variants={itemVariants}
                             sx={{
+                                ...glassStatCard,
                                 p: 3,
                                 textAlign: 'center',
-                                background: `linear-gradient(135deg, ${theme.palette.success.main} 0%, ${alpha(theme.palette.success.main, 0.8)} 100%)`,
-                                color: '#ffffff'
                             }}
                         >
-                            <Typography variant="h3" fontWeight="bold">
+                            <Box sx={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                mb: 2,
+                                color: '#48BB78'
+                            }}>
+                                <TrendingUpIcon sx={{ fontSize: 40 }} />
+                            </Box>
+                            <Typography variant="h3" fontWeight="bold" sx={{ color: '#2D3748', mb: 1 }}>
                                 {stats.published}
                             </Typography>
-                            <Typography variant="body1">
+                            <Typography variant="body1" sx={{ color: '#718096', fontWeight: 500 }}>
                                 Publicados
                             </Typography>
                         </Paper>
                     </Grid>
                     <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                         <Paper
+                            component={motion.div}
+                            variants={itemVariants}
                             sx={{
+                                ...glassStatCard,
                                 p: 3,
                                 textAlign: 'center',
-                                background: `linear-gradient(135deg, ${theme.palette.warning.main} 0%, ${alpha(theme.palette.warning.main, 0.8)} 100%)`,
-                                color: '#ffffff'
                             }}
                         >
-                            <Typography variant="h3" fontWeight="bold">
+                            <Box sx={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                mb: 2,
+                                color: '#F6AD55'
+                            }}>
+                                <EditIcon sx={{ fontSize: 40 }} />
+                            </Box>
+                            <Typography variant="h3" fontWeight="bold" sx={{ color: '#2D3748', mb: 1 }}>
                                 {stats.draft}
                             </Typography>
-                            <Typography variant="body1">
+                            <Typography variant="body1" sx={{ color: '#718096', fontWeight: 500 }}>
                                 Borradores
                             </Typography>
                         </Paper>
                     </Grid>
                     <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                         <Paper
+                            component={motion.div}
+                            variants={itemVariants}
                             sx={{
+                                ...glassStatCard,
                                 p: 3,
                                 textAlign: 'center',
-                                background: `linear-gradient(135deg, ${theme.palette.info.main} 0%, ${alpha(theme.palette.info.main, 0.8)} 100%)`,
-                                color: '#ffffff'
                             }}
                         >
-                            <Typography variant="h3" fontWeight="bold">
+                            <Box sx={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                mb: 2,
+                                color: '#4299E1'
+                            }}>
+                                <ScheduledIcon sx={{ fontSize: 40 }} />
+                            </Box>
+                            <Typography variant="h3" fontWeight="bold" sx={{ color: '#2D3748', mb: 1 }}>
                                 {stats.scheduled}
                             </Typography>
-                            <Typography variant="body1">
+                            <Typography variant="body1" sx={{ color: '#718096', fontWeight: 500 }}>
                                 Programados
                             </Typography>
                         </Paper>
                     </Grid>
                 </Grid>
 
+                {/* Engagement Stats - Segunda Fila */}
+                <Grid container spacing={3} sx={{ mb: 4 }}>
+                    <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                        <Paper
+                            component={motion.div}
+                            variants={itemVariants}
+                            sx={{
+                                ...glassStatCard,
+                                p: 2.5,
+                                textAlign: 'center',
+                            }}
+                        >
+                            <Box sx={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                mb: 1.5,
+                                color: '#E53E3E'
+                            }}>
+                                <FavoriteIcon sx={{ fontSize: 32 }} />
+                            </Box>
+                            <Typography variant="h4" fontWeight="bold" sx={{ color: '#2D3748', mb: 0.5 }}>
+                                {posts?.data?.reduce((sum, post) => sum + (post.likes_count || 0), 0) || 0}
+                            </Typography>
+                            <Typography variant="body2" sx={{ color: '#718096', fontWeight: 500 }}>
+                                Total Likes
+                            </Typography>
+                        </Paper>
+                    </Grid>
+                    <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                        <Paper
+                            component={motion.div}
+                            variants={itemVariants}
+                            sx={{
+                                ...glassStatCard,
+                                p: 2.5,
+                                textAlign: 'center',
+                            }}
+                        >
+                            <Box sx={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                mb: 1.5,
+                                color: '#38B2AC'
+                            }}>
+                                <CommentIcon sx={{ fontSize: 32 }} />
+                            </Box>
+                            <Typography variant="h4" fontWeight="bold" sx={{ color: '#2D3748', mb: 0.5 }}>
+                                {posts?.data?.reduce((sum, post) => sum + (post.comments_count || 0), 0) || 0}
+                            </Typography>
+                            <Typography variant="body2" sx={{ color: '#718096', fontWeight: 500 }}>
+                                Total Comentarios
+                            </Typography>
+                        </Paper>
+                    </Grid>
+                    <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                        <Paper
+                            component={motion.div}
+                            variants={itemVariants}
+                            sx={{
+                                ...glassStatCard,
+                                p: 2.5,
+                                textAlign: 'center',
+                            }}
+                        >
+                            <Box sx={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                mb: 1.5,
+                                color: '#D69E2E'
+                            }}>
+                                <StarIcon sx={{ fontSize: 32 }} />
+                            </Box>
+                            <Typography variant="h4" fontWeight="bold" sx={{ color: '#2D3748', mb: 0.5 }}>
+                                {posts?.data?.filter(post => post.is_featured).length || 0}
+                            </Typography>
+                            <Typography variant="body2" sx={{ color: '#718096', fontWeight: 500 }}>
+                                Posts Destacados
+                            </Typography>
+                        </Paper>
+                    </Grid>
+                    <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                        <Paper
+                            component={motion.div}
+                            variants={itemVariants}
+                            sx={{
+                                ...glassStatCard,
+                                p: 2.5,
+                                textAlign: 'center',
+                            }}
+                        >
+                            <Box sx={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                mb: 1.5,
+                                color: '#805AD5'
+                            }}>
+                                <VisibilityIcon sx={{ fontSize: 32 }} />
+                            </Box>
+                            <Typography variant="h4" fontWeight="bold" sx={{ color: '#2D3748', mb: 0.5 }}>
+                                {posts?.data?.reduce((sum, post) => sum + (post.views_count || 0), 0) || 0}
+                            </Typography>
+                            <Typography variant="body2" sx={{ color: '#718096', fontWeight: 500 }}>
+                                Total Vistas
+                            </Typography>
+                        </Paper>
+                    </Grid>
+                </Grid>
+
                 {/* Filters */}
-                <Paper sx={{ p: 3, mb: 4 }}>
+                <Paper
+                    component={motion.div}
+                    variants={itemVariants}
+                    sx={{
+                        ...glassStyle,
+                        p: 3,
+                        mb: 4
+                    }}
+                >
                     <Grid container spacing={3} alignItems="center">
                         <Grid size={{ xs: 12, md: 4 }}>
                             <TextField
@@ -320,6 +592,22 @@ const PostsIndex = ({ posts, categories, tags, filters, stats }) => {
                                         </InputAdornment>
                                     ),
                                 }}
+                                sx={{
+                                    '& .MuiOutlinedInput-root': {
+                                        background: 'rgba(255, 255, 255, 0.15)',
+                                        backdropFilter: 'blur(10px)',
+                                        borderRadius: '12px',
+                                        '& fieldset': {
+                                            borderColor: 'rgba(255, 255, 255, 0.2)',
+                                        },
+                                        '&:hover fieldset': {
+                                            borderColor: 'rgba(255, 255, 255, 0.3)',
+                                        },
+                                        '&.Mui-focused fieldset': {
+                                            borderColor: '#667eea',
+                                        },
+                                    },
+                                }}
                             />
                         </Grid>
                         <Grid size={{ xs: 12, md: 3 }}>
@@ -332,6 +620,20 @@ const PostsIndex = ({ posts, categories, tags, filters, stats }) => {
                                         setSelectedStatus(e.target.value);
                                         handleFilter('status', e.target.value);
                                     }}
+                                    sx={{
+                                        background: 'rgba(255, 255, 255, 0.15)',
+                                        backdropFilter: 'blur(10px)',
+                                        borderRadius: '12px',
+                                        '& fieldset': {
+                                            borderColor: 'rgba(255, 255, 255, 0.2)',
+                                        },
+                                        '&:hover fieldset': {
+                                            borderColor: 'rgba(255, 255, 255, 0.3)',
+                                        },
+                                        '&.Mui-focused fieldset': {
+                                            borderColor: '#667eea',
+                                        },
+                                    }}
                                 >
                                     <MenuItem value="">Todos</MenuItem>
                                     <MenuItem value="published">Publicado</MenuItem>
@@ -342,13 +644,27 @@ const PostsIndex = ({ posts, categories, tags, filters, stats }) => {
                         </Grid>
                         <Grid size={{ xs: 12, md: 3 }}>
                             <FormControl fullWidth>
-                                <InputLabel>Categoría</InputLabel>
+                                <InputLabel>CategorÃ­a</InputLabel>
                                 <Select
                                     value={selectedCategory}
-                                    label="Categoría"
+                                    label="CategorÃ­a"
                                     onChange={(e) => {
                                         setSelectedCategory(e.target.value);
                                         handleFilter('category', e.target.value);
+                                    }}
+                                    sx={{
+                                        background: 'rgba(255, 255, 255, 0.15)',
+                                        backdropFilter: 'blur(10px)',
+                                        borderRadius: '12px',
+                                        '& fieldset': {
+                                            borderColor: 'rgba(255, 255, 255, 0.2)',
+                                        },
+                                        '&:hover fieldset': {
+                                            borderColor: 'rgba(255, 255, 255, 0.3)',
+                                        },
+                                        '&.Mui-focused fieldset': {
+                                            borderColor: '#667eea',
+                                        },
                                     }}
                                 >
                                     <MenuItem value="">Todas</MenuItem>
@@ -365,7 +681,17 @@ const PostsIndex = ({ posts, categories, tags, filters, stats }) => {
                                 fullWidth
                                 variant="contained"
                                 onClick={handleSearch}
-                                sx={{ py: 1.8 }}
+                                sx={{
+                                    py: 1.8,
+                                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                                    borderRadius: '12px',
+                                    fontWeight: 600,
+                                    textTransform: 'none',
+                                    boxShadow: '0 4px 16px rgba(102, 126, 234, 0.3)',
+                                    '&:hover': {
+                                        boxShadow: '0 6px 20px rgba(102, 126, 234, 0.4)',
+                                    },
+                                }}
                             >
                                 Filtrar
                             </Button>
@@ -379,14 +705,20 @@ const PostsIndex = ({ posts, categories, tags, filters, stats }) => {
                         <Grid size={{ xs: 12, md: 6, lg: 4 }} key={post.id}>
                             <Card
                                 component={motion.div}
+                                variants={itemVariants}
                                 whileHover={{ y: -4 }}
                                 sx={{
+                                    ...glassStyle,
                                     height: '100%',
                                     display: 'flex',
                                     flexDirection: 'column',
                                     position: 'relative',
-                                    borderRadius: 3,
-                                    overflow: 'hidden'
+                                    overflow: 'hidden',
+                                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                                    '&:hover': {
+                                        boxShadow: '0 12px 40px rgba(31, 38, 135, 0.5)',
+                                        background: 'rgba(255, 255, 255, 0.3)',
+                                    },
                                 }}
                             >
                                 {/* Featured Badge */}
@@ -513,7 +845,7 @@ const PostsIndex = ({ posts, categories, tags, filters, stats }) => {
                                 <CardActions sx={{ p: 3, pt: 0 }}>
                                     <Button
                                         size="small"
-                                        href={`/admin/posts/${post.id}/edit`}
+                                        href={`/admin/posts/${post.slug}/edit`}
                                         startIcon={<EditIcon />}
                                         variant="outlined"
                                         sx={{ mr: 1 }}
@@ -548,7 +880,11 @@ const PostsIndex = ({ posts, categories, tags, filters, stats }) => {
 
                 {/* Pagination */}
                 {posts.last_page > 1 && (
-                    <Box sx={{ display: 'flex', justifyContent: 'center', mt: 6 }}>
+                    <Box
+                        component={motion.div}
+                        variants={itemVariants}
+                        sx={{ display: 'flex', justifyContent: 'center', mt: 6 }}
+                    >
                         <Pagination
                             count={posts.last_page}
                             page={posts.current_page}
@@ -563,6 +899,24 @@ const PostsIndex = ({ posts, categories, tags, filters, stats }) => {
                             }}
                             color="primary"
                             size="large"
+                            sx={{
+                                '& .MuiPaginationItem-root': {
+                                    background: 'rgba(255, 255, 255, 0.2)',
+                                    backdropFilter: 'blur(10px)',
+                                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                                    fontWeight: 600,
+                                    '&:hover': {
+                                        background: 'rgba(255, 255, 255, 0.3)',
+                                    },
+                                    '&.Mui-selected': {
+                                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                                        color: '#fff',
+                                        '&:hover': {
+                                            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                                        },
+                                    },
+                                },
+                            }}
                         />
                     </Box>
                 )}
@@ -577,7 +931,7 @@ const PostsIndex = ({ posts, categories, tags, filters, stats }) => {
                         <ViewIcon sx={{ mr: 1 }} />
                         Ver Post
                     </MenuItem>
-                    <MenuItem onClick={() => window.location.href = `/admin/posts/${selectedPost?.id}/edit`}>
+                    <MenuItem onClick={() => window.location.href = `/admin/posts/${selectedPost?.slug}/edit`}>
                         <EditIcon sx={{ mr: 1 }} />
                         Editar
                     </MenuItem>
@@ -611,37 +965,82 @@ const PostsIndex = ({ posts, categories, tags, filters, stats }) => {
                 </Menu>
 
                 {/* Delete Confirmation Dialog */}
-                <Dialog 
-                    open={deleteDialogOpen} 
+                <Dialog
+                    open={deleteDialogOpen}
                     onClose={() => setDeleteDialogOpen(false)}
                     maxWidth="sm"
                     fullWidth
+                    PaperProps={{
+                        sx: {
+                            ...glassStyle,
+                            borderRadius: '16px',
+                        }
+                    }}
                 >
-                    <DialogTitle>
-                        Confirmar Eliminación
+                    <DialogTitle sx={{ fontWeight: 700, fontSize: '1.5rem' }}>
+                        Confirmar EliminaciÃ³n
                     </DialogTitle>
                     <DialogContent>
                         <Typography>
-                            ¿Estás seguro de que quieres eliminar el post "{postToDelete?.title}"? 
-                            Esta acción no se puede deshacer.
+                            Â¿EstÃ¡s seguro de que quieres eliminar el post "{postToDelete?.title}"?
+                            Esta acciÃ³n no se puede deshacer.
                         </Typography>
                     </DialogContent>
-                    <DialogActions>
-                        <Button onClick={() => setDeleteDialogOpen(false)}>
+                    <DialogActions sx={{ p: 3, pt: 0 }}>
+                        <Button
+                            onClick={() => setDeleteDialogOpen(false)}
+                            sx={{
+                                borderRadius: '12px',
+                                px: 3,
+                                fontWeight: 600,
+                                textTransform: 'none',
+                            }}
+                        >
                             Cancelar
                         </Button>
-                        <Button 
-                            onClick={handleDeleteConfirm} 
-                            color="error" 
+                        <Button
+                            onClick={handleDeleteConfirm}
+                            color="error"
                             variant="contained"
+                            sx={{
+                                borderRadius: '12px',
+                                px: 3,
+                                fontWeight: 600,
+                                textTransform: 'none',
+                                boxShadow: '0 4px 16px rgba(229, 62, 62, 0.3)',
+                                '&:hover': {
+                                    boxShadow: '0 6px 20px rgba(229, 62, 62, 0.4)',
+                                },
+                            }}
                         >
                             Eliminar
                         </Button>
                     </DialogActions>
                 </Dialog>
-            </Container>
-        </AdminLayout>
+            </Box>
+            <Snackbar
+                open={snackbar.open}
+                autoHideDuration={4000}
+                onClose={handleSnackbarClose}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+            >
+                <Alert
+                    onClose={handleSnackbarClose}
+                    severity={snackbar.severity}
+                    variant="filled"
+                    sx={{ width: '100%' }}
+                >
+                    {snackbar.message}
+                </Alert>
+            </Snackbar>
+        </AdminLayoutNew>
     );
 };
 
 export default PostsIndex;
+
+
+
+
+
+

@@ -48,8 +48,10 @@ import {
     Analytics as AnalyticsIcon,
     Category as CategoryIcon,
     Tag as TagIcon,
+    ContactMail as ContactMailIcon,
     Close as CloseIcon
 } from '@mui/icons-material';
+import NotificationCenter from '@/Components/Admin/NotificationCenter';
 
 const drawerWidth = 280;
 
@@ -111,10 +113,9 @@ const menuItemVariants = {
 
 const AdminLayoutNew = ({ children, title = 'Admin Panel' }) => {
     const theme = useTheme();
-    const { auth, flash, notifications = [] } = usePage().props;
+    const { auth, flash } = usePage().props;
     const [mobileOpen, setMobileOpen] = useState(false);
     const [userMenuAnchor, setUserMenuAnchor] = useState(null);
-    const [notificationMenuAnchor, setNotificationMenuAnchor] = useState(null);
     const [expandedMenus, setExpandedMenus] = useState({});
     const [flashMessage, setFlashMessage] = useState(null);
     const isMobile = useMediaQuery(theme.breakpoints.down('lg'));
@@ -136,14 +137,6 @@ const AdminLayoutNew = ({ children, title = 'Admin Panel' }) => {
 
     const handleUserMenuClose = () => {
         setUserMenuAnchor(null);
-    };
-
-    const handleNotificationMenuOpen = (event) => {
-        setNotificationMenuAnchor(event.currentTarget);
-    };
-
-    const handleNotificationMenuClose = () => {
-        setNotificationMenuAnchor(null);
     };
 
     const handleMenuExpand = (menuKey) => {
@@ -222,6 +215,13 @@ const AdminLayoutNew = ({ children, title = 'Admin Panel' }) => {
             icon: <PeopleIcon />,
             href: route('admin.users.index'),
             active: route().current('admin.users.*')
+        },
+        {
+            key: 'contact-requests',
+            label: 'Solicitudes de Contacto',
+            icon: <ContactMailIcon />,
+            href: route('admin.contact-requests.index'),
+            active: route().current('admin.contact-requests.*')
         },
         {
             key: 'analytics',
@@ -395,17 +395,7 @@ const AdminLayoutNew = ({ children, title = 'Admin Panel' }) => {
                     </Typography>
 
                     {/* Notifications */}
-                    <Tooltip title="Notificaciones">
-                        <IconButton
-                            color="inherit"
-                            onClick={handleNotificationMenuOpen}
-                            sx={{ mr: 1 }}
-                        >
-                            <Badge badgeContent={notifications.length} color="error">
-                                <NotificationsIcon />
-                            </Badge>
-                        </IconButton>
-                    </Tooltip>
+                    <NotificationCenter />
 
                     {/* User Menu */}
                     <Tooltip title="Perfil de usuario">
@@ -528,42 +518,6 @@ const AdminLayoutNew = ({ children, title = 'Admin Panel' }) => {
                     <LogoutIcon sx={{ mr: 2 }} />
                     Cerrar Sesión
                 </MenuItem>
-            </Menu>
-
-            {/* Notification Menu */}
-            <Menu
-                anchorEl={notificationMenuAnchor}
-                open={Boolean(notificationMenuAnchor)}
-                onClose={handleNotificationMenuClose}
-                PaperProps={{
-                    sx: {
-                        ...glassmorphismStyles,
-                        mt: 1,
-                        maxWidth: 350,
-                        maxHeight: 400,
-                    }
-                }}
-            >
-                {notifications.length > 0 ? (
-                    notifications.map((notification, index) => (
-                        <MenuItem key={index} onClick={handleNotificationMenuClose}>
-                            <Box>
-                                <Typography variant="body2" fontWeight={600}>
-                                    {notification.title}
-                                </Typography>
-                                <Typography variant="caption" color="text.secondary">
-                                    {notification.message}
-                                </Typography>
-                            </Box>
-                        </MenuItem>
-                    ))
-                ) : (
-                    <MenuItem disabled>
-                        <Typography variant="body2" color="text.secondary">
-                            No hay notificaciones
-                        </Typography>
-                    </MenuItem>
-                )}
             </Menu>
 
             {/* Flash Messages */}

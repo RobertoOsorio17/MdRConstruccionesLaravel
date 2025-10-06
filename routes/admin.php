@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 use Illuminate\Support\Facades\Route;
 
@@ -35,7 +35,7 @@ Route::get('/login', [App\Http\Controllers\Admin\Auth\AdminAuthController::class
     ->name('login');
 
 // All admin routes require authentication and admin/editor role with enhanced security
-Route::middleware(['auth', 'verified', 'auth.enhanced', 'role:admin,editor', 'admin.timeout', 'admin.audit'])->group(function () {
+Route::middleware(['auth', 'auth.enhanced', 'role:admin,editor', 'admin.timeout', 'admin.audit'])->group(function () {
 
     // Admin root redirect to dashboard
     Route::get('/', function () {
@@ -59,6 +59,9 @@ Route::middleware(['auth', 'verified', 'auth.enhanced', 'role:admin,editor', 'ad
     // Admin Notifications API
     Route::prefix('api')->group(function () {
         Route::get('/notifications', [App\Http\Controllers\Admin\NotificationController::class, 'index'])->name('api.notifications.index');
+        Route::get('/notifications/recent', [App\Http\Controllers\Admin\NotificationController::class, 'recent'])->name('api.notifications.recent');
+        Route::get('/notifications/unread-count', [App\Http\Controllers\Admin\NotificationController::class, 'unreadCount'])->name('api.notifications.unread-count');
+        Route::get('/notifications/wait-updates', [App\Http\Controllers\Admin\NotificationController::class, 'waitUpdates'])->name('api.notifications.wait-updates');
         Route::post('/notifications', [App\Http\Controllers\Admin\NotificationController::class, 'store'])->name('api.notifications.store');
         Route::patch('/notifications/{notification}/read', [App\Http\Controllers\Admin\NotificationController::class, 'markAsRead'])->name('api.notifications.read');
         Route::patch('/notifications/{notification}/unread', [App\Http\Controllers\Admin\NotificationController::class, 'markAsUnread'])->name('api.notifications.unread');
@@ -87,7 +90,7 @@ Route::middleware(['auth', 'verified', 'auth.enhanced', 'role:admin,editor', 'ad
             'update' => 'users.update',
             'destroy' => 'users.destroy',
         ]);
-    // ✅ Bulk action with dedicated rate limiting
+    // âœ… Bulk action with dedicated rate limiting
     Route::post('/users/bulk-action', [App\Http\Controllers\Admin\UserManagementController::class, 'bulkAction'])
         ->middleware('throttle:bulk-operations')
         ->name('users.bulk-action');
@@ -120,7 +123,7 @@ Route::middleware(['auth', 'verified', 'auth.enhanced', 'role:admin,editor', 'ad
             'update' => 'services.update',
             'destroy' => 'services.destroy',
         ]);
-    // ✅ Bulk action with dedicated rate limiting
+    // âœ… Bulk action with dedicated rate limiting
     Route::post('/services/bulk-action', [App\Http\Controllers\Admin\ServiceManagementController::class, 'bulkAction'])
         ->middleware('throttle:bulk-operations')
         ->name('services.bulk-action');
@@ -138,7 +141,7 @@ Route::middleware(['auth', 'verified', 'auth.enhanced', 'role:admin,editor', 'ad
             'update' => 'projects.update',
             'destroy' => 'projects.destroy',
         ]);
-    // ✅ Bulk action with dedicated rate limiting
+    // âœ… Bulk action with dedicated rate limiting
     Route::post('/projects/bulk-action', [App\Http\Controllers\Admin\ProjectManagementController::class, 'bulkAction'])
         ->middleware('throttle:bulk-operations')
         ->name('projects.bulk-action');
@@ -167,6 +170,24 @@ Route::middleware(['auth', 'verified', 'auth.enhanced', 'role:admin,editor', 'ad
     Route::post('/backup/clean', [App\Http\Controllers\Admin\BackupController::class, 'clean'])->name('backup.clean');
 
     // Posts Management
+    // âš ï¸ IMPORTANT: Specific routes MUST come BEFORE Route::resource to avoid conflicts
+
+    // Additional post actions (BEFORE resource routes)
+    Route::get('posts/analytics', [App\Http\Controllers\Admin\PostController::class, 'analytics'])
+        ->name('posts.analytics');
+    Route::get('posts/export', [App\Http\Controllers\Admin\PostController::class, 'export'])
+        ->name('posts.export');
+    Route::post('posts/bulk-action', [App\Http\Controllers\Admin\PostController::class, 'bulkAction'])
+        ->middleware('throttle:bulk-operations')
+        ->name('posts.bulk-action');
+    Route::post('posts/{post}/toggle-featured', [App\Http\Controllers\Admin\PostController::class, 'toggleFeatured'])
+        ->name('posts.toggle-featured');
+    Route::patch('posts/{post}/status', [App\Http\Controllers\Admin\PostController::class, 'changeStatus'])
+        ->name('posts.change-status');
+    Route::post('posts/{post}/duplicate', [App\Http\Controllers\Admin\PostController::class, 'duplicate'])
+        ->name('posts.duplicate');
+
+    // Resource routes (AFTER specific routes)
     Route::resource('posts', App\Http\Controllers\Admin\PostController::class)
         ->names([
             'index' => 'posts.index',
@@ -177,22 +198,6 @@ Route::middleware(['auth', 'verified', 'auth.enhanced', 'role:admin,editor', 'ad
             'update' => 'posts.update',
             'destroy' => 'posts.destroy',
         ]);
-    
-    // Additional post actions
-    Route::post('posts/{post}/toggle-featured', [App\Http\Controllers\Admin\PostController::class, 'toggleFeatured'])
-        ->name('posts.toggle-featured');
-    Route::patch('posts/{post}/status', [App\Http\Controllers\Admin\PostController::class, 'changeStatus'])
-        ->name('posts.change-status');
-    Route::post('posts/{post}/duplicate', [App\Http\Controllers\Admin\PostController::class, 'duplicate'])
-        ->name('posts.duplicate');
-    // ✅ Bulk action with dedicated rate limiting
-    Route::post('posts/bulk-action', [App\Http\Controllers\Admin\PostController::class, 'bulkAction'])
-        ->middleware('throttle:bulk-operations')
-        ->name('posts.bulk-action');
-    Route::get('posts/analytics', [App\Http\Controllers\Admin\PostController::class, 'analytics'])
-        ->name('posts.analytics');
-    Route::get('posts/export', [App\Http\Controllers\Admin\PostController::class, 'export'])
-        ->name('posts.export');
     
     // Categories Management
     Route::resource('categories', App\Http\Controllers\Admin\CategoryController::class)
@@ -305,7 +310,7 @@ Route::middleware(['auth', 'verified', 'auth.enhanced', 'role:admin,editor', 'ad
 });
 
 // Admin only routes (restricted to admin role) with enhanced security
-Route::middleware(['auth', 'verified', 'auth.enhanced', 'role:admin', 'admin.security', 'admin.timeout', 'admin.audit'])->group(function () {
+Route::middleware(['auth', 'auth.enhanced', 'role:admin', 'admin.security', 'admin.timeout', 'admin.audit'])->group(function () {
 
     // System Management & Utilities
     Route::get('/system/stats', [App\Http\Controllers\Admin\AdminController::class, 'getSystemStats'])
@@ -354,11 +359,32 @@ Route::middleware(['auth', 'verified', 'auth.enhanced', 'role:admin', 'admin.sec
             ->name('archive');
         Route::post('/{contactRequest}/notes', [App\Http\Controllers\Admin\ContactRequestController::class, 'addNotes'])
             ->name('add-notes');
-        Route::get('/{contactRequest}/attachment/{index}', [App\Http\Controllers\Admin\ContactRequestController::class, 'downloadAttachment'])
-            ->name('download-attachment');
+        Route::get('/{contactRequest}/attachments/{attachment}/download', [App\Http\Controllers\Admin\ContactRequestController::class, 'downloadAttachment'])
+            ->name('attachments.download');
         Route::delete('/{contactRequest}', [App\Http\Controllers\Admin\ContactRequestController::class, 'destroy'])
             ->name('destroy');
         Route::post('/bulk-action', [App\Http\Controllers\Admin\ContactRequestController::class, 'bulkAction'])
             ->name('bulk-action');
     });
+
+    // Admin Notifications
+    Route::prefix('notifications')->name('notifications.')->group(function () {
+        Route::get('/', [App\Http\Controllers\Admin\NotificationController::class, 'index'])
+            ->name('index');
+        Route::get('/stats', [App\Http\Controllers\Admin\NotificationController::class, 'stats'])
+            ->name('stats');
+        Route::post('/{notification}/mark-read', [App\Http\Controllers\Admin\NotificationController::class, 'markAsRead'])
+            ->name('mark-read');
+        Route::post('/{notification}/mark-unread', [App\Http\Controllers\Admin\NotificationController::class, 'markAsUnread'])
+            ->name('mark-unread');
+        Route::post('/mark-all-read', [App\Http\Controllers\Admin\NotificationController::class, 'markAllAsRead'])
+            ->name('mark-all-read');
+        Route::delete('/{notification}', [App\Http\Controllers\Admin\NotificationController::class, 'destroy'])
+            ->name('destroy');
+        Route::post('/cleanup', [App\Http\Controllers\Admin\NotificationController::class, 'cleanup'])
+            ->name('cleanup');
+        Route::post('/', [App\Http\Controllers\Admin\NotificationController::class, 'store'])
+            ->name('store');
+    });
 });
+

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import AdminLayout from '@/Layouts/AdminLayout';
+import AdminLayoutNew from '@/Layouts/AdminLayoutNew';
 import { Head, router } from '@inertiajs/react';
+import ContactRequestDrawer from '@/Components/Admin/ContactRequestDrawer';
 import {
     Box,
     Card,
@@ -32,6 +33,7 @@ import {
     Tooltip,
     Menu,
     Checkbox,
+    CircularProgress,
 } from '@mui/material';
 import {
     Visibility,
@@ -122,7 +124,7 @@ export default function ContactRequestsIndex({ requests, stats, filters }) {
 
     const handleViewDetails = (request) => {
         setSelectedRequest(request);
-        setDetailsDialog(true);
+        setDetailsDialog(true); // Open drawer instead of dialog
     };
 
     const handleAddNotes = (request) => {
@@ -194,10 +196,8 @@ export default function ContactRequestsIndex({ requests, stats, filters }) {
     );
 
     return (
-        <AdminLayout>
+        <AdminLayoutNew title="Solicitudes de Contacto">
             <Head title="Solicitudes de Contacto" />
-
-            <Box sx={{ p: 3 }}>
                 {/* Header */}
                 <Box sx={{ mb: 4 }}>
                     <Typography variant="h4" fontWeight="bold" gutterBottom>
@@ -268,110 +268,389 @@ export default function ContactRequestsIndex({ requests, stats, filters }) {
                     </Grid>
                 </Grid>
 
-                {/* Filters */}
-                <Card sx={{ ...glassStyle, mb: 3 }}>
-                    <CardContent>
-                        <Grid container spacing={2} alignItems="center">
-                            <Grid item xs={12} md={4}>
-                                <TextField
-                                    fullWidth
-                                    placeholder="Buscar por nombre, email..."
-                                    value={search}
-                                    onChange={(e) => setSearch(e.target.value)}
-                                    onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-                                    InputProps={{
-                                        startAdornment: <Search sx={{ mr: 1, color: 'text.secondary' }} />,
-                                    }}
-                                />
-                            </Grid>
-                            <Grid item xs={12} md={3}>
-                                <FormControl fullWidth>
-                                    <InputLabel>Estado</InputLabel>
-                                    <Select
-                                        value={statusFilter}
-                                        onChange={(e) => setStatusFilter(e.target.value)}
-                                        label="Estado"
+                {/* Filters - Premium Glassmorphism Design */}
+                <motion.div
+                    initial={{ opacity: 0, y: -20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.4, delay: 0.2 }}
+                >
+                    <Card
+                        sx={{
+                            ...glassStyle,
+                            mb: 3,
+                            overflow: 'visible',
+                        }}
+                    >
+                        <CardContent sx={{ p: 3 }}>
+                            <Stack spacing={3}>
+                                {/* Header */}
+                                <Stack direction="row" alignItems="center" spacing={2}>
+                                    <Box
+                                        sx={{
+                                            width: 40,
+                                            height: 40,
+                                            borderRadius: '12px',
+                                            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            boxShadow: '0 4px 12px rgba(102, 126, 234, 0.3)',
+                                        }}
                                     >
-                                        <MenuItem value="">Todos</MenuItem>
-                                        <MenuItem value="new">Nuevas</MenuItem>
-                                        <MenuItem value="read">Leídas</MenuItem>
-                                        <MenuItem value="responded">Respondidas</MenuItem>
-                                        <MenuItem value="archived">Archivadas</MenuItem>
-                                    </Select>
-                                </FormControl>
-                            </Grid>
-                            <Grid item xs={12} md={3}>
-                                <FormControl fullWidth>
-                                    <InputLabel>Servicio</InputLabel>
-                                    <Select
-                                        value={serviceFilter}
-                                        onChange={(e) => setServiceFilter(e.target.value)}
-                                        label="Servicio"
-                                    >
-                                        <MenuItem value="">Todos</MenuItem>
-                                        <MenuItem value="Reformas Integrales">Reformas Integrales</MenuItem>
-                                        <MenuItem value="Construcción Nueva">Construcción Nueva</MenuItem>
-                                        <MenuItem value="Rehabilitación">Rehabilitación</MenuItem>
-                                        <MenuItem value="Diseño de Interiores">Diseño de Interiores</MenuItem>
-                                        <MenuItem value="Proyectos Comerciales">Proyectos Comerciales</MenuItem>
-                                        <MenuItem value="Otro">Otro</MenuItem>
-                                    </Select>
-                                </FormControl>
-                            </Grid>
-                            <Grid item xs={12} md={2}>
-                                <Button
-                                    fullWidth
-                                    variant="contained"
-                                    onClick={handleSearch}
-                                    startIcon={<FilterList />}
-                                >
-                                    Filtrar
-                                </Button>
-                            </Grid>
-                        </Grid>
-                    </CardContent>
-                </Card>
+                                        <FilterList sx={{ color: '#fff', fontSize: 20 }} />
+                                    </Box>
+                                    <Box>
+                                        <Typography variant="h6" fontWeight={600} sx={{ color: '#2D3748' }}>
+                                            Filtros de Búsqueda
+                                        </Typography>
+                                        <Typography variant="caption" sx={{ color: '#718096' }}>
+                                            Refina los resultados según tus criterios
+                                        </Typography>
+                                    </Box>
+                                </Stack>
 
-                {/* Bulk Actions */}
-                {selectedRequests.length > 0 && (
-                    <Card sx={{ ...glassStyle, mb: 3 }}>
-                        <CardContent>
-                            <Stack direction="row" spacing={2} alignItems="center">
-                                <Typography variant="body2">
-                                    {selectedRequests.length} seleccionadas
-                                </Typography>
-                                <Button
-                                    size="small"
-                                    onClick={() => handleBulkAction('mark_read')}
-                                    startIcon={<Visibility />}
-                                >
-                                    Marcar como leídas
-                                </Button>
-                                <Button
-                                    size="small"
-                                    onClick={() => handleBulkAction('mark_responded')}
-                                    startIcon={<CheckCircle />}
-                                >
-                                    Marcar como respondidas
-                                </Button>
-                                <Button
-                                    size="small"
-                                    onClick={() => handleBulkAction('archive')}
-                                    startIcon={<Archive />}
-                                >
-                                    Archivar
-                                </Button>
-                                <Button
-                                    size="small"
-                                    color="error"
-                                    onClick={() => handleBulkAction('delete')}
-                                    startIcon={<Delete />}
-                                >
-                                    Eliminar
-                                </Button>
+                                {/* Filters Grid */}
+                                <Grid container spacing={2.5}>
+                                    {/* Search Field */}
+                                    <Grid item xs={12} md={4}>
+                                        <TextField
+                                            fullWidth
+                                            placeholder="Buscar por nombre, email o teléfono..."
+                                            value={search}
+                                            onChange={(e) => setSearch(e.target.value)}
+                                            onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+                                            InputProps={{
+                                                startAdornment: (
+                                                    <Search sx={{ mr: 1.5, color: '#667eea', fontSize: 22 }} />
+                                                ),
+                                            }}
+                                            sx={{
+                                                '& .MuiOutlinedInput-root': {
+                                                    backgroundColor: alpha('#fff', 0.6),
+                                                    backdropFilter: 'blur(10px)',
+                                                    borderRadius: '12px',
+                                                    transition: 'all 0.3s ease',
+                                                    '&:hover': {
+                                                        backgroundColor: alpha('#fff', 0.8),
+                                                        boxShadow: '0 4px 12px rgba(102, 126, 234, 0.15)',
+                                                    },
+                                                    '&.Mui-focused': {
+                                                        backgroundColor: alpha('#fff', 0.95),
+                                                        boxShadow: '0 4px 16px rgba(102, 126, 234, 0.25)',
+                                                    },
+                                                },
+                                            }}
+                                        />
+                                    </Grid>
+
+                                    {/* Status Filter */}
+                                    <Grid item xs={12} sm={6} md={3}>
+                                        <FormControl fullWidth>
+                                            <InputLabel>Estado</InputLabel>
+                                            <Select
+                                                value={statusFilter}
+                                                onChange={(e) => setStatusFilter(e.target.value)}
+                                                label="Estado"
+                                                sx={{
+                                                    backgroundColor: alpha('#fff', 0.6),
+                                                    backdropFilter: 'blur(10px)',
+                                                    borderRadius: '12px',
+                                                    transition: 'all 0.3s ease',
+                                                    '&:hover': {
+                                                        backgroundColor: alpha('#fff', 0.8),
+                                                        boxShadow: '0 4px 12px rgba(102, 126, 234, 0.15)',
+                                                    },
+                                                    '&.Mui-focused': {
+                                                        backgroundColor: alpha('#fff', 0.95),
+                                                        boxShadow: '0 4px 16px rgba(102, 126, 234, 0.25)',
+                                                    },
+                                                }}
+                                            >
+                                                <MenuItem value="">
+                                                    <Stack direction="row" spacing={1} alignItems="center">
+                                                        <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#718096' }} />
+                                                        <span>Todos los estados</span>
+                                                    </Stack>
+                                                </MenuItem>
+                                                <MenuItem value="new">
+                                                    <Stack direction="row" spacing={1} alignItems="center">
+                                                        <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#4299E1' }} />
+                                                        <span>Nuevas</span>
+                                                    </Stack>
+                                                </MenuItem>
+                                                <MenuItem value="read">
+                                                    <Stack direction="row" spacing={1} alignItems="center">
+                                                        <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#F6AD55' }} />
+                                                        <span>Leídas</span>
+                                                    </Stack>
+                                                </MenuItem>
+                                                <MenuItem value="responded">
+                                                    <Stack direction="row" spacing={1} alignItems="center">
+                                                        <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#48BB78' }} />
+                                                        <span>Respondidas</span>
+                                                    </Stack>
+                                                </MenuItem>
+                                                <MenuItem value="archived">
+                                                    <Stack direction="row" spacing={1} alignItems="center">
+                                                        <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#718096' }} />
+                                                        <span>Archivadas</span>
+                                                    </Stack>
+                                                </MenuItem>
+                                            </Select>
+                                        </FormControl>
+                                    </Grid>
+
+                                    {/* Service Filter */}
+                                    <Grid item xs={12} sm={6} md={3}>
+                                        <FormControl fullWidth>
+                                            <InputLabel>Servicio</InputLabel>
+                                            <Select
+                                                value={serviceFilter}
+                                                onChange={(e) => setServiceFilter(e.target.value)}
+                                                label="Servicio"
+                                                sx={{
+                                                    backgroundColor: alpha('#fff', 0.6),
+                                                    backdropFilter: 'blur(10px)',
+                                                    borderRadius: '12px',
+                                                    transition: 'all 0.3s ease',
+                                                    '&:hover': {
+                                                        backgroundColor: alpha('#fff', 0.8),
+                                                        boxShadow: '0 4px 12px rgba(102, 126, 234, 0.15)',
+                                                    },
+                                                    '&.Mui-focused': {
+                                                        backgroundColor: alpha('#fff', 0.95),
+                                                        boxShadow: '0 4px 16px rgba(102, 126, 234, 0.25)',
+                                                    },
+                                                }}
+                                            >
+                                                <MenuItem value="">Todos los servicios</MenuItem>
+                                                <MenuItem value="Reformas Integrales">Reformas Integrales</MenuItem>
+                                                <MenuItem value="Construcción Nueva">Construcción Nueva</MenuItem>
+                                                <MenuItem value="Rehabilitación">Rehabilitación</MenuItem>
+                                                <MenuItem value="Diseño de Interiores">Diseño de Interiores</MenuItem>
+                                                <MenuItem value="Proyectos Comerciales">Proyectos Comerciales</MenuItem>
+                                                <MenuItem value="Otro">Otro</MenuItem>
+                                            </Select>
+                                        </FormControl>
+                                    </Grid>
+
+                                    {/* Action Buttons */}
+                                    <Grid item xs={12} md={2}>
+                                        <Stack spacing={1.5} direction={{ xs: 'row', md: 'column' }}>
+                                            <Button
+                                                fullWidth
+                                                variant="contained"
+                                                onClick={handleSearch}
+                                                startIcon={<FilterList />}
+                                                sx={{
+                                                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                                                    borderRadius: '12px',
+                                                    py: 1.5,
+                                                    fontWeight: 600,
+                                                    textTransform: 'none',
+                                                    boxShadow: '0 4px 12px rgba(102, 126, 234, 0.3)',
+                                                    transition: 'all 0.3s ease',
+                                                    '&:hover': {
+                                                        background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
+                                                        boxShadow: '0 6px 20px rgba(102, 126, 234, 0.4)',
+                                                        transform: 'translateY(-2px)',
+                                                    },
+                                                }}
+                                            >
+                                                Aplicar
+                                            </Button>
+                                            {(search || statusFilter || serviceFilter) && (
+                                                <Button
+                                                    fullWidth
+                                                    variant="outlined"
+                                                    onClick={() => {
+                                                        setSearch('');
+                                                        setStatusFilter('');
+                                                        setServiceFilter('');
+                                                        router.get(route('admin.contact-requests.index'));
+                                                    }}
+                                                    sx={{
+                                                        borderRadius: '12px',
+                                                        py: 1.5,
+                                                        fontWeight: 600,
+                                                        textTransform: 'none',
+                                                        borderColor: alpha('#667eea', 0.3),
+                                                        color: '#667eea',
+                                                        transition: 'all 0.3s ease',
+                                                        '&:hover': {
+                                                            borderColor: '#667eea',
+                                                            backgroundColor: alpha('#667eea', 0.05),
+                                                            transform: 'translateY(-2px)',
+                                                        },
+                                                    }}
+                                                >
+                                                    Limpiar
+                                                </Button>
+                                            )}
+                                        </Stack>
+                                    </Grid>
+                                </Grid>
                             </Stack>
                         </CardContent>
                     </Card>
+                </motion.div>
+
+                {/* Bulk Actions - Premium Design */}
+                {selectedRequests.length > 0 && (
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.95 }}
+                        transition={{ duration: 0.3 }}
+                    >
+                        <Card
+                            sx={{
+                                ...glassStyle,
+                                mb: 3,
+                                background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.05) 100%)',
+                                border: '2px solid rgba(102, 126, 234, 0.3)',
+                            }}
+                        >
+                            <CardContent sx={{ p: 2.5 }}>
+                                <Stack
+                                    direction={{ xs: 'column', sm: 'row' }}
+                                    spacing={2}
+                                    alignItems={{ xs: 'stretch', sm: 'center' }}
+                                    justifyContent="space-between"
+                                >
+                                    {/* Selection Info */}
+                                    <Stack direction="row" spacing={2} alignItems="center">
+                                        <Box
+                                            sx={{
+                                                width: 36,
+                                                height: 36,
+                                                borderRadius: '10px',
+                                                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                boxShadow: '0 4px 12px rgba(102, 126, 234, 0.3)',
+                                            }}
+                                        >
+                                            <CheckCircle sx={{ color: '#fff', fontSize: 18 }} />
+                                        </Box>
+                                        <Box>
+                                            <Typography variant="body1" fontWeight={600} sx={{ color: '#2D3748' }}>
+                                                {selectedRequests.length} {selectedRequests.length === 1 ? 'solicitud seleccionada' : 'solicitudes seleccionadas'}
+                                            </Typography>
+                                            <Typography variant="caption" sx={{ color: '#718096' }}>
+                                                Elige una acción para aplicar
+                                            </Typography>
+                                        </Box>
+                                    </Stack>
+
+                                    {/* Action Buttons */}
+                                    <Stack
+                                        direction={{ xs: 'column', sm: 'row' }}
+                                        spacing={1.5}
+                                        sx={{ width: { xs: '100%', sm: 'auto' } }}
+                                    >
+                                        <Button
+                                            size="medium"
+                                            onClick={() => handleBulkAction('mark_read')}
+                                            startIcon={<Visibility />}
+                                            sx={{
+                                                borderRadius: '10px',
+                                                px: 2.5,
+                                                py: 1,
+                                                fontWeight: 600,
+                                                textTransform: 'none',
+                                                backgroundColor: alpha('#F6AD55', 0.1),
+                                                color: '#F6AD55',
+                                                border: `1px solid ${alpha('#F6AD55', 0.3)}`,
+                                                transition: 'all 0.3s ease',
+                                                '&:hover': {
+                                                    backgroundColor: alpha('#F6AD55', 0.2),
+                                                    borderColor: '#F6AD55',
+                                                    transform: 'translateY(-2px)',
+                                                    boxShadow: '0 4px 12px rgba(246, 173, 85, 0.3)',
+                                                },
+                                            }}
+                                        >
+                                            Marcar leídas
+                                        </Button>
+                                        <Button
+                                            size="medium"
+                                            onClick={() => handleBulkAction('mark_responded')}
+                                            startIcon={<CheckCircle />}
+                                            sx={{
+                                                borderRadius: '10px',
+                                                px: 2.5,
+                                                py: 1,
+                                                fontWeight: 600,
+                                                textTransform: 'none',
+                                                backgroundColor: alpha('#48BB78', 0.1),
+                                                color: '#48BB78',
+                                                border: `1px solid ${alpha('#48BB78', 0.3)}`,
+                                                transition: 'all 0.3s ease',
+                                                '&:hover': {
+                                                    backgroundColor: alpha('#48BB78', 0.2),
+                                                    borderColor: '#48BB78',
+                                                    transform: 'translateY(-2px)',
+                                                    boxShadow: '0 4px 12px rgba(72, 187, 120, 0.3)',
+                                                },
+                                            }}
+                                        >
+                                            Respondidas
+                                        </Button>
+                                        <Button
+                                            size="medium"
+                                            onClick={() => handleBulkAction('archive')}
+                                            startIcon={<Archive />}
+                                            sx={{
+                                                borderRadius: '10px',
+                                                px: 2.5,
+                                                py: 1,
+                                                fontWeight: 600,
+                                                textTransform: 'none',
+                                                backgroundColor: alpha('#718096', 0.1),
+                                                color: '#718096',
+                                                border: `1px solid ${alpha('#718096', 0.3)}`,
+                                                transition: 'all 0.3s ease',
+                                                '&:hover': {
+                                                    backgroundColor: alpha('#718096', 0.2),
+                                                    borderColor: '#718096',
+                                                    transform: 'translateY(-2px)',
+                                                    boxShadow: '0 4px 12px rgba(113, 128, 150, 0.3)',
+                                                },
+                                            }}
+                                        >
+                                            Archivar
+                                        </Button>
+                                        <Button
+                                            size="medium"
+                                            onClick={() => handleBulkAction('delete')}
+                                            startIcon={<Delete />}
+                                            sx={{
+                                                borderRadius: '10px',
+                                                px: 2.5,
+                                                py: 1,
+                                                fontWeight: 600,
+                                                textTransform: 'none',
+                                                backgroundColor: alpha('#E53E3E', 0.1),
+                                                color: '#E53E3E',
+                                                border: `1px solid ${alpha('#E53E3E', 0.3)}`,
+                                                transition: 'all 0.3s ease',
+                                                '&:hover': {
+                                                    backgroundColor: alpha('#E53E3E', 0.2),
+                                                    borderColor: '#E53E3E',
+                                                    transform: 'translateY(-2px)',
+                                                    boxShadow: '0 4px 12px rgba(229, 62, 62, 0.3)',
+                                                },
+                                            }}
+                                        >
+                                            Eliminar
+                                        </Button>
+                                    </Stack>
+                                </Stack>
+                            </CardContent>
+                        </Card>
+                    </motion.div>
                 )}
 
                 {/* Table */}
@@ -522,176 +801,18 @@ export default function ContactRequestsIndex({ requests, stats, filters }) {
                     />
                 </Card>
 
-                {/* Details Dialog */}
-                <Dialog
+                {/* Contact Request Drawer */}
+                <ContactRequestDrawer
+                    request={selectedRequest}
+                    attachments={selectedRequest?.attachments || []}
                     open={detailsDialog}
-                    onClose={() => setDetailsDialog(false)}
-                    maxWidth="md"
-                    fullWidth
-                >
-                    <DialogTitle>
-                        <Typography variant="h6" fontWeight="bold">
-                            Detalles de la Solicitud
-                        </Typography>
-                    </DialogTitle>
-                    <DialogContent dividers>
-                        {selectedRequest && (
-                            <Stack spacing={3}>
-                                <Box>
-                                    <Typography variant="caption" color="text.secondary">
-                                        Nombre
-                                    </Typography>
-                                    <Typography variant="body1" fontWeight="500">
-                                        {selectedRequest.name}
-                                    </Typography>
-                                </Box>
-                                <Box>
-                                    <Typography variant="caption" color="text.secondary">
-                                        Email
-                                    </Typography>
-                                    <Typography variant="body1" fontWeight="500">
-                                        {selectedRequest.email}
-                                    </Typography>
-                                </Box>
-                                {selectedRequest.phone && (
-                                    <Box>
-                                        <Typography variant="caption" color="text.secondary">
-                                            Teléfono
-                                        </Typography>
-                                        <Typography variant="body1" fontWeight="500">
-                                            {selectedRequest.phone}
-                                        </Typography>
-                                    </Box>
-                                )}
-                                {selectedRequest.service && (
-                                    <Box>
-                                        <Typography variant="caption" color="text.secondary">
-                                            Servicio de Interés
-                                        </Typography>
-                                        <Typography variant="body1" fontWeight="500">
-                                            {selectedRequest.service}
-                                        </Typography>
-                                    </Box>
-                                )}
-                                <Box>
-                                    <Typography variant="caption" color="text.secondary">
-                                        Mensaje
-                                    </Typography>
-                                    <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap' }}>
-                                        {selectedRequest.message}
-                                    </Typography>
-                                </Box>
-                                <Box>
-                                    <Typography variant="caption" color="text.secondary">
-                                        Estado
-                                    </Typography>
-                                    <Box sx={{ mt: 1 }}>
-                                        <Chip
-                                            label={getStatusLabel(selectedRequest.status)}
-                                            color={getStatusColor(selectedRequest.status)}
-                                        />
-                                    </Box>
-                                </Box>
-                                <Box>
-                                    <Typography variant="caption" color="text.secondary">
-                                        Fecha de Recepción
-                                    </Typography>
-                                    <Typography variant="body1">
-                                        {format(new Date(selectedRequest.created_at), 'dd MMMM yyyy HH:mm', { locale: es })}
-                                    </Typography>
-                                </Box>
-                                {selectedRequest.preferred_contact && (
-                                    <Box>
-                                        <Typography variant="caption" color="text.secondary">
-                                            Preferencia de Contacto
-                                        </Typography>
-                                        <Typography variant="body1" fontWeight="500">
-                                            {selectedRequest.preferred_contact}
-                                        </Typography>
-                                    </Box>
-                                )}
-                                {selectedRequest.contact_time && (
-                                    <Box>
-                                        <Typography variant="caption" color="text.secondary">
-                                            Franja de Contacto
-                                        </Typography>
-                                        <Typography variant="body1" fontWeight="500">
-                                            {selectedRequest.contact_time}
-                                        </Typography>
-                                    </Box>
-                                )}
-                                {selectedRequest.attachments && selectedRequest.attachments.length > 0 && (
-                                    <Box>
-                                        <Typography variant="caption" color="text.secondary" gutterBottom>
-                                            Archivos Adjuntos ({selectedRequest.attachments.length})
-                                        </Typography>
-                                        <Stack spacing={1} sx={{ mt: 1 }}>
-                                            {selectedRequest.attachments.map((file, index) => (
-                                                <Card
-                                                    key={index}
-                                                    variant="outlined"
-                                                    sx={{
-                                                        p: 1.5,
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        justifyContent: 'space-between',
-                                                        '&:hover': {
-                                                            bgcolor: alpha(theme.palette.primary.main, 0.05),
-                                                        },
-                                                    }}
-                                                >
-                                                    <Stack direction="row" spacing={1.5} alignItems="center">
-                                                        {file.mime_type === 'application/pdf' ? (
-                                                            <PictureAsPdf color="error" />
-                                                        ) : (
-                                                            <ImageIcon color="primary" />
-                                                        )}
-                                                        <Box>
-                                                            <Typography variant="body2" fontWeight={500}>
-                                                                {file.original_name}
-                                                            </Typography>
-                                                            <Typography variant="caption" color="text.secondary">
-                                                                {(file.size / 1024).toFixed(2)} KB
-                                                            </Typography>
-                                                        </Box>
-                                                    </Stack>
-                                                    <Tooltip title="Descargar">
-                                                        <IconButton
-                                                            size="small"
-                                                            href={route('admin.contact-requests.download-attachment', {
-                                                                contactRequest: selectedRequest.id,
-                                                                index: index,
-                                                            })}
-                                                            component="a"
-                                                            target="_blank"
-                                                        >
-                                                            <Download fontSize="small" />
-                                                        </IconButton>
-                                                    </Tooltip>
-                                                </Card>
-                                            ))}
-                                        </Stack>
-                                    </Box>
-                                )}
-                                {selectedRequest.admin_notes && (
-                                    <Box>
-                                        <Typography variant="caption" color="text.secondary">
-                                            Notas Internas
-                                        </Typography>
-                                        <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap' }}>
-                                            {selectedRequest.admin_notes}
-                                        </Typography>
-                                    </Box>
-                                )}
-                            </Stack>
-                        )}
-                    </DialogContent>
-                    <DialogActions>
-                        <Button onClick={() => setDetailsDialog(false)}>
-                            Cerrar
-                        </Button>
-                    </DialogActions>
-                </Dialog>
+                    onClose={() => {
+                        setDetailsDialog(false);
+                        setSelectedRequest(null);
+                        // Reload list to reflect any changes
+                        router.reload({ only: ['requests'] });
+                    }}
+                />
 
                 {/* Notes Dialog */}
                 <Dialog
@@ -729,7 +850,6 @@ export default function ContactRequestsIndex({ requests, stats, filters }) {
                         </Button>
                     </DialogActions>
                 </Dialog>
-            </Box>
-        </AdminLayout>
+        </AdminLayoutNew>
     );
 }

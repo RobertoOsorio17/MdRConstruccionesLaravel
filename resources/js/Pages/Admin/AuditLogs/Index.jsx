@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Head, Link, router } from '@inertiajs/react';
-import AdminLayout from '@/Layouts/AdminLayout';
+import AdminLayoutNew from '@/Layouts/AdminLayoutNew';
 import {
     Box,
     Paper,
@@ -56,6 +56,52 @@ const AuditLogsIndex = ({ logs, filters: initialFilters, stats }) => {
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(15);
 
+    // Glassmorphism styles
+    const glassStyle = {
+        background: 'rgba(255, 255, 255, 0.25)',
+        backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)',
+        border: '1px solid rgba(255, 255, 255, 0.18)',
+        boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.37)',
+        borderRadius: '16px',
+    };
+
+    const glassStatCard = {
+        background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0.1) 100%)',
+        backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)',
+        border: '1px solid rgba(255, 255, 255, 0.18)',
+        boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.37)',
+        borderRadius: '16px',
+        transition: 'all 0.3s ease',
+        '&:hover': {
+            transform: 'translateY(-4px)',
+            boxShadow: '0 12px 40px 0 rgba(31, 38, 135, 0.45)',
+        },
+    };
+
+    // Animation variants
+    const containerVariants = {
+        hidden: { opacity: 0 },
+        visible: {
+            opacity: 1,
+            transition: {
+                staggerChildren: 0.1,
+            },
+        },
+    };
+
+    const itemVariants = {
+        hidden: { opacity: 0, y: 20 },
+        visible: {
+            opacity: 1,
+            y: 0,
+            transition: {
+                duration: 0.5,
+            },
+        },
+    };
+
     const handleFilterChange = (field, value) => {
         setFilters(prev => ({ ...prev, [field]: value }));
     };
@@ -108,100 +154,125 @@ const AuditLogsIndex = ({ logs, filters: initialFilters, stats }) => {
     };
 
     return (
-        <AdminLayout>
+        <AdminLayoutNew title="Logs de Auditoría">
             <Head title="Logs de Auditoría" />
 
-            <Box sx={{ p: 3 }}>
-                {/* Breadcrumbs */}
-                <Breadcrumbs 
-                    separator={<NavigateNextIcon fontSize="small" />}
-                    sx={{ mb: 3 }}
-                >
-                    <Link href={route('admin.dashboard')} style={{ textDecoration: 'none', color: 'inherit', display: 'flex', alignItems: 'center' }}>
-                        <HomeIcon sx={{ mr: 0.5 }} fontSize="small" />
-                        Dashboard
-                    </Link>
-                    <Typography color="text.primary" sx={{ display: 'flex', alignItems: 'center' }}>
-                        <SecurityIcon sx={{ mr: 0.5 }} fontSize="small" />
-                        Logs de Auditoría
-                    </Typography>
-                </Breadcrumbs>
-
+            <Box
+                component={motion.div}
+                variants={containerVariants}
+                initial="hidden"
+                animate="visible"
+            >
                 {/* Header */}
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-                    <Box>
-                        <Typography variant="h4" fontWeight="bold">
-                            Logs de Auditoría
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                            Registro completo de acciones administrativas
-                        </Typography>
-                    </Box>
-                    <Box sx={{ display: 'flex', gap: 2 }}>
-                        <Button
-                            variant="outlined"
-                            startIcon={<RefreshIcon />}
-                            onClick={() => router.reload()}
-                        >
-                            Actualizar
-                        </Button>
-                        <Button
-                            variant="contained"
-                            startIcon={<DownloadIcon />}
-                            onClick={handleExport}
-                        >
-                            Exportar
-                        </Button>
+                <Box sx={{ mb: 4 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
+                        <Box>
+                            <Typography variant="h4" fontWeight="bold" gutterBottom>
+                                Logs de Auditoría
+                            </Typography>
+                            <Typography variant="body1" color="text.secondary">
+                                Registro completo de acciones administrativas y eventos del sistema
+                            </Typography>
+                        </Box>
+                        <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                            <Button
+                                variant="outlined"
+                                startIcon={<RefreshIcon />}
+                                onClick={() => router.reload()}
+                                sx={{
+                                    borderRadius: '12px',
+                                    borderColor: '#667eea',
+                                    color: '#667eea',
+                                    '&:hover': {
+                                        borderColor: '#764ba2',
+                                        background: 'rgba(102, 126, 234, 0.1)',
+                                    },
+                                }}
+                            >
+                                Actualizar
+                            </Button>
+                            <Button
+                                variant="contained"
+                                startIcon={<DownloadIcon />}
+                                onClick={handleExport}
+                                sx={{
+                                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                                    borderRadius: '12px',
+                                    px: 3,
+                                    fontWeight: 600,
+                                    textTransform: 'none',
+                                    boxShadow: '0 8px 24px rgba(102, 126, 234, 0.4)',
+                                    '&:hover': {
+                                        transform: 'translateY(-2px)',
+                                        boxShadow: '0 12px 32px rgba(102, 126, 234, 0.5)',
+                                    },
+                                }}
+                            >
+                                Exportar
+                            </Button>
+                        </Box>
                     </Box>
                 </Box>
 
                 {/* Stats Cards */}
                 {stats && (
-                    <Grid container spacing={3} sx={{ mb: 3 }}>
+                    <Grid container spacing={3} sx={{ mb: 4 }}>
                         <Grid item xs={12} sm={6} md={3}>
-                            <Card>
-                                <CardContent>
-                                    <Typography color="text.secondary" gutterBottom variant="body2">
-                                        Total de Logs
-                                    </Typography>
-                                    <Typography variant="h4" fontWeight="bold">
+                            <Card component={motion.div} variants={itemVariants} sx={glassStatCard}>
+                                <CardContent sx={{ textAlign: 'center', py: 3 }}>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 2, color: '#667eea' }}>
+                                        <SecurityIcon sx={{ fontSize: 40 }} />
+                                    </Box>
+                                    <Typography variant="h3" fontWeight="bold" sx={{ color: '#2D3748', mb: 1 }}>
                                         {stats.total || 0}
                                     </Typography>
+                                    <Typography variant="body1" sx={{ color: '#718096', fontWeight: 500 }}>
+                                        Total de Logs
+                                    </Typography>
                                 </CardContent>
                             </Card>
                         </Grid>
                         <Grid item xs={12} sm={6} md={3}>
-                            <Card>
-                                <CardContent>
-                                    <Typography color="text.secondary" gutterBottom variant="body2">
-                                        Hoy
-                                    </Typography>
-                                    <Typography variant="h4" fontWeight="bold" color="primary">
+                            <Card component={motion.div} variants={itemVariants} sx={glassStatCard}>
+                                <CardContent sx={{ textAlign: 'center', py: 3 }}>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 2, color: '#48BB78' }}>
+                                        <CalendarIcon sx={{ fontSize: 40 }} />
+                                    </Box>
+                                    <Typography variant="h3" fontWeight="bold" sx={{ color: '#2D3748', mb: 1 }}>
                                         {stats.today || 0}
                                     </Typography>
+                                    <Typography variant="body1" sx={{ color: '#718096', fontWeight: 500 }}>
+                                        Hoy
+                                    </Typography>
                                 </CardContent>
                             </Card>
                         </Grid>
                         <Grid item xs={12} sm={6} md={3}>
-                            <Card>
-                                <CardContent>
-                                    <Typography color="text.secondary" gutterBottom variant="body2">
-                                        Esta Semana
-                                    </Typography>
-                                    <Typography variant="h4" fontWeight="bold" color="success.main">
+                            <Card component={motion.div} variants={itemVariants} sx={glassStatCard}>
+                                <CardContent sx={{ textAlign: 'center', py: 3 }}>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 2, color: '#F6AD55' }}>
+                                        <CalendarIcon sx={{ fontSize: 40 }} />
+                                    </Box>
+                                    <Typography variant="h3" fontWeight="bold" sx={{ color: '#2D3748', mb: 1 }}>
                                         {stats.week || 0}
                                     </Typography>
+                                    <Typography variant="body1" sx={{ color: '#718096', fontWeight: 500 }}>
+                                        Esta Semana
+                                    </Typography>
                                 </CardContent>
                             </Card>
                         </Grid>
                         <Grid item xs={12} sm={6} md={3}>
-                            <Card>
-                                <CardContent>
-                                    <Typography color="text.secondary" gutterBottom variant="body2">
-                                        Este Mes
-                                    </Typography>
-                                    <Typography variant="h4" fontWeight="bold" color="info.main">
+                            <Card component={motion.div} variants={itemVariants} sx={glassStatCard}>
+                                <CardContent sx={{ textAlign: 'center', py: 3 }}>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 2, color: '#4299E1' }}>
+                                        <CalendarIcon sx={{ fontSize: 40 }} />
+                                    </Box>
+                                    <Typography variant="h3" fontWeight="bold" sx={{ color: '#2D3748', mb: 1 }}>
                                         {stats.month || 0}
+                                    </Typography>
+                                    <Typography variant="body1" sx={{ color: '#718096', fontWeight: 500 }}>
+                                        Este Mes
                                     </Typography>
                                 </CardContent>
                             </Card>
@@ -395,7 +466,7 @@ const AuditLogsIndex = ({ logs, filters: initialFilters, stats }) => {
                     )}
                 </Paper>
             </Box>
-        </AdminLayout>
+        </AdminLayoutNew>
     );
 };
 

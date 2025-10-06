@@ -27,10 +27,10 @@ class Post extends Model
         'featured',
     ];
 
-    // ✅ Protected fields that should NOT be mass-assignable
+    // âœ… Protected fields that should NOT be mass-assignable
     protected $guarded = [
         'id',
-        'views_count', // ✅ CRITICAL: Prevent manipulation of view counts
+        'views_count', // âœ… CRITICAL: Prevent manipulation of view counts
         'created_at',
         'updated_at',
     ];
@@ -49,7 +49,22 @@ class Post extends Model
         'published_at' => 'datetime',
         'featured' => 'boolean',
         'views_count' => 'integer',
+        'reading_time' => 'integer',
     ];
+
+    /**
+     * Boot the model and register event listeners
+     */
+    protected static function booted(): void
+    {
+        // Automatically calculate reading time when content changes
+        static::saving(function ($post) {
+            if ($post->isDirty('content')) {
+                $readingTimeService = app(\App\Services\ReadingTimeService::class);
+                $post->reading_time = $readingTimeService->calculate($post->content);
+            }
+        });
+    }
 
     /**
      * Get the author of the post.
@@ -233,7 +248,7 @@ class Post extends Model
     }
 
     /**
-     * Obtener posts relacionados/sugeridos basados en categorÃƒÆ’Ã‚Â­as y etiquetas
+     * Obtener posts relacionados/sugeridos basados en categorÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­as y etiquetas
      */
     public function getRelatedPosts($limit = 3)
     {
@@ -262,16 +277,16 @@ class Post extends Model
     }
     
     /**
-     * Obtener posts sugeridos inteligentes basados en mÃƒÆ’Ã‚Âºltiples factores
+     * Obtener posts sugeridos inteligentes basados en mÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âºltiples factores
      */
     public function getSuggestedPosts($limit = 4)
     {
         $categoryIds = $this->categories->pluck('id');
         $tagIds = $this->tags->pluck('id');
         
-        // Posts con mayor relevancia por categorÃƒÆ’Ã‚Â­as y etiquetas compartidas
+        // Posts con mayor relevancia por categorÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­as y etiquetas compartidas
         if ($categoryIds->isEmpty() && $tagIds->isEmpty()) {
-            // Si no hay categorÃƒÆ’Ã‚Â­as ni etiquetas, usar posts populares directamente
+            // Si no hay categorÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­as ni etiquetas, usar posts populares directamente
             return static::published()
                 ->where('id', '!=', $this->id)
                 ->with(['author:id,name,avatar', 'categories:id,name,slug', 'tags:id,name,slug,color'])
@@ -282,12 +297,12 @@ class Post extends Model
                 ->get();
         }
         
-        // Construir la query de relevancia de forma segura usando parÃƒÆ’Ã‚Â¡metros
+        // Construir la query de relevancia de forma segura usando parÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡metros
         $query = static::published()
             ->where('id', '!=', $this->id)
             ->select('posts.*');
 
-        // Construir la query de relevancia usando parÃƒÆ’Ã‚Â¡metros seguros
+        // Construir la query de relevancia usando parÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡metros seguros
         $relevanceQuery = '(posts.views_count / 100) + (posts.featured * 1)';
         $bindings = [];
 
@@ -388,3 +403,5 @@ class Post extends Model
 
 
 }
+
+

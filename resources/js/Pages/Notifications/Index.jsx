@@ -301,27 +301,20 @@ function NotificationItem({ notification, onMarkAsRead, onDelete, index }) {
                     </Avatar>
                 </ListItemAvatar>
                 <ListItemText
-                    primary={
-                        <Stack direction="row" spacing={1} alignItems="center">
-                            <Typography variant="subtitle1" fontWeight={notification.is_read ? 400 : 600}>
-                                {notification.data.title}
-                            </Typography>
-                            {!notification.is_read && (
-                                <Chip label="Nuevo" size="small" color="primary" />
-                            )}
-                        </Stack>
-                    }
-                    secondary={
-                        <>
-                            <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                                {notification.data.message}
-                            </Typography>
-                            <Typography variant="caption" color="text.secondary">
-                                {notification.created_at_human}
-                            </Typography>
-                        </>
-                    }
+                    primary={notification.data.title}
+                    secondary={`${notification.data.message} • ${notification.created_at_human}`}
+                    primaryTypographyProps={{
+                        variant: 'subtitle1',
+                        fontWeight: notification.is_read ? 400 : 600
+                    }}
+                    secondaryTypographyProps={{
+                        variant: 'body2',
+                        color: 'text.secondary'
+                    }}
                 />
+                {!notification.is_read && (
+                    <Chip label="Nuevo" size="small" color="primary" sx={{ ml: 1 }} />
+                )}
             </ListItem>
         </motion.div>
     );

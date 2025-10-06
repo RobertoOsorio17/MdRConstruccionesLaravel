@@ -80,10 +80,11 @@ function ContactFormContent({ contactInfo, services, seo, flash }) {
 
     // Stepper state
     const [activeStep, setActiveStep] = useState(0);
-    const steps = ['Datos de Contacto', 'Servicio y Mensaje', 'Adjuntos y Envío'];
+    const steps = ['Datos de Contacto', 'Servicio y Mensaje', 'Adjuntos y Envío', 'Confirmación'];
 
     // Local state
     const [submitted, setSubmitted] = useState(false);
+    const [submissionSuccess, setSubmissionSuccess] = useState(false);
     const [privacyModalOpen, setPrivacyModalOpen] = useState(false);
     const [isAvailable, setIsAvailable] = useState(false);
     const [snackbarOpen, setSnackbarOpen] = useState(false);
@@ -353,13 +354,11 @@ function ContactFormContent({ contactInfo, services, seo, flash }) {
                 forceFormData: true,
                 onSuccess: () => {
                     setSubmitted(true);
+                    setSubmissionSuccess(true);
+                    setActiveStep(3); // Move to success step
                     setSnackbarMessage('¡Gracias por tu mensaje! Te contactaremos en las próximas 24 horas.');
                     setSnackbarSeverity('success');
                     setSnackbarOpen(true);
-                    reset();
-                    setUploadedFiles([]);
-                    setActiveStep(0);
-                    setTimeout(() => setSubmitted(false), 5000);
                     try { localStorage.removeItem('contact_form_draft'); } catch {}
                 },
                 onError: (errors) => {
@@ -720,6 +719,126 @@ function ContactFormContent({ contactInfo, services, seo, flash }) {
                     </Stack>
                 );
 
+            case 3:
+                // Success Step
+                return (
+                    <Stack spacing={4} alignItems="center" sx={{ py: 4 }}>
+                        <motion.div
+                            initial={{ scale: 0 }}
+                            animate={{ scale: 1 }}
+                            transition={{ type: 'spring', stiffness: 200, damping: 15 }}
+                        >
+                            <Box
+                                sx={{
+                                    width: 120,
+                                    height: 120,
+                                    borderRadius: '50%',
+                                    background: `linear-gradient(135deg, ${theme.palette.success.main} 0%, ${theme.palette.success.dark} 100%)`,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    boxShadow: `0 12px 40px 0 ${alpha(theme.palette.success.main, 0.4)}`,
+                                }}
+                            >
+                                <CheckCircle sx={{ fontSize: 70, color: 'white' }} />
+                            </Box>
+                        </motion.div>
+
+                        <Stack spacing={2} alignItems="center" textAlign="center">
+                            <Typography variant="h3" fontWeight="bold" color="success.main">
+                                ¡Mensaje Enviado!
+                            </Typography>
+                            <Typography variant="h6" color="text.secondary" sx={{ maxWidth: 600 }}>
+                                Gracias por contactarnos. Hemos recibido tu mensaje correctamente.
+                            </Typography>
+                            <Typography variant="body1" color="text.secondary" sx={{ maxWidth: 600 }}>
+                                Nuestro equipo revisará tu solicitud y te contactaremos en las próximas <strong>24 horas</strong> a través de tu método de contacto preferido.
+                            </Typography>
+                        </Stack>
+
+                        <Box
+                            sx={{
+                                ...glassStyle,
+                                p: 3,
+                                width: '100%',
+                                maxWidth: 500,
+                            }}
+                        >
+                            <Stack spacing={2}>
+                                <Typography variant="subtitle1" fontWeight="600" color="primary">
+                                    Resumen de tu Solicitud:
+                                </Typography>
+                                <Divider />
+                                <Stack spacing={1.5}>
+                                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                                        <Typography variant="body2" color="text.secondary">Nombre:</Typography>
+                                        <Typography variant="body2" fontWeight="500">{data.name}</Typography>
+                                    </Box>
+                                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                                        <Typography variant="body2" color="text.secondary">Email:</Typography>
+                                        <Typography variant="body2" fontWeight="500">{data.email}</Typography>
+                                    </Box>
+                                    {data.phone && (
+                                        <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                                            <Typography variant="body2" color="text.secondary">Teléfono:</Typography>
+                                            <Typography variant="body2" fontWeight="500">{data.phone}</Typography>
+                                        </Box>
+                                    )}
+                                    {data.preferred_contact && (
+                                        <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                                            <Typography variant="body2" color="text.secondary">Contacto Preferido:</Typography>
+                                            <Typography variant="body2" fontWeight="500">{data.preferred_contact}</Typography>
+                                        </Box>
+                                    )}
+                                    {data.service && (
+                                        <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                                            <Typography variant="body2" color="text.secondary">Servicio:</Typography>
+                                            <Typography variant="body2" fontWeight="500">{data.service}</Typography>
+                                        </Box>
+                                    )}
+                                </Stack>
+                            </Stack>
+                        </Box>
+
+                        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ mt: 2 }}>
+                            <Button
+                                variant="contained"
+                                size="large"
+                                onClick={() => {
+                                    reset();
+                                    setUploadedFiles([]);
+                                    setActiveStep(0);
+                                    setSubmissionSuccess(false);
+                                    setSubmitted(false);
+                                }}
+                                sx={{
+                                    py: 1.5,
+                                    px: 4,
+                                    background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
+                                }}
+                            >
+                                Enviar Otro Mensaje
+                            </Button>
+                            <Button
+                                variant="outlined"
+                                size="large"
+                                component={Link}
+                                href={route('home')}
+                                sx={{ py: 1.5, px: 4 }}
+                            >
+                                Volver al Inicio
+                            </Button>
+                        </Stack>
+
+                        <Alert severity="info" sx={{ maxWidth: 600 }}>
+                            <Typography variant="body2">
+                                <strong>¿Necesitas ayuda urgente?</strong> Llámanos directamente al{' '}
+                                <strong>{contactInfo?.phone || '+34 123 456 789'}</strong> o escríbenos por WhatsApp.
+                            </Typography>
+                        </Alert>
+                    </Stack>
+                );
+
             default:
                 return null;
         }
@@ -878,44 +997,47 @@ function ContactFormContent({ contactInfo, services, seo, flash }) {
                                         </motion.div>
                                     </AnimatePresence>
 
-                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 4 }}>
-                                        <Button
-                                            disabled={activeStep === 0 || processing}
-                                            onClick={handleBack}
-                                            startIcon={<ArrowBack />}
-                                        >
-                                            Atrás
-                                        </Button>
+                                    {/* Hide navigation buttons on success step */}
+                                    {activeStep !== 3 && (
+                                        <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 4 }}>
+                                            <Button
+                                                disabled={activeStep === 0 || processing}
+                                                onClick={handleBack}
+                                                startIcon={<ArrowBack />}
+                                            >
+                                                Atrás
+                                            </Button>
 
-                                        {activeStep === steps.length - 1 ? (
-                                            <Button
-                                                type="submit"
-                                                variant="contained"
-                                                size="large"
-                                                disabled={processing || !validateStep(activeStep)}
-                                                endIcon={processing ? <CircularProgress size={20} color="inherit" /> : <Send />}
-                                                sx={{
-                                                    py: 1.5,
-                                                    px: 4,
-                                                    fontSize: '1.1rem',
-                                                    fontWeight: 600,
-                                                    background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
-                                                    boxShadow: `0 8px 24px 0 ${alpha(theme.palette.primary.main, 0.4)}`,
-                                                }}
-                                            >
-                                                Enviar Mensaje
-                                            </Button>
-                                        ) : (
-                                            <Button
-                                                variant="contained"
-                                                onClick={handleNext}
-                                                disabled={!validateStep(activeStep) || processing}
-                                                endIcon={<ArrowForward />}
-                                            >
-                                                Siguiente
-                                            </Button>
-                                        )}
-                                    </Box>
+                                            {activeStep === 2 ? (
+                                                <Button
+                                                    type="submit"
+                                                    variant="contained"
+                                                    size="large"
+                                                    disabled={processing || !validateStep(activeStep)}
+                                                    endIcon={processing ? <CircularProgress size={20} color="inherit" /> : <Send />}
+                                                    sx={{
+                                                        py: 1.5,
+                                                        px: 4,
+                                                        fontSize: '1.1rem',
+                                                        fontWeight: 600,
+                                                        background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
+                                                        boxShadow: `0 8px 24px 0 ${alpha(theme.palette.primary.main, 0.4)}`,
+                                                    }}
+                                                >
+                                                    Enviar Mensaje
+                                                </Button>
+                                            ) : (
+                                                <Button
+                                                    variant="contained"
+                                                    onClick={handleNext}
+                                                    disabled={!validateStep(activeStep) || processing}
+                                                    endIcon={<ArrowForward />}
+                                                >
+                                                    Siguiente
+                                                </Button>
+                                            )}
+                                        </Box>
+                                    )}
                                 </form>
                             </CardContent>
                         </Card>

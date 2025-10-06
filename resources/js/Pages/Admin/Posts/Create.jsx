@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Head, useForm, router } from '@inertiajs/react';
 import {
     Box,
@@ -23,6 +23,10 @@ import {
     Autocomplete,
     Alert,
     CircularProgress,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogActions,
     useTheme,
     alpha
 } from '@mui/material';
@@ -38,21 +42,28 @@ import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import dayjs from 'dayjs';
+import relativeTime from 'dayjs/plugin/relativeTime';
 import 'dayjs/locale/es';
+
+dayjs.extend(relativeTime);
+dayjs.locale('es');
 import AdminLayout from '@/Layouts/AdminLayout';
 import TinyMCEProfessional from '@/Components/Admin/TinyMCEProfessional';
 import ContentScheduler from '@/Components/Admin/ContentScheduler';
 import SEOOptimizer from '@/Components/Admin/SEOOptimizer';
 
-const PostForm = ({ post, categories, tags, authors, isEdit = false }) => {
+const PostForm = ({ post, categories, tags, authors, revisions = [], isEdit = false }) => {
     const theme = useTheme();
     const [previewMode, setPreviewMode] = useState(false);
     const [selectedTags, setSelectedTags] = useState([]);
     const [selectedCategories, setSelectedCategories] = useState([]);
     const [coverImagePreview, setCoverImagePreview] = useState(post?.cover_image || '');
     const [mediaFiles, setMediaFiles] = useState([]);
+    const [revisionDialogOpen, setRevisionDialogOpen] = useState(false);
+    const [selectedRevision, setSelectedRevision] = useState(null);
+    const [restoringRevisionId, setRestoringRevisionId] = useState(null);
 
-    const { data, setData, post: submitPost, processing, errors, reset } = useForm({
+    const { data, setData, post: submitPost, put: updatePost, processing, errors, reset } = useForm({
         title: post?.title || '',
         slug: post?.slug || '',
         excerpt: post?.excerpt || '',
@@ -67,6 +78,10 @@ const PostForm = ({ post, categories, tags, authors, isEdit = false }) => {
         seo_title: post?.seo_title || '',
         seo_description: post?.seo_description || '',
     });
+
+    const revisionList = Array.isArray(revisions) ? revisions : [];
+    const categoryMap = useMemo(() => Object.fromEntries((categories || []).map((category) => [category.id, category.name])), [categories]);
+    const tagMap = useMemo(() => Object.fromEntries((tags || []).map((tag) => [tag.id, tag.name])), [tags]);
 
     // Generate slug from title
     useEffect(() => {
@@ -116,19 +131,22 @@ const PostForm = ({ post, categories, tags, authors, isEdit = false }) => {
         }
     }, [data.categories, data.tags]);
 
-    const handleSubmit = (e) => {
+    const handleSubmit = (e, overrideStatus = null, overridePublishedAt = null) => {
         e.preventDefault();
 
         const formData = {
             ...data,
+            // Override status if provided (for draft/publish/schedule buttons)
+            status: overrideStatus || data.status,
             categories: selectedCategories,
             tags: selectedTags,
-            published_at: data.published_at ? data.published_at.format('YYYY-MM-DD HH:mm:ss') : null,
+            published_at: overridePublishedAt
+                ? overridePublishedAt.format('YYYY-MM-DD HH:mm:ss')
+                : (data.published_at ? data.published_at.format('YYYY-MM-DD HH:mm:ss') : null),
         };
 
         if (isEdit) {
-            submitPost(route('admin.posts.update', post.id), {
-                data: formData,
+            updatePost(route('admin.posts.update', post.slug), formData, {
                 onSuccess: () => {
                     router.visit(route('admin.posts.index'), {
                         onSuccess: () => {
@@ -138,8 +156,8 @@ const PostForm = ({ post, categories, tags, authors, isEdit = false }) => {
                 }
             });
         } else {
-            submitPost(route('admin.posts.store'), {
-                data: formData,
+            // For Inertia's post method, pass data directly as second parameter
+            submitPost(route('admin.posts.store'), formData, {
                 onSuccess: () => {
                     router.visit(route('admin.posts.index'), {
                         onSuccess: () => {
@@ -151,22 +169,48 @@ const PostForm = ({ post, categories, tags, authors, isEdit = false }) => {
         }
     };
 
-    const handleSaveAsDraft = () => {
-        setData('status', 'draft');
-        setTimeout(() => handleSubmit(new Event('submit')), 100);
+    const handleSaveAsDraft = (e) => {
+        e.preventDefault();
+        handleSubmit(e, 'draft');
     };
 
-    const handlePublish = () => {
-        setData('status', 'published');
-        if (!data.published_at) {
-            setData('published_at', dayjs());
-        }
-        setTimeout(() => handleSubmit(new Event('submit')), 100);
+    const handlePublish = (e) => {
+        e.preventDefault();
+        const publishedAt = data.published_at || dayjs();
+        handleSubmit(e, 'published', publishedAt);
     };
 
-    const handleSchedule = () => {
-        setData('status', 'scheduled');
-        setTimeout(() => handleSubmit(new Event('submit')), 100);
+    const handleSchedule = (e) => {
+        e.preventDefault();
+        handleSubmit(e, 'scheduled');
+    };
+
+    const handleViewRevision = (revision) => {
+        setSelectedRevision(revision);
+        setRevisionDialogOpen(true);
+    };
+
+    const handleCloseRevisionDialog = () => {
+        setRevisionDialogOpen(false);
+        setSelectedRevision(null);
+    };
+
+    const handleRestoreRevision = (revisionId) => {
+        if (!isEdit || !post?.slug) return;
+
+        const confirmation = window.confirm('�?�Est�?�s seguro de que deseas restaurar esta revisi�?�n? Se sobrescribir�?�n los cambios actuales.');
+        if (!confirmation) return;
+
+        setRestoringRevisionId(revisionId);
+
+        router.post(`/admin/posts/${post.slug}/revisions/${revisionId}/restore`, {}, {
+            preserveScroll: true,
+            onFinish: () => setRestoringRevisionId(null),
+            onSuccess: () => {
+                setRevisionDialogOpen(false);
+                setSelectedRevision(null);
+            },
+        });
     };
 
     const handleImageUpload = (event) => {
@@ -201,8 +245,8 @@ const PostForm = ({ post, categories, tags, authors, isEdit = false }) => {
                             <Typography variant="h4" fontWeight="bold" gutterBottom>
                                 {isEdit ? 'Editar Post' : 'Crear Nuevo Post'}
                             </Typography>
-                            <Typography variant="body1" color="text.secondary">
-                                {isEdit ? 'Modifica la información del post' : 'Completa los datos para crear un nuevo post'}
+                            <Typography component="div" variant="body1" color="text.secondary">
+                                {isEdit ? 'Modifica la informaciÃ³n del post' : 'Completa los datos para crear un nuevo post'}
                             </Typography>
                         </Box>
 
@@ -250,14 +294,14 @@ const PostForm = ({ post, categories, tags, authors, isEdit = false }) => {
                                 {/* Basic Info */}
                                 <Card>
                                     <CardContent sx={{ p: 4 }}>
-                                        <Typography variant="h6" fontWeight="bold" gutterBottom>
-                                            Información Básica
+                                        <Typography component="div" variant="h6" fontWeight="bold" gutterBottom>
+                                            InformaciÃ³n BÃ¡sica
                                         </Typography>
 
                                         <Stack spacing={3}>
                                             <TextField
                                                 fullWidth
-                                                label="Título *"
+                                                label="TÃ­tulo *"
                                                 value={data.title}
                                                 onChange={(e) => setData('title', e.target.value)}
                                                 error={!!errors.title}
@@ -271,7 +315,7 @@ const PostForm = ({ post, categories, tags, authors, isEdit = false }) => {
                                                 value={data.slug}
                                                 onChange={(e) => setData('slug', e.target.value)}
                                                 error={!!errors.slug}
-                                                helperText={errors.slug || 'Se genera automáticamente desde el título'}
+                                                helperText={errors.slug || 'Se genera automÃ¡ticamente desde el tÃ­tulo'}
                                                 variant="outlined"
                                             />
 
@@ -281,7 +325,7 @@ const PostForm = ({ post, categories, tags, authors, isEdit = false }) => {
                                                 value={data.excerpt}
                                                 onChange={(e) => setData('excerpt', e.target.value)}
                                                 error={!!errors.excerpt}
-                                                helperText={errors.excerpt || 'Resumen breve que aparecerá en las listas'}
+                                                helperText={errors.excerpt || 'Resumen breve que aparecerÃ¡ en las listas'}
                                                 multiline
                                                 rows={3}
                                                 variant="outlined"
@@ -324,7 +368,7 @@ const PostForm = ({ post, categories, tags, authors, isEdit = false }) => {
                                                 }}>
                                                     Editor de Contenido
                                                 </Typography>
-                                                <Typography variant="body2" color="text.secondary">
+                                                <Typography component="div" variant="body2" color="text.secondary">
                                                     Crea contenido profesional con nuestro editor avanzado
                                                 </Typography>
                                             </Box>
@@ -371,7 +415,7 @@ const PostForm = ({ post, categories, tags, authors, isEdit = false }) => {
                                                     }
                                                 }}
                                             >
-                                                <Typography variant="body1" component="div">
+                                                <Typography component="div" variant="body1">
                                                     <div dangerouslySetInnerHTML={{ __html: data.content || '<p>Escribe contenido para ver la vista previa...</p>' }} />
                                                 </Typography>
                                             </Paper>
@@ -379,18 +423,18 @@ const PostForm = ({ post, categories, tags, authors, isEdit = false }) => {
                                             <TinyMCEProfessional
                                                 value={data.content}
                                                 onChange={(value) => setData('content', value)}
-                                                placeholder="Escribe el contenido de tu post aquí... Usa la barra de herramientas profesional para formatear texto, insertar imágenes, videos, tablas y más."
+                                                placeholder="Escribe el contenido de tu post aquÃ­... Usa la barra de herramientas profesional para formatear texto, insertar imÃ¡genes, videos, tablas y mÃ¡s."
                                                 height={700}
                                                 error={errors.content}
-                                                helperText={errors.content || 'Editor TinyMCE profesional con todas las funciones premium: formato avanzado, tablas mejoradas, inserción de medios, plantillas, auto-guardado y más. Arrastra y suelta imágenes para subirlas automáticamente.'}
+                                                helperText={errors.content || 'Editor TinyMCE profesional con todas las funciones premium: formato avanzado, tablas mejoradas, inserciÃ³n de medios, plantillas, auto-guardado y mÃ¡s. Arrastra y suelta imÃ¡genes para subirlas automÃ¡ticamente.'}
                                                 autoSave={true}
                                                 showWordCount={true}
                                                 allowFullscreen={true}
                                                 onSave={async (content) => {
                                                     // Auto-save functionality
-                                                    if (isEdit && post?.id) {
+                                                    if (isEdit && post?.slug) {
                                                         try {
-                                                            await fetch(route('admin.posts.update', post.id), {
+                                                            await fetch(route('admin.posts.update', post.slug), {
                                                                 method: 'PUT',
                                                                 headers: {
                                                                     'Content-Type': 'application/json',
@@ -415,7 +459,7 @@ const PostForm = ({ post, categories, tags, authors, isEdit = false }) => {
                                 {/* Cover Image */}
                                 <Card>
                                     <CardContent sx={{ p: 4 }}>
-                                        <Typography variant="h6" fontWeight="bold" gutterBottom>
+                                        <Typography component="div" variant="h6" fontWeight="bold" gutterBottom>
                                             Imagen de Portada
                                         </Typography>
 
@@ -495,7 +539,7 @@ const PostForm = ({ post, categories, tags, authors, isEdit = false }) => {
                                 <Card>
                                     <CardContent sx={{ p: 4 }}>
                                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-                                            <Typography variant="h6" fontWeight="bold">
+                                            <Typography component="div" variant="h6" fontWeight="bold">
                                                 SEO
                                             </Typography>
                                             <Button
@@ -510,7 +554,7 @@ const PostForm = ({ post, categories, tags, authors, isEdit = false }) => {
                                         <Stack spacing={3}>
                                             <TextField
                                                 fullWidth
-                                                label="Título SEO"
+                                                label="TÃ­tulo SEO"
                                                 value={data.seo_title}
                                                 onChange={(e) => setData('seo_title', e.target.value)}
                                                 error={!!errors.seo_title}
@@ -520,7 +564,7 @@ const PostForm = ({ post, categories, tags, authors, isEdit = false }) => {
 
                                             <TextField
                                                 fullWidth
-                                                label="Descripción SEO"
+                                                label="DescripciÃ³n SEO"
                                                 value={data.seo_description}
                                                 onChange={(e) => setData('seo_description', e.target.value)}
                                                 error={!!errors.seo_description}
@@ -551,15 +595,15 @@ const PostForm = ({ post, categories, tags, authors, isEdit = false }) => {
                                 {/* Author */}
                                 <Card>
                                     <CardContent sx={{ p: 3 }}>
-                                        <Typography variant="h6" fontWeight="bold" gutterBottom>
+                                        <Typography component="div" variant="h6" fontWeight="bold" gutterBottom>
                                             Autor
                                         </Typography>
 
                                         <FormControl fullWidth>
-                                            <InputLabel>Seleccionar Autor</InputLabel>
+                                            <InputLabel>seleccionar Autor</InputLabel>
                                             <Select
                                                 value={data.user_id}
-                                                label="Seleccionar Autor"
+                                                label="seleccionar Autor"
                                                 onChange={(e) => setData('user_id', e.target.value)}
                                             >
                                                 {authors.map((author) => (
@@ -577,11 +621,63 @@ const PostForm = ({ post, categories, tags, authors, isEdit = false }) => {
                                     </CardContent>
                                 </Card>
 
+                                {isEdit && (
+                                    <Card>
+                                        <CardContent sx={{ p: 3 }}>
+                                            <Typography component="div" variant="h6" fontWeight="bold" gutterBottom>
+                                                Historial de ediciones
+                                            </Typography>
+
+                                            {revisionList.length === 0 ? (
+                                                <Typography component="div" variant="body2" color="text.secondary">
+                                                    A�?�n no hay revisiones guardadas.
+                                                </Typography>
+                                            ) : (
+                                                <Stack spacing={2} sx={{ mt: 2 }}>
+                                                    {revisionList.map((revision) => (
+                                                        <Paper
+                                                            key={revision.id}
+                                                            variant="outlined"
+                                                            sx={{ p: 2 }}
+                                                        >
+                                                            <Stack direction="row" spacing={2} alignItems="center" justifyContent="space-between">
+                                                                <Box>
+                                                                    <Typography component="div" variant="subtitle2">
+                                                                        {revision.summary || 'Revisi�?�n guardada'}
+                                                                    </Typography>
+                                                                    <Typography variant="caption" color="text.secondary">
+                                                                        {(revision.author || 'Sistema')} �?� {dayjs(revision.created_at).fromNow()}
+                                                                    </Typography>
+                                                                </Box>
+                                                                <Stack direction="row" spacing={1}>
+                                                                    <Button size="small" variant="text" onClick={() => handleViewRevision(revision)}>
+                                                                        Ver
+                                                                    </Button>
+                                                                    <Button
+                                                                        size="small"
+                                                                        variant="outlined"
+                                                                        color="warning"
+                                                                        onClick={() => handleRestoreRevision(revision.id)}
+                                                                        disabled={restoringRevisionId === revision.id}
+                                                                        startIcon={restoringRevisionId === revision.id ? <CircularProgress size={16} /> : null}
+                                                                    >
+                                                                        {restoringRevisionId === revision.id ? 'Restaurando...' : 'Restaurar'}
+                                                                    </Button>
+                                                                </Stack>
+                                                            </Stack>
+                                                        </Paper>
+                                                    ))}
+                                                </Stack>
+                                            )}
+                                        </CardContent>
+                                    </Card>
+                                )}
+
                                 {/* Categories */}
                                 <Card>
                                     <CardContent sx={{ p: 3 }}>
-                                        <Typography variant="h6" fontWeight="bold" gutterBottom>
-                                            Categorías
+                                        <Typography component="div" variant="h6" fontWeight="bold" gutterBottom>
+                                            CategorÃ­as
                                         </Typography>
 
                                         <Autocomplete
@@ -611,8 +707,8 @@ const PostForm = ({ post, categories, tags, authors, isEdit = false }) => {
                                             renderInput={(params) => (
                                                 <TextField
                                                     {...params}
-                                                    label="Seleccionar Categorías"
-                                                    placeholder="Buscar categorías..."
+                                                    label="seleccionar CategorÃ­as"
+                                                    placeholder="Buscar categorÃ­as..."
                                                 />
                                             )}
                                         />
@@ -622,7 +718,7 @@ const PostForm = ({ post, categories, tags, authors, isEdit = false }) => {
                                 {/* Tags */}
                                 <Card>
                                     <CardContent sx={{ p: 3 }}>
-                                        <Typography variant="h6" fontWeight="bold" gutterBottom>
+                                        <Typography component="div" variant="h6" fontWeight="bold" gutterBottom>
                                             Tags
                                         </Typography>
 
@@ -654,7 +750,7 @@ const PostForm = ({ post, categories, tags, authors, isEdit = false }) => {
                                             renderInput={(params) => (
                                                 <TextField
                                                     {...params}
-                                                    label="Seleccionar Tags"
+                                                    label="seleccionar Tags"
                                                     placeholder="Buscar tags..."
                                                 />
                                             )}
@@ -678,8 +774,106 @@ const PostForm = ({ post, categories, tags, authors, isEdit = false }) => {
                     </Grid>
                 </form>
             </Container>
+            <Dialog
+                open={revisionDialogOpen}
+                onClose={handleCloseRevisionDialog}
+                maxWidth="md"
+                fullWidth
+            >
+                <DialogTitle>Detalles de la revisi�?�n</DialogTitle>
+                <DialogContent dividers>
+                    {selectedRevision ? (
+                        <Stack spacing={3}>
+                            <Box>
+                                <Typography component="div" variant="subtitle2">T�?�tulo</Typography>
+                                <Typography component="div" variant="body1">{selectedRevision.data?.title || 'Sin t�?�tulo'}</Typography>
+                            </Box>
+                            <Box>
+                                <Typography component="div" variant="subtitle2">Estado</Typography>
+                                <Typography component="div" variant="body2" color="text.secondary">
+                                    {selectedRevision.data?.status || 'desconocido'}
+                                </Typography>
+                            </Box>
+                            <Stack direction="row" spacing={2}>
+                                <Box>
+                                    <Typography component="div" variant="subtitle2">Publicado el</Typography>
+                                    <Typography component="div" variant="body2" color="text.secondary">
+                                        {selectedRevision.data?.published_at ? dayjs(selectedRevision.data.published_at).format('DD/MM/YYYY HH:mm') : '�?�'}
+                                    </Typography>
+                                </Box>
+                                <Box>
+                                    <Typography component="div" variant="subtitle2">Autor</Typography>
+                                    <Typography component="div" variant="body2" color="text.secondary">
+                                        {selectedRevision.author || 'Sistema'}
+                                    </Typography>
+                                </Box>
+                            </Stack>
+                            <Box>
+                                <Typography component="div" variant="subtitle2">Categor�?�as</Typography>
+                                {selectedRevision.data?.categories?.length ? (
+                                    <Stack direction="row" spacing={1} flexWrap="wrap">
+                                        {selectedRevision.data.categories.map((categoryId) => (
+                                            <Chip key={categoryId} label={categoryMap[categoryId] || `ID ${categoryId}`} size="small" sx={{ mr: 1, mb: 1 }} />
+                                        ))}
+                                    </Stack>
+                                ) : (
+                                    <Typography component="div" variant="body2" color="text.secondary">Sin categor�?�as</Typography>
+                                )}
+                            </Box>
+                            <Box>
+                                <Typography component="div" variant="subtitle2">Etiquetas</Typography>
+                                {selectedRevision.data?.tags?.length ? (
+                                    <Stack direction="row" spacing={1} flexWrap="wrap">
+                                        {selectedRevision.data.tags.map((tagId) => (
+                                            <Chip key={tagId} label={tagMap[tagId] || `ID ${tagId}`} size="small" sx={{ mr: 1, mb: 1 }} />
+                                        ))}
+                                    </Stack>
+                                ) : (
+                                    <Typography component="div" variant="body2" color="text.secondary">Sin etiquetas</Typography>
+                                )}
+                            </Box>
+                            <Box>
+                                <Typography component="div" variant="subtitle2">Contenido</Typography>
+                                <Paper variant="outlined" sx={{ p: 2, maxHeight: 320, overflowY: 'auto' }}>
+                                    <div
+                                        dangerouslySetInnerHTML={{
+                                            __html: selectedRevision.data?.content || '<p>Sin contenido disponible.</p>'
+                                        }}
+                                    />
+                                </Paper>
+                            </Box>
+                        </Stack>
+                    ) : (
+                        <Typography component="div" variant="body2" color="text.secondary">
+                            selecciona una revisi�?�n para ver los detalles.
+                        </Typography>
+                    )}
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={handleCloseRevisionDialog}>Cerrar</Button>
+                    {selectedRevision && (
+                        <Button
+                            color="warning"
+                            variant="contained"
+                            onClick={() => handleRestoreRevision(selectedRevision.id)}
+                            disabled={restoringRevisionId === selectedRevision.id}
+                            startIcon={restoringRevisionId === selectedRevision.id ? <CircularProgress size={16} color="inherit" /> : null}
+                        >
+                            {restoringRevisionId === selectedRevision.id ? 'Restaurando...' : 'Restaurar esta revisi�?�n'}
+                        </Button>
+                    )}
+                </DialogActions>
+            </Dialog>
+
         </AdminLayout>
     );
 };
 
 export default PostForm;
+
+
+
+
+
+
+

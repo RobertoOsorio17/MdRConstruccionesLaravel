@@ -87,7 +87,8 @@ class AuthenticatedSessionController extends Controller
                     $errorMessage .= ' Esta suspensiÃƒÆ’Ã‚Â³n es permanente.';
                 }
 
-                return redirect()->route('login')->withErrors([
+                // Throw validation exception for Inertia
+                throw ValidationException::withMessages([
                     'email' => $errorMessage
                 ]);
             }
@@ -169,9 +170,10 @@ class AuthenticatedSessionController extends Controller
                     'timestamp' => now()->toISOString()
                 ]);
 
-                // Return error to trigger 2FA modal in frontend
-                return back()->withErrors([
-                    'requires2FA' => true
+                // Throw validation exception to trigger 2FA modal in frontend
+                // The frontend checks if errors.requires2FA is truthy
+                throw ValidationException::withMessages([
+                    'requires2FA' => 'true'
                 ]);
             }
 

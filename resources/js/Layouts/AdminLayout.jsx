@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Head, Link, usePage, router } from '@inertiajs/react';
 import { NotificationProvider } from '@/Contexts/NotificationContext';
 import NotificationSystem from '@/Components/Admin/NotificationSystem';
+import useAdminNotificationsRealtime from '@/Hooks/useAdminNotificationsRealtime';
 import SessionManager from '@/Components/Admin/SessionManager';
 import {
     AppBar,
@@ -54,6 +55,15 @@ const drawerWidth = 280;
 const AdminLayout = ({ children, title = 'Dashboard Admin' }) => {
     const theme = useTheme();
     const { auth, flash } = usePage().props;
+    const {
+        notifications: adminNotifications,
+        unreadCount: adminUnreadCount,
+        markAsRead: adminMarkAsRead,
+        markAllAsRead: adminMarkAllAsRead,
+        deleteNotification: adminDeleteNotification,
+        dndEnabled,
+        toggleDnd,
+    } = useAdminNotificationsRealtime();
     const [mobileOpen, setMobileOpen] = useState(false);
     const [anchorEl, setAnchorEl] = useState(null);
     const [notificationAnchor, setNotificationAnchor] = useState(null);
@@ -349,10 +359,13 @@ const AdminLayout = ({ children, title = 'Dashboard Admin' }) => {
                         />
 
                         <NotificationSystem
-                            notifications={[]}
-                            onMarkAsRead={() => {}}
-                            onMarkAllAsRead={() => {}}
-                            onDeleteNotification={() => {}}
+                            notifications={adminNotifications}
+                            onMarkAsRead={adminMarkAsRead}
+                            onMarkAllAsRead={adminMarkAllAsRead}
+                            onDeleteNotification={adminDeleteNotification}
+                            dndEnabled={dndEnabled}
+                            onToggleDnd={toggleDnd}
+                            unreadCountOverride={adminUnreadCount}
                         />
 
                         <IconButton

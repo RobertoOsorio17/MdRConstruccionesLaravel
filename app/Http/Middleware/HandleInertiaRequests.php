@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Inertia\Middleware;
 
 /**
@@ -18,11 +19,52 @@ class HandleInertiaRequests extends Middleware
     protected $rootView = 'app';
 
     /**
+     * Handle the incoming request.
+     */
+    public function handle(Request $request, \Closure $next): \Symfony\Component\HttpFoundation\Response
+    {
+        // Register the URL resolver with Inertia before processing
+        \Inertia\Inertia::resolveUrlUsing($this->urlResolver());
+
+        // Check for any output before response (helps catch BOM issues)
+        if (ob_get_length() > 0) {
+            \Log::warning('Output detected before Inertia response', [
+                'output_length' => ob_get_length(),
+                'route' => $request->route()?->getName(),
+                'url' => $request->fullUrl()
+            ]);
+            ob_clean();
+        }
+
+        return parent::handle($request, $next);
+    }
+
+    /**
      * Determine the current asset version.
      */
     public function version(Request $request): ?string
     {
         return parent::version($request);
+    }
+
+    /**
+     * Provide a deterministic relative URL for every Inertia response.
+     */
+    public function urlResolver()
+    {
+        return function (Request $request): string {
+            $relative = $request->getRequestUri() ?: '/';
+
+            if ($relative === '' || $relative === false) {
+                $relative = '/';
+            }
+
+            if (! Str::startsWith($relative, '/')) {
+                $relative = '/'.$relative;
+            }
+
+            return $relative;
+        };
     }
 
     /**
@@ -34,8 +76,8 @@ class HandleInertiaRequests extends Middleware
     {
         $auth = $request->user();
         $authData = [
-            'isAuthenticated' => !!$auth,
-            'isGuest' => !$auth,
+            'isAuthenticated' => !! $auth,
+            'isGuest' => ! $auth,
             'user' => $auth ? [
                 'id' => $auth->id,
                 'name' => $auth->name,
@@ -49,8 +91,8 @@ class HandleInertiaRequests extends Middleware
                 'initials' => $auth->initials ?? null,
                 'profile_completeness' => $auth->profile_completeness ?? 0,
                 'email_verified_at' => $auth->email_verified_at,
-                'is_email_verified' => !is_null($auth->email_verified_at),
-            ] : null
+                'is_email_verified' => ! is_null($auth->email_verified_at),
+            ] : null,
         ];
 
         // Enrich with statistics and permissions when authenticated.
@@ -75,7 +117,7 @@ class HandleInertiaRequests extends Middleware
                                     'name' => $permission->name,
                                     'module' => $permission->module,
                                     'action' => $permission->action,
-                                    'display_name' => $permission->display_name
+                                    'display_name' => $permission->display_name,
                                 ];
                             });
                         })
@@ -92,7 +134,7 @@ class HandleInertiaRequests extends Middleware
                             'name' => $role->name,
                             'display_name' => $role->display_name,
                             'color' => $role->color,
-                            'level' => $role->level
+                            'level' => $role->level,
                         ];
                     })->toArray();
                 }
@@ -110,6 +152,13 @@ class HandleInertiaRequests extends Middleware
         return [
             ...parent::share($request),
             'auth' => $authData,
+            'csrf_token' => csrf_token(),
+            'flash' => [
+                'success' => $request->session()->get('success'),
+                'error' => $request->session()->get('error'),
+                'warning' => $request->session()->get('warning'),
+                'info' => $request->session()->get('info'),
+            ],
         ];
     }
 }

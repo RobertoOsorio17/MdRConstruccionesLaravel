@@ -51,9 +51,9 @@ class CommentPolicy
      */
     public function update(User $user, Comment $comment): bool
     {
-        // Users can only update their own comments within 15 minutes
+        // Users can only update their own comments within 24 hours
         if ($user->id === $comment->user_id) {
-            return $comment->created_at->diffInMinutes(now()) <= 15;
+            return $comment->created_at->diffInHours(now()) < 24;
         }
 
         // Admins and moderators can update any comment

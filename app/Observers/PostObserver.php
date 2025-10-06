@@ -43,15 +43,15 @@ class PostObserver
      */
     protected function invalidateCache(Post $post): void
     {
-        // Invalidate specific post cache
-        $this->cacheService->invalidatePost($post->slug);
-        
+        // Invalidate specific post cache (using post ID, not slug)
+        $this->cacheService->invalidatePost((int) $post->id);
+
         // Invalidate dashboard stats
         $this->cacheService->invalidateDashboardStats();
-        
+
         // Invalidate user stats if post has an author
         if ($post->user_id) {
-            $this->cacheService->invalidateUserStats($post->user_id);
+            $this->cacheService->invalidateUserStats((int) $post->user_id);
         }
     }
 }

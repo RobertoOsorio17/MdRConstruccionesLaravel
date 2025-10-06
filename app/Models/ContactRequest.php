@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class ContactRequest extends Model
 {
@@ -144,5 +145,13 @@ class ContactRequest extends Model
     public function isResponded(): bool
     {
         return $this->status === 'responded';
+    }
+
+    /**
+     * Get all attachments for this contact request.
+     */
+    public function attachments(): HasMany
+    {
+        return $this->hasMany(ContactRequestAttachment::class);
     }
 }

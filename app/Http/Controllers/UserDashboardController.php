@@ -142,8 +142,9 @@ class UserDashboardController extends Controller
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
-            
-            return back()->with('error', 'Failed to load the dashboard. Please try again.');
+
+            session()->flash('error', 'Failed to load the dashboard. Please try again.');
+            return redirect()->back();
         }
     }
 

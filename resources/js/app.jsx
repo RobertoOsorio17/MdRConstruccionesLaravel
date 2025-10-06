@@ -18,6 +18,17 @@ createInertiaApp({
             import.meta.glob('./Pages/**/*.jsx'),
         ),
     setup({ el, App, props }) {
+        // Ensure CSRF token meta tag exists
+        if (!document.querySelector('meta[name="csrf-token"]')) {
+            const csrfToken = props.initialPage.props.csrf_token;
+            if (csrfToken) {
+                const meta = document.createElement('meta');
+                meta.name = 'csrf-token';
+                meta.content = csrfToken;
+                document.head.appendChild(meta);
+            }
+        }
+
         const root = createRoot(el);
 
         root.render(

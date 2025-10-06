@@ -58,19 +58,27 @@ class AdminAuditMiddleware
     {
         $skipRoutes = [
             'admin.dashboard', // Skip dashboard views to reduce noise
+            'admin.api.analytics.users',
+            'admin.api.analytics.content',
+            'admin.api.analytics.services',
+            'admin.api.analytics.projects',
+            'admin.api.analytics.system',
         ];
 
-        $skipMethods = ['GET']; // Only log state-changing operations by default
-
         $routeName = $request->route()?->getName();
-        
-        // Skip if it's a GET request to dashboard or similar read-only routes
-        if (in_array($request->method(), $skipMethods) && in_array($routeName, $skipRoutes)) {
+
+        // Skip analytics API calls to reduce noise
+        if (in_array($routeName, $skipRoutes)) {
             return true;
         }
 
-        // Skip AJAX requests for real-time data
-        if ($request->ajax() && $request->method() === 'GET') {
+        // Skip AJAX requests for real-time data (but log important actions)
+        if ($request->ajax() && $request->method() === 'GET' && !str_contains($routeName, 'export')) {
+            return true;
+        }
+
+        // Skip asset requests
+        if ($request->is('admin/assets/*') || $request->is('admin/images/*')) {
             return true;
         }
 
@@ -158,13 +166,32 @@ class AdminAuditMiddleware
         if (str_contains($routeName, 'posts')) {
             return "{$user->name} performed {$action} on blog post";
         }
-        
+
         if (str_contains($routeName, 'users')) {
             return "{$user->name} performed {$action} on user account";
         }
-        
+
         if (str_contains($routeName, 'services')) {
             return "{$user->name} performed {$action} on service";
+        }
+
+        if (str_contains($routeName, 'contact-requests')) {
+            $actionMap = [
+                'mark-read' => 'marked as read',
+                'mark-responded' => 'marked as responded',
+                'archive' => 'archived',
+                'add-notes' => 'added notes to',
+                'download-attachment' => 'downloaded attachment from',
+                'bulk-action' => 'performed bulk action on',
+            ];
+
+            foreach ($actionMap as $key => $description) {
+                if (str_contains($routeName, $key)) {
+                    return "{$user->name} {$description} contact request";
+                }
+            }
+
+            return "{$user->name} performed {$action} on contact request";
         }
 
         return "{$user->name} performed {$action} in admin panel";
@@ -207,6 +234,7 @@ class AdminAuditMiddleware
             'tag' => 'App\\Models\\Tag',
             'comment' => 'App\\Models\\Comment',
             'project' => 'App\\Models\\Project',
+            'contactRequest' => 'App\\Models\\ContactRequest',
         ];
 
         return $modelMap[$paramName] ?? null;

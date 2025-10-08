@@ -8,6 +8,10 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 
+/**
+ * Curates customer testimonials in the admin area, facilitating moderation, media handling, and publication workflows.
+ * Helps marketing teams surface authentic social proof while maintaining brand consistency and approval trails.
+ */
 class TestimonialController extends Controller
 {
     /**

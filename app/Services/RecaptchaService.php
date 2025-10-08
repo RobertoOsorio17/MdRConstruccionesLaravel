@@ -5,6 +5,10 @@ namespace App\Services;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
+/**
+ * Wraps Google reCAPTCHA verification logic and configuration checks for form submissions.
+ * Centralizes score thresholds, error logging, and availability detection.
+ */
 class RecaptchaService
 {
     /**

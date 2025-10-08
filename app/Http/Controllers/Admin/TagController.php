@@ -10,7 +10,8 @@ use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
 /**
- * Manage blog tags within the admin panel.
+ * Maintains the tagging taxonomy available to editors, ensuring discoverability across published content.
+ * Delivers CRUD operations, validation, and usage analytics so tags remain consistent and purposeful.
  */
 class TagController extends Controller
 {

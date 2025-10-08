@@ -79,7 +79,13 @@ const LoginMUI = ({ status, canResetPassword }) => {
                     setRecoveryCode('');
                     setAttempts(0);
                 }
-            }
+            },
+            onBefore: () => {
+                // Clear any previous errors
+                return true;
+            },
+            preserveScroll: true,
+            preserveState: true,
         });
     };
 

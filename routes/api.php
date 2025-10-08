@@ -44,18 +44,20 @@ Route::middleware('auth:sanctum')->group(function () {
 Route::prefix('search')->group(function () {
     // Main search endpoint with pagination and filters
     Route::get('/', [SearchController::class, 'search'])->name('api.search');
-    
+
     // Quick search for instant results (lighter version)
     Route::get('/quick', [SearchController::class, 'quick'])->name('api.search.quick');
-    
+
     // Search suggestions for autocomplete
     Route::get('/suggestions', [SearchController::class, 'suggestions'])->name('api.search.suggestions');
-    
+
     // Popular search terms
     Route::get('/popular', [SearchController::class, 'popular'])->name('api.search.popular');
-    
-    // Search analytics (can be protected with middleware if needed)
-    Route::get('/analytics', [SearchController::class, 'analytics'])->name('api.search.analytics');
+
+    // Search analytics (protected - admin only)
+    Route::middleware(['auth', 'auth.enhanced', 'role:admin,editor'])
+        ->get('/analytics', [SearchController::class, 'analytics'])
+        ->name('api.search.analytics');
 });
 
 /*

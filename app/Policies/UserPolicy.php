@@ -5,6 +5,10 @@ namespace App\Policies;
 use App\Models\User;
 use Illuminate\Auth\Access\Response;
 
+/**
+ * Outlines authorization rules for managing user accounts, including self-service exceptions.
+ * Ensures administrative safeguards around role changes, banning, and verification.
+ */
 class UserPolicy
 {
     /**

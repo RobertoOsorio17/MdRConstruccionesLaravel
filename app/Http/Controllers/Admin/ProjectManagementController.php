@@ -11,7 +11,8 @@ use Illuminate\Support\Str;
 use Carbon\Carbon;
 
 /**
- * Manage projects and related analytics for administrators.
+ * Administers company project records from the control panel, covering portfolio curation, timelines, and featured selections.
+ * Supports rich metadata editing, media management, and filtering capabilities tailored to construction case studies.
  */
 class ProjectManagementController extends Controller
 {

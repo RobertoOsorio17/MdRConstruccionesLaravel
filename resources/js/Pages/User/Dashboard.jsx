@@ -90,7 +90,7 @@ import {
     Search as SearchIcon
 } from '@mui/icons-material';
 import { motion, AnimatePresence } from 'framer-motion';
-import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import MainLayout from '@/Layouts/MainLayout';
 import { usePage } from '@inertiajs/react';
 import { useNotification } from '@/Context/NotificationContext';
 import ErrorBoundary from '@/Components/ErrorBoundary';
@@ -316,23 +316,14 @@ function Dashboard({ stats, recentComments, recentSavedPosts }) {
 
     if (!isAuthenticated) {
         return (
-            <AuthenticatedLayout
-                header={
-                    <Box display="flex" alignItems="center">
-                        <DashboardIcon sx={{ mr: 2, color: 'primary.main' }} />
-                        <Typography variant="h4" component="h1">
-                            Mi Dashboard
-                        </Typography>
-                    </Box>
-                }
-            >
+            <MainLayout>
                 <Head title="Mi Dashboard" />
                 <Container maxWidth="xl" sx={{ py: 4 }}>
                     <Alert severity="error" sx={{ mb: 4 }}>
                         Error de autenticación. Por favor, inicia sesión nuevamente.
                     </Alert>
                 </Container>
-            </AuthenticatedLayout>
+            </MainLayout>
         );
     }
 
@@ -341,37 +332,8 @@ function Dashboard({ stats, recentComments, recentSavedPosts }) {
 
     return (
         <ErrorBoundary>
-            <AuthenticatedLayout
-                header={
-                    <Box display="flex" alignItems="center" justifyContent="space-between">
-                        <Box display="flex" alignItems="center">
-                            {headerIcon}
-                            <Box>
-                                <Typography variant="h4" component="h1">
-                                    {headerTitle}
-                                </Typography>
-                                {isAdmin && (
-                                    <Typography variant="subtitle1" color="text.secondary">
-                                        Acceso completo de administrador
-                                    </Typography>
-                                )}
-                            </Box>
-                        </Box>
-                        
-                        {isAdmin && (
-                            <Chip
-                                label="ADMIN"
-                                color="error"
-                                variant="filled"
-                                icon={<AdminIcon />}
-                                sx={{ fontWeight: 700, px: 2, py: 1 }}
-                            />
-                        )}
-                    </Box>
-                }
-            >
+            <MainLayout>
                 <Head title={headerTitle} />
-
                 <Container maxWidth="xl" sx={{ py: 4 }}>
                     {isLoading ? (
                         <Box display="flex" justifyContent="center" alignItems="center" py={4}>
@@ -1445,7 +1407,7 @@ function Dashboard({ stats, recentComments, recentSavedPosts }) {
                         </SpeedDial>
                     )}
                 </Container>
-            </AuthenticatedLayout>
+            </MainLayout>
         </ErrorBoundary>
     );
 }

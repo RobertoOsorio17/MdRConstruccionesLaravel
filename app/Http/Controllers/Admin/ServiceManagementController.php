@@ -13,7 +13,8 @@ use Illuminate\Support\Str;
 use Inertia\Inertia;
 
 /**
- * Advanced service management features for administrators.
+ * Provides a comprehensive administration surface for service offerings, spanning metadata, media assets, and audience targeting.
+ * Empowers staff to curate catalog visibility, maintain categorization, and analyze engagement signals in real time.
  */
 class ServiceManagementController extends Controller
 {

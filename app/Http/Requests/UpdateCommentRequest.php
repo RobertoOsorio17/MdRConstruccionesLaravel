@@ -5,8 +5,7 @@ namespace App\Http\Requests;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
- * Validation request for updating comment content.
- * Ensures proper authorization and data validation for comment edits.
+ * Validate update comment input data.
  */
 class UpdateCommentRequest extends FormRequest
 {

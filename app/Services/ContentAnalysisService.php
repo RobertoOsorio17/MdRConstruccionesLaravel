@@ -6,6 +6,10 @@ use App\Models\Post;
 use App\Models\MLPostVector;
 use Illuminate\Support\Str;
 
+/**
+ * Generates machine-learning friendly representations of posts, including TF-IDF vectors and engagement metrics.
+ * Powers recommendation engines by analyzing text, taxonomy, and behavioural signals.
+ */
 class ContentAnalysisService
 {
     /**

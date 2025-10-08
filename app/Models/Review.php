@@ -8,6 +8,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
+/**
+ * Represents customer reviews for services or projects, including moderation workflow metadata.
+ * Supports polymorphic associations and approval tracking for trust and marketing surfaces.
+ */
 class Review extends Model
 {
     use HasFactory, SoftDeletes;

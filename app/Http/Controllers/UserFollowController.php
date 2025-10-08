@@ -9,7 +9,8 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Validation\ValidationException;
 
 /**
- * Manage follow relationships between users.
+ * Manages the social graph between users, exposing endpoints to follow, unfollow, and inspect relationships.
+ * Enforces guardrails like self-follow prevention while returning up-to-date follower counts for UI feedback.
  */
 class UserFollowController extends Controller
 {

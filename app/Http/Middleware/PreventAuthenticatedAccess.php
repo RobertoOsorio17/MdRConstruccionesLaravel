@@ -7,6 +7,9 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Symfony\Component\HttpFoundation\Response;
 
+/**
+ * Apply prevent authenticated middleware logic.
+ */
 class PreventAuthenticatedAccess
 {
     /**

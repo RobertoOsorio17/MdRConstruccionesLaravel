@@ -10,7 +10,8 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 
 /**
- * Provide machine-learning powered recommendations for posts.
+ * Orchestrates the hybrid recommendation engine combining content-based, collaborative, and trending signals.
+ * Generates personalized suggestions, caches results, and logs interactions for continuous model improvement.
  */
 class MLRecommendationService
 {

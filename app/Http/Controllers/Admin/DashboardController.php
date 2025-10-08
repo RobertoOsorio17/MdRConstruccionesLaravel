@@ -20,6 +20,10 @@ use Illuminate\Support\Facades\Cache;
 use Carbon\Carbon;
 use Inertia\Inertia;
 
+/**
+ * Curates the administrative dashboard experience by assembling metrics, alerts, and quick actions for staff.
+ * Acts as the orchestration point that feeds configurable widgets and surface-level performance snapshots.
+ */
 class DashboardController extends Controller
 {
     /**
@@ -27,50 +31,52 @@ class DashboardController extends Controller
      */
     public function index(Request $request)
     {
-        // Basic dashboard statistics.
-        $stats = [
-            'posts' => [
-                'total' => Post::count(),
-                'published' => Post::where('status', 'published')->count(),
-                'draft' => Post::where('status', 'draft')->count(),
-                'scheduled' => Post::where('status', 'scheduled')->count(),
-            ],
-            'comments' => [
-                'total' => Comment::count(),
-                'pending' => Comment::where('status', 'pending')->count(),
-                'approved' => Comment::where('status', 'approved')->count(),
-                'spam' => Comment::where('status', 'spam')->count(),
-            ],
-            'categories' => [
-                'total' => Category::count(),
-                'active' => Category::where('is_active', true)->count(),
-            ],
-            'tags' => [
-                'total' => Tag::count(),
-                'used' => Tag::has('posts')->count(),
-            ],
-            'users' => [
-                'total' => User::count(),
-                'active' => User::whereNotNull('email_verified_at')->count(),
-            ],
-            'projects' => [
-                'total' => Project::count(),
-                'completed' => Project::where('status', 'completed')->count(),
-            ],
-            'services' => [
-                'total' => Service::count(),
-                'active' => Service::where('is_active', true)->count(),
-                'favorites' => ServiceFavorite::count(),
-            ],
-            'admin' => [
-                'audit_logs' => AdminAuditLog::count(),
-                'notifications' => AdminNotification::unread()->count(),
-                'active_sessions' => User::whereNotNull('last_activity_at')
-                    ->where('last_activity_at', '>=', Carbon::now()->subMinutes(30))
-                    ->where('role', 'admin')
-                    ->count(),
-            ],
-        ];
+        // Cache dashboard statistics for 5 minutes to reduce database load
+        $stats = Cache::remember('admin_dashboard_stats', 300, function () {
+            return [
+                'posts' => [
+                    'total' => Post::count(),
+                    'published' => Post::where('status', 'published')->count(),
+                    'draft' => Post::where('status', 'draft')->count(),
+                    'scheduled' => Post::where('status', 'scheduled')->count(),
+                ],
+                'comments' => [
+                    'total' => Comment::count(),
+                    'pending' => Comment::where('status', 'pending')->count(),
+                    'approved' => Comment::where('status', 'approved')->count(),
+                    'spam' => Comment::where('status', 'spam')->count(),
+                ],
+                'categories' => [
+                    'total' => Category::count(),
+                    'active' => Category::where('is_active', true)->count(),
+                ],
+                'tags' => [
+                    'total' => Tag::count(),
+                    'used' => Tag::has('posts')->count(),
+                ],
+                'users' => [
+                    'total' => User::count(),
+                    'active' => User::whereNotNull('email_verified_at')->count(),
+                ],
+                'projects' => [
+                    'total' => Project::count(),
+                    'completed' => Project::where('status', 'completed')->count(),
+                ],
+                'services' => [
+                    'total' => Service::count(),
+                    'active' => Service::where('is_active', true)->count(),
+                    'favorites' => ServiceFavorite::count(),
+                ],
+                'admin' => [
+                    'audit_logs' => AdminAuditLog::count(),
+                    'notifications' => AdminNotification::unread()->count(),
+                    'active_sessions' => User::whereNotNull('last_activity_at')
+                        ->where('last_activity_at', '>=', Carbon::now()->subMinutes(30))
+                        ->where('role', 'admin')
+                        ->count(),
+                ],
+            ];
+        });
 
         // Recent posts displayed in activity cards.
         $recentPosts = Post::with(['author:id,name', 'categories:id,name,color'])
@@ -124,33 +130,61 @@ class DashboardController extends Controller
                 ];
             });
 
-        // Enhanced monthly statistics (covering the last six months).
-        $monthlyStats = [];
-        for ($i = 5; $i >= 0; $i--) {
-            $date = Carbon::now()->subMonths($i);
-            $monthlyStats[] = [
-                'month' => $date->format('M Y'),
-                'posts' => Post::whereYear('created_at', $date->year)
-                    ->whereMonth('created_at', $date->month)
-                    ->count(),
-                'published' => Post::where('status', 'published')
-                    ->whereYear('created_at', $date->year)
-                    ->whereMonth('created_at', $date->month)
-                    ->count(),
-                'comments' => Comment::whereYear('created_at', $date->year)
-                    ->whereMonth('created_at', $date->month)
-                    ->count(),
-                'users' => User::whereYear('created_at', $date->year)
-                    ->whereMonth('created_at', $date->month)
-                    ->count(),
-                'projects' => Project::whereYear('created_at', $date->year)
-                    ->whereMonth('created_at', $date->month)
-                    ->count(),
-                'services' => Service::whereYear('created_at', $date->year)
-                    ->whereMonth('created_at', $date->month)
-                    ->count(),
-            ];
-        }
+        // Enhanced monthly statistics (covering the last six months) - optimized with single queries
+        $monthlyStats = Cache::remember('admin_dashboard_monthly_stats', 300, function () {
+            $sixMonthsAgo = Carbon::now()->subMonths(5)->startOfMonth();
+
+            // Get all posts grouped by month
+            $postsByMonth = Post::selectRaw('DATE_FORMAT(created_at, "%Y-%m") as month, COUNT(*) as total')
+                ->where('created_at', '>=', $sixMonthsAgo)
+                ->groupBy('month')
+                ->pluck('total', 'month');
+
+            $publishedByMonth = Post::selectRaw('DATE_FORMAT(created_at, "%Y-%m") as month, COUNT(*) as total')
+                ->where('created_at', '>=', $sixMonthsAgo)
+                ->where('status', 'published')
+                ->groupBy('month')
+                ->pluck('total', 'month');
+
+            $commentsByMonth = Comment::selectRaw('DATE_FORMAT(created_at, "%Y-%m") as month, COUNT(*) as total')
+                ->where('created_at', '>=', $sixMonthsAgo)
+                ->groupBy('month')
+                ->pluck('total', 'month');
+
+            $usersByMonth = User::selectRaw('DATE_FORMAT(created_at, "%Y-%m") as month, COUNT(*) as total')
+                ->where('created_at', '>=', $sixMonthsAgo)
+                ->groupBy('month')
+                ->pluck('total', 'month');
+
+            $projectsByMonth = Project::selectRaw('DATE_FORMAT(created_at, "%Y-%m") as month, COUNT(*) as total')
+                ->where('created_at', '>=', $sixMonthsAgo)
+                ->groupBy('month')
+                ->pluck('total', 'month');
+
+            $servicesByMonth = Service::selectRaw('DATE_FORMAT(created_at, "%Y-%m") as month, COUNT(*) as total')
+                ->where('created_at', '>=', $sixMonthsAgo)
+                ->groupBy('month')
+                ->pluck('total', 'month');
+
+            // Build the monthly stats array
+            $stats = [];
+            for ($i = 5; $i >= 0; $i--) {
+                $date = Carbon::now()->subMonths($i);
+                $monthKey = $date->format('Y-m');
+
+                $stats[] = [
+                    'month' => $date->format('M Y'),
+                    'posts' => $postsByMonth[$monthKey] ?? 0,
+                    'published' => $publishedByMonth[$monthKey] ?? 0,
+                    'comments' => $commentsByMonth[$monthKey] ?? 0,
+                    'users' => $usersByMonth[$monthKey] ?? 0,
+                    'projects' => $projectsByMonth[$monthKey] ?? 0,
+                    'services' => $servicesByMonth[$monthKey] ?? 0,
+                ];
+            }
+
+            return $stats;
+        });
 
         // User growth trends.
         $userGrowthStats = [];

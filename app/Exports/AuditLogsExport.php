@@ -12,6 +12,10 @@ use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
 use Carbon\Carbon;
 
+/**
+ * Generates a spreadsheet export of administrator audit logs with optional filtering.
+ * Implements Laravel Excel contracts to provide headings, mapping, and presentation styling.
+ */
 class AuditLogsExport implements FromQuery, WithHeadings, WithMapping, WithStyles, ShouldAutoSize
 {
     protected $filters;

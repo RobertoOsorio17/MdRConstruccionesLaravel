@@ -8,6 +8,10 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Jenssegers\Agent\Agent;
 
+/**
+ * Tracks devices interacting with user accounts, supporting trust decisions and session insights.
+ * Generates deterministic device identifiers and exposes helpers for managing trusted hardware.
+ */
 class DeviceTrackingService
 {
     /**

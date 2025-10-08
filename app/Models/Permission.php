@@ -5,6 +5,10 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
+/**
+ * Defines granular permissions within the RBAC system and their relationships to roles and users.
+ * Supplies query helpers for grouping and assignment checks used across authorization logic.
+ */
 class Permission extends Model
 {
     protected $fillable = [

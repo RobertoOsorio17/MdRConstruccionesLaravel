@@ -12,6 +12,10 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 
+/**
+ * Exposes machine learning powered personalization endpoints that drive recommendations and insight logging.
+ * Connects content analysis services with user sessions to deliver contextual suggestions and telemetry.
+ */
 class MLController extends Controller
 {
     private ContentAnalysisService $contentAnalysis;

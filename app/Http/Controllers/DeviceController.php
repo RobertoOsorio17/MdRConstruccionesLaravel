@@ -8,6 +8,10 @@ use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
+/**
+ * Administers the authenticated user's registered devices, enabling review, naming, trust toggles, and clean-up.
+ * Relies on the DeviceTrackingService to keep device metadata synchronized and policy compliant.
+ */
 class DeviceController extends Controller
 {
     use AuthorizesRequests;

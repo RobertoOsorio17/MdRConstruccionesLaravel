@@ -6,7 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * Represents a report submitted against a specific comment.
+ * Captures abuse reports filed against comments, including reporter metadata and moderation notes.
+ * Enables moderators to triage flags from both guests and authenticated users.
  */
 class CommentReport extends Model
 {

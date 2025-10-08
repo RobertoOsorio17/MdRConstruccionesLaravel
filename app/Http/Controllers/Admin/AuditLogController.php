@@ -11,6 +11,10 @@ use Inertia\Inertia;
 use Inertia\Response;
 use Carbon\Carbon;
 
+/**
+ * Oversees presentation and filtering of administrative audit logs to surface security and change trails.
+ * Coordinates list rendering, scoped queries, and export-ready payloads that support oversight and compliance workflows.
+ */
 class AuditLogController extends Controller
 {
     /**

@@ -27,10 +27,12 @@ Route::get('/servicios/{service:slug}', [ServiceController::class, 'show'])->nam
 Route::get('/proyectos', [ProjectController::class, 'index'])->name('projects.index');
 Route::get('/proyectos/{project:slug}', [ProjectController::class, 'show'])->name('projects.show');
 
-// Blog Routes
-Route::get('/blog', [PostController::class, 'enhancedIndex'])->name('blog.index');
-Route::get('/blog/classic', [PostController::class, 'index'])->name('blog.classic'); // Vista clásica como backup
-Route::get('/blog/{post:slug}', [PostController::class, 'show'])->name('blog.show');
+// Blog Routes (protected by blog enabled check)
+Route::middleware('check.blog')->group(function () {
+    Route::get('/blog', [PostController::class, 'enhancedIndex'])->name('blog.index');
+    Route::get('/blog/classic', [PostController::class, 'index'])->name('blog.classic'); // Vista clásica como backup
+    Route::get('/blog/{post:slug}', [PostController::class, 'show'])->name('blog.show');
+});
 
 // ✅ Search Routes (with rate limiting)
 Route::middleware(['throttle:60,1'])->group(function () {
@@ -113,8 +115,8 @@ Route::prefix('api/services')->name('api.services.')->group(function () {
 // Post Interaction Status (available for all users)
 Route::get('/posts/{post}/interaction-status', [App\Http\Controllers\UserInteractionController::class, 'getInteractionStatus'])->name('posts.interaction-status');
 
-// ✅ Comment Routes (with granular rate limiting and IP ban protection)
-Route::middleware(['throttle:comments-auth', 'check.ip.ban'])->group(function () {
+// ✅ Comment Routes (with granular rate limiting, IP ban protection, and blog enabled check)
+Route::middleware(['check.blog', 'throttle:comments-auth', 'check.ip.ban'])->group(function () {
     Route::post('/blog/{post:slug}/comments', [App\Http\Controllers\CommentController::class, 'store'])->name('comments.store');
     Route::get('/blog/{post:slug}/comments', [App\Http\Controllers\CommentController::class, 'getComments'])->name('comments.get');
 });

@@ -5,6 +5,10 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
+/**
+ * Defines RBAC roles and their relationships to users and permissions within the authorization layer.
+ * Provides helper methods for granting, revoking, and grouping permissions by domain.
+ */
 class Role extends Model
 {
     protected $fillable = [

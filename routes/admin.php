@@ -288,6 +288,32 @@ Route::middleware(['auth', 'auth.enhanced', 'role:admin,editor', 'admin.timeout'
         ->name('settings.update');
     Route::post('/settings/initialize', [App\Http\Controllers\Admin\SettingController::class, 'initializeDefaults'])
         ->name('settings.initialize');
+    Route::post('/settings/upload', [App\Http\Controllers\Admin\SettingController::class, 'uploadFile'])
+        ->name('settings.upload');
+    Route::get('/settings/history/{key}', [App\Http\Controllers\Admin\SettingController::class, 'getHistory'])
+        ->name('settings.history');
+    Route::post('/settings/revert/{key}', [App\Http\Controllers\Admin\SettingController::class, 'revert'])
+        ->name('settings.revert');
+    Route::get('/settings/export', [App\Http\Controllers\Admin\SettingController::class, 'export'])
+        ->name('settings.export');
+    Route::post('/settings/import', [App\Http\Controllers\Admin\SettingController::class, 'import'])
+        ->name('settings.import');
+    Route::post('/settings/reset-all', [App\Http\Controllers\Admin\SettingController::class, 'resetAll'])
+        ->name('settings.reset-all');
+
+    // Maintenance Mode Management
+    Route::post('/maintenance/toggle', [App\Http\Controllers\Admin\MaintenanceModeController::class, 'toggle'])
+        ->name('maintenance.toggle');
+    Route::post('/maintenance/schedule', [App\Http\Controllers\Admin\MaintenanceModeController::class, 'schedule'])
+        ->name('maintenance.schedule');
+    Route::get('/maintenance/preview', [App\Http\Controllers\Admin\MaintenanceModeController::class, 'preview'])
+        ->name('maintenance.preview');
+    Route::post('/maintenance/ip/add', [App\Http\Controllers\Admin\MaintenanceModeController::class, 'addIp'])
+        ->name('maintenance.ip.add');
+    Route::delete('/maintenance/ip/{ip}', [App\Http\Controllers\Admin\MaintenanceModeController::class, 'removeIp'])
+        ->name('maintenance.ip.remove');
+    Route::get('/maintenance/status', [App\Http\Controllers\Admin\MaintenanceModeController::class, 'status'])
+        ->name('maintenance.status');
 
     // Media Management
     Route::get('/media', [App\Http\Controllers\Admin\MediaController::class, 'index'])

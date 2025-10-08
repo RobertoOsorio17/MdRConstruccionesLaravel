@@ -5,6 +5,10 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Cache;
 
+/**
+ * Lightweight key-value settings store used for legacy configuration needs.
+ * Provides cached getters and setters to minimize database lookups.
+ */
 class Setting extends Model
 {
     protected $fillable = [

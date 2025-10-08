@@ -5,6 +5,10 @@ namespace App\Policies;
 use App\Models\Project;
 use App\Models\User;
 
+/**
+ * Controls who can manage construction projects within the admin suite.
+ * Grants viewing to the public while restricting edits, deletions, and status changes to elevated roles.
+ */
 class ProjectPolicy
 {
     /**

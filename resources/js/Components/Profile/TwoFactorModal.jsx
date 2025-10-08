@@ -29,7 +29,7 @@ import {
     Download as DownloadIcon,
 } from '@mui/icons-material';
 
-const steps = ['Escanear QR', 'Guardar Códigos', 'Verificar'];
+const steps = ['Comenzar', 'Escanear QR', 'Guardar Códigos', 'Verificar'];
 
 export default function TwoFactorModal({ open, onClose, twoFactorEnabled }) {
     const [activeStep, setActiveStep] = useState(0);
@@ -42,57 +42,59 @@ export default function TwoFactorModal({ open, onClose, twoFactorEnabled }) {
     const [copiedCode, setCopiedCode] = useState(false);
     const [copiedSecret, setCopiedSecret] = useState(false);
 
-    useEffect(() => {
-        if (open && !twoFactorEnabled) {
-            // Enable 2FA and get QR code
-            setLoading(true);
-            router.post('/user/two-factor-authentication', {}, {
-                preserveScroll: true,
-                onSuccess: async (page) => {
-                    try {
-                        // Fetch QR code
-                        const qrResponse = await fetch('/user/two-factor-authentication/qr-code');
-                        const qrData = await qrResponse.json();
+    const enable2FA = () => {
+        setLoading(true);
+        setError('');
+        router.post('/user/two-factor-authentication', {}, {
+            preserveScroll: true,
+            onSuccess: async (page) => {
+                try {
+                    // Fetch QR code
+                    const qrResponse = await fetch('/user/two-factor-authentication/qr-code');
+                    const qrData = await qrResponse.json();
 
-                        if (qrData.svg) {
-                            setQrCode(qrData.svg);
-                        }
-
-                        if (qrData.url) {
-                            // Extract secret from URL
-                            const urlParams = new URLSearchParams(qrData.url.split('?')[1]);
-                            const secretParam = urlParams.get('secret');
-                            if (secretParam) {
-                                setSecret(secretParam);
-                            }
-                        }
-
-                        // Fetch recovery codes
-                        const codesResponse = await fetch('/user/two-factor-authentication/recovery-codes');
-                        const codesData = await codesResponse.json();
-
-                        if (codesData.recoveryCodes) {
-                            setRecoveryCodes(codesData.recoveryCodes);
-                        }
-
-                        setLoading(false);
-                    } catch (error) {
-                        console.error('Error fetching 2FA data:', error);
-                        setError('Error al cargar los datos de 2FA');
-                        setLoading(false);
+                    if (qrData.svg) {
+                        setQrCode(qrData.svg);
                     }
-                },
-                onError: () => {
+
+                    if (qrData.url) {
+                        // Extract secret from URL
+                        const urlParams = new URLSearchParams(qrData.url.split('?')[1]);
+                        const secretParam = urlParams.get('secret');
+                        if (secretParam) {
+                            setSecret(secretParam);
+                        }
+                    }
+
+                    // Fetch recovery codes
+                    const codesResponse = await fetch('/user/two-factor-authentication/recovery-codes');
+                    const codesData = await codesResponse.json();
+
+                    if (codesData.recoveryCodes) {
+                        setRecoveryCodes(codesData.recoveryCodes);
+                    }
+
                     setLoading(false);
-                    setError('Error al activar 2FA');
+                    setActiveStep(1); // Move to QR code step
+                } catch (error) {
+                    console.error('Error fetching 2FA data:', error);
+                    setError('Error al cargar los datos de 2FA');
+                    setLoading(false);
                 }
-            });
-        }
-    }, [open, twoFactorEnabled]);
+            },
+            onError: () => {
+                setLoading(false);
+                setError('Error al activar 2FA');
+            }
+        });
+    };
 
     const handleNext = () => {
-        if (activeStep === 2) {
-            // Verify code
+        if (activeStep === 0) {
+            // First step: Enable 2FA
+            enable2FA();
+        } else if (activeStep === 3) {
+            // Last step: Verify code
             if (!verificationCode || verificationCode.length !== 6) {
                 setError('Por favor ingresa un código de 6 dígitos');
                 return;
@@ -229,6 +231,39 @@ ${recoveryCodes.map((code, index) => `   ${(index + 1).toString().padStart(2, '0
             case 0:
                 return (
                     <Box sx={{ textAlign: 'center', py: 3 }}>
+                        <SecurityIcon sx={{ fontSize: 64, color: 'primary.main', mb: 2 }} />
+                        <Typography variant="h5" gutterBottom fontWeight="600">
+                            Protege tu Cuenta
+                        </Typography>
+                        <Typography variant="body1" color="text.secondary" sx={{ mb: 3, maxWidth: 400, mx: 'auto' }}>
+                            La autenticación de dos factores añade una capa extra de seguridad a tu cuenta.
+                            Necesitarás tu contraseña y un código de tu teléfono para iniciar sesión.
+                        </Typography>
+
+                        <Alert severity="info" sx={{ mb: 3, textAlign: 'left' }}>
+                            <Typography variant="body2" fontWeight="600" gutterBottom>
+                                Necesitarás:
+                            </Typography>
+                            <Typography variant="body2" component="div">
+                                • Una aplicación de autenticación (Google Authenticator, Authy, etc.)
+                                <br />
+                                • Unos minutos para completar la configuración
+                                <br />
+                                • Un lugar seguro para guardar los códigos de recuperación
+                            </Typography>
+                        </Alert>
+
+                        {error && (
+                            <Alert severity="error" sx={{ mb: 2 }}>
+                                {error}
+                            </Alert>
+                        )}
+                    </Box>
+                );
+
+            case 1:
+                return (
+                    <Box sx={{ textAlign: 'center', py: 3 }}>
                         <QrCodeIcon sx={{ fontSize: 48, color: 'primary.main', mb: 2 }} />
                         <Typography variant="h6" gutterBottom>
                             Escanea el Código QR
@@ -236,7 +271,7 @@ ${recoveryCodes.map((code, index) => `   ${(index + 1).toString().padStart(2, '0
                         <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
                             Usa una aplicación de autenticación como Google Authenticator o Authy
                         </Typography>
-                        
+
                         {loading ? (
                             <CircularProgress />
                         ) : qrCode ? (
@@ -277,7 +312,7 @@ ${recoveryCodes.map((code, index) => `   ${(index + 1).toString().padStart(2, '0
                     </Box>
                 );
 
-            case 1:
+            case 2:
                 return (
                     <Box sx={{ py: 3 }}>
                         <KeyIcon sx={{ fontSize: 48, color: 'warning.main', mb: 2, display: 'block', mx: 'auto' }} />
@@ -331,7 +366,7 @@ ${recoveryCodes.map((code, index) => `   ${(index + 1).toString().padStart(2, '0
                     </Box>
                 );
 
-            case 2:
+            case 3:
                 return (
                     <Box sx={{ py: 3, textAlign: 'center' }}>
                         <SecurityIcon sx={{ fontSize: 48, color: 'success.main', mb: 2 }} />
@@ -341,14 +376,14 @@ ${recoveryCodes.map((code, index) => `   ${(index + 1).toString().padStart(2, '0
                         <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
                             Ingresa el código de 6 dígitos de tu aplicación de autenticación
                         </Typography>
-                        
+
                         <TextField
                             fullWidth
                             label="Código de Verificación"
                             value={verificationCode}
                             onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
                             placeholder="000000"
-                            inputProps={{ 
+                            inputProps={{
                                 maxLength: 6,
                                 style: { textAlign: 'center', fontSize: '1.5rem', letterSpacing: '0.5rem', fontFamily: 'monospace' }
                             }}
@@ -404,9 +439,9 @@ ${recoveryCodes.map((code, index) => `   ${(index + 1).toString().padStart(2, '0
                 <Button
                     variant="contained"
                     onClick={handleNext}
-                    disabled={loading || (activeStep === 0 && !qrCode)}
+                    disabled={loading || (activeStep === 1 && !qrCode)}
                 >
-                    {loading ? <CircularProgress size={24} /> : activeStep === steps.length - 1 ? 'Finalizar' : 'Siguiente'}
+                    {loading ? <CircularProgress size={24} /> : activeStep === 0 ? 'Comenzar' : activeStep === steps.length - 1 ? 'Finalizar' : 'Siguiente'}
                 </Button>
             </DialogActions>
         </Dialog>

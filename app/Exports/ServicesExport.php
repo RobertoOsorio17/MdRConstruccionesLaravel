@@ -10,6 +10,10 @@ use Maatwebsite\Excel\Concerns\WithStyles;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
+/**
+ * Builds an export of service offerings, including engagement counts and feature flags.
+ * Designed for business stakeholders who need up-to-date catalog data in spreadsheet form.
+ */
 class ServicesExport implements FromQuery, WithHeadings, WithMapping, WithStyles, ShouldAutoSize
 {
     protected $filters;

@@ -13,6 +13,10 @@ use Illuminate\Support\Str;
 use Inertia\Inertia;
 use App\Models\Setting;
 
+/**
+ * Handles inbound contact interactions from the public site, including validation, throttling, and follow-up orchestration.
+ * Bridges the front-end form with persistence, mail delivery, and spam mitigation services to ensure reliable communication.
+ */
 class ContactController extends Controller
 {
     /**

@@ -7,7 +7,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Carbon\Carbon;
 
 /**
- * Records administrative IP bans applied to guest interactions.
+ * Tracks IP-based bans applied to the platform, including duration, reason, and administrator context.
+ * Supplies scopes and helpers used to enforce access restrictions across middleware and services.
  */
 class IpBan extends Model
 {

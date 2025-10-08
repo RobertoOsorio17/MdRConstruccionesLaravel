@@ -14,6 +14,10 @@ use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
+/**
+ * Orchestrates password reset link distribution by validating requests and delegating to Laravel's broker services.
+ * Provides actionable feedback for the front-end flow while preserving localized messaging for end users.
+ */
 class PasswordResetLinkController extends Controller
 {
     /**
@@ -57,6 +61,10 @@ class PasswordResetLinkController extends Controller
     }
 }
 
+/**
+ * Finalizes password reset attempts by validating tokens and persisting new credentials securely.
+ * Applies comprehensive password rules, emits lifecycle events, and ensures sensitive session cleanup.
+ */
 class NewPasswordController extends Controller
 {
     /**

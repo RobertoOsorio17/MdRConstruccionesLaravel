@@ -5,6 +5,10 @@ namespace App\Console\Commands;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
 
+/**
+ * Toggles the `.env` database configuration between SQLite and MySQL profiles for local development.
+ * Streamlines environment switches without manual editing of connection credentials.
+ */
 class SwitchDatabase extends Command
 {
     /**

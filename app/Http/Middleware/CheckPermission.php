@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Auth;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Middleware enforcing role/permission-based access checks.
+ * Apply check middleware logic.
  */
 class CheckPermission
 {

@@ -13,7 +13,8 @@ use Inertia\Inertia;
 use Inertia\Response;
 
 /**
- * Handle authenticated user dashboard and related activity pages.
+ * Collects metrics and content tailored to authenticated users, composing the personalized dashboard experience.
+ * Mixes editorial insights, engagement summaries, and administrative fallbacks to keep members informed.
  */
 class UserDashboardController extends Controller
 {

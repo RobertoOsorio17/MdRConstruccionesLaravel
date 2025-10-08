@@ -6,6 +6,9 @@ use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
+/**
+ * Apply security headers middleware logic.
+ */
 class SecurityHeadersMiddleware
 {
     /**

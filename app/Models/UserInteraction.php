@@ -7,6 +7,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
+/**
+ * Captures polymorphic interactions such as likes and bookmarks between users and content.
+ * Supplies scopes and toggling utilities leveraged by engagement features across the platform.
+ */
 class UserInteraction extends Model
 {
     use HasFactory;

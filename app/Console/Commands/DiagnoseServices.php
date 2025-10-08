@@ -5,6 +5,10 @@ namespace App\Console\Commands;
 use Illuminate\Console\Command;
 use App\Models\Service;
 
+/**
+ * Provides a diagnostic Artisan routine to inspect service FAQ payloads and their decoded structure.
+ * Useful during migrations or bug hunts when JSON casting issues surface in the services catalog.
+ */
 class DiagnoseServices extends Command
 {
     /**

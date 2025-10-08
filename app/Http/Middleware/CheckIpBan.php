@@ -7,6 +7,9 @@ use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 use App\Models\IpBan;
 
+/**
+ * Apply check ip middleware logic.
+ */
 class CheckIpBan
 {
     /**

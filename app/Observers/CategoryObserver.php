@@ -5,6 +5,10 @@ namespace App\Observers;
 use App\Models\Category;
 use App\Services\CacheService;
 
+/**
+ * Listens for category lifecycle events to keep cached data synchronized.
+ * Invalidates relevant cache segments whenever categories are created, updated, or removed.
+ */
 class CategoryObserver
 {
     protected $cacheService;

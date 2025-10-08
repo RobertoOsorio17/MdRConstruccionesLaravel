@@ -8,6 +8,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
+/**
+ * Represents user-generated comments with moderation workflows, edit history, and interaction metadata.
+ * Includes helpers for policy enforcement, reply hierarchies, and status management across the blog.
+ */
 class Comment extends Model
 {
     use HasFactory, SoftDeletes;

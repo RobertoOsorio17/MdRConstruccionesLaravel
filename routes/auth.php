@@ -16,10 +16,11 @@ use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest.redirect')->group(function () {
     Route::get('register', [RegisteredUserController::class, 'create'])
+        ->middleware('check.registration')
         ->name('register');
 
     Route::post('register', [RegisteredUserController::class, 'store'])
-        ->middleware('auth.ratelimit');
+        ->middleware(['check.registration', 'auth.ratelimit']);
 
     Route::get('login', [AuthenticatedSessionController::class, 'create'])
         ->name('login');

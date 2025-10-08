@@ -6,6 +6,10 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
 
+/**
+ * Represents portfolio projects showcased on the site, including metadata for scheduling, budget, and media galleries.
+ * Supplies scopes for featured, published, and completed work to power front-end displays.
+ */
 class Project extends Model
 {
     use SoftDeletes;

@@ -9,6 +9,9 @@ use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 
+/**
+ * Mail notification for trusted device added events.
+ */
 class TrustedDeviceAdded extends Mailable
 {
     use Queueable, SerializesModels;

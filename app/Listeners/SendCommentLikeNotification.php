@@ -6,6 +6,9 @@ use App\Http\Controllers\NotificationController;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Queue\InteractsWithQueue;
 
+/**
+ * Handle comment like notification listener events.
+ */
 class SendCommentLikeNotification implements ShouldQueue
 {
     use InteractsWithQueue;

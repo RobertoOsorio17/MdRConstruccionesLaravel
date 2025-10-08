@@ -11,7 +11,8 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 
 /**
- * API endpoints for managing service favorites.
+ * Enables clients to favorite or unfavorite services through authenticated API endpoints enriched with telemetry.
+ * Maintains consistency of favorite counts while producing meaningful responses for interactive user interfaces.
  */
 class ServiceFavoriteController extends Controller
 {

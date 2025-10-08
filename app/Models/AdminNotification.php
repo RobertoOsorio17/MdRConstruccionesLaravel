@@ -6,6 +6,10 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Carbon\Carbon;
 
+/**
+ * Stores alert messages targeted at administrative users within the control panel.
+ * Tracks delivery state, severity metadata, and contextual payloads used to render actionable notices.
+ */
 class AdminNotification extends Model
 {
     protected $fillable = [

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Models\AdminSetting;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -14,6 +15,10 @@ use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
+/**
+ * Completes the password reset process once users arrive from their emailed token link.
+ * Validates the reset payload, enforces policy settings, and rotates credentials while emitting password reset events.
+ */
 class NewPasswordController extends Controller
 {
     /**
@@ -34,10 +39,22 @@ class NewPasswordController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
+        // Get minimum password length from settings
+        $minLength = AdminSetting::getCachedValue('password_min_length', 8, 300);
+
         $request->validate([
             'token' => 'required',
             'email' => 'required|email',
-            'password' => ['required', 'confirmed', Rules\Password::defaults()],
+            'password' => [
+                'required',
+                'confirmed',
+                Rules\Password::min($minLength)
+                    ->letters()
+                    ->mixedCase()
+                    ->numbers()
+                    ->symbols()
+                    ->uncompromised()
+            ],
         ]);
 
         // Here we will attempt to reset the user's password. If it is successful we

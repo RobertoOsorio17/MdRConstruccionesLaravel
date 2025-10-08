@@ -9,6 +9,10 @@ use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
+/**
+ * Coordinates CRUD operations and policy enforcement for blog categories within the admin suite.
+ * Ensures taxonomy records remain consistent, discoverable, and aligned with editorial workflows.
+ */
 class CategoryController extends Controller
 {
     /**

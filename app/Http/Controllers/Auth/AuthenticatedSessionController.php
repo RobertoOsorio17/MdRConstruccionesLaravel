@@ -13,6 +13,10 @@ use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
+/**
+ * Governs the lifecycle of user sessions, overseeing login rendering, authentication, and secure logout routines.
+ * Integrates logging, policy enforcement, and multi-factor hooks to uphold platform security standards.
+ */
 class AuthenticatedSessionController extends Controller
 {
     /**

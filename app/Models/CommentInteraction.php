@@ -6,7 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * Stores user interactions with comments (likes, dislikes, etc.).
+ * Records like or dislike interactions applied to comments by individual users.
+ * Supports engagement analytics and toggle logic for sentiment tracking.
  */
 class CommentInteraction extends Model
 {

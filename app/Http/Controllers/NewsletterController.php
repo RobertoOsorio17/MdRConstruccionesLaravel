@@ -7,6 +7,10 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\RateLimiter;
 
+/**
+ * Manages public newsletter subscriptions with throttling, validation, and confirmation messaging.
+ * Coordinates with mailing services so subscribers receive timely onboarding and curated content.
+ */
 class NewsletterController extends Controller
 {
     /**

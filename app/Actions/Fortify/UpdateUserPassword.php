@@ -7,6 +7,10 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Laravel\Fortify\Contracts\UpdatesUserPasswords;
 
+/**
+ * Supports authenticated password changes by validating the current credential and applying new policy rules.
+ * Integrates with Fortify so in-session users can rotate their passwords without leaving the application.
+ */
 class UpdateUserPassword implements UpdatesUserPasswords
 {
     use PasswordValidationRules;
@@ -27,6 +31,7 @@ class UpdateUserPassword implements UpdatesUserPasswords
 
         $user->forceFill([
             'password' => Hash::make($input['password']),
+            'password_changed_at' => now(),
         ])->save();
     }
 }

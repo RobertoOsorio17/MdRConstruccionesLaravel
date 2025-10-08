@@ -8,6 +8,10 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 use Laravel\Fortify\Contracts\CreatesNewUsers;
 
+/**
+ * Implements Laravel Fortify's user-creation contract with domain-specific validation rules.
+ * Responsible for vetting registration payloads and persisting freshly hashed credentials for new members.
+ */
 class CreateNewUser implements CreatesNewUsers
 {
     use PasswordValidationRules;

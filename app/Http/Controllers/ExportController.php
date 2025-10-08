@@ -14,6 +14,10 @@ use Maatwebsite\Excel\Facades\Excel;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Inertia\Inertia;
 
+/**
+ * Facilitates administrative data exports by validating filters and delegating to Excel/PDF pipelines.
+ * Centralizes export authorization to ensure only privileged staff can extract bulk application data.
+ */
 class ExportController extends Controller
 {
     /**

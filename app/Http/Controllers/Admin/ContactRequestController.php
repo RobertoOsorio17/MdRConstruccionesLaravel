@@ -12,6 +12,10 @@ use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
 use Inertia\Inertia;
 
+/**
+ * Supervises the intake and triage of contact requests submitted through public channels.
+ * Delivers administrative tooling to review submissions, respond, track attachments, and log follow-up actions.
+ */
 class ContactRequestController extends Controller
 {
     /**

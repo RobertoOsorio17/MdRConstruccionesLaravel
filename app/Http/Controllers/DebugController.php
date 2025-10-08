@@ -12,6 +12,10 @@ use App\Models\Post;
 use App\Models\Comment;
 use Inertia\Inertia;
 
+/**
+ * Aggregates diagnostic tooling that surfaces environment, cache, and authentication insights for maintainers.
+ * Provides safe administrative endpoints to inspect, clear, or analyze system state during troubleshooting.
+ */
 class DebugController extends Controller
 {
     /**

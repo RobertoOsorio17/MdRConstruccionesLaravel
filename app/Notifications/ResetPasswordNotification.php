@@ -7,6 +7,10 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
+/**
+ * Sends password reset instructions to users with a custom Blade template and signed token URL.
+ * Mirrors Laravel's default notification while allowing application-specific branding.
+ */
 class ResetPasswordNotification extends Notification
 {
     use Queueable;

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AdminSetting;
 use App\Models\Comment;
 use App\Models\CommentEdit;
 use App\Models\Post;
@@ -13,7 +14,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 /**
- * Manage comment creation, retrieval, and moderation endpoints.
+ * Powers public comment submission and moderation logic, balancing usability with anti-abuse safeguards.
+ * Coordinates validation rules, rate limiting, editing, and status transitions for conversations under blog posts.
  */
 class CommentController extends Controller
 {
@@ -27,6 +29,14 @@ class CommentController extends Controller
      */
     public function store(Request $request, Post $post)
     {
+        // Check if comments are globally enabled
+        $commentsEnabled = AdminSetting::getCachedValue('blog_allow_comments', true, 300);
+        if (!$commentsEnabled) {
+            return response()->json([
+                'message' => 'Los comentarios están deshabilitados temporalmente.',
+            ], 403);
+        }
+
         // Check if post allows comments.
         if ($post->status !== 'published') {
             abort(404);

@@ -10,6 +10,10 @@ use Maatwebsite\Excel\Concerns\WithStyles;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
+/**
+ * Streams project portfolio data into spreadsheets for reporting, honoring filters like status and featured flags.
+ * Supplies human-readable headings and formatted columns tailored to construction case studies.
+ */
 class ProjectsExport implements FromQuery, WithHeadings, WithMapping, WithStyles, ShouldAutoSize
 {
     protected $filters;

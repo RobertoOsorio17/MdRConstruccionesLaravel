@@ -7,7 +7,8 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Str;
 
 /**
- * Console command that regenerates missing or empty slugs for posts.
+ * Repairs missing or duplicate post slugs by regenerating unique values via Artisan.
+ * Helpful when imported data or manual edits leave records without SEO-friendly identifiers.
  */
 class FixPostSlugs extends Command
 {

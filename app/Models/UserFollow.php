@@ -7,6 +7,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Builder;
 
+/**
+ * Models follower relationships between users, enabling social graph queries and toggling logic.
+ * Provides scopes to fetch followers/following lists and prevents self-following operations.
+ */
 class UserFollow extends Model
 {
     use HasFactory;

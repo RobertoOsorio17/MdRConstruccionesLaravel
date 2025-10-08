@@ -5,6 +5,10 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * Pivot model tracking which users have favorited specific services.
+ * Enables quick lookups of favoriting relationships for personalization and analytics.
+ */
 class ServiceFavorite extends Model
 {
     protected $table = 'user_service_favorites';

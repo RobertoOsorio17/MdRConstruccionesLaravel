@@ -6,6 +6,10 @@ use App\Models\Review;
 use App\Models\User;
 use Illuminate\Auth\Access\Response;
 
+/**
+ * Manages authorization for customer reviews, distinguishing self-service edits from moderator controls.
+ * Restricts moderation powers to admins and editors while allowing users to manage their pending feedback.
+ */
 class ReviewPolicy
 {
     /**

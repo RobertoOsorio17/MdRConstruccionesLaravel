@@ -7,6 +7,10 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 
+/**
+ * Showcases client testimonials on the public site, layering filters and storytelling content for social proof.
+ * Ensures only approved, high-quality feedback is surfaced with the necessary media and attribution metadata.
+ */
 class TestimonialController extends Controller
 {
     /**

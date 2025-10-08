@@ -6,6 +6,10 @@ use App\Models\Project;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
+/**
+ * Presents the public portfolio of construction projects with filtering, search, and related recommendations.
+ * Translates domain models into Inertia responses that highlight featured work and contextual metadata.
+ */
 class ProjectController extends Controller
 {
     /**

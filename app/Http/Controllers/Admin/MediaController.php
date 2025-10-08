@@ -9,6 +9,10 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 
+/**
+ * Administers the media library by cataloging uploaded assets, enforcing validations, and exposing management utilities.
+ * Facilitates searching, filtering, and lifecycle actions so editors can curate reusable media across the site.
+ */
 class MediaController extends Controller
 {
     /**

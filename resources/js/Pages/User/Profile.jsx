@@ -270,7 +270,7 @@ const UserProfile = ({
                         >
                             <CardContent sx={{ p: 4 }}>
                                 <Grid container spacing={3} alignItems="center">
-                                    <Grid item xs={12} md={3} sx={{ textAlign: { xs: 'center', md: 'left' } }}>
+                                    <Grid size={{ xs: 12, md: 3 }} sx={{ textAlign: { xs: 'center', md: 'left' } }}>
                                         <Avatar
                                             src={profileUser.avatar}
                                             sx={{
@@ -286,7 +286,7 @@ const UserProfile = ({
                                         </Avatar>
                                     </Grid>
 
-                                    <Grid item xs={12} md={6}>
+                                    <Grid size={{ xs: 12, md: 6 }}>
                                         <Box sx={{ textAlign: { xs: 'center', md: 'left' } }}>
                                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, justifyContent: { xs: 'center', md: 'flex-start' }, mb: 1 }}>
                                                 <Typography variant="h4" fontWeight={700} color={THEME.text.primary}>
@@ -344,7 +344,7 @@ const UserProfile = ({
                                         </Box>
                                     </Grid>
 
-                                    <Grid item xs={12} md={3} sx={{ textAlign: { xs: 'center', md: 'right' } }}>
+                                    <Grid size={{ xs: 12, md: 3 }} sx={{ textAlign: { xs: 'center', md: 'right' } }}>
                                         {isOwnProfile ? (
                                             <Button
                                                 variant="contained"

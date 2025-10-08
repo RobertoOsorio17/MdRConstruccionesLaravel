@@ -6,6 +6,10 @@ use App\Models\Permission;
 use App\Models\Role;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
+/**
+ * Adds role and permission management helpers to Eloquent models participating in RBAC.
+ * Provides relationships and convenience methods for checking and syncing authorization capabilities.
+ */
 trait HasPermissions
 {
     /**
@@ -221,4 +225,3 @@ trait HasPermissions
         return $this->hasRole('moderator');
     }
 }
-

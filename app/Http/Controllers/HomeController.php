@@ -9,7 +9,8 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 
 /**
- * Handle rendering of the marketing home page with featured content.
+ * Composes the public home page by aggregating highlighted services, projects, content, and marketing metrics.
+ * Ensures visitors receive an up-to-date snapshot of offerings and achievements immediately upon arrival.
  */
 class HomeController extends Controller
 {

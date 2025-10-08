@@ -6,6 +6,10 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Support\Str;
 
+/**
+ * Represents content tags used for categorizing posts and enhancing discovery.
+ * Automatically generates slugs and exposes helpers for search and published post counts.
+ */
 class Tag extends Model
 {
     protected $fillable = [

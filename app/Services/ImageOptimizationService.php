@@ -7,6 +7,10 @@ use Intervention\Image\Drivers\Gd\Driver;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
+/**
+ * Handles server-side image processing, including resizing, optimization, and derivative generation.
+ * Wraps Intervention Image operations with storage helpers tailored to the application's media pipeline.
+ */
 class ImageOptimizationService
 {
     protected ImageManager $manager;

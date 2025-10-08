@@ -8,6 +8,10 @@ use App\Models\ContactRequestAttachment;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 
+/**
+ * Simulates encrypted attachment workflows by generating sample contact requests with secured files.
+ * Verifies encryption, storage integrity, and decryption to validate the attachment pipeline end-to-end.
+ */
 class TestEncryptedAttachments extends Command
 {
     /**

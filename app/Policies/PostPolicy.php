@@ -6,6 +6,10 @@ use App\Models\Post;
 use App\Models\User;
 use Illuminate\Auth\Access\Response;
 
+/**
+ * Encapsulates authorization logic for creating, editing, and maintaining blog posts.
+ * Applies different permissions for authors, editors, and administrators depending on the action.
+ */
 class PostPolicy
 {
     /**

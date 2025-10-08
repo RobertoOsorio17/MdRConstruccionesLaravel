@@ -270,7 +270,7 @@ export const CardGridSkeleton = ({ items = 6, columns = 3 }) => {
     return (
         <Grid container spacing={3}>
             {Array.from({ length: items }).map((_, index) => (
-                <Grid item xs={12} sm={6} md={12 / columns} key={index}>
+                <Grid size={{ xs: 12, sm: 6, md: 12 / columns }} key={index}>
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}

@@ -8,7 +8,8 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Console command that performs a lightweight security audit of the application.
+ * Executes a security posture review from the command line, covering sessions, RBAC, middleware, and rate limits.
+ * Optional detailed output surfaces deeper telemetry for incident response.
  */
 class SecurityAuditCommand extends Command
 {

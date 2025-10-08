@@ -7,6 +7,10 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Laravel\Fortify\Contracts\ResetsUserPasswords;
 
+/**
+ * Drives Fortify's password reset workflow by validating input and securely rotating credentials.
+ * Applies shared password policy traits and records change metadata once the hash is updated.
+ */
 class ResetUserPassword implements ResetsUserPasswords
 {
     use PasswordValidationRules;
@@ -24,6 +28,7 @@ class ResetUserPassword implements ResetsUserPasswords
 
         $user->forceFill([
             'password' => Hash::make($input['password']),
+            'password_changed_at' => now(),
         ])->save();
     }
 }

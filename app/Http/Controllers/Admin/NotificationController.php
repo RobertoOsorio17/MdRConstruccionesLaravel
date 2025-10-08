@@ -9,7 +9,8 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Validation\Rule;
 
 /**
- * Manage administrative notifications and related lifecycle operations.
+ * Manages delivery and lifecycle tracking for administrator-facing notifications within the control panel.
+ * Supplies real-time endpoints for unread counts, polling updates, and preference management to keep staff informed.
  */
 class NotificationController extends Controller
 {
@@ -31,7 +32,8 @@ class NotificationController extends Controller
      */
     public function recent(Request $request): JsonResponse
     {
-        $limit = (int) $request->get('limit', 10);
+        // Limit to max 100 to prevent abuse
+        $limit = min((int) $request->get('limit', 10), 100);
 
         $items = AdminNotification::forUser(auth()->id())
             ->active()
@@ -64,6 +66,11 @@ class NotificationController extends Controller
 
         // Basic long-poll loop
         while (true) {
+            // Check if client disconnected
+            if (connection_aborted()) {
+                break;
+            }
+
             // New notifications since last id
             $newItems = AdminNotification::forUser($userId)
                 ->active()
@@ -96,6 +103,14 @@ class NotificationController extends Controller
             // Sleep briefly to reduce load
             usleep(500000); // 500ms
         }
+
+        // If connection was aborted, return empty response
+        return response()->json([
+            'changed' => false,
+            'new_notifications' => [],
+            'unread_count' => $initialUnread,
+            'last_id' => $lastId,
+        ]);
     }
 
     /**
@@ -108,7 +123,8 @@ class NotificationController extends Controller
     {
         // If limit parameter is provided, return simple list (for dropdown)
         if ($request->has('limit')) {
-            $limit = (int) $request->get('limit', 10);
+            // Limit to max 100 to prevent abuse
+            $limit = min((int) $request->get('limit', 10), 100);
 
             $notifications = AdminNotification::forUser(auth()->id())
                 ->active()

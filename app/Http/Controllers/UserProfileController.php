@@ -16,7 +16,8 @@ use Illuminate\Support\Facades\Validator;
 // use Intervention\Image\ImageManagerStatic as Image; // Disabled until the Intervention Image library is installed.
 
 /**
- * Handle user profile rendering, updates, and related utilities.
+ * Powers the authenticated user's profile area by aggregating posts, reactions, statistics, and personalization data.
+ * Connects storage, validation, and Inertia responses so members can curate their public presence seamlessly.
  */
 class UserProfileController extends Controller
 {

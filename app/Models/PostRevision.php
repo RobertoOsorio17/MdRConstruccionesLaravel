@@ -6,6 +6,10 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * Stores historical revisions of posts, including snapshot data and the author responsible for changes.
+ * Enables rollback and audit capabilities within the editorial workflow.
+ */
 class PostRevision extends Model
 {
     use HasFactory;

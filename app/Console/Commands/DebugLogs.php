@@ -6,6 +6,10 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
 
+/**
+ * Offers an interactive Artisan tool for tailing or clearing segmented application log files.
+ * Supports targeted channels, configurable tail lengths, and a force-clear mode for on-call workflows.
+ */
 class DebugLogs extends Command
 {
     /**

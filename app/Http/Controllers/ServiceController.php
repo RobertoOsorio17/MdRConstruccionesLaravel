@@ -6,6 +6,10 @@ use App\Models\Service;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
+/**
+ * Presents the catalogue of public services by transforming domain models into visitor-friendly listings and detail payloads.
+ * Handles resilient queries, featured segmentation, and view recording so offerings stay visible and informative.
+ */
 class ServiceController extends Controller
 {
     /**

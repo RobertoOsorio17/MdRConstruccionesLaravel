@@ -10,6 +10,10 @@ use Maatwebsite\Excel\Concerns\WithStyles;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
+/**
+ * Produces an exportable dataset of blog posts with optional search, category, and feature filters.
+ * Formats columns for downstream analytics while retaining key editorial metadata.
+ */
 class PostsExport implements FromQuery, WithHeadings, WithMapping, WithStyles, ShouldAutoSize
 {
     protected $filters;

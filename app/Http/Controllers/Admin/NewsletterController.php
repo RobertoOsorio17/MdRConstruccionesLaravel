@@ -10,6 +10,10 @@ use Inertia\Inertia;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\NewsletterExport;
 
+/**
+ * Oversees newsletter subscriber management, campaign exports, and outbound mailing actions for administrators.
+ * Streamlines segmentation, verification, and compliance tracking to keep the mailing list healthy.
+ */
 class NewsletterController extends Controller
 {
     /**

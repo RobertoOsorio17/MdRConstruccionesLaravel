@@ -5,6 +5,10 @@ namespace App\Console\Commands;
 use App\Services\CacheService;
 use Illuminate\Console\Command;
 
+/**
+ * Primes frequently accessed cache entries through a single Artisan command.
+ * Supports an optional force mode that clears stale data before rebuilding warm caches.
+ */
 class CacheWarmUp extends Command
 {
     /**

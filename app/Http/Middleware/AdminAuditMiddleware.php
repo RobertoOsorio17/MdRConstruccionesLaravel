@@ -9,6 +9,9 @@ use App\Models\AdminAuditLog;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 
+/**
+ * Apply admin audit middleware logic.
+ */
 class AdminAuditMiddleware
 {
     /**

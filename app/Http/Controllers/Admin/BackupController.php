@@ -10,6 +10,10 @@ use Inertia\Inertia;
 use Spatie\Backup\BackupDestination\BackupDestination;
 use Spatie\Backup\Tasks\Monitor\BackupDestinationStatusFactory;
 
+/**
+ * Manages the lifecycle of system backups so administrators can trigger, inspect, and retrieve protected archives.
+ * Integrates with monitoring utilities to surface backup health insights and to support manual recovery workflows.
+ */
 class BackupController extends Controller
 {
     /**

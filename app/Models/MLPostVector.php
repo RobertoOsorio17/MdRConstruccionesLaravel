@@ -6,6 +6,10 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * Maintains vector representations of posts for machine-learning similarity and recommendation tasks.
+ * Encapsulates cosine similarity utilities and tracks metadata such as model version and engagement scores.
+ */
 class MLPostVector extends Model
 {
     use HasFactory;

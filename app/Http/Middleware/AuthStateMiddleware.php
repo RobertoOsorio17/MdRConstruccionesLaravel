@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Share authentication state with Inertia responses for front-end consumption.
+ * Apply auth state middleware logic.
  */
 class AuthStateMiddleware
 {

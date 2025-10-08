@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AdminSetting;
 use App\Models\Post;
 use App\Models\Category;
 use App\Models\Tag;
@@ -10,6 +11,10 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 
+/**
+ * Powers the public blog experience by providing rich listing and detail endpoints with personalization features.
+ * Combines editorial metadata, filtering, and logging so readers can discover relevant articles efficiently.
+ */
 class PostController extends Controller
 {
     /**
@@ -116,8 +121,10 @@ class PostController extends Controller
         }
 
         // Handle per_page parameter with validation
-        $perPage = $request->input('per_page', 12);
-        $perPage = in_array($perPage, [6, 12, 18, 24, 36]) ? $perPage : 12;
+        // Get posts per page from settings
+        $defaultPerPage = AdminSetting::getCachedValue('blog_posts_per_page', 12, 300);
+        $perPage = $request->input('per_page', $defaultPerPage);
+        $perPage = in_array($perPage, [6, 12, 18, 24, 36]) ? $perPage : $defaultPerPage;
 
         $posts = $query->paginate($perPage)->withQueryString();
 
@@ -230,10 +237,13 @@ class PostController extends Controller
             ]);
             
             // Return basic posts in case of error
+            // Get posts per page from settings
+            $defaultPerPage = AdminSetting::getCachedValue('blog_posts_per_page', 12, 300);
+
             $basicPosts = Post::published()
                 ->with(['author:id,name,avatar,is_verified', 'categories:id,name,slug,color'])
                 ->latest()
-                ->paginate(12);
+                ->paginate($defaultPerPage);
                 
             return Inertia::render('Blog/PerfectBlogIndex', [
                 'posts' => $basicPosts,
@@ -270,9 +280,12 @@ class PostController extends Controller
             });
         }
 
+        // Get posts per page from settings
+        $defaultPerPage = AdminSetting::getCachedValue('blog_posts_per_page', 12, 300);
+
         $posts = $query->orderBy('featured', 'desc')
             ->orderBy('published_at', 'desc')
-            ->paginate(9)
+            ->paginate($defaultPerPage)
             ->through(function ($post) {
                 return [
                     'id' => $post->id,

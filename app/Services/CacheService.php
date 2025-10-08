@@ -5,6 +5,10 @@ namespace App\Services;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Redis;
 
+/**
+ * Centralizes cache operations, namespacing, and invalidation logic across the application.
+ * Offers convenience methods for common cache patterns and targeted purge routines.
+ */
 class CacheService
 {
     /**

@@ -11,6 +11,10 @@ use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 use Illuminate\Support\Facades\Request;
 
+/**
+ * Compiles user account data into a spreadsheet, respecting search, role, and status filters.
+ * Helpful for compliance reviews, customer support, or off-platform analytics.
+ */
 class UsersExport implements FromQuery, WithHeadings, WithMapping, WithStyles, ShouldAutoSize
 {
     protected $filters;

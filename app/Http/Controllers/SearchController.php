@@ -13,6 +13,10 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
+/**
+ * Provides a unified search experience across posts, services, and projects with caching and personalization support.
+ * Couples query analytics, result aggregation, and suggestion utilities to guide users toward relevant content quickly.
+ */
 class SearchController extends Controller
 {
     /**

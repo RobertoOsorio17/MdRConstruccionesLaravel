@@ -6,6 +6,10 @@ use App\Models\ContactRequest;
 use App\Models\AdminAuditLog;
 use Illuminate\Support\Facades\Log;
 
+/**
+ * Observes contact request events to generate audit logs and administrative notifications.
+ * Keeps staff informed about new inquiries, status transitions, and deletions.
+ */
 class ContactRequestObserver
 {
     /**

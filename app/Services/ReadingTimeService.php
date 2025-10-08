@@ -2,6 +2,10 @@
 
 namespace App\Services;
 
+/**
+ * Estimates reading time for mixed content by weighting text, code, media, and lists appropriately.
+ * Returns both numeric durations and human-friendly strings for UI display.
+ */
 class ReadingTimeService
 {
     // Base reading speeds (words per minute)

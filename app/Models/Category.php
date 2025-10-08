@@ -6,6 +6,10 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
+/**
+ * Represents a blog category with soft deletes, ordering helpers, and relationships to posts.
+ * Powers taxonomy filtering across the publishing stack and provides quick access to published counts.
+ */
 class Category extends Model
 {
     use SoftDeletes;

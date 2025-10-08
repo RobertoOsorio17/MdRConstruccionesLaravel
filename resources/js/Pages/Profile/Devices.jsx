@@ -267,7 +267,7 @@ export default function Devices({ auth, devices, stats }) {
                     {/* Devices List */}
                     <Grid container spacing={3}>
                         {devices.length === 0 ? (
-                            <Grid item xs={12}>
+                            <Grid size={{ xs: 12 }}>
                                 <Paper
                                     elevation={0}
                                     sx={{

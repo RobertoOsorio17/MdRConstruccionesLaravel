@@ -10,6 +10,10 @@ use Maatwebsite\Excel\Concerns\WithStyles;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
+/**
+ * Exports newsletter subscriber records with optional status filters for marketing teams.
+ * Provides structured headings, mappings, and styles compatible with common spreadsheet tooling.
+ */
 class NewsletterExport implements FromCollection, WithHeadings, WithMapping, WithStyles, ShouldAutoSize
 {
     protected $filters;

@@ -6,6 +6,10 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * Tracks devices associated with a user account, including trust state, location details, and activity.
+ * Supports security dashboards by exposing convenience scopes and helpers for trust and recency.
+ */
 class UserDevice extends Model
 {
     use HasFactory;

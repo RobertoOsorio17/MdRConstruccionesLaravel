@@ -7,6 +7,10 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
 
+/**
+ * Manages newsletter subscriptions, including verification status, preferences, and unsubscribe flows.
+ * Provides convenience scopes and helpers used by marketing automation and admin tooling.
+ */
 class Newsletter extends Model
 {
     use HasFactory, SoftDeletes;

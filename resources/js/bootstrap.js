@@ -112,5 +112,32 @@ window.axios.interceptors.response.use(
 
         return response;
     },
-    (error) => Promise.reject(error)
+    (error) => {
+        // Handle CSRF token mismatch (419 error)
+        if (error.response?.status === 419) {
+            console.warn('CSRF token mismatch detected. Reloading page to get fresh token...');
+
+            // Store current form data in sessionStorage if available
+            if (error.config?.data) {
+                try {
+                    const formData = JSON.parse(error.config.data);
+                    sessionStorage.setItem('csrf_retry_data', JSON.stringify({
+                        url: error.config.url,
+                        data: formData,
+                        timestamp: Date.now()
+                    }));
+                } catch (e) {
+                    // Ignore parsing errors
+                }
+            }
+
+            // Reload the page to get a fresh CSRF token
+            window.location.reload();
+
+            // Return a pending promise to prevent further error handling
+            return new Promise(() => {});
+        }
+
+        return Promise.reject(error);
+    }
 );

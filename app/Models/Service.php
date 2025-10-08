@@ -5,6 +5,10 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
+/**
+ * Represents public-facing service offerings with rich metadata, relationships, and engagement metrics.
+ * Exposes scopes for active/featured listings and accessor logic for FAQs, reviews, and favorites.
+ */
 class Service extends Model
 {
     use SoftDeletes;

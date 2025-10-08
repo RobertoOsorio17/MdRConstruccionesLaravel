@@ -7,6 +7,10 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 
+/**
+ * Registers named rate limiters that throttle critical application endpoints.
+ * Centralizes configuration so comment, admin, and authentication limits remain consistent.
+ */
 class RateLimitServiceProvider extends ServiceProvider
 {
     /**

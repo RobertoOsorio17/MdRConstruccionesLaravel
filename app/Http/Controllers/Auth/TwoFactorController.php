@@ -15,6 +15,10 @@ use Laravel\Fortify\Actions\EnableTwoFactorAuthentication;
 use Laravel\Fortify\Actions\GenerateNewRecoveryCodes;
 use Laravel\Fortify\Contracts\TwoFactorAuthenticationProvider;
 
+/**
+ * Manages two-factor authentication enrollment and recovery workflows for authenticated users.
+ * Wraps Fortify actions to expose setup, QR generation, confirmation, and disablement endpoints consistently.
+ */
 class TwoFactorController extends Controller
 {
     /**

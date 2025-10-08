@@ -8,7 +8,8 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Handle frontend error logging
+ * Captures client-side errors reported via the API and persists them with contextual metadata for diagnostics.
+ * Normalizes incoming payloads, applies severity heuristics, and routes logs to the appropriate monitoring channels.
  */
 class ErrorLogController extends Controller
 {

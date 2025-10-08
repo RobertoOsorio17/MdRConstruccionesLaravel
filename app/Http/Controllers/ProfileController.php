@@ -11,6 +11,10 @@ use Illuminate\Support\Facades\Redirect;
 use Inertia\Inertia;
 use Inertia\Response;
 
+/**
+ * Manages authenticated user profile settings, routing visitors to tailored configuration experiences.
+ * Bridges legacy profile endpoints with the tabbed settings UI while coordinating security device insights.
+ */
 class ProfileController extends Controller
 {
     /**

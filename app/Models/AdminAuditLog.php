@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Carbon\Carbon;
 
 /**
- * Represents an administrative audit log entry recording backend activity.
+ * Represent the admin audit log entity.
  */
 class AdminAuditLog extends Model
 {

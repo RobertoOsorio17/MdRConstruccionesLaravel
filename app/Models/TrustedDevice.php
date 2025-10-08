@@ -6,6 +6,10 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Str;
 
+/**
+ * Records devices that have passed additional trust checks for multi-factor authentication bypass.
+ * Tracks expiry, usage, and associated user so security flows can validate device trustworthiness.
+ */
 class TrustedDevice extends Model
 {
     protected $fillable = [

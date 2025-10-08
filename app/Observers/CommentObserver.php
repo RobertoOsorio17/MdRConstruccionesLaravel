@@ -7,6 +7,10 @@ use App\Models\AdminAuditLog;
 use App\Services\CacheService;
 use Illuminate\Support\Facades\Log;
 
+/**
+ * Reacts to comment lifecycle events to refresh caches and emit administrative notifications.
+ * Ensures dashboards and audit logs stay current whenever comments are created, updated, or removed.
+ */
 class CommentObserver
 {
     protected $cacheService;

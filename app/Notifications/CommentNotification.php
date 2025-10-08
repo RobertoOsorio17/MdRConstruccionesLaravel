@@ -8,6 +8,10 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
+/**
+ * Notifies post authors when a new comment is published, delivering both email and database payloads.
+ * Queued to avoid blocking user interactions while providing localized messaging.
+ */
 class CommentNotification extends Notification implements ShouldQueue
 {
     use Queueable;

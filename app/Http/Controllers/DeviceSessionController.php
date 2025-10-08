@@ -8,6 +8,10 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Jenssegers\Agent\Agent;
 
+/**
+ * Surfaces active session metadata so users can review and manage devices connected to their account.
+ * Interprets session records into human-readable device details while exposing controls for revocation.
+ */
 class DeviceSessionController extends Controller
 {
     /**

@@ -17,7 +17,8 @@ use Carbon\Carbon;
 use Inertia\Inertia;
 
 /**
- * Provide analytics endpoints for administrative dashboards and reports.
+ * Drives the analytical reporting section of the admin panel by aggregating behavioral and content metrics into actionable summaries.
+ * Supplies data endpoints and dashboard views that power trend visualizations and operational decisions for administrators.
  */
 class AnalyticsController extends Controller
 {

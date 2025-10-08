@@ -10,6 +10,10 @@ use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
+/**
+ * Initiates password reset emails by validating requests and delegating to Laravel's password broker.
+ * Provides user-friendly responses while avoiding information disclosure about account existence.
+ */
 class PasswordResetLinkController extends Controller
 {
     /**

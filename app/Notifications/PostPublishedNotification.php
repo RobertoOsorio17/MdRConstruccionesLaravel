@@ -8,6 +8,10 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
+/**
+ * Alerts subscribers when a new blog post goes live, sending both email and database notifications.
+ * Provides teaser content and a direct call-to-action back to the published article.
+ */
 class PostPublishedNotification extends Notification implements ShouldQueue
 {
     use Queueable;

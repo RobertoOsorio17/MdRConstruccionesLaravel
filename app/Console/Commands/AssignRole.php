@@ -7,7 +7,8 @@ use App\Models\User;
 use App\Models\Role;
 
 /**
- * Console utility to attach an application role to a specific user.
+ * Provides a maintenance Artisan command that assigns a given role to a user by email.
+ * Helps administrators manage role memberships directly from the CLI while surfacing validation feedback.
  */
 class AssignRole extends Command
 {

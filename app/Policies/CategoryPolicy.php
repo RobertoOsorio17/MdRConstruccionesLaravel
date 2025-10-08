@@ -5,6 +5,10 @@ namespace App\Policies;
 use App\Models\Category;
 use App\Models\User;
 
+/**
+ * Governs authorization for category management tasks across the admin panel.
+ * Differentiates permissions for viewing, editing, and reordering taxonomy records.
+ */
 class CategoryPolicy
 {
     /**

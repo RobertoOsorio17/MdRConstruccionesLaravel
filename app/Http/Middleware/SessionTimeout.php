@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\AdminSetting;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -9,7 +10,7 @@ use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Enforce session inactivity timeouts and logs activity transitions.
+ * Apply session middleware logic.
  */
 class SessionTimeout
 {
@@ -106,17 +107,20 @@ class SessionTimeout
     /**
      * Determine the role-based session timeout in seconds.
      * Admin users get shorter timeout for enhanced security.
+     * Uses session_timeout setting from admin settings.
      */
     private function getRoleBasedTimeout($user): int
     {
-        $defaultTimeout = config('session.lifetime') * 60; // Convert minutes to seconds
+        // Get session timeout from admin settings (in minutes, default: 120)
+        $sessionTimeoutMinutes = AdminSetting::getCachedValue('session_timeout', 120, 300);
+        $defaultTimeout = $sessionTimeoutMinutes * 60; // Convert minutes to seconds
 
-        // Admin and editor roles get shorter timeout (20 minutes).
+        // Admin and editor roles get shorter timeout (20 minutes) for security.
         if ($user->hasRole('admin') || $user->hasRole('editor')) {
             return 20 * 60; // 20 minutes for admin users
         }
 
-        // Regular users use the configured session lifetime.
+        // Regular users use the configured session timeout from settings.
         return $defaultTimeout;
     }
 

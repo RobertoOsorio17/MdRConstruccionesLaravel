@@ -7,6 +7,10 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
+/**
+ * Stores client testimonials with moderation status, rating metadata, and presentation helpers.
+ * Drives social proof components across marketing pages and supports featured curation.
+ */
 class Testimonial extends Model
 {
     use HasFactory, SoftDeletes;

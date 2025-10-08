@@ -11,6 +11,10 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
 
+/**
+ * Orchestrates full-text search across posts and categories, including caching, analytics, and highlighting.
+ * Offers suggestion endpoints and aggregates metrics to inform search optimization.
+ */
 class SearchService
 {
     private const CACHE_TTL = 300; // 5 minutes

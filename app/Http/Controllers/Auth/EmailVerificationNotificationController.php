@@ -6,6 +6,10 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
+/**
+ * Dispatches verification emails to users who have not yet confirmed ownership of their address.
+ * Integrates guard checks and redirects so the verification flow remains smooth while preventing redundant mail.
+ */
 class EmailVerificationNotificationController extends Controller
 {
     /**

@@ -8,6 +8,10 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
+/**
+ * Presents the verification prompt or forwards verified users to their intended destination.
+ * Ensures newly registered accounts complete email confirmation before accessing protected areas.
+ */
 class EmailVerificationPromptController extends Controller
 {
     /**

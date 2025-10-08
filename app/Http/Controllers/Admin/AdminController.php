@@ -21,7 +21,8 @@ use Carbon\Carbon;
 use Inertia\Inertia;
 
 /**
- * Deliver administrative overview data, health metrics, and maintenance utilities.
+ * Provides the central administration hub responsible for summarizing platform activity and infrastructure metrics.
+ * Exposes high-level insights, maintenance utilities, and health diagnostics used across the admin dashboard.
  */
 class AdminController extends Controller
 {

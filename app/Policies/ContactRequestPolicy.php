@@ -6,6 +6,10 @@ use App\Models\ContactRequest;
 use App\Models\User;
 use Illuminate\Auth\Access\Response;
 
+/**
+ * Defines access control for managing contact requests throughout the administrative backend.
+ * Distinguishes between view, manage, and destructive operations based on roles and permissions.
+ */
 class ContactRequestPolicy
 {
     /**

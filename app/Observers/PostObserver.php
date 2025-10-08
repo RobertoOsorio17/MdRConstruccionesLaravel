@@ -5,6 +5,10 @@ namespace App\Observers;
 use App\Models\Post;
 use App\Services\CacheService;
 
+/**
+ * Synchronizes caches when posts change, ensuring dashboards and detail pages stay accurate.
+ * Responds to create, update, and delete events to refresh related metrics.
+ */
 class PostObserver
 {
     protected $cacheService;

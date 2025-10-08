@@ -8,7 +8,8 @@ use App\Models\UserInteraction;
 use Illuminate\Http\JsonResponse;
 
 /**
- * Manage like and bookmark interactions for posts.
+ * Centralizes lightweight engagement endpoints so users can like, bookmark, and track interactions with content.
+ * Keeps counters synchronized and responses consistent for front-end widgets that reflect social activity.
  */
 class UserInteractionController extends Controller
 {

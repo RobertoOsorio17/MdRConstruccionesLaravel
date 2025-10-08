@@ -7,6 +7,10 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 
+/**
+ * Stores database-backed notifications delivered to end users, including polymorphic notifiables.
+ * Offers helper scopes and attributes used to present icons, colors, and read-state toggles in the UI.
+ */
 class Notification extends Model
 {
     use HasFactory;

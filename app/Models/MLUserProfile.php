@@ -7,7 +7,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * Represents a behavioural profile used by the recommendation engine.
+ * Aggregates behavioural signals into a machine-learning user profile used for personalized recommendations.
+ * Tracks category affinities, tag interests, and engagement metrics for both guests and authenticated users.
  */
 class MLUserProfile extends Model
 {

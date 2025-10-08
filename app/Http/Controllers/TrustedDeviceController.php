@@ -6,6 +6,10 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 
+/**
+ * Manages the trusted device roster attached to an account, enabling revocation and password-protected actions.
+ * Provides JSON responses tailored for security settings interfaces tracking long-lived device tokens.
+ */
 class TrustedDeviceController extends Controller
 {
     /**

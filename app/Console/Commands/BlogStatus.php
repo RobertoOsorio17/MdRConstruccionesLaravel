@@ -8,6 +8,10 @@ use App\Models\Category;
 use App\Models\User;
 use App\Models\Comment;
 
+/**
+ * Aggregates key metrics about the blog and outputs them in a friendly status report via Artisan.
+ * Useful for quick health checks during deployments or maintenance windows.
+ */
 class BlogStatus extends Command
 {
     /**

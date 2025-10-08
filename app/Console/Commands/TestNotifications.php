@@ -4,6 +4,10 @@ namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
 
+/**
+ * Seeds the administrative notification inbox with representative sample messages for interface testing.
+ * Allows QA and designers to preview various notification types and priorities without real events.
+ */
 class TestNotifications extends Command
 {
     /**

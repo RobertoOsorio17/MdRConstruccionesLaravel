@@ -7,6 +7,10 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
+/**
+ * Models inbound contact inquiries, including status transitions, responder metadata, and attachments.
+ * Powers admin workflows for triaging messages from marketing forms and tracks follow-up actions.
+ */
 class ContactRequest extends Model
 {
     use SoftDeletes;

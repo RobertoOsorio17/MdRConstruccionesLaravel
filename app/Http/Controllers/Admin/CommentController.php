@@ -8,6 +8,10 @@ use App\Models\Post;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
+/**
+ * Moderates reader conversations by enabling administrators to review, update, and triage comment submissions.
+ * Provides filtered listings and bulk actions that keep community discussions healthy and compliant.
+ */
 class CommentController extends Controller
 {
     /**

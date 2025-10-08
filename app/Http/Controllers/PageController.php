@@ -8,6 +8,10 @@ use App\Models\Post;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
+/**
+ * Serves static marketing pages while enriching them with dynamic data drawn from projects, settings, and posts.
+ * Keeps informational sections like About and Contact synchronized with the latest company metadata.
+ */
 class PageController extends Controller
 {
     /**

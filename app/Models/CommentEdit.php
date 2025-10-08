@@ -7,8 +7,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * Represents a single edit operation on a comment, tracking the complete history.
- * Similar to PostRevision model pattern.
+ * Captures a snapshot of a comment revision, preserving original content and editor context.
+ * Enables transparent edit histories and auditability for collaborative moderation.
  */
 class CommentEdit extends Model
 {

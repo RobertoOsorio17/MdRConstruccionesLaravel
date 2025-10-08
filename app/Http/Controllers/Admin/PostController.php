@@ -17,6 +17,10 @@ use Inertia\Inertia;
 use Illuminate\Support\Facades\Storage;
 use Carbon\Carbon;
 
+/**
+ * Directs editorial workflows for blog posts by orchestrating drafting, publishing, revision tracking, and taxonomy assignment.
+ * Provides administrators with validation, media handling, and audit integrations essential for content governance.
+ */
 class PostController extends Controller
 {
     /**

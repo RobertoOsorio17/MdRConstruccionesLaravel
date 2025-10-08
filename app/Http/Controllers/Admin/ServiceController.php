@@ -9,7 +9,8 @@ use Inertia\Inertia;
 use Illuminate\Support\Str;
 
 /**
- * Manage CRUD operations for service records in the admin panel.
+ * Controls the administrative management of public services, ensuring offerings remain accurate and market-ready.
+ * Wraps validation, ordering, and presentation concerns so service content stays aligned with business priorities.
  */
 class ServiceController extends Controller
 {

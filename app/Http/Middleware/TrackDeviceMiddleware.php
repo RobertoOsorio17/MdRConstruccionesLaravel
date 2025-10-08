@@ -7,6 +7,9 @@ use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
+/**
+ * Apply track device middleware logic.
+ */
 class TrackDeviceMiddleware
 {
     protected DeviceTrackingService $deviceService;

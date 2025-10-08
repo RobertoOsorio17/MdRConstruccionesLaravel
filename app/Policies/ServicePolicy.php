@@ -5,6 +5,10 @@ namespace App\Policies;
 use App\Models\Service;
 use App\Models\User;
 
+/**
+ * Restricts management of service offerings to authorized staff while keeping published listings public.
+ * Governs create, update, delete, and bulk operations within the services module.
+ */
 class ServicePolicy
 {
     /**

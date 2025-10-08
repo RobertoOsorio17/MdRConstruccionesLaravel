@@ -16,7 +16,8 @@ use Inertia\Inertia;
 use Carbon\Carbon;
 
 /**
- * Manage administrative operations for user accounts and moderation workflows.
+ * Orchestrates comprehensive administrative control over user accounts, role assignments, and disciplinary actions.
+ * Delivers filtered insights, credential tooling, and ban management so staff can safeguard community integrity.
  */
 class UserManagementController extends Controller
 {
@@ -143,7 +144,9 @@ class UserManagementController extends Controller
             'admins' => User::where('role', 'admin')->orWhereHas('roles', function ($q) {
                 $q->where('name', 'admin');
             })->count(),
-            'new_this_month' => User::whereMonth('created_at', now()->month)->count(),
+            'new_this_month' => User::whereMonth('created_at', now()->month)
+                ->whereYear('created_at', now()->year)
+                ->count(),
         ];
 
         // Include the available roles so admins can filter or assign them.
@@ -185,9 +188,9 @@ class UserManagementController extends Controller
         }
 
         $validator = Validator::make($request->all(), [
-            'name' => 'required|string|max:255|regex:/^[a-zA-ZÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬-ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¿\s]+$/',
+            'name' => 'required|string|max:255|regex:/^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]+$/',
             'email' => 'required|string|email|max:255|unique:users|regex:/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/',
-            'password' => 'required|string|min:8|confirmed|regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/',
+            'password' => 'required|string|min:8|confirmed|regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]+$/',
             'role' => 'nullable|string|in:admin,editor,user',
             'roles' => 'nullable|array|max:3',
             'roles.*' => 'exists:roles,id',
@@ -197,9 +200,9 @@ class UserManagementController extends Controller
             'send_welcome_email' => 'boolean',
         ], [
             'name.regex' => 'El nombre solo puede contener letras y espacios.',
-            'email.regex' => 'El formato del email no es vÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡lido.',
-            'password.regex' => 'La contraseÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â±a debe contener al menos: 1 mayÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âºscula, 1 minÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âºscula, 1 nÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âºmero y 1 carÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡cter especial.',
-            'roles.max' => 'Un usuario no puede tener mÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡s de 3 roles.',
+            'email.regex' => 'El formato del email no es válido.',
+            'password.regex' => 'La contraseña debe contener al menos: 1 mayúscula, 1 minúscula, 1 número y 1 carácter especial.',
+            'roles.max' => 'Un usuario no puede tener más de 3 roles.',
         ]);
 
         if ($validator->fails()) {
@@ -212,14 +215,18 @@ class UserManagementController extends Controller
             'name' => $request->name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
-            'role' => $request->role,
             'bio' => $request->bio,
             'website' => $request->website,
             'location' => $request->location,
             'email_verified_at' => now(), // Auto-verify admin-created users.
         ]);
 
-        // Assign any selected roles once the account has been created.
+        // Assign role using Spatie method (role is in $guarded)
+        if ($request->filled('role')) {
+            $user->assignRole($request->role);
+        }
+
+        // Assign any additional selected roles once the account has been created.
         if ($request->filled('roles')) {
             $user->roles()->sync($request->roles);
         }
@@ -353,9 +360,9 @@ class UserManagementController extends Controller
         }
 
         $validator = Validator::make($request->all(), [
-            'name' => 'required|string|max:255|regex:/^[a-zA-ZÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬-ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¿\s]+$/',
+            'name' => 'required|string|max:255|regex:/^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]+$/',
             'email' => ['required', 'string', 'email', 'max:255', 'regex:/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/', Rule::unique('users')->ignore($user->id)],
-            'password' => 'nullable|string|min:8|confirmed|regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/',
+            'password' => 'nullable|string|min:8|confirmed|regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]+$/',
             'role' => 'nullable|string|in:admin,editor,user',
             'roles' => 'nullable|array|max:3',
             'roles.*' => 'exists:roles,id',
@@ -365,9 +372,9 @@ class UserManagementController extends Controller
             'email_verified' => 'boolean',
         ], [
             'name.regex' => 'El nombre solo puede contener letras y espacios.',
-            'email.regex' => 'El formato del email no es vÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡lido.',
-            'password.regex' => 'La contraseÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â±a debe contener al menos: 1 mayÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âºscula, 1 minÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âºscula, 1 nÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âºmero y 1 carÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡cter especial.',
-            'roles.max' => 'Un usuario no puede tener mÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡s de 3 roles.',
+            'email.regex' => 'El formato del email no es válido.',
+            'password.regex' => 'La contraseña debe contener al menos: 1 mayúscula, 1 minúscula, 1 número y 1 carácter especial.',
+            'roles.max' => 'Un usuario no puede tener más de 3 roles.',
         ]);
 
         if ($validator->fails()) {
@@ -381,7 +388,6 @@ class UserManagementController extends Controller
         $updateData = [
             'name' => $request->name,
             'email' => $request->email,
-            'role' => $request->role,
             'bio' => $request->bio,
             'website' => $request->website,
             'location' => $request->location,
@@ -402,7 +408,13 @@ class UserManagementController extends Controller
 
         $user->update($updateData);
 
-        // Sync any role selections after the profile details are updated.
+        // Update role using Spatie method (role is in $guarded)
+        if ($request->filled('role')) {
+            // Remove all current roles and assign the new one
+            $user->syncRoles([$request->role]);
+        }
+
+        // Sync any additional role selections after the profile details are updated.
         if ($request->has('roles')) {
             $user->roles()->sync($request->roles ?? []);
         }
@@ -1265,7 +1277,6 @@ class UserManagementController extends Controller
         }
     }
 }
-
 
 
 

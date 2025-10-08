@@ -6,6 +6,9 @@ use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
+/**
+ * Apply ensure two factor middleware logic.
+ */
 class EnsureTwoFactorChallenge
 {
     /**

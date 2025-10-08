@@ -8,6 +8,9 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpFoundation\Response;
 
+/**
+ * Apply enhanced auth middleware logic.
+ */
 class EnhancedAuthMiddleware
 {
     /**

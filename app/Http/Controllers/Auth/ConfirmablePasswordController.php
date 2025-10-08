@@ -12,6 +12,10 @@ use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
+/**
+ * Oversees password confirmation flows that gate sensitive account operations behind re-authentication.
+ * Couples Fortify's verification logic with rate limiting and logging to reinforce session security before critical changes execute.
+ */
 class ConfirmablePasswordController extends Controller
 {
     /**

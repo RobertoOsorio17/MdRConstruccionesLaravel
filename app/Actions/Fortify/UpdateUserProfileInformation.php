@@ -8,6 +8,10 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 use Laravel\Fortify\Contracts\UpdatesUserProfileInformation;
 
+/**
+ * Implements Fortify's profile-update contract, validating core identity fields and handling email verification resets.
+ * Keeps user records synchronized while respecting unique constraints and re-triggering verification when needed.
+ */
 class UpdateUserProfileInformation implements UpdatesUserProfileInformation
 {
     /**

@@ -9,6 +9,9 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Session;
 use Carbon\Carbon;
 
+/**
+ * Apply admin session middleware logic.
+ */
 class AdminSessionTimeout
 {
     /**

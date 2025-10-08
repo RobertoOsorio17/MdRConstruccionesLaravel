@@ -8,6 +8,9 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpFoundation\Response;
 
+/**
+ * Apply auth rate limit middleware logic.
+ */
 class AuthRateLimitMiddleware
 {
     /**

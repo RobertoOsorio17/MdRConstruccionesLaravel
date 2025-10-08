@@ -7,6 +7,10 @@ use Inertia\Inertia;
 use App\Models\Post;
 use App\Models\Category;
 
+/**
+ * Delivers polished fallback views when visitors encounter application errors or missing content.
+ * Supplements error pages with curated recommendations to keep users engaged despite navigation issues.
+ */
 class ErrorController extends Controller
 {
     /**

@@ -6,7 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * Represents a configurable dashboard widget for administrators.
+ * Persisted configuration for a dashboard widget pinned to an administrator's workspace layout.
+ * Stores positioning, sizing, and refresh preferences that drive the customizable admin dashboard grid.
  */
 class AdminDashboardWidget extends Model
 {

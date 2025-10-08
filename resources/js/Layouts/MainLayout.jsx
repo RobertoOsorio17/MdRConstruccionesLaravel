@@ -49,6 +49,7 @@ import { Link, usePage, router } from '@inertiajs/react';
 import { AuthProvider, useAuth } from '@/Components/AuthGuard';
 import PremiumFooter from '@/Components/Layout/PremiumFooter';
 import GlobalSearch from '@/Components/GlobalSearch';
+import TwoFactorWarningBanner from '@/Components/Security/TwoFactorWarningBanner';
 
 // Componente de menú de usuario
 const UserMenu = () => {
@@ -73,8 +74,7 @@ const UserMenu = () => {
         return (
             <Box sx={{ display: 'flex', gap: 1 }}>
                 <Button
-                    component={Link}
-                    href="/login"
+                    onClick={() => router.visit('/login')}
                     color="inherit"
                     startIcon={<LoginIcon />}
                     sx={{ fontWeight: 500 }}
@@ -82,8 +82,7 @@ const UserMenu = () => {
                     Entrar
                 </Button>
                 <Button
-                    component={Link}
-                    href="/register"
+                    onClick={() => router.visit('/register')}
                     variant="outlined"
                     color="inherit"
                     startIcon={<RegisterIcon />}
@@ -183,12 +182,12 @@ const UserMenu = () => {
                 </MenuItem>
                 <Divider sx={{ my: 1 }} />
 
-                <MenuItem component={Link} href="/user/dashboard" onClick={handleClose}>
+                <MenuItem onClick={() => { handleClose(); router.visit('/user/dashboard'); }}>
                     <PersonIcon sx={{ mr: 2, color: 'primary.main' }} />
                     Mi Perfil
                 </MenuItem>
 
-                <MenuItem component={Link} href="/profile/settings" onClick={handleClose}>
+                <MenuItem onClick={() => { handleClose(); router.visit('/profile/settings'); }}>
                     <SettingsIcon sx={{ mr: 2, color: 'secondary.main' }} />
                     Configuración
                 </MenuItem>
@@ -199,9 +198,7 @@ const UserMenu = () => {
                     <>
                         <Divider sx={{ my: 1 }} />
                         <MenuItem
-                            component={Link}
-                            href="/admin/dashboard"
-                            onClick={handleClose}
+                            onClick={() => { handleClose(); router.visit('/admin/dashboard'); }}
                             sx={{
                                 background: 'linear-gradient(135deg, rgba(11, 107, 203, 0.1), rgba(11, 107, 203, 0.05))',
                                 '&:hover': {
@@ -248,7 +245,8 @@ const MainLayoutContent = ({ children }) => {
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
     const [mobileOpen, setMobileOpen] = useState(false);
     const [searchOpen, setSearchOpen] = useState(false);
-    const { url } = usePage();
+    const page = usePage();
+    const { url } = page;
     const auth = useAuth();
 
     const handleSearchOpen = () => {
@@ -420,9 +418,10 @@ const MainLayoutContent = ({ children }) => {
                     >
                         <ListItem disablePadding sx={{ mb: 1.5 }}>
                             <ListItemButton
-                                component={Link}
-                                href={item.href}
-                                onClick={handleDrawerToggle}
+                                onClick={() => {
+                                    handleDrawerToggle();
+                                    router.visit(item.href);
+                                }}
                                 sx={{
                                     borderRadius: 4,
                                     minHeight: 60, // Enhanced touch-friendly height
@@ -532,9 +531,9 @@ const MainLayoutContent = ({ children }) => {
                             <BuildIcon sx={{ mr: 1, color: 'primary.main' }} />
                             <Typography
                                 variant="h6"
-                                component={Link}
-                                href="/"
+                                onClick={() => router.visit('/')}
                                 sx={{
+                                    cursor: 'pointer',
                                     fontWeight: 700,
                                     textDecoration: 'none',
                                     color: 'inherit',
@@ -550,8 +549,7 @@ const MainLayoutContent = ({ children }) => {
                                 {navigationItems.slice(0, -1).map((item) => (
                                     <Button
                                         key={item.title}
-                                        component={Link}
-                                        href={item.href}
+                                        onClick={() => router.visit(item.href)}
                                         color={isActive(item.href) ? 'primary' : 'inherit'}
                                         sx={{ fontWeight: isActive(item.href) ? 600 : 400 }}
                                     >
@@ -573,8 +571,7 @@ const MainLayoutContent = ({ children }) => {
                                 <Button
                                     variant="contained"
                                     color="warning"
-                                    component={Link}
-                                    href="/contacto"
+                                    onClick={() => router.visit('/contacto')}
                                     sx={{ ml: 2 }}
                                 >
                                     Pide Presupuesto
@@ -606,6 +603,9 @@ const MainLayoutContent = ({ children }) => {
             >
                 {drawer}
             </Drawer>
+
+            {/* 2FA Warning Banner */}
+            <TwoFactorWarningBanner flash={page.props.flash} security={page.props.security} />
 
             {/* Main Content */}
             <Box component="main" sx={{ flexGrow: 1 }}>

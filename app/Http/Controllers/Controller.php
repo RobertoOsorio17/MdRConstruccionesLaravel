@@ -3,7 +3,8 @@
 namespace App\Http\Controllers;
 
 /**
- * Base controller for the application providing shared logic across HTTP controllers.
+ * Provides the shared base class for HTTP controllers within the application.
+ * Extend this abstract layer to inherit common middleware bindings or helper traits when needed.
  */
 abstract class Controller
 {

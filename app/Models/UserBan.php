@@ -7,6 +7,10 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Carbon\Carbon;
 
+/**
+ * Tracks account bans applied to users, including duration, issuer, and status helpers.
+ * Powers administrative enforcement and UI messaging around disciplinary actions.
+ */
 class UserBan extends Model
 {
     use HasFactory;

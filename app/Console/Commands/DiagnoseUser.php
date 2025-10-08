@@ -8,7 +8,8 @@ use App\Models\Role;
 use App\Models\Permission;
 
 /**
- * Console command that inspects a user's roles and permissions for troubleshooting.
+ * Outputs a comprehensive CLI diagnostic for a user, including roles, permissions, and remediation tips.
+ * Provides security teams with a quick way to audit RBAC assignments during support incidents.
  */
 class DiagnoseUser extends Command
 {

@@ -9,6 +9,9 @@ use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 
+/**
+ * Mail notification for recovery codes regenerated events.
+ */
 class RecoveryCodesRegenerated extends Mailable
 {
     use Queueable, SerializesModels;

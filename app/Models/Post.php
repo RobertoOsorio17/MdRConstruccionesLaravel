@@ -10,6 +10,10 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
 
+/**
+ * Encapsulates blog posts with editorial metadata, relationships, and rich helper methods for engagement features.
+ * Supports moderation, recommendations, and analytics via scopes, accessors, and administrative utilities.
+ */
 class Post extends Model
 {
     use HasFactory, SoftDeletes;

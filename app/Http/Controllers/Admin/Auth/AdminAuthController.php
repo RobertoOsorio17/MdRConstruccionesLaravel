@@ -17,7 +17,8 @@ use Inertia\Response;
 use Carbon\Carbon;
 
 /**
- * Handle authentication workflows for administrative users.
+ * Manages administrator authentication by combining hardened login policies, authorization checks, and auditing hooks.
+ * Protects the control panel through rate limiting, role validation, ban enforcement, and session lifecycle management.
  */
 class AdminAuthController extends Controller
 {

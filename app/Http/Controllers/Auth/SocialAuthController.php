@@ -12,6 +12,10 @@ use Inertia\Inertia;
 use Laravel\Socialite\Facades\Socialite;
 use Exception;
 
+/**
+ * Bridges OAuth providers with the local authentication system to streamline social logins.
+ * Validates provider support, handles callback exceptions gracefully, and provisions or links user accounts securely.
+ */
 class SocialAuthController extends Controller
 {
     /**

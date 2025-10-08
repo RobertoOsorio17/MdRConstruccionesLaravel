@@ -9,6 +9,10 @@ use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Validation\ValidationException;
 
+/**
+ * Serves API consumers with search capabilities backed by the dedicated SearchService.
+ * Accepts query, filter, and pagination inputs to return structured results consumable by client applications.
+ */
 class SearchController extends Controller
 {
     /**

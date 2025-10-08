@@ -10,6 +10,10 @@ use Maatwebsite\Excel\Concerns\WithStyles;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
+/**
+ * Prepares comment records for export, honoring search and status filters supplied by the UI.
+ * Uses Laravel Excel interfaces to produce structured spreadsheets ready for moderation reviews.
+ */
 class CommentsExport implements FromQuery, WithHeadings, WithMapping, WithStyles, ShouldAutoSize
 {
     protected $filters;

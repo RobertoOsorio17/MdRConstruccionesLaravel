@@ -12,6 +12,10 @@ use Illuminate\Notifications\Notifiable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
 use App\Notifications\ResetPasswordNotification;
 
+/**
+ * Application user model providing authentication, profile attributes, permissions, and rich domain helpers.
+ * Extends Laravel's Authenticatable with soft deletes, role management, and extensive relationship accessors.
+ */
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */

@@ -7,7 +7,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * Persist interaction events used to train recommendation models.
+ * Stores rich telemetry about recommendation interactions for the machine-learning feedback loop.
+ * Captures behaviour metrics that inform implicit ratings, engagement scores, and performance analytics.
  */
 class MLInteractionLog extends Model
 {

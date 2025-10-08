@@ -7,6 +7,10 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 
+/**
+ * Delivers notification feeds for authenticated users, handling filtering, presentation, and read state toggles.
+ * Bridges database notifications with Inertia views so users stay aware of activity that affects them.
+ */
 class NotificationController extends Controller
 {
     /**

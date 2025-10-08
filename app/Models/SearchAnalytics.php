@@ -6,6 +6,10 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 
+/**
+ * Logs search activity to power analytics dashboards, including normalization and success metrics.
+ * Offers helpers for recording queries, deriving popular terms, and summarizing performance trends.
+ */
 class SearchAnalytics extends Model
 {
     use HasFactory;

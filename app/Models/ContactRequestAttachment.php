@@ -8,6 +8,10 @@ use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
+/**
+ * Handles encrypted file attachments associated with contact requests, including storage and integrity checks.
+ * Encapsulates encryption key management, size formatting, and download tracking for sensitive uploads.
+ */
 class ContactRequestAttachment extends Model
 {
     protected $fillable = [

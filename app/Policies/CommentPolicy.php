@@ -6,6 +6,10 @@ use App\Models\Comment;
 use App\Models\User;
 use Illuminate\Auth\Access\Response;
 
+/**
+ * Centralizes authorization rules for comment creation, moderation, and engagement features.
+ * Differentiates between guests, authors, and elevated roles when enforcing policies.
+ */
 class CommentPolicy
 {
     /**

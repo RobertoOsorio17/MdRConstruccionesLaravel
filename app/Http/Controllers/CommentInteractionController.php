@@ -9,6 +9,10 @@ use App\Models\Comment;
 use App\Models\CommentInteraction;
 use App\Models\CommentReport;
 
+/**
+ * Coordinates like, dislike, and report interactions on comments for authenticated and guest users.
+ * Applies authorization, toggling logic, and analytics updates to keep engagement signals accurate.
+ */
 class CommentInteractionController extends Controller
 {
     /**

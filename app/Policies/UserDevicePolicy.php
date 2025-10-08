@@ -5,6 +5,10 @@ namespace App\Policies;
 use App\Models\User;
 use App\Models\UserDevice;
 
+/**
+ * Restricts management of tracked devices to the owning user for privacy and security.
+ * Applies the same check across view, update, and delete operations.
+ */
 class UserDevicePolicy
 {
     /**

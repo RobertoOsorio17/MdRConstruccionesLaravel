@@ -6,6 +6,10 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Exception;
 
+/**
+ * Bootstraps the application's MySQL schema by creating the primary database if it does not yet exist.
+ * Useful for first-time environment provisioning before running migrations or seeders.
+ */
 class SetupDatabase extends Command
 {
     /**

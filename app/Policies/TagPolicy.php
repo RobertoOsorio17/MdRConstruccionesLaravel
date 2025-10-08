@@ -5,6 +5,10 @@ namespace App\Policies;
 use App\Models\Tag;
 use App\Models\User;
 
+/**
+ * Handles authorization for tag maintenance, allowing editors and admins to curate taxonomy entries.
+ * Applies stricter rules when tags are associated with existing posts.
+ */
 class TagPolicy
 {
     /**

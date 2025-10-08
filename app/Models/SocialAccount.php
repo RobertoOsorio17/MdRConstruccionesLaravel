@@ -5,6 +5,10 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * Links a local user account to an external OAuth provider, storing tokens and provider metadata.
+ * Supports multi-provider logins by exposing helper accessors for provider display names and token state.
+ */
 class SocialAccount extends Model
 {
     /**

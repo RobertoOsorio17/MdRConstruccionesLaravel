@@ -7,6 +7,10 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
+/**
+ * Welcomes newly registered users with an onboarding email and dashboard prompt.
+ * Also stores a database notification so the greeting appears in-app.
+ */
 class WelcomeNotification extends Notification implements ShouldQueue
 {
     use Queueable;

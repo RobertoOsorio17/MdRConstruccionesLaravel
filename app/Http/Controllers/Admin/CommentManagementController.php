@@ -9,6 +9,10 @@ use App\Models\Comment;
 use App\Models\CommentReport;
 use App\Models\User;
 
+/**
+ * Handles advanced moderation workflows for comments by integrating reports, escalations, and resolution tracking into one surface.
+ * Equips administrators with targeted filters and batch tools to enforce community guidelines effectively.
+ */
 class CommentManagementController extends Controller
 {
     /**

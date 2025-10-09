@@ -105,7 +105,7 @@ class DashboardController extends Controller
             ->map(function ($comment) {
                 return [
                     'id' => $comment->id,
-                    'content' => \Illuminate\Support\Str::limit($comment->content, 100),
+                    'content' => \Illuminate\Support\Str::limit($comment->body, 100), // ✅ Correct column name
                     'author_name' => $comment->author_name,
                     'status' => $comment->status,
                     'post' => $comment->post,

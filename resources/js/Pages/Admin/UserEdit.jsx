@@ -100,7 +100,7 @@ const UserEdit = ({ user }) => {
     };
 
     const handleCancel = () => {
-        router.get(route('admin.admin.users.show', user.id));
+        router.get(route('admin.users.show', user.id)); // ✅ Fixed route name
     };
 
     const generatePassword = () => {

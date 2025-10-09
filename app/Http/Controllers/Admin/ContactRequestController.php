@@ -52,10 +52,19 @@ class ContactRequestController extends Controller
             $query->whereDate('created_at', '<=', $request->date_to);
         }
 
-        // Sort
+        // Sort with whitelist validation
         $sortField = $request->get('sort', 'created_at');
         $sortDirection = $request->get('direction', 'desc');
-        $query->orderBy($sortField, $sortDirection);
+
+        // ✅ SECURITY: Whitelist allowed sort fields and directions
+        $allowedSorts = ['name', 'email', 'subject', 'status', 'created_at', 'updated_at'];
+        $allowedDirections = ['asc', 'desc'];
+
+        if (in_array($sortField, $allowedSorts) && in_array(strtolower($sortDirection), $allowedDirections)) {
+            $query->orderBy($sortField, $sortDirection);
+        } else {
+            $query->orderBy('created_at', 'desc');
+        }
 
         $requests = $query->paginate(15)->withQueryString();
 

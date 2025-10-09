@@ -89,8 +89,9 @@ return Application::configure(basePath: dirname(__DIR__))
         });
 
         $exceptions->render(function (\Throwable $e, $request) {
-            // Only handle 500 errors for non-debug mode
-            if (!config('app.debug') && !$request->expectsJson()) {
+            // ✅ FIXED: Use app()->environment() instead of config('app.debug')
+            // This is more reliable and works even when config is cached
+            if (app()->environment('production') && !$request->expectsJson()) {
                 if ($e instanceof \Symfony\Component\HttpKernel\Exception\HttpException) {
                     return null; // Let other handlers deal with HTTP exceptions
                 }

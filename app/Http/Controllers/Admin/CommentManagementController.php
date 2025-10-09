@@ -66,21 +66,23 @@ class CommentManagementController extends Controller
             });
         }
         
-        // Sorting configuration.
+        // Sorting configuration with full validation
         $sortBy = $request->get('sort_by', 'created_at');
         $sortDirection = $request->get('sort_direction', 'desc');
 
-        // Validate the requested sort field.
+        // ✅ SECURITY: Validate both sort field and direction
         $allowedSortFields = ['created_at', 'status', 'reports_count', 'interactions_count'];
+        $allowedDirections = ['asc', 'desc'];
+
         if (!in_array($sortBy, $allowedSortFields)) {
             $sortBy = 'created_at';
         }
-        
-        if ($sortBy === 'reports_count' || $sortBy === 'interactions_count') {
-            $query->orderBy($sortBy, $sortDirection);
-        } else {
-            $query->orderBy($sortBy, $sortDirection);
+
+        if (!in_array(strtolower($sortDirection), $allowedDirections)) {
+            $sortDirection = 'desc';
         }
+
+        $query->orderBy($sortBy, $sortDirection);
         
         $comments = $query->paginate(20);
         
@@ -135,9 +137,22 @@ class CommentManagementController extends Controller
             });
         }
         
-        // Sorting configuration for reports.
+        // Sorting configuration for reports with validation
         $sortBy = $request->get('sort_by', 'created_at');
         $sortDirection = $request->get('sort_direction', 'desc');
+
+        // ✅ SECURITY: Validate both sort field and direction
+        $allowedSortFields = ['created_at', 'status', 'category'];
+        $allowedDirections = ['asc', 'desc'];
+
+        if (!in_array($sortBy, $allowedSortFields)) {
+            $sortBy = 'created_at';
+        }
+
+        if (!in_array(strtolower($sortDirection), $allowedDirections)) {
+            $sortDirection = 'desc';
+        }
+
         $query->orderBy($sortBy, $sortDirection);
         
         $reports = $query->paginate(20);
@@ -153,46 +168,55 @@ class CommentManagementController extends Controller
      */
     public function updateStatus(Request $request, Comment $comment): JsonResponse
     {
+        // ✅ FIXED IDOR: Authorize action
+        $this->authorize('moderate', $comment);
+
         $request->validate([
             'status' => 'required|in:approved,pending,rejected'
         ]);
-        
+
         $comment->update(['status' => $request->status]);
-        
+
         return response()->json([
             'success' => true,
             'message' => 'Comment status updated successfully.'
         ]);
     }
-    
+
     /**
      * Resolve a comment report.
      */
     public function resolveReport(Request $request, CommentReport $report): JsonResponse
     {
+        // ✅ FIXED IDOR: Authorize action (only admins/moderators can resolve reports)
+        $this->authorize('moderate', Comment::class);
+
         $request->validate([
             'status' => 'required|in:resolved,dismissed',
             'notes' => 'nullable|string|max:500'
         ]);
-        
+
         $report->update([
             'status' => $request->status,
             'notes' => $request->notes
         ]);
-        
+
         return response()->json([
             'success' => true,
             'message' => 'Report updated successfully.'
         ]);
     }
-    
+
     /**
      * Delete a comment.
      */
     public function destroy(Comment $comment): JsonResponse
     {
+        // ✅ FIXED IDOR: Authorize action
+        $this->authorize('delete', $comment);
+
         $comment->delete();
-        
+
         return response()->json([
             'success' => true,
             'message' => 'Comment deleted successfully.'
@@ -242,73 +266,103 @@ class CommentManagementController extends Controller
      */
     public function bulkApprove(Request $request): JsonResponse
     {
+        // ✅ FIXED IDOR: Authorize bulk action capability
+        $this->authorize('moderate', Comment::class);
+
         $request->validate([
-            'comment_ids' => 'required|array',
+            'comment_ids' => 'required|array|max:100', // ✅ Limit to 100
             'comment_ids.*' => 'exists:comments,id',
         ]);
-        
+
+        // ✅ Verify authorization for each comment
+        $comments = Comment::whereIn('id', $request->comment_ids)->get();
+        foreach ($comments as $comment) {
+            $this->authorize('moderate', $comment);
+        }
+
         $count = Comment::whereIn('id', $request->comment_ids)
                        ->update(['status' => 'approved']);
-        
+
         return response()->json([
             'success' => true,
             'approved_count' => $count,
             'message' => "{$count} comment(s) approved successfully."
         ]);
     }
-    
+
     /**
      * Bulk reject comments
      */
     public function bulkReject(Request $request): JsonResponse
     {
+        // ✅ FIXED IDOR: Authorize bulk action capability
+        $this->authorize('moderate', Comment::class);
+
         $request->validate([
-            'comment_ids' => 'required|array',
+            'comment_ids' => 'required|array|max:100', // ✅ Limit to 100
             'comment_ids.*' => 'exists:comments,id',
         ]);
-        
+
+        // ✅ Verify authorization for each comment
+        $comments = Comment::whereIn('id', $request->comment_ids)->get();
+        foreach ($comments as $comment) {
+            $this->authorize('moderate', $comment);
+        }
+
         $count = Comment::whereIn('id', $request->comment_ids)
                        ->update(['status' => 'rejected']);
-        
+
         return response()->json([
             'success' => true,
             'rejected_count' => $count,
             'message' => "{$count} comment(s) rejected successfully."
         ]);
     }
-    
+
     /**
      * Bulk delete comments
      */
     public function bulkDelete(Request $request): JsonResponse
     {
+        // ✅ FIXED IDOR: Authorize bulk action capability
+        $this->authorize('delete', Comment::class);
+
         $request->validate([
-            'comment_ids' => 'required|array',
+            'comment_ids' => 'required|array|max:100', // ✅ Limit to 100
             'comment_ids.*' => 'exists:comments,id',
         ]);
-        
-        $count = Comment::whereIn('id', $request->comment_ids)->count();
-        
+
+        // ✅ Verify authorization for each comment
+        $comments = Comment::whereIn('id', $request->comment_ids)->get();
+        foreach ($comments as $comment) {
+            $this->authorize('delete', $comment);
+        }
+
+        $count = $comments->count();
+
         // Delete all replies first
         Comment::whereIn('parent_id', $request->comment_ids)->delete();
-        
+
         // Delete main comments
         Comment::whereIn('id', $request->comment_ids)->delete();
-        
+
         return response()->json([
             'success' => true,
             'deleted_count' => $count,
             'message' => "{$count} comment(s) deleted successfully."
         ]);
     }
-    
+
     /**
      * Mark comment as spam
      */
     public function markAsSpam(Comment $comment): JsonResponse
     {
+        // ✅ FIXED IDOR: Authorize action
+        $this->authorize('moderate', $comment);
+
         $comment->update(['status' => 'spam']);
-        
+
         return response()->json([
             'success' => true,
             'message' => 'Comment flagged as spam successfully.'

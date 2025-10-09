@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Project;
+use App\Traits\GeneratesUniqueSlug;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Storage;
@@ -16,6 +17,7 @@ use Carbon\Carbon;
  */
 class ProjectManagementController extends Controller
 {
+    use GeneratesUniqueSlug;
     /**
      * Display a listing of projects.
      */
@@ -61,10 +63,19 @@ class ProjectManagementController extends Controller
             $query->where('budget_estimate', '<=', $request->budget_max);
         }
 
-        // Sorting.
+        // Sorting with whitelist validation to prevent SQL injection
         $sortField = $request->get('sort', 'created_at');
         $sortDirection = $request->get('direction', 'desc');
-        $query->orderBy($sortField, $sortDirection);
+
+        // ✅ SECURITY: Whitelist allowed sort fields and directions
+        $allowedSorts = ['title', 'status', 'featured', 'start_date', 'end_date', 'budget_estimate', 'created_at', 'views_count'];
+        $allowedDirections = ['asc', 'desc'];
+
+        if (in_array($sortField, $allowedSorts) && in_array(strtolower($sortDirection), $allowedDirections)) {
+            $query->orderBy($sortField, $sortDirection);
+        } else {
+            $query->orderBy('created_at', 'desc');
+        }
 
         // Paginate results.
         $projects = $query->paginate($request->get('per_page', 15))->withQueryString();
@@ -91,7 +102,7 @@ class ProjectManagementController extends Controller
                     : null,
                 'status_label' => $this->getStatusLabel($project->status),
                 'budget_formatted' => $project->budget_estimate
-                    ? 'â‚¬' . number_format($project->budget_estimate, 2, ',', '.')
+                    ? '€' . number_format($project->budget_estimate, 2, ',', '.') // ✅ Fixed encoding
                     : 'No especificado',
             ];
         });
@@ -134,7 +145,8 @@ class ProjectManagementController extends Controller
             'gallery.*' => 'string', // URLs or file paths
         ]);
 
-        $validated['slug'] = Str::slug($validated['title']);
+        // ✅ SECURITY: Ensure slug uniqueness using trait
+        $validated['slug'] = $this->generateUniqueSlug($validated['title'], Project::class);
         $validated['featured'] = $request->boolean('featured');
 
         $project = Project::create($validated);
@@ -161,7 +173,8 @@ class ProjectManagementController extends Controller
             'gallery.*' => 'string',
         ]);
 
-        $validated['slug'] = Str::slug($validated['title']);
+        // ✅ SECURITY: Ensure slug uniqueness (exclude current project) using trait
+        $validated['slug'] = $this->generateUniqueSlug($validated['title'], Project::class, $project->id);
         $validated['featured'] = $request->boolean('featured');
 
         $project->update($validated);
@@ -309,9 +322,9 @@ class ProjectManagementController extends Controller
                 'id' => $project->id,
                 'title' => $project->title,
                 'summary' => $project->summary,
-                'description' => $project->description,
+                'body' => $project->body, // ✅ Correct column name
                 'location' => $project->location,
-                'budget' => $project->budget,
+                'budget_estimate' => $project->budget_estimate, // ✅ Correct column name
                 'status' => $project->status,
                 'featured' => $project->featured,
                 'start_date' => $project->start_date,
@@ -355,10 +368,9 @@ class ProjectManagementController extends Controller
                 'total_completed' => Project::where('status', 'completed')
                     ->where('end_date', '>=', $startDate)
                     ->count(),
-                'completed_on_time' => Project::where('status', 'completed')
-                    ->where('end_date', '>=', $startDate)
-                    ->whereRaw('end_date <= expected_end_date')
-                    ->count(),
+                // ✅ Note: There is no expected_end_date column, only end_date
+                // This metric would need a separate expected_end_date column to work properly
+                'completed_on_time' => 0, // Disabled until expected_end_date column is added
                 'on_time_completion_rate' => 0, // Will be calculated below
             ],
             'completion_trends' => Project::where('status', 'completed')

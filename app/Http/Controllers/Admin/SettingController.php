@@ -969,6 +969,9 @@ class SettingController extends Controller
             ['key' => 'seo_keywords', 'value' => 'construcción, reformas, Madrid, calidad'],
             ['key' => 'og_image', 'value' => '/images/og-image.jpg'],
             ['key' => 'google_analytics_id', 'value' => ''],
+            ['key' => 'google_search_console_id', 'value' => ''],
+            ['key' => 'enable_sitemap', 'value' => true],
+            ['key' => 'sitemap_frequency', 'value' => 'daily'],
 
             // Backup
             ['key' => 'backup_enabled', 'value' => true],

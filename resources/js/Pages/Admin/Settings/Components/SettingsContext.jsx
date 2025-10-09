@@ -157,6 +157,29 @@ function coerceSettingValue(type, value) {
             const floatValue = parseFloat(value);
             return Number.isNaN(floatValue) ? null : floatValue;
         }
+        case 'datetime': {
+            if (value === null || value === undefined || value === '') {
+                return null;
+            }
+            // Convert "YYYY-MM-DD HH:MM:SS" to "YYYY-MM-DDTHH:MM" for datetime-local input
+            if (typeof value === 'string') {
+                try {
+                    const date = new Date(value.replace(' ', 'T'));
+                    if (isNaN(date.getTime())) return null;
+
+                    const year = date.getFullYear();
+                    const month = String(date.getMonth() + 1).padStart(2, '0');
+                    const day = String(date.getDate()).padStart(2, '0');
+                    const hours = String(date.getHours()).padStart(2, '0');
+                    const minutes = String(date.getMinutes()).padStart(2, '0');
+
+                    return `${year}-${month}-${day}T${hours}:${minutes}`;
+                } catch (error) {
+                    return null;
+                }
+            }
+            return value;
+        }
         case 'json':
             return coerceJson(value, null);
         case 'array': {

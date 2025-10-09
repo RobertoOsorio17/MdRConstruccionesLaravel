@@ -426,7 +426,7 @@ const TinyMCEProfessional = ({
                 }}
             >
                 <Editor
-                    apiKey="fl1wft4p7gwc0wpmuva8dzidox4c1a5az87v1mdpcx1r62s2"
+                    apiKey={import.meta.env.VITE_TINYMCE_API_KEY}
                     onInit={(evt, editor) => editorRef.current = editor}
                     value={value}
                     init={editorConfig}

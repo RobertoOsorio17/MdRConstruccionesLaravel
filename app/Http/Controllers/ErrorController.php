@@ -58,9 +58,25 @@ class ErrorController extends Controller
                     ];
                 });
         } catch (\Exception $e) {
+            // ✅ FIXED: Use Log::error() for critical database errors instead of warning
             // Fallback if posts table has issues
             $recentPosts = collect([]);
-            \Log::warning('Error fetching recent posts for 404 page: ' . $e->getMessage());
+            \Log::error('Critical error fetching recent posts for 404 page', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'url' => $request->fullUrl(),
+                'user_id' => auth()->id(),
+            ]);
+
+            // ✅ FIXED: Notify admins of critical database errors
+            if (app()->environment('production')) {
+                try {
+                    \Illuminate\Support\Facades\Notification::route('mail', config('mail.admin_email'))
+                        ->notify(new \App\Notifications\CriticalErrorNotification($e, 'Error fetching posts for 404 page'));
+                } catch (\Exception $notifyError) {
+                    \Log::error('Failed to send critical error notification', ['error' => $notifyError->getMessage()]);
+                }
+            }
         }
 
         // Get categories for navigation with error handling
@@ -80,9 +96,14 @@ class ErrorController extends Controller
                     ];
                 });
         } catch (\Exception $e) {
+            // ✅ FIXED: Use Log::error() for critical database errors
             // Fallback if categories table has issues
             $categories = collect([]);
-            \Log::warning('Error fetching categories for 404 page: ' . $e->getMessage());
+            \Log::error('Critical error fetching categories for 404 page', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'url' => $request->fullUrl(),
+            ]);
         }
 
         // Log 404 error for analytics

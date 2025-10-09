@@ -110,7 +110,7 @@ const ServiceManagement = ({ services, categories, stats, filters, flash }) => {
     // Handle search
     const handleSearch = (value) => {
         setSearchTerm(value);
-        router.get(route('admin.admin.services.index'), {
+        router.get(route('admin.services.index'), { // ✅ Fixed route name
             ...filters,
             search: value,
         }, {
@@ -127,8 +127,8 @@ const ServiceManagement = ({ services, categories, stats, filters, flash }) => {
         if (filterType === 'category') setCategoryFilter(value);
         if (filterType === 'status') setStatusFilter(value);
         if (filterType === 'featured') setFeaturedFilter(value);
-        
-        router.get(route('admin.admin.services.index'), newFilters, {
+
+        router.get(route('admin.services.index'), newFilters, { // ✅ Fixed route name
             preserveState: true,
             replace: true,
         });
@@ -164,12 +164,12 @@ const ServiceManagement = ({ services, categories, stats, filters, flash }) => {
 
     // Handle service actions
     const handleViewService = (service) => {
-        router.visit(route('admin.admin.services.show', service.id));
+        router.visit(route('admin.services.show', service.id)); // ✅ Fixed route name
         handleMenuClose();
     };
 
     const handleEditService = (service) => {
-        router.visit(route('admin.admin.services.edit', service.id));
+        router.visit(route('admin.services.edit', service.id)); // ✅ Fixed route name
         handleMenuClose();
     };
 
@@ -181,7 +181,7 @@ const ServiceManagement = ({ services, categories, stats, filters, flash }) => {
 
     const confirmDelete = () => {
         if (serviceToDelete) {
-            router.delete(route('admin.admin.services.destroy', serviceToDelete.id), {
+            router.delete(route('admin.services.destroy', serviceToDelete.id), { // ✅ Fixed route name
                 onSuccess: () => {
                     setDeleteDialog(false);
                     setServiceToDelete(null);
@@ -197,7 +197,7 @@ const ServiceManagement = ({ services, categories, stats, filters, flash }) => {
     };
 
     const executeBulkAction = () => {
-        router.post(route('admin.admin.services.bulk-action'), {
+        router.post(route('admin.services.bulk-action'), { // ✅ Fixed route name
             action: bulkAction,
             service_ids: selectedServices,
         }, {
@@ -257,7 +257,7 @@ const ServiceManagement = ({ services, categories, stats, filters, flash }) => {
                         <Button
                             variant="contained"
                             startIcon={<PersonAddIcon />}
-                            onClick={() => router.visit(route('admin.admin.services.create'))}
+                            onClick={() => router.visit(route('admin.services.create'))} // ✅ Fixed route name
                             sx={{
                                 borderRadius: '12px',
                                 textTransform: 'none',
@@ -447,7 +447,7 @@ const ServiceManagement = ({ services, categories, stats, filters, flash }) => {
                                         <Button
                                             variant="outlined"
                                             startIcon={<DownloadIcon />}
-                                            onClick={() => router.visit(route('admin.admin.services.export', filters))}
+                                            onClick={() => router.visit(route('admin.services.export', filters))} // ✅ Fixed route name
                                             sx={{
                                                 borderRadius: '12px',
                                                 textTransform: 'none',
@@ -598,14 +598,14 @@ const ServiceManagement = ({ services, categories, stats, filters, flash }) => {
                             count={services.total}
                             page={services.current_page - 1}
                             onPageChange={(e, page) => {
-                                router.get(route('admin.admin.services.index'), {
+                                router.get(route('admin.services.index'), { // ✅ Fixed route name
                                     ...filters,
                                     page: page + 1,
                                 });
                             }}
                             rowsPerPage={services.per_page}
                             onRowsPerPageChange={(e) => {
-                                router.get(route('admin.admin.services.index'), {
+                                router.get(route('admin.services.index'), { // ✅ Fixed route name
                                     ...filters,
                                     per_page: e.target.value,
                                 });

@@ -188,6 +188,24 @@ class CommentController extends Controller
             if (!$parentComment || $parentComment->post_id !== $post->id) {
                 abort(422, 'The parent comment does not belong to this post.');
             }
+
+            // ✅ FIXED: Validate maximum nesting depth (max 3 levels)
+            $depth = 1;
+            $currentParent = $parentComment;
+            while ($currentParent->parent_id !== null) {
+                $depth++;
+                if ($depth >= 3) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Maximum comment nesting depth reached. You cannot reply to this comment.',
+                        'error' => 'MAX_DEPTH_EXCEEDED'
+                    ], 422);
+                }
+                $currentParent = Comment::find($currentParent->parent_id);
+                if (!$currentParent) {
+                    break; // Safety check
+                }
+            }
         }
 
         // Set additional fields.

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Service;
 use App\Models\ServiceFavorite;
 use App\Models\Category;
+use App\Traits\GeneratesUniqueSlug;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
@@ -18,6 +19,7 @@ use Inertia\Inertia;
  */
 class ServiceManagementController extends Controller
 {
+    use GeneratesUniqueSlug;
     /**
      * Display a listing of services.
      */
@@ -49,19 +51,28 @@ class ServiceManagementController extends Controller
             }
         }
 
-        // Filter by featured flag.
+        // Filter by featured flag (correct column name is 'featured', not 'is_featured')
         if ($request->filled('featured')) {
             if ($request->featured === 'yes') {
-                $query->where('is_featured', true);
+                $query->where('featured', true);
             } elseif ($request->featured === 'no') {
-                $query->where('is_featured', false);
+                $query->where('featured', false);
             }
         }
 
-        // Sorting preferences.
+        // Sorting preferences with whitelist validation
         $sortBy = $request->get('sort_by', 'created_at');
         $sortOrder = $request->get('sort_order', 'desc');
-        $query->orderBy($sortBy, $sortOrder);
+
+        // ✅ SECURITY: Whitelist allowed sort fields and directions
+        $allowedSorts = ['title', 'status', 'featured', 'is_active', 'sort_order', 'created_at', 'views_count', 'price'];
+        $allowedDirections = ['asc', 'desc'];
+
+        if (in_array($sortBy, $allowedSorts) && in_array(strtolower($sortOrder), $allowedDirections)) {
+            $query->orderBy($sortBy, $sortOrder);
+        } else {
+            $query->orderBy('created_at', 'desc');
+        }
 
         // Paginate the results.
         $perPage = $request->get('per_page', 15);
@@ -73,13 +84,11 @@ class ServiceManagementController extends Controller
                 'id' => $service->id,
                 'title' => $service->title,
                 'slug' => $service->slug,
-                'short_description' => $service->short_description,
-                'description' => $service->description,
+                'excerpt' => $service->excerpt, // ✅ Correct column name
+                'body' => $service->body, // ✅ Correct column name
                 'price' => $service->price,
-                'price_type' => $service->price_type,
-                'duration' => $service->duration,
                 'is_active' => $service->is_active,
-                'is_featured' => $service->is_featured,
+                'featured' => $service->featured, // ✅ Correct column name
                 'image_url' => $service->image ? Storage::url($service->image) : null,
                 'category' => $service->category ? [
                     'id' => $service->category->id,
@@ -133,15 +142,13 @@ class ServiceManagementController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'title' => 'required|string|max:255',
-            'short_description' => 'required|string|max:500',
-            'description' => 'required|string',
+            'excerpt' => 'required|string|max:500', // ✅ Correct column name
+            'body' => 'required|string', // ✅ Correct column name
             'category_id' => 'required|exists:categories,id',
             'price' => 'nullable|numeric|min:0',
-            'price_type' => 'nullable|string|in:fixed,hourly,project,quote',
-            'duration' => 'nullable|string|max:100',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             'is_active' => 'boolean',
-            'is_featured' => 'boolean',
+            'featured' => 'boolean', // ✅ Correct column name
         ]);
 
         if ($validator->fails()) {
@@ -149,7 +156,9 @@ class ServiceManagementController extends Controller
         }
 
         $data = $validator->validated();
-        $data['slug'] = Str::slug($data['title']);
+
+        // ✅ SECURITY: Ensure slug uniqueness using trait
+        $data['slug'] = $this->generateUniqueSlug($data['title'], Service::class);
 
         // Handle image upload.
         if ($request->hasFile('image')) {
@@ -159,7 +168,7 @@ class ServiceManagementController extends Controller
         $service = Service::create($data);
 
         session()->flash('success', 'Service created successfully.');
-        return redirect()->route('admin.admin.services.index');
+        return redirect()->route('admin.services.index'); // ✅ Fixed route name
     }
 
     /**
@@ -238,15 +247,13 @@ class ServiceManagementController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'title' => 'required|string|max:255',
-            'short_description' => 'required|string|max:500',
-            'description' => 'required|string',
+            'excerpt' => 'required|string|max:500', // ✅ Correct column name
+            'body' => 'required|string', // ✅ Correct column name
             'category_id' => 'required|exists:categories,id',
             'price' => 'nullable|numeric|min:0',
-            'price_type' => 'nullable|string|in:fixed,hourly,project,quote',
-            'duration' => 'nullable|string|max:100',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             'is_active' => 'boolean',
-            'is_featured' => 'boolean',
+            'featured' => 'boolean', // ✅ Correct column name
         ]);
 
         if ($validator->fails()) {
@@ -255,9 +262,9 @@ class ServiceManagementController extends Controller
 
         $data = $validator->validated();
 
-        // Update the slug when the title changes.
+        // Update the slug when the title changes with uniqueness check using trait
         if ($data['title'] !== $service->title) {
-            $data['slug'] = Str::slug($data['title']);
+            $data['slug'] = $this->generateUniqueSlug($data['title'], Service::class, $service->id);
         }
 
         // Handle image upload.
@@ -271,7 +278,7 @@ class ServiceManagementController extends Controller
 
         $service->update($data);
 
-        return redirect()->route('admin.admin.services.index')
+        return redirect()->route('admin.services.index') // ✅ Fixed route name
             ->with('success', 'Service updated successfully.');
     }
 
@@ -287,7 +294,7 @@ class ServiceManagementController extends Controller
 
         $service->delete();
 
-        return redirect()->route('admin.admin.services.index')
+        return redirect()->route('admin.services.index') // ✅ Fixed route name
             ->with('success', 'Service deleted successfully.');
     }
 
@@ -320,11 +327,11 @@ class ServiceManagementController extends Controller
                 $message = 'Services deactivated successfully.';
                 break;
             case 'feature':
-                $services->update(['is_featured' => true]);
+                $services->update(['featured' => true]); // ✅ Correct column name
                 $message = 'Services marked as featured successfully.';
                 break;
             case 'unfeature':
-                $services->update(['is_featured' => false]);
+                $services->update(['featured' => false]); // ✅ Correct column name
                 $message = 'Services unmarked as featured successfully.';
                 break;
             case 'delete':
@@ -340,7 +347,7 @@ class ServiceManagementController extends Controller
                 break;
         }
 
-        return redirect()->route('admin.admin.services.index')
+        return redirect()->route('admin.services.index') // ✅ Fixed route name
             ->with('success', $message);
     }
 

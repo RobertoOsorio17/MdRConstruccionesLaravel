@@ -6,7 +6,10 @@ use App\Models\Post;
 use App\Models\MLUserProfile;
 use App\Models\MLInteractionLog;
 use App\Services\ContentAnalysisService;
+use App\Services\ContentAnalysisServiceV2;
 use App\Services\MLRecommendationService;
+use App\Services\MLUserProfileService;
+use App\Services\MLMetricsService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
@@ -19,14 +22,23 @@ use Illuminate\Support\Facades\Log;
 class MLController extends Controller
 {
     private ContentAnalysisService $contentAnalysis;
+    private ContentAnalysisServiceV2 $contentAnalysisV2;
     private MLRecommendationService $mlRecommendation;
+    private MLUserProfileService $userProfileService;
+    private MLMetricsService $metricsService;
 
     public function __construct(
         ContentAnalysisService $contentAnalysis,
-        MLRecommendationService $mlRecommendation
+        ContentAnalysisServiceV2 $contentAnalysisV2,
+        MLRecommendationService $mlRecommendation,
+        MLUserProfileService $userProfileService,
+        MLMetricsService $metricsService
     ) {
         $this->contentAnalysis = $contentAnalysis;
+        $this->contentAnalysisV2 = $contentAnalysisV2;
         $this->mlRecommendation = $mlRecommendation;
+        $this->userProfileService = $userProfileService;
+        $this->metricsService = $metricsService;
     }
 
     /**
@@ -94,7 +106,7 @@ class MLController extends Controller
                 'completed_reading' => 'nullable|boolean',
                 'recommendation_source' => 'nullable|string',
                 'recommendation_position' => 'nullable|integer|min:1',
-                'metadata' => 'nullable|array'
+                'metadata' => ['nullable', 'array', new \App\Rules\MaxJsonDepth(5)]
             ]);
 
             $sessionId = $validated['session_id'] ?? $request->session()->getId();
@@ -203,15 +215,22 @@ class MLController extends Controller
                 ], 403);
             }
 
-            // Analyze all posts.
-            $this->contentAnalysis->analyzeAllPosts();
-            
-            // Train user clustering (simplified).
-            $this->trainUserClustering();
-            
+            // Analyze all posts using V2 service
+            $postsAnalyzed = $this->contentAnalysisV2->analyzeAllPosts();
+
+            // Update all user profiles
+            $profilesUpdated = $this->userProfileService->updateAllProfiles();
+
+            // Clear caches
+            $this->contentAnalysisV2->clearCaches();
+
             return response()->json([
                 'success' => true,
                 'message' => 'Models trained successfully.',
+                'stats' => [
+                    'posts_analyzed' => $postsAnalyzed,
+                    'profiles_updated' => $profilesUpdated
+                ],
                 'trained_at' => now()->toISOString()
             ]);
 
@@ -550,6 +569,145 @@ class MLController extends Controller
             'avg_engagement_score' => round($avgEngagement, 3),
             'active_profiles' => MLUserProfile::where('last_activity', '>=', $from)->count()
         ];
+    }
+
+    /**
+     * Get comprehensive ML metrics report.
+     */
+    public function getMetricsReport(Request $request): JsonResponse
+    {
+        try {
+            $validated = $request->validate([
+                'k' => 'nullable|integer|min:1|max:50',
+                'days' => 'nullable|integer|min:1|max:90'
+            ]);
+
+            $k = $validated['k'] ?? 10;
+            $days = $validated['days'] ?? 7;
+
+            $report = $this->metricsService->getMetricsReport($k, $days);
+            $performanceBySource = $this->metricsService->getPerformanceBySource($days);
+
+            return response()->json([
+                'success' => true,
+                'report' => $report,
+                'performance_by_source' => $performanceBySource
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Error generating metrics report', [
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'error' => 'Could not generate metrics report.'
+            ], 500);
+        }
+    }
+
+    /**
+     * Run A/B test comparison between algorithm variants.
+     */
+    public function runABTest(Request $request): JsonResponse
+    {
+        try {
+            $validated = $request->validate([
+                'variant_a' => 'required|string',
+                'variant_b' => 'required|string',
+                'days' => 'nullable|integer|min:1|max:90'
+            ]);
+
+            $days = $validated['days'] ?? 7;
+
+            $results = $this->metricsService->getABTestResults(
+                $validated['variant_a'],
+                $validated['variant_b'],
+                $days
+            );
+
+            return response()->json([
+                'success' => true,
+                'results' => $results
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Error running A/B test', [
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'error' => 'Could not run A/B test.'
+            ], 500);
+        }
+    }
+
+    /**
+     * Update user profile manually.
+     */
+    public function updateProfile(Request $request): JsonResponse
+    {
+        try {
+            $sessionId = $request->session()->getId();
+            $userId = Auth::id();
+
+            $profile = $this->userProfileService->updateUserProfile($sessionId, $userId);
+
+            return response()->json([
+                'success' => true,
+                'profile' => [
+                    'user_cluster' => $profile->user_cluster,
+                    'cluster_confidence' => $profile->cluster_confidence,
+                    'engagement_rate' => $profile->engagement_rate,
+                    'total_posts_read' => $profile->total_posts_read,
+                    'last_updated' => $profile->profile_updated_at
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Error updating user profile', [
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'error' => 'Could not update profile.'
+            ], 500);
+        }
+    }
+
+    /**
+     * Clear ML caches.
+     */
+    public function clearCaches(Request $request): JsonResponse
+    {
+        try {
+            $user = Auth::user();
+            if (!$user || !$user->is_admin) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Unauthorized.'
+                ], 403);
+            }
+
+            $this->contentAnalysisV2->clearCaches();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'ML caches cleared successfully.'
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Error clearing ML caches', [
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'error' => 'Could not clear caches.'
+            ], 500);
+        }
     }
 }
 

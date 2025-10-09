@@ -85,7 +85,9 @@ class HandleInertiaRequests extends Middleware
                 'email' => $auth->email,
                 'avatar' => $auth->avatar,
                 'avatar_url' => $auth->avatar_url ?? null,
-                'role' => $auth->role,
+                // ✅ FIXED: getRoleNames() returns Collection, convert to array
+                'roles' => $auth->roles->pluck('name')->toArray(),
+                'role' => $auth->roles->first()?->name, // ✅ Primary role for backward compatibility
                 'bio' => $auth->bio,
                 'profession' => $auth->profession,
                 'profile_visibility' => $auth->profile_visibility,

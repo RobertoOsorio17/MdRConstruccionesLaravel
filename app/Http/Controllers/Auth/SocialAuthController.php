@@ -66,8 +66,8 @@ class SocialAuthController extends Controller
         // Log the user in
         Auth::login($user, true);
 
-        // Redirect based on role
-        if ($user->role === 'admin') {
+        // Redirect based on role (use hasRole method from Spatie)
+        if ($user->hasRole('admin')) {
             session()->flash('success', '¡Bienvenido de vuelta, ' . $user->name . '!');
             return redirect()->route('admin.dashboard');
         }
@@ -112,7 +112,7 @@ class SocialAuthController extends Controller
         }
 
         // Create new user
-        return User::create([
+        $user = User::create([
             'name' => $socialUser->getName() ?? $socialUser->getNickname() ?? 'Usuario',
             'email' => $socialUser->getEmail(),
             'email_verified_at' => now(), // OAuth users are pre-verified
@@ -121,9 +121,13 @@ class SocialAuthController extends Controller
             'provider_token' => $socialUser->token,
             'provider_refresh_token' => $socialUser->refreshToken ?? null,
             'password' => null, // OAuth users don't need password
-            'role' => 'user', // Default role
             'avatar' => $socialUser->getAvatar() ?? null,
         ]);
+
+        // Assign default role using Spatie method (role column doesn't exist)
+        $user->assignRole('user');
+
+        return $user;
     }
 
     /**

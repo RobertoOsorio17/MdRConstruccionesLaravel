@@ -7,8 +7,10 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
+use App\Models\MLPostVector;
 
 /**
  * Encapsulates blog posts with editorial metadata, relationships, and rich helper methods for engagement features.
@@ -171,24 +173,32 @@ class Post extends Model
     {
         return $this->bookmarks()->count();
     }
-    
+
+    /**
+     * Get the ML vector for this post.
+     */
+    public function mlVector(): HasOne
+    {
+        return $this->hasOne(MLPostVector::class);
+    }
+
     /**
      * Verificar si un usuario ha dado like al post
      */
-    public function isLikedBy($user)
+    public function isLikedBy(?User $user): bool
     {
         if (!$user) return false;
-        
+
         return $this->likes()->where('user_id', $user->id)->exists();
     }
-    
+
     /**
      * Verificar si un usuario ha guardado el post
      */
-    public function isBookmarkedBy($user)
+    public function isBookmarkedBy(?User $user): bool
     {
         if (!$user) return false;
-        
+
         return $this->bookmarks()->where('user_id', $user->id)->exists();
     }
 
@@ -212,7 +222,7 @@ class Post extends Model
     /**
      * Get the route key for the model.
      */
-    public function getRouteKeyName()
+    public function getRouteKeyName(): string
     {
         return 'slug';
     }
@@ -220,7 +230,7 @@ class Post extends Model
     /**
      * Get the SEO title or fall back to title.
      */
-    public function getSeoTitleAttribute($value)
+    public function getSeoTitleAttribute($value): string
     {
         return $value ?: $this->title;
     }
@@ -228,7 +238,7 @@ class Post extends Model
     /**
      * Get the SEO description or fall back to excerpt.
      */
-    public function getSeoDescriptionAttribute($value)
+    public function getSeoDescriptionAttribute($value): string
     {
         return $value ?: Str::limit(strip_tags($this->excerpt), 160);
     }
@@ -236,9 +246,40 @@ class Post extends Model
     /**
      * Increment the views count.
      */
-    public function incrementViews()
+    public function incrementViews(): void
     {
         $this->increment('views_count');
+    }
+
+    /**
+     * Capture the current state of the post as a revision.
+     * Creates a snapshot of all important post data for audit and rollback purposes.
+     *
+     * @param string|null $summary Optional description of why this revision was created
+     * @return PostRevision The created revision instance
+     */
+    public function captureRevision(?string $summary = null): PostRevision
+    {
+        return PostRevision::create([
+            'post_id' => $this->id,
+            'user_id' => auth()->id(),
+            'summary' => $summary ?? 'Revisión automática',
+            'data' => [
+                'title' => $this->title,
+                'slug' => $this->slug,
+                'excerpt' => $this->excerpt,
+                'content' => $this->content,
+                'cover_image' => $this->cover_image,
+                'status' => $this->status,
+                'featured' => $this->featured,
+                'published_at' => $this->published_at?->toDateTimeString(),
+                'seo_title' => $this->seo_title,
+                'seo_description' => $this->seo_description,
+                'user_id' => $this->user_id,
+                'categories' => $this->categories->pluck('id')->toArray(),
+                'tags' => $this->tags->pluck('id')->toArray(),
+            ],
+        ]);
     }
 
     /**
@@ -254,25 +295,31 @@ class Post extends Model
     /**
      * Obtener posts relacionados/sugeridos basados en categorÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­as y etiquetas
      */
-    public function getRelatedPosts($limit = 3)
+    public function getRelatedPosts(int $limit = 3)
     {
         $categoryIds = $this->categories->pluck('id');
         $tagIds = $this->tags->pluck('id');
-        
-        return static::published()
-            ->where('id', '!=', $this->id)
-            ->where(function ($query) use ($categoryIds, $tagIds) {
+
+        $query = static::published()
+            ->where('id', '!=', $this->id);
+
+        // Only add relationship filters if we have categories or tags
+        if ($categoryIds->isNotEmpty() || $tagIds->isNotEmpty()) {
+            $query->where(function ($q) use ($categoryIds, $tagIds) {
                 if ($categoryIds->isNotEmpty()) {
-                    $query->whereHas('categories', function ($q) use ($categoryIds) {
-                        $q->whereIn('categories.id', $categoryIds);
+                    $q->whereHas('categories', function ($categoryQuery) use ($categoryIds) {
+                        $categoryQuery->whereIn('categories.id', $categoryIds);
                     });
                 }
                 if ($tagIds->isNotEmpty()) {
-                    $query->orWhereHas('tags', function ($q) use ($tagIds) {
-                        $q->whereIn('tags.id', $tagIds);
+                    $q->orWhereHas('tags', function ($tagQuery) use ($tagIds) {
+                        $tagQuery->whereIn('tags.id', $tagIds);
                     });
                 }
-            })
+            });
+        }
+
+        return $query
             ->withCount(['likes', 'bookmarks', 'comments'])
             ->with(['author:id,name,avatar', 'categories:id,name,slug', 'tags:id,name,slug,color'])
             ->orderByDesc('published_at')

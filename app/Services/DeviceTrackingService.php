@@ -16,6 +16,13 @@ class DeviceTrackingService
 {
     /**
      * Track or update device information for a user.
+     *
+     * Creates or updates a device record for the given user based on the current request.
+     * Uses a deterministic device ID to identify the same device across sessions.
+     *
+     * @param User $user The user whose device is being tracked
+     * @param Request $request The current HTTP request containing device information
+     * @return UserDevice The created or updated device record
      */
     public function trackDevice(User $user, Request $request): UserDevice
     {
@@ -37,6 +44,12 @@ class DeviceTrackingService
 
     /**
      * Generate a unique device identifier.
+     *
+     * Creates a deterministic SHA-256 hash based on browser, platform, and IP address.
+     * The same device will always generate the same ID, allowing device recognition.
+     *
+     * @param Request $request The current HTTP request
+     * @return string A SHA-256 hash representing the device
      */
     protected function generateDeviceId(Request $request): string
     {
@@ -56,6 +69,12 @@ class DeviceTrackingService
 
     /**
      * Extract device information from request.
+     *
+     * Parses the user agent and request data to extract detailed device information
+     * including browser, platform, IP address, and geolocation data.
+     *
+     * @param Request $request The current HTTP request
+     * @return array Associative array with device details (device_type, browser, platform, etc.)
      */
     protected function extractDeviceInfo(Request $request): array
     {
@@ -76,6 +95,11 @@ class DeviceTrackingService
 
     /**
      * Determine device type.
+     *
+     * Classifies the device as mobile, tablet, desktop, or unknown based on user agent.
+     *
+     * @param Agent $agent The Jenssegers Agent instance
+     * @return string One of: 'mobile', 'tablet', 'desktop', 'unknown'
      */
     protected function getDeviceType(Agent $agent): string
     {
@@ -96,7 +120,8 @@ class DeviceTrackingService
 
     /**
      * Get country from IP address.
-     * In production, use a service like MaxMind GeoIP2 or ip-api.com
+     * Uses ip-api.com free service with caching (45 requests/minute limit)
+     * For production with high traffic, consider MaxMind GeoIP2 or similar paid service
      */
     protected function getCountryFromIp(string $ip): ?string
     {
@@ -105,14 +130,15 @@ class DeviceTrackingService
             return 'Local';
         }
 
-        // TODO: Implement actual geolocation service
-        // Example: Use MaxMind GeoIP2 or ip-api.com
-        return null;
+        // ✅ IMPLEMENTED: Basic geolocation using ip-api.com with caching
+        $geoData = $this->getGeoDataFromIp($ip);
+        return $geoData['country'] ?? null;
     }
 
     /**
      * Get city from IP address.
-     * In production, use a service like MaxMind GeoIP2 or ip-api.com
+     * Uses ip-api.com free service with caching (45 requests/minute limit)
+     * For production with high traffic, consider MaxMind GeoIP2 or similar paid service
      */
     protected function getCityFromIp(string $ip): ?string
     {
@@ -121,8 +147,47 @@ class DeviceTrackingService
             return 'Local';
         }
 
-        // TODO: Implement actual geolocation service
-        return null;
+        // ✅ IMPLEMENTED: Basic geolocation using ip-api.com with caching
+        $geoData = $this->getGeoDataFromIp($ip);
+        return $geoData['city'] ?? null;
+    }
+
+    /**
+     * Get geolocation data from IP using ip-api.com with caching
+     * Cache for 24 hours to avoid hitting rate limits
+     *
+     * @param string $ip
+     * @return array
+     */
+    protected function getGeoDataFromIp(string $ip): array
+    {
+        $cacheKey = 'geo_ip_' . $ip;
+
+        // Try to get from cache first
+        return \Cache::remember($cacheKey, 86400, function () use ($ip) {
+            try {
+                // Use ip-api.com free service (45 requests/minute limit)
+                $response = \Http::timeout(3)->get("http://ip-api.com/json/{$ip}", [
+                    'fields' => 'status,country,city,lat,lon'
+                ]);
+
+                if ($response->successful() && $response->json('status') === 'success') {
+                    return [
+                        'country' => $response->json('country'),
+                        'city' => $response->json('city'),
+                        'latitude' => $response->json('lat'),
+                        'longitude' => $response->json('lon'),
+                    ];
+                }
+            } catch (\Exception $e) {
+                \Log::warning('Geolocation lookup failed', [
+                    'ip' => $ip,
+                    'error' => $e->getMessage()
+                ]);
+            }
+
+            return [];
+        });
     }
 
     /**

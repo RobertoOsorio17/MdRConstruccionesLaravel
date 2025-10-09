@@ -48,7 +48,9 @@ class UserManagementController extends Controller
         // Filter by a primary role slug or ensure any custom role assignments.
         if ($request->filled('role')) {
             if ($request->role === 'simple_role') {
-                $query->where('role', '!=', null);
+                // ✅ FIXED: Use whereNotNull instead of != null (SQL always false)
+                // Note: 'role' column doesn't exist - this should filter users WITH roles
+                $query->whereHas('roles');
             } else {
                 $query->whereHas('roles', function ($q) use ($request) {
                     $q->where('name', $request->role);
@@ -91,9 +93,15 @@ class UserManagementController extends Controller
         $sortField = $request->get('sort', 'created_at');
         $sortDirection = $request->get('direction', 'desc');
 
+        // ✅ SECURITY: Whitelist both field and direction to prevent SQL injection
         $allowedSorts = ['name', 'email', 'role', 'created_at', 'last_login_at'];
-        if (in_array($sortField, $allowedSorts)) {
+        $allowedDirections = ['asc', 'desc'];
+
+        if (in_array($sortField, $allowedSorts) && in_array(strtolower($sortDirection), $allowedDirections)) {
             $query->orderBy($sortField, $sortDirection);
+        } else {
+            // Default safe sorting
+            $query->orderBy('created_at', 'desc');
         }
 
         // Resolve the pagination size, enforcing the supported page sizes.
@@ -189,7 +197,8 @@ class UserManagementController extends Controller
 
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255|regex:/^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]+$/',
-            'email' => 'required|string|email|max:255|unique:users|regex:/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/',
+            // ✅ FIXED: Use email:rfc,dns instead of regex for better international email support
+            'email' => 'required|string|email:rfc,dns|max:255|unique:users',
             'password' => 'required|string|min:8|confirmed|regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]+$/',
             'role' => 'nullable|string|in:admin,editor,user',
             'roles' => 'nullable|array|max:3',
@@ -200,7 +209,8 @@ class UserManagementController extends Controller
             'send_welcome_email' => 'boolean',
         ], [
             'name.regex' => 'El nombre solo puede contener letras y espacios.',
-            'email.regex' => 'El formato del email no es válido.',
+            'email.email' => 'El formato del email no es válido.',
+            'email.dns' => 'El dominio del email no existe.',
             'password.regex' => 'La contraseña debe contener al menos: 1 mayúscula, 1 minúscula, 1 número y 1 carácter especial.',
             'roles.max' => 'Un usuario no puede tener más de 3 roles.',
         ]);
@@ -517,6 +527,8 @@ class UserManagementController extends Controller
 
             case 'assign_role':
                 $this->guardAdminRoleAssignment([], $request->role_id);
+                // ✅ FIXED: Load role before accessing display_name
+                $role = \Spatie\Permission\Models\Role::findOrFail($request->role_id);
                 $users = User::whereIn('id', $userIds)->get();
                 foreach ($users as $user) {
                     $user->roles()->sync([$request->role_id]);

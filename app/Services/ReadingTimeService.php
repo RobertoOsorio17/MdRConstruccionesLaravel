@@ -160,8 +160,9 @@ class ReadingTimeService
      */
     private function countLists(string $content): int
     {
-        // Count ordered and unordered lists
-        preg_match_all('/<[ou]l>/i', $content, $matches);
+        // ✅ FIXED: Count ordered and unordered lists with or without attributes
+        // Matches <ul>, <ul class="...">, <ol>, <ol class="...">, etc.
+        preg_match_all('/<[ou]l(\s+[^>]*)?>/i', $content, $matches);
         return count($matches[0]);
     }
     

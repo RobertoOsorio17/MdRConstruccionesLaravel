@@ -32,13 +32,17 @@ class PostController extends Controller
         ]);
 
         try {
+            $user = Auth::user();
+
             $query = Post::published()
                 ->select(['id', 'title', 'slug', 'excerpt', 'cover_image', 'published_at', 'views_count', 'featured', 'user_id', 'reading_time'])
                 ->with([
-                    'author:id,name,avatar', 
-                    'categories:id,name,slug,color', 
+                    'author:id,name,avatar',
+                    'categories:id,name,slug,color',
                     'tags:id,name,slug,color'
-                ]);
+                ])
+                // ✅ FIXED N+1: Eager load counts to avoid queries in transform loop
+                ->withCount(['likes', 'bookmarks', 'approvedComments']);
 
             Log::debug('Initial query setup', [
                 'base_query_count' => Post::published()->count(),
@@ -136,9 +140,28 @@ class PostController extends Controller
             'has_filters' => $request->hasAny(['search', 'category', 'tag', 'tags', 'featured'])
         ]);
 
-        // Transform posts data (optimized - no content loading)
-        $posts->getCollection()->transform(function ($post) {
-            $user = Auth::user();
+        // ✅ FIXED N+1: Load user interactions in bulk before transform
+        $userInteractions = [];
+        if ($user) {
+            $postIds = $posts->pluck('id');
+            $userInteractions = [
+                'likes' => \App\Models\UserInteraction::where('user_id', $user->id)
+                    ->where('interactable_type', 'App\\Models\\Post')
+                    ->whereIn('interactable_id', $postIds)
+                    ->where('type', 'like')
+                    ->pluck('interactable_id')
+                    ->toArray(),
+                'bookmarks' => \App\Models\UserInteraction::where('user_id', $user->id)
+                    ->where('interactable_type', 'App\\Models\\Post')
+                    ->whereIn('interactable_id', $postIds)
+                    ->where('type', 'bookmark')
+                    ->pluck('interactable_id')
+                    ->toArray(),
+            ];
+        }
+
+        // Transform posts data (optimized - no content loading, no N+1 queries)
+        $posts->getCollection()->transform(function ($post) use ($user, $userInteractions) {
             return [
                 'id' => $post->id,
                 'title' => $post->title,
@@ -152,46 +175,70 @@ class PostController extends Controller
                 'categories' => $post->categories,
                 'tags' => $post->tags,
                 'reading_time' => $post->reading_time ?? 5, // Default fallback
-                // User interaction status
-                'is_liked' => $user ? $post->isLikedBy($user) : false,
-                'is_bookmarked' => $user ? $post->isBookmarkedBy($user) : false,
-                'likes_count' => $post->likes()->count(),
-                'bookmarks_count' => $post->bookmarks()->count(),
-                'comments_count' => 0, // Will be loaded on demand
+                // ✅ FIXED N+1: Use pre-loaded interaction data
+                'is_liked' => $user ? in_array($post->id, $userInteractions['likes']) : false,
+                'is_bookmarked' => $user ? in_array($post->id, $userInteractions['bookmarks']) : false,
+                // ✅ FIXED N+1: Use eager-loaded counts
+                'likes_count' => $post->likes_count ?? 0,
+                'bookmarks_count' => $post->bookmarks_count ?? 0,
+                'comments_count' => $post->approved_comments_count ?? 0,
             ];
         });
 
         // Get featured posts (optimized)
         $featuredPosts = [];
         if (!$request->hasAny(['search', 'category', 'tag', 'tags', 'featured', 'sortBy'])) {
-            $featuredPosts = Post::published()
+            $featuredPostsCollection = Post::published()
                 ->select(['id', 'title', 'slug', 'excerpt', 'cover_image', 'published_at', 'views_count', 'user_id'])
                 ->where('featured', true)
                 ->with(['author:id,name,avatar,is_verified', 'categories:id,name,slug,color', 'tags:id,name,slug,color'])
+                // ✅ FIXED N+1: Eager load counts
+                ->withCount(['likes', 'bookmarks'])
                 ->orderBy('published_at', 'desc')
                 ->limit(4) // Increased for trending section
-                ->get()
-                ->map(function ($post) {
-                    $user = Auth::user();
-                    return [
-                        'id' => $post->id,
-                        'title' => $post->title,
-                        'slug' => $post->slug,
-                        'excerpt' => $post->excerpt,
-                        'cover_image' => $post->cover_image,
-                        'published_at' => $post->published_at,
-                        'views_count' => $post->views_count,
-                        'author' => $post->author,
-                        'categories' => $post->categories,
-                        'tags' => $post->tags,
-                        'reading_time' => 5, // Default for featured posts
-                        // User interaction status
-                        'is_liked' => $user ? $post->isLikedBy($user) : false,
-                        'is_bookmarked' => $user ? $post->isBookmarkedBy($user) : false,
-                        'likes_count' => $post->likes()->count(),
-                        'bookmarks_count' => $post->bookmarks()->count(),
-                    ];
-                });
+                ->get();
+
+            // ✅ FIXED N+1: Load user interactions in bulk for featured posts
+            $featuredUserInteractions = [];
+            if ($user && $featuredPostsCollection->isNotEmpty()) {
+                $featuredPostIds = $featuredPostsCollection->pluck('id');
+                $featuredUserInteractions = [
+                    'likes' => \App\Models\UserInteraction::where('user_id', $user->id)
+                        ->where('interactable_type', 'App\\Models\\Post')
+                        ->whereIn('interactable_id', $featuredPostIds)
+                        ->where('type', 'like')
+                        ->pluck('interactable_id')
+                        ->toArray(),
+                    'bookmarks' => \App\Models\UserInteraction::where('user_id', $user->id)
+                        ->where('interactable_type', 'App\\Models\\Post')
+                        ->whereIn('interactable_id', $featuredPostIds)
+                        ->where('type', 'bookmark')
+                        ->pluck('interactable_id')
+                        ->toArray(),
+                ];
+            }
+
+            $featuredPosts = $featuredPostsCollection->map(function ($post) use ($user, $featuredUserInteractions) {
+                return [
+                    'id' => $post->id,
+                    'title' => $post->title,
+                    'slug' => $post->slug,
+                    'excerpt' => $post->excerpt,
+                    'cover_image' => $post->cover_image,
+                    'published_at' => $post->published_at,
+                    'views_count' => $post->views_count,
+                    'author' => $post->author,
+                    'categories' => $post->categories,
+                    'tags' => $post->tags,
+                    'reading_time' => 5, // Default for featured posts
+                    // ✅ FIXED N+1: Use pre-loaded interaction data
+                    'is_liked' => $user ? in_array($post->id, $featuredUserInteractions['likes']) : false,
+                    'is_bookmarked' => $user ? in_array($post->id, $featuredUserInteractions['bookmarks']) : false,
+                    // ✅ FIXED N+1: Use eager-loaded counts
+                    'likes_count' => $post->likes_count ?? 0,
+                    'bookmarks_count' => $post->bookmarks_count ?? 0,
+                ];
+            });
         }
 
         // Get all active categories with post counts
@@ -537,7 +584,9 @@ class PostController extends Controller
             ->with(['author:id,name,avatar,is_verified', 'categories:id,name,slug', 'tags:id,name,slug,color'])
             ->withCount(['likes', 'bookmarks', 'approvedComments']);
 
-        $unreadPosts = $query->get();
+        // ✅ FIXED: Limit query to prevent loading thousands of posts
+        // We fetch 2x the limit to have enough posts for scoring and filtering
+        $unreadPosts = $query->limit($limit * 2)->get();
 
         // If there are not enough unread posts, include a few read ones with a penalty
         $posts = $unreadPosts;

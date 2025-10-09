@@ -100,7 +100,7 @@ class AdminController extends Controller
                     'title' => $post->title,
                     'user' => $post->author->name ?? 'System',
                     'created_at' => $post->created_at,
-                    'url' => route('admin.posts.edit', $post->id),
+                    'url' => route('admin.posts.edit', $post->slug), // ✅ Use slug for route resolution
                     'icon' => 'article',
                     'color' => 'primary',
                 ]);

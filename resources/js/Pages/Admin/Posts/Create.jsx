@@ -145,8 +145,11 @@ const PostForm = ({ post, categories, tags, authors, revisions = [], isEdit = fa
                 : (data.published_at ? data.published_at.format('YYYY-MM-DD HH:mm:ss') : null),
         };
 
+        console.log('📤 Submitting post with status:', formData.status, 'overrideStatus:', overrideStatus);
+
         if (isEdit) {
-            updatePost(route('admin.posts.update', post.slug), formData, {
+            // ✅ FIXED: Use router.put with formData directly
+            router.put(route('admin.posts.update', post.slug), formData, {
                 onSuccess: () => {
                     router.visit(route('admin.posts.index'), {
                         onSuccess: () => {
@@ -156,8 +159,8 @@ const PostForm = ({ post, categories, tags, authors, revisions = [], isEdit = fa
                 }
             });
         } else {
-            // For Inertia's post method, pass data directly as second parameter
-            submitPost(route('admin.posts.store'), formData, {
+            // For Inertia's post method
+            router.post(route('admin.posts.store'), formData, {
                 onSuccess: () => {
                     router.visit(route('admin.posts.index'), {
                         onSuccess: () => {

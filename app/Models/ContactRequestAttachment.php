@@ -55,17 +55,25 @@ class ContactRequestAttachment extends Model
         // Read file contents
         $fileContents = file_get_contents($file->getRealPath());
 
-        // Generate encryption key
-        $encryptionKey = Str::random(32);
+        // Generate encryption key (32 bytes for AES-256)
+        $encryptionKey = random_bytes(32);
 
-        // Encrypt file contents using AES-256
+        // ✅ SECURITY: Generate random IV for AES-256-CBC (16 bytes)
+        // CRITICAL: Never use deterministic IV - it breaks semantic security
+        $iv = random_bytes(16);
+
+        // Encrypt file contents using AES-256-CBC with random IV
         $encryptedContents = openssl_encrypt(
             $fileContents,
             'AES-256-CBC',
             $encryptionKey,
-            0,
-            substr(hash('sha256', $encryptionKey), 0, 16)
+            OPENSSL_RAW_DATA,
+            $iv
         );
+
+        // Prepend IV to encrypted data (standard practice for CBC mode)
+        // Format: [IV (16 bytes)][Encrypted Data]
+        $encryptedDataWithIV = $iv . $encryptedContents;
 
         // Calculate file hash for integrity
         $fileHash = hash('sha256', $fileContents);
@@ -80,7 +88,7 @@ class ContactRequestAttachment extends Model
 
         file_put_contents(
             $storagePath . '/' . $encryptedFilename,
-            $encryptedContents
+            $encryptedDataWithIV
         );
 
         // Create database record
@@ -90,7 +98,8 @@ class ContactRequestAttachment extends Model
             'encrypted_filename' => $encryptedFilename,
             'mime_type' => $file->getMimeType(),
             'file_size' => $file->getSize(),
-            'encryption_key' => Crypt::encryptString($encryptionKey), // Encrypt the key with app key
+            // Encrypt the binary key with app key (base64 encode first for safe storage)
+            'encryption_key' => Crypt::encryptString(base64_encode($encryptionKey)),
             'file_hash' => $fileHash,
         ]);
     }
@@ -114,22 +123,27 @@ class ContactRequestAttachment extends Model
                 return false;
             }
 
-            $encryptedContents = file_get_contents($filePath);
+            $encryptedDataWithIV = file_get_contents($filePath);
 
-            if (!$encryptedContents) {
+            if (!$encryptedDataWithIV) {
                 return false;
             }
 
-            // Decrypt the encryption key
-            $encryptionKey = Crypt::decryptString($this->encryption_key);
+            // Decrypt the encryption key and decode from base64
+            $encryptionKey = base64_decode(Crypt::decryptString($this->encryption_key));
 
-            // Decrypt file contents
+            // ✅ SECURITY: Extract IV from the beginning of encrypted data
+            // Format: [IV (16 bytes)][Encrypted Data]
+            $iv = substr($encryptedDataWithIV, 0, 16);
+            $encryptedContents = substr($encryptedDataWithIV, 16);
+
+            // Decrypt file contents using extracted IV
             $decryptedContents = openssl_decrypt(
                 $encryptedContents,
                 'AES-256-CBC',
                 $encryptionKey,
-                0,
-                substr(hash('sha256', $encryptionKey), 0, 16)
+                OPENSSL_RAW_DATA,
+                $iv
             );
 
             // Verify integrity

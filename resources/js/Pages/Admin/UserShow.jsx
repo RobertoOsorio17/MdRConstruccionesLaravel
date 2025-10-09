@@ -19,6 +19,11 @@ import {
     Alert,
     Tabs,
     Tab,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogActions,
+    TextField,
 } from '@mui/material';
 import {
     ArrowBack as ArrowBackIcon,
@@ -44,6 +49,9 @@ import UserCommentsTab from '@/Components/Admin/UserCommentsTab';
 const UserShow = ({ user, recentActivity = [], commentStats = {} }) => {
     const [activeTab, setActiveTab] = useState(0);
     const [verificationLoading, setVerificationLoading] = useState(false);
+    const [verifyDialogOpen, setVerifyDialogOpen] = useState(false);
+    const [unverifyDialogOpen, setUnverifyDialogOpen] = useState(false);
+    const [verificationNotes, setVerificationNotes] = useState('');
     // Glassmorphism styles
     const glassmorphismCard = {
         background: 'rgba(255, 255, 255, 0.25)',
@@ -119,13 +127,32 @@ const UserShow = ({ user, recentActivity = [], commentStats = {} }) => {
     };
 
     const handleVerifyUser = () => {
-        const notes = prompt('Notas de verificación (opcional):');
-        if (notes === null) return; // User cancelled
+        setVerifyDialogOpen(true);
+    };
 
+    const confirmVerifyUser = () => {
         setVerificationLoading(true);
+        setVerifyDialogOpen(false);
+
         router.post(route('admin.users.verify', user.id), {
-            verification_notes: notes
+            verification_notes: verificationNotes
         }, {
+            onFinish: () => {
+                setVerificationLoading(false);
+                setVerificationNotes('');
+            }
+        });
+    };
+
+    const handleUnverifyUser = () => {
+        setUnverifyDialogOpen(true);
+    };
+
+    const confirmUnverifyUser = () => {
+        setVerificationLoading(true);
+        setUnverifyDialogOpen(false);
+
+        router.post(route('admin.users.unverify', user.id), {}, {
             onFinish: () => setVerificationLoading(false)
         });
     };

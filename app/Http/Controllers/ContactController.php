@@ -123,7 +123,8 @@ class ContactController extends Controller
             'service' => 'nullable|string|max:255|regex:/^[^<>]*$/',
             'message' => 'required|string|min:10|max:2000|regex:/^[^<>]*$/',
             'attachments' => 'nullable|array|max:5', // Máximo 5 archivos
-            'attachments.*' => 'nullable|file|mimes:pdf,jpg,jpeg,png,doc,docx,xls,xlsx|max:10240', // Max 10MB per file
+            // ✅ IMPROVED: Use mimetypes instead of mimes for real MIME type validation
+            'attachments.*' => 'nullable|file|mimetypes:application/pdf,image/jpeg,image/png,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet|max:10240', // Max 10MB per file
             'privacy_accepted' => 'required|accepted',
             'recaptcha_token' => $recaptchaValidation, // ✅ OBLIGATORIO SIEMPRE
         ], [
@@ -136,11 +137,26 @@ class ContactController extends Controller
             'message.required' => 'El mensaje es obligatorio.',
             'message.min' => 'El mensaje debe tener al menos 10 caracteres.',
             'attachments.max' => 'Máximo 5 archivos permitidos.',
-            'attachments.*.mimes' => 'Solo se permiten archivos PDF, imágenes, Word y Excel.',
+            'attachments.*.mimetypes' => 'Solo se permiten archivos PDF, imágenes JPG/PNG, Word y Excel.',
             'attachments.*.max' => 'Cada archivo no debe superar los 10MB.',
             'privacy_accepted.accepted' => 'Debes aceptar la política de privacidad.',
             'recaptcha_token.required' => 'Error de verificación de seguridad. Por favor, recarga la página.',
         ]);
+
+        // ✅ FIXED: Validate total size of all attachments (max 25MB total)
+        if ($request->hasFile('attachments')) {
+            $totalSize = 0;
+            foreach ($request->file('attachments') as $file) {
+                $totalSize += $file->getSize();
+            }
+
+            $maxTotalSize = 25 * 1024 * 1024; // 25MB in bytes
+            if ($totalSize > $maxTotalSize) {
+                return back()->withErrors([
+                    'attachments' => 'El tamaño total de todos los archivos no puede superar los 25MB.'
+                ])->withInput();
+            }
+        }
 
         // ✅ reCAPTCHA verification (MANDATORY ALWAYS - production and development)
         $recaptchaToken = $validated['recaptcha_token'];
@@ -321,8 +337,14 @@ class ContactController extends Controller
                 'user_agent' => $request->userAgent(),
             ]);
 
-            // TODO: Send email notification to admin
-            // TODO: Send confirmation email to user
+            // ✅ IMPLEMENTED: Send email notification to admin
+            $adminEmail = config('mail.admin_email', config('mail.from.address'));
+            $adminNotifiable = new \App\Models\AnonymousNotifiable($adminEmail, 'Admin');
+            $adminNotifiable->notify(new \App\Notifications\NewContactRequestNotification($contactRequest));
+
+            // ✅ IMPLEMENTED: Send confirmation email to user
+            $userNotifiable = new \App\Models\AnonymousNotifiable($contactRequest->email, $contactRequest->name);
+            $userNotifiable->notify(new \App\Notifications\ContactRequestConfirmation($contactRequest));
 
             session()->flash('success', '¡Gracias por tu mensaje! Te contactaremos en las próximas 24 horas.');
             return redirect()->back();
@@ -353,8 +375,11 @@ class ContactController extends Controller
     /**
      * Handle budget request form submission.
      */
-    public function budgetRequest(Request $request)
+    public function budgetRequest(Request $request, RecaptchaService $recaptcha)
     {
+        // ✅ FIXED: reCAPTCHA validation to prevent spam
+        $recaptchaValidation = 'required|string';
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|email|max:255',
@@ -366,6 +391,7 @@ class ContactController extends Controller
             'timeline' => 'nullable|string|max:100',
             'description' => 'required|string|max:2000',
             'privacy_accepted' => 'required|accepted',
+            'recaptcha_token' => $recaptchaValidation, // ✅ FIXED: reCAPTCHA required
         ], [
             'name.required' => 'The name field is required.',
             'email.required' => 'The email field is required.',
@@ -374,7 +400,29 @@ class ContactController extends Controller
             'property_type.required' => 'You must specify the property type.',
             'description.required' => 'The project description is required.',
             'privacy_accepted.accepted' => 'You must accept the privacy policy.',
+            'recaptcha_token.required' => 'Security verification error. Please reload the page.',
         ]);
+
+        // ✅ FIXED: Verify reCAPTCHA token
+        $recaptchaToken = $validated['recaptcha_token'];
+
+        if (!$recaptcha->isEnabled()) {
+            Log::error('reCAPTCHA is not enabled but budget request form was submitted', [
+                'environment' => app()->environment(),
+                'ip' => $request->ip(),
+            ]);
+            return back()->with('error', 'Security verification is not configured. Please contact support.');
+        }
+
+        $recaptchaResult = $recaptcha->verify($recaptchaToken, $request->ip());
+
+        if (!$recaptchaResult['success']) {
+            Log::warning('reCAPTCHA verification failed for budget request', [
+                'ip' => $request->ip(),
+                'errors' => $recaptchaResult['error-codes'] ?? [],
+            ]);
+            return back()->with('error', 'Security verification failed. Please try again.');
+        }
 
         try {
             // Store the budget request

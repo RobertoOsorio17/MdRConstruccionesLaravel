@@ -20,6 +20,7 @@ class SearchService
     private const CACHE_TTL = 300; // 5 minutes
     private const MIN_QUERY_LENGTH = 2;
     private const MAX_QUERY_LENGTH = 500;
+    private const MAX_PER_PAGE = 100; // ✅ FIXED: Maximum results per page
 
     /**
      * Perform comprehensive search across posts, categories, and tags
@@ -30,6 +31,8 @@ class SearchService
         int $perPage = 12,
         int $page = 1
     ): array {
+        // ✅ FIXED: Enforce maximum per page limit
+        $perPage = min($perPage, self::MAX_PER_PAGE);
         $startTime = microtime(true);
         
         // Validate and sanitize query
@@ -280,22 +283,38 @@ class SearchService
             
             // Ensure we don't cut words
             if ($start > 0) {
-                $snippet = '...' . substr($snippet, strpos($snippet, ' ') + 1);
+                $spacePos = strpos($snippet, ' ');
+                // ✅ FIXED: Check if strpos returned false (no space found)
+                if ($spacePos !== false) {
+                    $snippet = '...' . substr($snippet, $spacePos + 1);
+                }
             }
-            
+
             if (strlen($content) > $start + $snippetLength) {
-                $snippet = substr($snippet, 0, strrpos($snippet, ' ')) . '...';
+                $lastSpace = strrpos($snippet, ' ');
+                // ✅ FIXED: Check if strrpos returned false (no space found)
+                if ($lastSpace !== false) {
+                    $snippet = substr($snippet, 0, $lastSpace) . '...';
+                } else {
+                    $snippet .= '...';
+                }
             }
-            
+
             return $this->highlightText($snippet, $query);
         }
-        
+
         // If query not found, return beginning of content
         $snippet = substr($content, 0, $snippetLength);
         if (strlen($content) > $snippetLength) {
-            $snippet = substr($snippet, 0, strrpos($snippet, ' ')) . '...';
+            $lastSpace = strrpos($snippet, ' ');
+            // ✅ FIXED: Check if strrpos returned false (no space found)
+            if ($lastSpace !== false) {
+                $snippet = substr($snippet, 0, $lastSpace) . '...';
+            } else {
+                $snippet .= '...';
+            }
         }
-        
+
         return $snippet;
     }
 

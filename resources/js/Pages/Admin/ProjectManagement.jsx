@@ -120,8 +120,8 @@ const ProjectManagement = () => {
     const handleFilter = (key, value) => {
         const newFilters = { ...filters, [key]: value };
         if (!value) delete newFilters[key];
-        
-        router.get(route('admin.admin.projects.index'), newFilters, {
+
+        router.get(route('admin.projects.index'), newFilters, { // ✅ Fixed route name
             preserveState: true,
             preserveScroll: true,
         });
@@ -129,7 +129,7 @@ const ProjectManagement = () => {
 
     const handleSort = (field) => {
         const direction = sort.field === field && sort.direction === 'asc' ? 'desc' : 'asc';
-        router.get(route('admin.admin.projects.index'), { ...filters, sort: field, direction }, {
+        router.get(route('admin.projects.index'), { ...filters, sort: field, direction }, { // ✅ Fixed route name
             preserveState: true,
             preserveScroll: true,
         });
@@ -183,7 +183,7 @@ const ProjectManagement = () => {
 
     const confirmDelete = () => {
         if (projectToDelete) {
-            router.delete(route('admin.admin.projects.destroy', projectToDelete.id), {
+            router.delete(route('admin.projects.destroy', projectToDelete.id), { // ✅ Fixed route name
                 preserveScroll: true,
                 onSuccess: () => {
                     setDeleteDialog(false);
@@ -202,7 +202,7 @@ const ProjectManagement = () => {
 
     const executeBulkAction = () => {
         if (bulkAction && selectedProjects.length > 0) {
-            router.post(route('admin.admin.projects.bulk-action'), {
+            router.post(route('admin.projects.bulk-action'), { // ✅ Fixed route name
                 action: bulkAction,
                 project_ids: selectedProjects,
             }, {
@@ -218,12 +218,12 @@ const ProjectManagement = () => {
 
     // Export function
     const handleExport = () => {
-        window.location.href = route('admin.admin.projects.export', filters);
+        window.location.href = route('admin.projects.export', filters); // ✅ Fixed route name
     };
 
     // Pagination
     const handleChangePage = (event, newPage) => {
-        router.get(route('admin.admin.projects.index'), {
+        router.get(route('admin.projects.index'), { // ✅ Fixed route name
             ...filters,
             page: newPage + 1,
         }, {
@@ -233,7 +233,7 @@ const ProjectManagement = () => {
     };
 
     const handleChangeRowsPerPage = (event) => {
-        router.get(route('admin.admin.projects.index'), {
+        router.get(route('admin.projects.index'), { // ✅ Fixed route name
             ...filters,
             per_page: event.target.value,
             page: 1,

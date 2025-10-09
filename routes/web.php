@@ -68,9 +68,10 @@ Route::middleware(['auth'])->prefix('notifications')->name('notifications.')->gr
     Route::delete('/read/all', [App\Http\Controllers\NotificationController::class, 'deleteAllRead'])->name('delete-all-read');
 });
 
+// ✅ FIXED: Reduced rate limiting to prevent abuse (was 20/min, now 10/min)
 // Guest recommendations for personalized suggestions (throttled)
 Route::post('/api/guest-recommendations', [PostController::class, 'getGuestRecommendations'])
-    ->middleware('throttle:20,1')
+    ->middleware('throttle:10,1')
     ->name('guest.recommendations');
 
 // Debug routes (only available in development environment)
@@ -94,11 +95,15 @@ Route::prefix('api/ml')->name('ml.')->group(function () {
         Route::post('/interaction', [MLController::class, 'logInteraction'])->name('interaction');
         Route::get('/insights', [MLController::class, 'getUserInsights'])->name('insights');
         Route::get('/metrics', [MLController::class, 'getMetrics'])->name('metrics');
+        Route::post('/profile/update', [MLController::class, 'updateProfile'])->name('profile.update');
     });
 
     // Admin only routes
     Route::middleware(['auth', 'auth.enhanced', 'role:admin'])->group(function () {
         Route::post('/train', [MLController::class, 'trainModels'])->name('train');
+        Route::get('/metrics/report', [MLController::class, 'getMetricsReport'])->name('metrics.report');
+        Route::post('/ab-test', [MLController::class, 'runABTest'])->name('ab-test');
+        Route::post('/cache/clear', [MLController::class, 'clearCaches'])->name('cache.clear');
     });
 });
 

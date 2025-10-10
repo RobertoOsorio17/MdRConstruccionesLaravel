@@ -8,6 +8,7 @@ use App\Models\AdminSetting;
 use App\Models\AdminSettingHistory;
 use App\Events\SettingChanged;
 use App\Services\Admin\AdminSettingsService;
+use App\Helpers\MLSettingsHelper;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Validator;
@@ -62,6 +63,15 @@ class SettingController extends Controller
 
         $result = $this->settingsService->updateSettings($settings, $request->user());
 
+        // Clear ML settings cache if any ML setting was updated
+        $mlSettingsUpdated = collect($result['updated'] ?? [])->contains(function ($key) {
+            return str_starts_with($key, 'ml_');
+        });
+
+        if ($mlSettingsUpdated) {
+            MLSettingsHelper::clearCache();
+        }
+
         if (!empty($result['errors'])) {
             return back()
                 ->withErrors($result['errors'])
@@ -105,6 +115,11 @@ class SettingController extends Controller
                 'label' => 'APIs and Integrations',
                 'description' => 'API keys and external service configurations',
                 'icon' => 'api',
+            ],
+            'ml' => [
+                'label' => 'Machine Learning',
+                'description' => 'AI and recommendation system configuration',
+                'icon' => 'psychology',
             ],
             'social' => [
                 'label' => 'Social Media',

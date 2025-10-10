@@ -68,6 +68,9 @@ import LoginModal from '@/Components/Auth/LoginModal';
 import NotificationSnackbar from '@/Components/NotificationSnackbar';
 import { useAuth, AuthSwitch } from '@/Components/AuthGuard';
 import { usePostTracking } from '@/Hooks/usePostTracking';
+import InteractionTracker from '@/Components/ML/InteractionTracker';
+import RecommendationsWidget from '@/Components/ML/RecommendationsWidget';
+import MLInsights from '@/Components/ML/MLInsights';
 
 const BlogShow = ({ post, suggestedPosts, seo }) => {
     const theme = useTheme();
@@ -398,6 +401,9 @@ const BlogShow = ({ post, suggestedPosts, seo }) => {
                 <meta name="article:published_time" content={post.published_at} />
                 <meta name="article:author" content={post.author?.name} />
             </Head>
+
+            {/* ML Interaction Tracker - Invisible component */}
+            <InteractionTracker post={post} enabled={true} />
 
             {/* Hero Section con tipografía optimizada */}
             <Box
@@ -844,6 +850,13 @@ const BlogShow = ({ post, suggestedPosts, seo }) => {
                                 comments={post.comments || []}
                             />
                         </Box>
+
+                        {/* ML Insights Widget */}
+                        <AnimatedSection>
+                            <Box sx={{ mt: 6 }}>
+                                <MLInsights variant="full" />
+                            </Box>
+                        </AnimatedSection>
                     </Grid>
 
                     {/* Sidebar responsive */}
@@ -961,8 +974,24 @@ const BlogShow = ({ post, suggestedPosts, seo }) => {
                                 </motion.div>
                             )}
 
-                            {/* Posts sugeridos inteligentes */}
-                            {(personalizedSuggestions.length > 0 || suggestedPosts.length > 0) && (
+                            {/* ML Recommendations Widget in Sidebar */}
+                            <motion.div
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: 0.3 }}
+                            >
+                                <RecommendationsWidget
+                                    currentPostId={post.id}
+                                    limit={5}
+                                    showAlgorithmSelector={false}
+                                    showExplanations={false}
+                                    title="🤖 Recomendado para ti"
+                                    compact={true}
+                                />
+                            </motion.div>
+
+                            {/* Posts sugeridos inteligentes - Fallback */}
+                            {false && (personalizedSuggestions.length > 0 || suggestedPosts.length > 0) && (
                                 <motion.div
                                     initial={{ opacity: 0, y: 20 }}
                                     animate={{ opacity: 1, y: 0 }}

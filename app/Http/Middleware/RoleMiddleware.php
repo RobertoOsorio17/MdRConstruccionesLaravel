@@ -56,12 +56,12 @@ class RoleMiddleware
 
             if ($request->expectsJson()) {
                 return response()->json([
-                    'message' => 'No tienes permisos para acceder a esta secciÃƒÆ’Ã‚Â³n',
+                    'message' => 'No tienes permisos para acceder a esta sección',
                     'required_roles' => $roles
                 ], 403);
             }
 
-            abort(403, 'No tienes permisos para acceder a esta secciÃƒÆ’Ã‚Â³n.');
+            abort(403, 'No tienes permisos para acceder a esta sección.');
         }
 
         // Log successful access for audit trail

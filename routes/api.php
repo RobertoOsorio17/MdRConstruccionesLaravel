@@ -86,3 +86,108 @@ Route::middleware(['throttle:search'])->group(function () {
     // Apply rate limiting to search endpoints if needed
     // This can be configured in app/Http/Kernel.php
 });
+
+/*
+|--------------------------------------------------------------------------
+| Machine Learning API Routes
+|--------------------------------------------------------------------------
+*/
+
+use App\Http\Controllers\MLController;
+
+Route::prefix('ml')->name('api.ml.')->group(function () {
+
+    // Public ML endpoints with rate limiting
+    Route::middleware(['throttle:60,1'])->group(function () {
+
+        // Get personalized recommendations
+        Route::post('/recommendations', [MLController::class, 'getRecommendations'])
+            ->name('recommendations');
+
+        // Log user interaction
+        Route::post('/interactions', [MLController::class, 'logInteraction'])
+            ->middleware(['throttle:120,1']) // Higher limit for interactions
+            ->name('log-interaction');
+
+        // Get user ML insights (works for both authenticated and guest users)
+        Route::get('/insights', [MLController::class, 'getUserInsights'])
+            ->name('insights');
+    });
+
+    // Authenticated user endpoints
+    Route::middleware(['auth:sanctum'])->group(function () {
+
+        // Update user profile manually
+        Route::post('/profile/update', [MLController::class, 'updateProfile'])
+            ->name('profile.update');
+
+        // Get user's recommendation history
+        Route::get('/recommendations/history', [MLController::class, 'getRecommendationHistory'])
+            ->name('recommendations.history');
+
+        // Provide feedback on recommendation
+        Route::post('/recommendations/{id}/feedback', [MLController::class, 'submitRecommendationFeedback'])
+            ->name('recommendations.feedback');
+    });
+
+    // Admin-only ML management endpoints
+    Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
+
+        // Train ML models
+        Route::post('/train', [MLController::class, 'trainModels'])
+            ->name('train');
+
+        // Get ML system metrics
+        Route::get('/metrics', [MLController::class, 'getMetrics'])
+            ->name('metrics');
+
+        // Get comprehensive metrics report
+        Route::get('/metrics/report', [MLController::class, 'getMetricsReport'])
+            ->name('metrics.report');
+
+        // Run A/B test
+        Route::post('/ab-test', [MLController::class, 'runABTest'])
+            ->name('ab-test');
+
+        // Get A/B test results
+        Route::get('/ab-test/{id}/results', [MLController::class, 'getABTestResults'])
+            ->name('ab-test.results');
+
+        // Clear ML caches
+        Route::post('/cache/clear', [MLController::class, 'clearCaches'])
+            ->name('cache.clear');
+
+        // Get clustering analysis
+        Route::get('/clustering/analysis', [MLController::class, 'getClusteringAnalysis'])
+            ->name('clustering.analysis');
+
+        // Retrain clustering
+        Route::post('/clustering/retrain', [MLController::class, 'retrainClustering'])
+            ->name('clustering.retrain');
+
+        // Get feature importance
+        Route::get('/features/importance', [MLController::class, 'getFeatureImportance'])
+            ->name('features.importance');
+
+        // Get model performance over time
+        Route::get('/performance/timeline', [MLController::class, 'getPerformanceTimeline'])
+            ->name('performance.timeline');
+
+        // Export ML data for analysis
+        Route::get('/export/{type}', [MLController::class, 'exportMLData'])
+            ->name('export')
+            ->where('type', 'vectors|profiles|interactions|metrics');
+
+        // Get system health check (V2.0: Enhanced with MLHealthMonitorService)
+        Route::get('/health', [MLController::class, 'getHealthStatus'])
+            ->name('health');
+
+        // Get anomaly detection report (V2.0: New endpoint)
+        Route::get('/anomalies', [MLController::class, 'detectAnomalies'])
+            ->name('anomalies');
+
+        // Get recommendation explanations
+        Route::get('/explain/{postId}', [MLController::class, 'explainRecommendation'])
+            ->name('explain');
+    });
+});

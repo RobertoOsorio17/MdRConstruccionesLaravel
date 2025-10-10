@@ -28,15 +28,13 @@ class ContactController extends Controller
         $bytes = fread($handle, 8);
         fclose($handle);
 
-        // Magic bytes for allowed file types
+        // Magic bytes for allowed file types (only modern formats)
         $magicBytes = [
             'pdf' => ['25504446'], // %PDF
             'jpg' => ['FFD8FF'], // JPEG
             'jpeg' => ['FFD8FF'], // JPEG
             'png' => ['89504E47'], // PNG
-            'doc' => ['D0CF11E0'], // MS Office (old format)
             'docx' => ['504B0304'], // ZIP-based (Office 2007+)
-            'xls' => ['D0CF11E0'], // MS Office (old format)
             'xlsx' => ['504B0304'], // ZIP-based (Office 2007+)
         ];
 
@@ -123,8 +121,8 @@ class ContactController extends Controller
             'service' => 'nullable|string|max:255|regex:/^[^<>]*$/',
             'message' => 'required|string|min:10|max:2000|regex:/^[^<>]*$/',
             'attachments' => 'nullable|array|max:5', // Máximo 5 archivos
-            // ✅ IMPROVED: Use mimetypes instead of mimes for real MIME type validation
-            'attachments.*' => 'nullable|file|mimetypes:application/pdf,image/jpeg,image/png,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet|max:10240', // Max 10MB per file
+            // ✅ IMPROVED: Only modern Office formats (docx/xlsx) - removed old .doc/.xls for security
+            'attachments.*' => 'nullable|file|mimetypes:application/pdf,image/jpeg,image/png,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet|max:10240', // Max 10MB per file
             'privacy_accepted' => 'required|accepted',
             'recaptcha_token' => $recaptchaValidation, // ✅ OBLIGATORIO SIEMPRE
         ], [
@@ -137,7 +135,7 @@ class ContactController extends Controller
             'message.required' => 'El mensaje es obligatorio.',
             'message.min' => 'El mensaje debe tener al menos 10 caracteres.',
             'attachments.max' => 'Máximo 5 archivos permitidos.',
-            'attachments.*.mimetypes' => 'Solo se permiten archivos PDF, imágenes JPG/PNG, Word y Excel.',
+            'attachments.*.mimetypes' => 'Solo se permiten archivos PDF, imágenes JPG/PNG, Word (.docx) y Excel (.xlsx) modernos.',
             'attachments.*.max' => 'Cada archivo no debe superar los 10MB.',
             'privacy_accepted.accepted' => 'Debes aceptar la política de privacidad.',
             'recaptcha_token.required' => 'Error de verificación de seguridad. Por favor, recarga la página.',
@@ -218,8 +216,8 @@ class ContactController extends Controller
                         ]);
                     }
 
-                    // Validar extensión
-                    $allowedExtensions = ['pdf', 'jpg', 'jpeg', 'png', 'doc', 'docx', 'xls', 'xlsx'];
+                    // Validar extensión (removed old .doc/.xls formats for security)
+                    $allowedExtensions = ['pdf', 'jpg', 'jpeg', 'png', 'docx', 'xlsx'];
                     $extension = strtolower($file->getClientOriginalExtension());
 
                     if (!in_array($extension, $allowedExtensions)) {
@@ -229,21 +227,19 @@ class ContactController extends Controller
                             'ip' => $request->ip(),
                         ]);
                         return back()->withErrors([
-                            'attachments' => "Extensión no permitida: {$extension}. Solo PDF, imágenes, Word y Excel."
+                            'attachments' => "Extensión no permitida: {$extension}. Solo PDF, imágenes, Word (.docx) y Excel (.xlsx)."
                         ]);
                     }
 
-                    // Validar MIME type
+                    // Validar MIME type (only modern formats)
                     $mimeType = $file->getMimeType();
                     $allowedMimes = [
                         'application/pdf',
                         'image/jpeg',
                         'image/jpg',
                         'image/png',
-                        'application/msword',
-                        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-                        'application/vnd.ms-excel',
-                        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                        'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // .docx only
+                        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx only
                     ];
 
                     if (!in_array($mimeType, $allowedMimes)) {

@@ -6,8 +6,11 @@ use App\Models\User;
 use App\Models\MLUserProfile;
 use App\Models\MLInteractionLog;
 use App\Models\Post;
+use App\Services\ML\KMeansClusteringService;
+use App\Exceptions\ML\MLProfileUpdateException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Service for managing and updating ML user profiles based on interaction history.
@@ -15,6 +18,12 @@ use Illuminate\Support\Facades\Cache;
  */
 class MLUserProfileService
 {
+    private KMeansClusteringService $clusteringService;
+
+    public function __construct(KMeansClusteringService $clusteringService)
+    {
+        $this->clusteringService = $clusteringService;
+    }
     /**
      * Update or create user profile based on recent interactions.
      */
@@ -63,11 +72,20 @@ class MLUserProfileService
         $profile->engagement_rate = $interactions->avg('engagement_score') ?? 0;
         $profile->total_posts_read = $interactions->where('interaction_type', 'view')->count();
         $profile->return_rate = $this->calculateReturnRate($interactions);
-        
-        // Update clustering (simplified)
-        $profile->user_cluster = $this->assignUserCluster($profile);
-        $profile->cluster_confidence = $this->calculateClusterConfidence($profile);
-        
+
+        // Update clustering using real K-Means if enough data
+        try {
+            $this->updateClusterAssignment($profile);
+        } catch (\Exception $e) {
+            Log::warning('Failed to update cluster assignment', [
+                'profile_id' => $profile->id,
+                'error' => $e->getMessage()
+            ]);
+            // Fallback to simple clustering
+            $profile->user_cluster = $this->assignUserClusterSimple($profile);
+            $profile->cluster_confidence = $this->calculateClusterConfidenceSimple($profile);
+        }
+
         $profile->last_activity = now();
         $profile->profile_updated_at = now();
         $profile->save();
@@ -87,25 +105,37 @@ class MLUserProfileService
             'reading_speed' => 'medium'
         ];
 
-        // Analyze time of day preferences
+        // Analyze time of day preferences with weights
         $hourCounts = [];
+        $totalInteractions = $interactions->count();
+
         foreach ($interactions as $interaction) {
             $hour = $interaction->created_at->hour;
             $hourCounts[$hour] = ($hourCounts[$hour] ?? 0) + 1;
         }
-        
-        arsort($hourCounts);
-        $patterns['preferred_hours'] = array_slice(array_keys($hourCounts), 0, 3);
 
-        // Analyze day of week preferences
+        // Convert to weighted preferences (0-1 scale)
+        $hourWeights = [];
+        foreach ($hourCounts as $hour => $count) {
+            $hourWeights[$hour] = $count / $totalInteractions;
+        }
+        arsort($hourWeights);
+        $patterns['preferred_hours'] = $hourWeights;
+
+        // Analyze day of week preferences with weights
         $dayCounts = [];
         foreach ($interactions as $interaction) {
             $day = $interaction->created_at->dayOfWeek;
             $dayCounts[$day] = ($dayCounts[$day] ?? 0) + 1;
         }
-        
-        arsort($dayCounts);
-        $patterns['preferred_days'] = array_slice(array_keys($dayCounts), 0, 3);
+
+        // Convert to weighted preferences (0-1 scale)
+        $dayWeights = [];
+        foreach ($dayCounts as $day => $count) {
+            $dayWeights[$day] = $count / $totalInteractions;
+        }
+        arsort($dayWeights);
+        $patterns['preferred_days'] = $dayWeights;
 
         // Calculate average session duration
         $patterns['avg_session_duration'] = $interactions->avg('time_spent_seconds') ?? 0;
@@ -119,6 +149,31 @@ class MLUserProfileService
         } else {
             $patterns['reading_speed'] = 'medium';
         }
+
+        // Calculate engagement by content length
+        $patterns['engagement_by_length'] = [
+            'short' => 0.5,  // Default neutral
+            'medium' => 0.5,
+            'long' => 0.5
+        ];
+
+        $lengthEngagement = ['short' => [], 'medium' => [], 'long' => []];
+        foreach ($interactions as $interaction) {
+            if ($interaction->post && $interaction->engagement_score) {
+                $wordCount = str_word_count(strip_tags($interaction->post->content ?? ''));
+                $length = $wordCount < 300 ? 'short' : ($wordCount < 800 ? 'medium' : 'long');
+                $lengthEngagement[$length][] = $interaction->engagement_score;
+            }
+        }
+
+        foreach ($lengthEngagement as $length => $scores) {
+            if (!empty($scores)) {
+                $patterns['engagement_by_length'][$length] = array_sum($scores) / count($scores) / 100;
+            }
+        }
+
+        // Calculate average scroll depth
+        $patterns['avg_scroll_depth'] = $interactions->avg('scroll_percentage') ?? 0;
 
         return $patterns;
     }
@@ -142,12 +197,14 @@ class MLUserProfileService
         }
 
         // Normalize scores
-        $maxScore = max($categoryScores) ?: 1;
-        foreach ($categoryScores as $id => $score) {
-            $categoryScores[$id] = $score / $maxScore;
+        if (!empty($categoryScores)) {
+            $maxScore = max($categoryScores) ?: 1;
+            foreach ($categoryScores as $id => $score) {
+                $categoryScores[$id] = $score / $maxScore;
+            }
+            arsort($categoryScores);
         }
 
-        arsort($categoryScores);
         return $categoryScores;
     }
 
@@ -170,12 +227,14 @@ class MLUserProfileService
         }
 
         // Normalize scores
-        $maxScore = max($tagScores) ?: 1;
-        foreach ($tagScores as $id => $score) {
-            $tagScores[$id] = $score / $maxScore;
+        if (!empty($tagScores)) {
+            $maxScore = max($tagScores) ?: 1;
+            foreach ($tagScores as $id => $score) {
+                $tagScores[$id] = $score / $maxScore;
+            }
+            arsort($tagScores);
         }
 
-        arsort($tagScores);
         return $tagScores;
     }
 
@@ -263,9 +322,57 @@ class MLUserProfileService
     }
 
     /**
-     * Assign user to a cluster using simple k-means-like approach.
+     * Update cluster assignment using K-Means clustering.
      */
-    private function assignUserCluster(MLUserProfile $profile): int
+    private function updateClusterAssignment(MLUserProfile $profile): void
+    {
+        // Get cached centroids from last clustering run
+        $centroids = Cache::get('ml_cluster_centroids');
+
+        if (!$centroids) {
+            // No centroids available, use simple assignment
+            $profile->user_cluster = $this->assignUserClusterSimple($profile);
+            $profile->cluster_confidence = $this->calculateClusterConfidenceSimple($profile);
+            return;
+        }
+
+        // Assign to nearest centroid
+        $vector = $this->clusteringService->profileToVector($profile);
+        $minDist = PHP_FLOAT_MAX;
+        $assignedCluster = 0;
+
+        foreach ($centroids as $c => $centroid) {
+            $dist = $this->euclideanDistance($vector, $centroid);
+            if ($dist < $minDist) {
+                $minDist = $dist;
+                $assignedCluster = $c;
+            }
+        }
+
+        $profile->user_cluster = $assignedCluster;
+        $profile->cluster_confidence = $this->clusteringService->getClusterConfidence($profile, $centroids);
+    }
+
+    /**
+     * Calculate Euclidean distance between two vectors.
+     */
+    private function euclideanDistance(array $a, array $b): float
+    {
+        $sum = 0;
+        $n = min(count($a), count($b));
+
+        for ($i = 0; $i < $n; $i++) {
+            $diff = $a[$i] - $b[$i];
+            $sum += $diff * $diff;
+        }
+
+        return sqrt($sum);
+    }
+
+    /**
+     * Assign user to a cluster using simple rule-based approach (fallback).
+     */
+    private function assignUserClusterSimple(MLUserProfile $profile): int
     {
         // Simplified clustering based on engagement patterns
         $engagementRate = $profile->engagement_rate ?? 0;
@@ -274,25 +381,25 @@ class MLUserProfileService
 
         // Define 5 clusters
         if ($engagementRate > 0.7 && $returnRate > 0.5) {
-            return 1; // Power users
+            return 0; // Power users
         } elseif ($engagementRate > 0.4 && $totalPosts > 10) {
-            return 2; // Regular engaged users
+            return 1; // Regular engaged users
         } elseif ($returnRate > 0.3) {
-            return 3; // Casual returners
+            return 2; // Casual returners
         } elseif ($totalPosts > 5) {
-            return 4; // Explorers
+            return 3; // Explorers
         } else {
-            return 5; // New/inactive users
+            return 4; // New/inactive users
         }
     }
 
     /**
-     * Calculate confidence in cluster assignment.
+     * Calculate confidence in cluster assignment (simple fallback).
      */
-    private function calculateClusterConfidence(MLUserProfile $profile): float
+    private function calculateClusterConfidenceSimple(MLUserProfile $profile): float
     {
         $totalInteractions = $profile->total_posts_read ?? 0;
-        
+
         // More interactions = higher confidence
         if ($totalInteractions > 50) {
             return 0.9;

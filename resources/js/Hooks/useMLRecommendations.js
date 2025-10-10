@@ -34,11 +34,19 @@ export const useMLRecommendations = () => {
     };
 
     /**
-     * Obtiene recomendaciones ML inteligentes
+     * Obtiene recomendaciones ML inteligentes con opciones avanzadas
      */
-    const getMLRecommendations = useCallback(async (currentPostId = null, limit = 10) => {
-        const cacheKey = `ml_recs_${currentPostId}_${limit}`;
-        
+    const getMLRecommendations = useCallback(async (currentPostId = null, options = {}) => {
+        const {
+            limit = 10,
+            algorithm = 'hybrid',
+            diversityBoost = 0.3,
+            includeExplanation = false,
+            excludePosts = []
+        } = options;
+
+        const cacheKey = `ml_recs_${currentPostId}_${limit}_${algorithm}`;
+
         // Verificar cache
         if (cacheRef.current.has(cacheKey)) {
             const cached = cacheRef.current.get(cacheKey);
@@ -52,38 +60,50 @@ export const useMLRecommendations = () => {
         setError(null);
 
         try {
-            console.log('🤖 Obteniendo recomendaciones ML...', { currentPostId, limit });
-            
-            const response = await axios.get('/api/ml/recommendations', {
-                params: {
-                    session_id: sessionId.current,
-                    current_post_id: currentPostId,
-                    limit: limit
-                }
+            console.log('🤖 Obteniendo recomendaciones ML...', { currentPostId, limit, algorithm });
+
+            const response = await axios.post('/api/ml/recommendations', {
+                session_id: sessionId.current,
+                current_post_id: currentPostId,
+                limit: limit,
+                algorithm: algorithm,
+                diversity_boost: diversityBoost,
+                include_explanation: includeExplanation,
+                exclude_posts: excludePosts,
+                device_type: /Mobile|Android|iPhone/i.test(navigator.userAgent) ? 'mobile' : 'desktop',
+                viewport_width: window.innerWidth,
+                viewport_height: window.innerHeight
             });
 
             if (response.data.success) {
                 const recommendations = response.data.recommendations || [];
-                
+                const explanations = response.data.explanations || [];
+
                 console.log(`✅ ${recommendations.length} recomendaciones ML obtenidas`);
-                console.log('📊 Fuentes:', recommendations.map(r => r.ml_data.source));
-                
-                setMLRecommendations(recommendations);
-                
+                console.log('📊 Algoritmo:', response.data.metadata?.algorithm);
+
+                // Enriquecer recomendaciones con explicaciones
+                const enrichedRecs = recommendations.map((rec, index) => ({
+                    ...rec,
+                    explanation: explanations[index] || null
+                }));
+
+                setMLRecommendations(enrichedRecs);
+
                 // Cache la respuesta
                 cacheRef.current.set(cacheKey, {
-                    data: recommendations,
+                    data: enrichedRecs,
                     timestamp: Date.now()
                 });
-                
-                return recommendations;
+
+                return enrichedRecs;
             } else {
                 throw new Error(response.data.error || 'Error obteniendo recomendaciones ML');
             }
         } catch (error) {
             console.error('❌ Error ML recommendations:', error);
             setError('No se pudieron cargar las recomendaciones inteligentes');
-            
+
             // Retornar array vacío en caso de error
             setMLRecommendations([]);
             return [];
@@ -93,29 +113,51 @@ export const useMLRecommendations = () => {
     }, []);
 
     /**
-     * Registra una interacción de usuario para el sistema ML
+     * Registra una interacción de usuario para el sistema ML con métricas avanzadas
      */
     const logMLInteraction = useCallback(async (interactionData) => {
         try {
             console.log('📝 Registrando interacción ML:', interactionData);
-            
-            const response = await axios.post('/api/ml/interaction', {
+
+            // Enriquecer datos con métricas del navegador
+            const enrichedData = {
                 session_id: sessionId.current,
-                ...interactionData
-            });
+                device_type: /Mobile|Android|iPhone/i.test(navigator.userAgent) ? 'mobile' : 'desktop',
+                viewport_width: window.innerWidth,
+                viewport_height: window.innerHeight,
+                user_agent: navigator.userAgent,
+                referrer: document.referrer || null,
+                ...interactionData,
+                metadata: {
+                    ...(interactionData.metadata || {}),
+                    browser_language: navigator.language,
+                    screen_resolution: `${window.screen.width}x${window.screen.height}`,
+                    connection_type: navigator.connection?.effectiveType || 'unknown'
+                }
+            };
+
+            const response = await axios.post('/api/ml/interactions', enrichedData);
 
             if (response.data.success) {
-                console.log('✅ Interacción ML registrada');
-                
+                console.log('✅ Interacción ML registrada', {
+                    interaction_id: response.data.data?.interaction_id,
+                    implicit_rating: response.data.data?.implicit_rating,
+                    engagement_score: response.data.data?.engagement_score
+                });
+
                 // Invalidar cache si es una interacción importante
                 if (['like', 'bookmark', 'share', 'recommendation_click'].includes(interactionData.interaction_type)) {
                     cacheRef.current.clear();
                 }
+
+                return response.data.data;
             }
         } catch (error) {
             console.warn('⚠️ Error registrando interacción ML:', error);
             // No mostrar error al usuario, es background
         }
+
+        return null;
     }, []);
 
     /**

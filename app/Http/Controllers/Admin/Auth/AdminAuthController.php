@@ -96,7 +96,7 @@ class AdminAuthController extends Controller
             ]);
             
             throw ValidationException::withMessages([
-                'email' => 'No tienes permisos para acceder al panel de administraciÃƒÆ’Ã‚Â³n.',
+                'email' => 'No tienes permisos para acceder al panel de administración.',
             ]);
         }
 

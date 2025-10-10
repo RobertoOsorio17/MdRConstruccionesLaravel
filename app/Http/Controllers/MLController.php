@@ -10,14 +10,29 @@ use App\Services\ContentAnalysisServiceV2;
 use App\Services\MLRecommendationService;
 use App\Services\MLUserProfileService;
 use App\Services\MLMetricsService;
+use App\Services\ML\KMeansClusteringService;
+use App\Services\ML\AnomalyDetectionService;
+use App\Services\ML\MLHealthMonitorService;
+use App\Http\Requests\ML\GetRecommendationsRequest;
+use App\Http\Requests\ML\LogInteractionRequest;
+use App\Http\Requests\ML\TrainModelsRequest;
+use App\Exceptions\ML\MLRecommendationException;
+use App\Exceptions\ML\MLTrainingException;
+use App\Exceptions\ML\MLProfileUpdateException;
+use App\Helpers\MLSettingsHelper;
+use App\Jobs\UpdateMLUserProfileJob;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Cache;
 
 /**
  * Exposes machine learning powered personalization endpoints that drive recommendations and insight logging.
  * Connects content analysis services with user sessions to deliver contextual suggestions and telemetry.
+ *
+ * V2.0: Integrated with AnomalyDetectionService and MLHealthMonitorService
  */
 class MLController extends Controller
 {
@@ -26,37 +41,42 @@ class MLController extends Controller
     private MLRecommendationService $mlRecommendation;
     private MLUserProfileService $userProfileService;
     private MLMetricsService $metricsService;
+    private KMeansClusteringService $clusteringService;
+    private AnomalyDetectionService $anomalyDetection;
+    private MLHealthMonitorService $healthMonitor;
 
     public function __construct(
         ContentAnalysisService $contentAnalysis,
         ContentAnalysisServiceV2 $contentAnalysisV2,
         MLRecommendationService $mlRecommendation,
         MLUserProfileService $userProfileService,
-        MLMetricsService $metricsService
+        MLMetricsService $metricsService,
+        KMeansClusteringService $clusteringService,
+        AnomalyDetectionService $anomalyDetection,
+        MLHealthMonitorService $healthMonitor
     ) {
         $this->contentAnalysis = $contentAnalysis;
         $this->contentAnalysisV2 = $contentAnalysisV2;
         $this->mlRecommendation = $mlRecommendation;
         $this->userProfileService = $userProfileService;
         $this->metricsService = $metricsService;
+        $this->clusteringService = $clusteringService;
+        $this->anomalyDetection = $anomalyDetection;
+        $this->healthMonitor = $healthMonitor;
     }
 
     /**
      * Retrieve ML recommendations for a user.
      */
-    public function getRecommendations(Request $request): JsonResponse
+    public function getRecommendations(GetRecommendationsRequest $request): JsonResponse
     {
         try {
-            $validated = $request->validate([
-                'session_id' => 'nullable|string',
-                'current_post_id' => 'nullable|integer|exists:posts,id',
-                'limit' => 'nullable|integer|min:1|max:20'
-            ]);
+            $validated = $request->validated();
 
             $sessionId = $validated['session_id'] ?? $request->session()->getId();
             $userId = Auth::id();
             $currentPostId = $validated['current_post_id'] ?? null;
-            $limit = $validated['limit'] ?? 10;
+            $limit = $validated['limit'];
 
             $recommendations = $this->mlRecommendation->getRecommendations(
                 $sessionId,
@@ -65,27 +85,44 @@ class MLController extends Controller
                 $limit
             );
 
-            return response()->json([
+            if (empty($recommendations)) {
+                throw MLRecommendationException::noCandidatesAvailable();
+            }
+
+            $response = [
                 'success' => true,
                 'recommendations' => $this->formatRecommendations($recommendations),
                 'metadata' => [
-                    'algorithm_version' => '1.0',
+                    'algorithm_version' => '2.0',
                     'generated_at' => now()->toISOString(),
                     'user_type' => $userId ? 'authenticated' : 'guest',
-                    'total_count' => count($recommendations)
+                    'total_count' => count($recommendations),
+                    'session_id' => $sessionId,
+                    'diversity_boost' => $validated['diversity_boost'],
+                    'algorithm' => $validated['algorithm'] ?? 'hybrid'
                 ]
-            ]);
+            ];
 
+            // Include explanations if requested
+            if ($validated['include_explanation'] && !empty($recommendations)) {
+                $response['explanations'] = $this->generateExplanations($recommendations);
+            }
+
+            return response()->json($response);
+
+        } catch (MLRecommendationException $e) {
+            return response()->json($e->toResponse(), $e->getHttpStatusCode());
         } catch (\Exception $e) {
             Log::error('Error generating ML recommendations', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
-                'request' => $request->all()
+                'request' => $request->validated()
             ]);
 
             return response()->json([
                 'success' => false,
                 'error' => 'Recommendations could not be generated.',
+                'error_code' => 'RECOMMENDATION_ERROR',
                 'recommendations' => []
             ], 500);
         }
@@ -93,57 +130,159 @@ class MLController extends Controller
 
     /**
      * Register a user interaction for the ML system.
+     * V2.0: Now includes anomaly detection
      */
-    public function logInteraction(Request $request): JsonResponse
+    public function logInteraction(LogInteractionRequest $request): JsonResponse
     {
         try {
-            $validated = $request->validate([
-                'session_id' => 'nullable|string',
-                'post_id' => 'required|integer|exists:posts,id',
-                'interaction_type' => 'required|in:view,click,like,share,comment,bookmark,recommendation_click',
-                'time_spent_seconds' => 'nullable|integer|min:0',
-                'scroll_percentage' => 'nullable|numeric|min:0|max:100',
-                'completed_reading' => 'nullable|boolean',
-                'recommendation_source' => 'nullable|string',
-                'recommendation_position' => 'nullable|integer|min:1',
-                'metadata' => ['nullable', 'array', new \App\Rules\MaxJsonDepth(5)]
-            ]);
+            $validated = $request->validated();
 
             $sessionId = $validated['session_id'] ?? $request->session()->getId();
             $userId = Auth::id();
 
-            // Record the interaction entry.
-            $interaction = MLInteractionLog::logInteraction([
+            // Prepare interaction data with advanced metrics
+            $interactionData = [
                 'session_id' => $sessionId,
                 'user_id' => $userId,
                 'post_id' => $validated['post_id'],
                 'interaction_type' => $validated['interaction_type'],
                 'time_spent_seconds' => $validated['time_spent_seconds'] ?? null,
                 'scroll_percentage' => $validated['scroll_percentage'] ?? null,
-                'completed_reading' => $validated['completed_reading'] ?? false,
+                'completed_reading' => $validated['completed_reading'],
                 'recommendation_source' => $validated['recommendation_source'] ?? null,
                 'recommendation_position' => $validated['recommendation_position'] ?? null,
-                'interaction_metadata' => $validated['metadata'] ?? null,
-            ]);
+                'recommendation_score' => $validated['recommendation_score'] ?? null,
+                'interaction_metadata' => array_merge(
+                    $validated['metadata'] ?? [],
+                    [
+                        'viewport' => [
+                            'width' => $validated['viewport_width'] ?? null,
+                            'height' => $validated['viewport_height'] ?? null
+                        ],
+                        'device_type' => $validated['device_type'] ?? 'unknown',
+                        'referrer' => $validated['referrer'] ?? null,
+                        'user_agent' => $validated['user_agent'] ?? null,
+                        'engagement_metrics' => [
+                            'clicks_count' => $validated['clicks_count'] ?? 0,
+                            'copy_events' => $validated['copy_events'] ?? 0,
+                            'highlight_events' => $validated['highlight_events'] ?? 0,
+                            'scroll_depth_max' => $validated['scroll_depth_max'] ?? null,
+                            'scroll_velocity' => $validated['scroll_velocity'] ?? null,
+                            'reading_velocity' => $validated['reading_velocity'] ?? null,
+                            'pause_count' => $validated['pause_count'] ?? 0,
+                            'avg_pause_duration' => $validated['avg_pause_duration'] ?? null
+                        ]
+                    ]
+                )
+            ];
 
-            // Update the user profile when required.
-            $this->updateUserProfile($sessionId, $userId, $interaction);
+            // Calculate engagement score before anomaly detection
+            $engagementScore = $this->calculateEngagementScore($interactionData);
+            $interactionData['engagement_score'] = $engagementScore;
+
+            // Detect anomalies (if enabled in settings)
+            $anomalyConfig = MLSettingsHelper::getAnomalyDetectionConfig();
+            if ($anomalyConfig['enabled']) {
+                $anomalyResult = $this->anomalyDetection->detectAnomalies($interactionData, $sessionId);
+
+                // Add anomaly detection results to metadata
+                $interactionData['interaction_metadata']['anomaly_detection'] = $anomalyResult;
+                $interactionData['interaction_metadata']['is_anomalous'] = $anomalyResult['has_anomalies'];
+
+                // Auto-block if enabled and anomaly detected
+                if ($anomalyConfig['auto_block'] && $anomalyResult['has_anomalies'] && $anomalyResult['anomaly_score'] >= $anomalyConfig['threshold']) {
+                    // Block user if authenticated
+                    if ($userId) {
+                        $user = Auth::user();
+                        if ($user && !$user->isMLBlocked()) {
+                            $user->blockByML(
+                                $anomalyResult['anomaly_score'],
+                                'Auto-blocked due to suspicious activity: ' . implode(', ', $anomalyResult['anomalies'] ?? [])
+                            );
+
+                            Log::warning('User auto-blocked by ML system', [
+                                'user_id' => $userId,
+                                'session_id' => $sessionId,
+                                'anomaly_score' => $anomalyResult['anomaly_score'],
+                                'anomalies' => $anomalyResult['anomalies'] ?? [],
+                            ]);
+
+                            // Don't logout immediately - let frontend handle it gracefully
+                            // This prevents data loss and provides better UX
+                            return response()->json([
+                                'success' => false,
+                                'error' => 'Your account has been temporarily blocked due to suspicious activity. Please contact support.',
+                                'error_code' => 'ML_AUTO_BLOCKED',
+                                'should_logout' => true,  // Frontend will handle logout
+                                'block_info' => [
+                                    'reason' => 'Suspicious activity detected',
+                                    'anomaly_score' => $anomalyResult['anomaly_score'],
+                                    'support_email' => config('mail.from.address')
+                                ]
+                            ], 403);
+                        }
+                    } else {
+                        // For guest users, just log the anomaly
+                        Log::warning('Suspicious guest activity detected', [
+                            'session_id' => $sessionId,
+                            'anomaly_score' => $anomalyResult['anomaly_score'],
+                            'anomalies' => $anomalyResult['anomalies'] ?? [],
+                        ]);
+                    }
+                }
+            } else {
+                $interactionData['interaction_metadata']['anomaly_detection'] = null;
+                $interactionData['interaction_metadata']['is_anomalous'] = false;
+            }
+
+            // Record the interaction with retry logic
+            $interaction = DB::transaction(function () use ($interactionData) {
+                return MLInteractionLog::logInteraction($interactionData);
+            });
+
+            // Update user profile (queue or sync based on settings)
+            $performanceConfig = MLSettingsHelper::getPerformanceConfig();
+
+            if ($performanceConfig['enable_queue_jobs']) {
+                // Dispatch to queue for async processing
+                UpdateMLUserProfileJob::dispatch($sessionId, $userId, $interaction->id);
+            } else {
+                // Process synchronously
+                dispatch(function () use ($sessionId, $userId, $interaction) {
+                    try {
+                        $this->updateUserProfile($sessionId, $userId, $interaction);
+                    } catch (\Exception $e) {
+                        Log::warning('Failed to update user profile after interaction', [
+                            'error' => $e->getMessage(),
+                            'interaction_id' => $interaction->id
+                        ]);
+                    }
+                })->afterResponse();
+            }
 
             return response()->json([
                 'success' => true,
                 'message' => 'Interaction recorded successfully.',
-                'interaction_id' => $interaction->id
+                'data' => [
+                    'interaction_id' => $interaction->id,
+                    'implicit_rating' => round($interaction->implicit_rating, 2),
+                    'engagement_score' => round($interaction->engagement_score, 2)
+                ]
             ]);
 
+        } catch (MLProfileUpdateException $e) {
+            return response()->json($e->toResponse(), $e->getHttpStatusCode());
         } catch (\Exception $e) {
             Log::error('Error logging ML interaction', [
                 'error' => $e->getMessage(),
-                'request' => $request->all()
+                'trace' => $e->getTraceAsString(),
+                'request' => $request->validated()
             ]);
 
             return response()->json([
                 'success' => false,
-                'error' => 'The interaction could not be recorded.'
+                'error' => 'The interaction could not be recorded.',
+                'error_code' => 'INTERACTION_LOG_ERROR'
             ], 500);
         }
     }
@@ -201,49 +340,204 @@ class MLController extends Controller
     }
 
     /**
-     * Trigger ML model training.
+     * Trigger ML model training with advanced options.
      */
-    public function trainModels(Request $request): JsonResponse
+    public function trainModels(TrainModelsRequest $request): JsonResponse
     {
         try {
-            // Allow only administrators (simplified - enforce role checks separately).
-            $user = Auth::user();
-            if (!$user || !$user->is_admin) {
-                return response()->json([
-                    'success' => false,
-                    'error' => 'Unauthorized.'
-                ], 403);
+            $validated = $request->validated();
+            $startTime = microtime(true);
+
+            $stats = [
+                'posts_analyzed' => 0,
+                'profiles_updated' => 0,
+                'clusters_updated' => 0,
+                'cache_cleared' => false,
+                'mode' => $validated['mode']
+            ];
+
+            // Execute training based on mode
+            switch ($validated['mode']) {
+                case 'posts_only':
+                    $stats['posts_analyzed'] = $this->trainPostVectors($validated['batch_size']);
+                    break;
+
+                case 'profiles_only':
+                    $stats['profiles_updated'] = $this->trainUserProfiles($validated['batch_size']);
+                    break;
+
+                case 'incremental':
+                    $stats = $this->performIncrementalTraining($validated['batch_size']);
+                    break;
+
+                case 'full':
+                default:
+                    $stats['posts_analyzed'] = $this->trainPostVectors($validated['batch_size']);
+                    $stats['profiles_updated'] = $this->trainUserProfiles($validated['batch_size']);
+                    $stats['clusters_updated'] = $this->retrainClustering();
+                    break;
             }
 
-            // Analyze all posts using V2 service
-            $postsAnalyzed = $this->contentAnalysisV2->analyzeAllPosts();
+            // Clear caches if requested
+            if ($validated['clear_cache']) {
+                $this->contentAnalysisV2->clearCaches();
 
-            // Update all user profiles
-            $profilesUpdated = $this->userProfileService->updateAllProfiles();
+                // Clear ML caches (check if driver supports tags)
+                try {
+                    if (method_exists(Cache::getStore(), 'tags')) {
+                        Cache::tags(['ml_recommendations', 'ml_metrics'])->flush();
+                    } else {
+                        // Fallback: clear specific keys
+                        Cache::forget('ml_user_factors');
+                        Cache::forget('ml_item_factors');
+                        Cache::forget('ml_cluster_centroids');
+                    }
+                } catch (\BadMethodCallException $e) {
+                    // Driver doesn't support tags, use fallback
+                    Cache::forget('ml_user_factors');
+                    Cache::forget('ml_item_factors');
+                    Cache::forget('ml_cluster_centroids');
+                }
 
-            // Clear caches
-            $this->contentAnalysisV2->clearCaches();
+                $stats['cache_cleared'] = true;
+            }
+
+            $stats['duration_seconds'] = round(microtime(true) - $startTime, 2);
+            $stats['trained_at'] = now()->toISOString();
+
+            // Send notification if requested
+            if ($validated['notify_on_completion'] && $validated['notification_email']) {
+                $this->sendTrainingNotification($validated['notification_email'], $stats);
+            }
+
+            Log::info('ML models trained successfully', $stats);
 
             return response()->json([
                 'success' => true,
                 'message' => 'Models trained successfully.',
-                'stats' => [
-                    'posts_analyzed' => $postsAnalyzed,
-                    'profiles_updated' => $profilesUpdated
-                ],
-                'trained_at' => now()->toISOString()
+                'stats' => $stats
             ]);
 
+        } catch (MLTrainingException $e) {
+            return response()->json($e->toResponse(), $e->getHttpStatusCode());
         } catch (\Exception $e) {
             Log::error('Error training ML models', [
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
             ]);
 
             return response()->json([
                 'success' => false,
-                'error' => 'Error training models.'
+                'error' => 'Error training models.',
+                'error_code' => 'TRAINING_ERROR'
             ], 500);
         }
+    }
+
+    /**
+     * Train post vectors in batches.
+     */
+    private function trainPostVectors(int $batchSize): int
+    {
+        $count = 0;
+
+        Post::published()
+            ->whereDoesntHave('mlVector')
+            ->orWhereHas('mlVector', function($query) {
+                $query->where('vector_updated_at', '<', now()->subHours(24));
+            })
+            ->chunk($batchSize, function($posts) use (&$count) {
+                foreach ($posts as $post) {
+                    try {
+                        $this->contentAnalysisV2->analyzePost($post);
+                        $count++;
+                    } catch (\Exception $e) {
+                        Log::warning('Failed to analyze post', [
+                            'post_id' => $post->id,
+                            'error' => $e->getMessage()
+                        ]);
+                    }
+                }
+            });
+
+        return $count;
+    }
+
+    /**
+     * Train user profiles in batches.
+     */
+    private function trainUserProfiles(int $batchSize): int
+    {
+        $count = 0;
+
+        MLUserProfile::where('profile_updated_at', '<', now()->subHours(24))
+            ->orWhereNull('profile_updated_at')
+            ->chunk($batchSize, function($profiles) use (&$count) {
+                foreach ($profiles as $profile) {
+                    try {
+                        $this->userProfileService->updateUserProfile(
+                            $profile->session_id,
+                            $profile->user_id
+                        );
+                        $count++;
+                    } catch (\Exception $e) {
+                        Log::warning('Failed to update profile', [
+                            'profile_id' => $profile->id,
+                            'error' => $e->getMessage()
+                        ]);
+                    }
+                }
+            });
+
+        return $count;
+    }
+
+    /**
+     * Perform incremental training (only new/updated data).
+     */
+    private function performIncrementalTraining(int $batchSize): array
+    {
+        $stats = [
+            'posts_analyzed' => 0,
+            'profiles_updated' => 0,
+            'clusters_updated' => 0
+        ];
+
+        // Only train posts without vectors
+        $stats['posts_analyzed'] = Post::published()
+            ->whereDoesntHave('mlVector')
+            ->chunk($batchSize, function($posts) {
+                foreach ($posts as $post) {
+                    $this->contentAnalysisV2->analyzePost($post);
+                }
+            });
+
+        // Only update profiles with recent activity
+        $stats['profiles_updated'] = MLUserProfile::where('last_activity', '>', now()->subHours(24))
+            ->where('profile_updated_at', '<', now()->subHours(1))
+            ->chunk($batchSize, function($profiles) {
+                foreach ($profiles as $profile) {
+                    $this->userProfileService->updateUserProfile(
+                        $profile->session_id,
+                        $profile->user_id
+                    );
+                }
+            });
+
+        return $stats;
+    }
+
+    /**
+     * Send training completion notification.
+     */
+    private function sendTrainingNotification(string $email, array $stats): void
+    {
+        // Implementation would use Laravel Mail
+        // For now, just log
+        Log::info('Training notification sent', [
+            'email' => $email,
+            'stats' => $stats
+        ]);
     }
 
     /**
@@ -683,19 +977,29 @@ class MLController extends Controller
     public function clearCaches(Request $request): JsonResponse
     {
         try {
-            $user = Auth::user();
-            if (!$user || !$user->is_admin) {
-                return response()->json([
-                    'success' => false,
-                    'error' => 'Unauthorized.'
-                ], 403);
+            $this->contentAnalysisV2->clearCaches();
+
+            // Clear ML caches (check if driver supports tags)
+            try {
+                if (method_exists(Cache::getStore(), 'tags')) {
+                    Cache::tags(['ml_recommendations', 'ml_metrics', 'ml_clustering'])->flush();
+                } else {
+                    // Fallback: clear specific keys
+                    $this->clearMLCacheKeys();
+                }
+            } catch (\BadMethodCallException $e) {
+                // Driver doesn't support tags, use fallback
+                $this->clearMLCacheKeys();
             }
 
-            $this->contentAnalysisV2->clearCaches();
+            Log::info('ML caches cleared by admin', [
+                'user_id' => Auth::id()
+            ]);
 
             return response()->json([
                 'success' => true,
-                'message' => 'ML caches cleared successfully.'
+                'message' => 'ML caches cleared successfully.',
+                'cleared_at' => now()->toISOString()
             ]);
 
         } catch (\Exception $e) {
@@ -705,10 +1009,355 @@ class MLController extends Controller
 
             return response()->json([
                 'success' => false,
-                'error' => 'Could not clear caches.'
+                'error' => 'Could not clear caches.',
+                'error_code' => 'CACHE_CLEAR_ERROR'
             ], 500);
         }
     }
+
+    /**
+     * Get clustering analysis.
+     */
+    public function getClusteringAnalysis(Request $request): JsonResponse
+    {
+        try {
+            $profiles = MLUserProfile::whereNotNull('category_preferences')
+                ->where('total_posts_read', '>', 5)
+                ->get();
+
+            if ($profiles->count() < 5) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Insufficient data for clustering analysis.',
+                    'error_code' => 'INSUFFICIENT_DATA'
+                ], 400);
+            }
+
+            // Get current clustering state
+            $clusterDistribution = $profiles->groupBy('user_cluster')
+                ->map(fn($group) => $group->count())
+                ->toArray();
+
+            // Calculate cluster quality metrics
+            $avgConfidence = $profiles->avg('cluster_confidence');
+
+            // Get cluster characteristics
+            $clusterCharacteristics = [];
+            for ($c = 0; $c < 5; $c++) {
+                $clusterProfiles = $profiles->where('user_cluster', $c);
+
+                if ($clusterProfiles->isNotEmpty()) {
+                    $clusterCharacteristics[$c] = [
+                        'size' => $clusterProfiles->count(),
+                        'avg_engagement' => round($clusterProfiles->avg('engagement_rate'), 3),
+                        'avg_return_rate' => round($clusterProfiles->avg('return_rate'), 3),
+                        'avg_posts_read' => round($clusterProfiles->avg('total_posts_read'), 1),
+                        'avg_reading_time' => round($clusterProfiles->avg('avg_reading_time'), 1)
+                    ];
+                }
+            }
+
+            return response()->json([
+                'success' => true,
+                'analysis' => [
+                    'total_profiles' => $profiles->count(),
+                    'cluster_distribution' => $clusterDistribution,
+                    'avg_confidence' => round($avgConfidence, 3),
+                    'cluster_characteristics' => $clusterCharacteristics,
+                    'analyzed_at' => now()->toISOString()
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Error getting clustering analysis', [
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'error' => 'Could not generate clustering analysis.',
+                'error_code' => 'CLUSTERING_ANALYSIS_ERROR'
+            ], 500);
+        }
+    }
+
+    /**
+     * Retrain clustering with K-Means.
+     */
+    public function retrainClustering(Request $request = null)
+    {
+        try {
+            // Get clustering configuration from settings
+            $clusteringConfig = MLSettingsHelper::getClusteringConfig();
+
+            // Skip if clustering is disabled
+            if (!$clusteringConfig['enabled']) {
+                Log::info('Clustering is disabled in settings, skipping retrain');
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Clustering is disabled in settings',
+                    'profiles_updated' => 0
+                ]);
+            }
+
+        $profiles = MLUserProfile::whereNotNull('category_preferences')
+            ->where('total_posts_read', '>', 5)
+            ->get();
+
+        $minProfiles = max(5, $clusteringConfig['cluster_count']);
+        if ($profiles->count() < $minProfiles) {
+            throw MLTrainingException::insufficientData('user profiles', $minProfiles, $profiles->count());
+        }
+
+        // Perform clustering with configured cluster count
+        $result = $this->clusteringService->cluster($profiles, $clusteringConfig['cluster_count']);
+
+        // Update profiles with new cluster assignments
+        $updated = 0;
+        foreach ($result['assignments'] as $i => $cluster) {
+            $profileId = $result['profile_ids'][$i] ?? null;
+            if ($profileId) {
+                $profile = $profiles->firstWhere('id', $profileId);
+                if ($profile) {
+                    $confidence = $this->clusteringService->getClusterConfidence(
+                        $profile,
+                        $result['centroids']
+                    );
+
+                    $profile->update([
+                        'user_cluster' => $cluster,
+                        'cluster_confidence' => $confidence
+                    ]);
+                    $updated++;
+                }
+            }
+        }
+
+            // Cache centroids for future confidence calculations
+            Cache::put('ml_cluster_centroids', $result['centroids'], now()->addDays(7));
+
+            Log::info('Clustering retrained', [
+                'profiles_updated' => $updated,
+                'iterations' => $result['iterations'],
+                'silhouette_score' => $result['metrics']['silhouette_score']
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Clustering retrained successfully',
+                'profiles_updated' => $updated,
+                'iterations' => $result['iterations'],
+                'metrics' => $result['metrics']
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Error retraining clustering', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to retrain clustering',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Generate explanations for recommendations.
+     */
+    private function generateExplanations(array $recommendations): array
+    {
+        $explanations = [];
+
+        foreach ($recommendations as $rec) {
+            // Use explanation from ExplainableAI if available
+            if (isset($rec['explanation'])) {
+                $explanations[] = [
+                    'post_id' => $rec['post']->id,
+                    'primary_reason' => $rec['explanation']['primary_reason'] ?? $rec['reason'],
+                    'detailed_reasons' => $rec['explanation']['detailed_reasons'] ?? [$rec['reason']],
+                    'algorithm' => $rec['explanation']['algorithm'] ?? 'Unknown',
+                    'confidence' => round(($rec['combined_score'] ?? $rec['score']) * 100, 1),
+                    'technical_details' => $rec['explanation']['technical_details'] ?? [],
+                    'feature_importance' => $rec['explanation']['feature_importance'] ?? [],
+                ];
+            } else {
+                // Fallback to basic explanation
+                $explanations[] = [
+                    'post_id' => $rec['post']->id,
+                    'reason' => $rec['reason'],
+                    'confidence' => round(($rec['combined_score'] ?? $rec['score']) * 100, 1),
+                    'factors' => $rec['metadata'] ?? []
+                ];
+            }
+        }
+
+        return $explanations;
+    }
+
+    /**
+     * Get ML system health status
+     *
+     * @return JsonResponse
+     */
+    public function getHealthStatus(Request $request): JsonResponse
+    {
+        try {
+            $detailed = $request->boolean('detailed', false);
+
+            $healthStatus = $this->healthMonitor->getHealthStatus($detailed);
+
+            return response()->json([
+                'success' => true,
+                'data' => $healthStatus
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Error getting ML health status', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'error' => 'Failed to retrieve health status',
+                'error_code' => 'HEALTH_CHECK_ERROR'
+            ], 500);
+        }
+    }
+
+    /**
+     * Detect anomalies in recent interactions
+     *
+     * @return JsonResponse
+     */
+    public function detectAnomalies(Request $request): JsonResponse
+    {
+        try {
+            $sessionId = $request->input('session_id');
+            $limit = $request->input('limit', 100);
+
+            // Get recent interactions
+            $query = MLInteractionLog::orderBy('created_at', 'desc')
+                ->limit($limit);
+
+            if ($sessionId) {
+                $query->where('session_id', $sessionId);
+            }
+
+            $interactions = $query->get();
+
+            $anomalies = [];
+            foreach ($interactions as $interaction) {
+                $metadata = $interaction->interaction_metadata ?? [];
+                if (isset($metadata['anomaly_detection']) && $metadata['anomaly_detection']['has_anomalies']) {
+                    $anomalies[] = [
+                        'interaction_id' => $interaction->id,
+                        'post_id' => $interaction->post_id,
+                        'session_id' => $interaction->session_id,
+                        'anomaly_score' => $metadata['anomaly_detection']['anomaly_score'],
+                        'risk_level' => $metadata['anomaly_detection']['risk_level'],
+                        'anomalies' => $metadata['anomaly_detection']['anomalies'],
+                        'timestamp' => $interaction->created_at->toIso8601String()
+                    ];
+                }
+            }
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'total_checked' => $interactions->count(),
+                    'anomalies_found' => count($anomalies),
+                    'anomaly_rate' => $interactions->count() > 0 ?
+                        round(count($anomalies) / $interactions->count() * 100, 2) : 0,
+                    'anomalies' => $anomalies
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Error detecting anomalies', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'error' => 'Failed to detect anomalies',
+                'error_code' => 'ANOMALY_DETECTION_ERROR'
+            ], 500);
+        }
+    }
+
+    /**
+     * Calculate engagement score for interaction data.
+     */
+    private function calculateEngagementScore(array $data): float
+    {
+        $score = 0;
+
+        // Time spent component (0-30 points)
+        if (isset($data['time_spent_seconds'])) {
+            $score += min(30, $data['time_spent_seconds'] / 10);
+        }
+
+        // Scroll percentage component (0-20 points)
+        if (isset($data['scroll_percentage'])) {
+            $score += ($data['scroll_percentage'] / 100) * 20;
+        }
+
+        // Completed reading bonus (20 points)
+        if ($data['completed_reading'] ?? false) {
+            $score += 20;
+        }
+
+        // Engagement metrics from metadata (0-30 points)
+        $metadata = $data['interaction_metadata'] ?? [];
+        $engagementMetrics = $metadata['engagement_metrics'] ?? [];
+
+        if (isset($engagementMetrics['clicks_count'])) {
+            $score += min(10, $engagementMetrics['clicks_count'] * 2);
+        }
+
+        if (isset($engagementMetrics['copy_events'])) {
+            $score += min(5, $engagementMetrics['copy_events'] * 2.5);
+        }
+
+        if (isset($engagementMetrics['highlight_events'])) {
+            $score += min(5, $engagementMetrics['highlight_events'] * 2.5);
+        }
+
+        if (isset($engagementMetrics['pause_count'])) {
+            $score += min(10, $engagementMetrics['pause_count']);
+        }
+
+        // Normalize to 0-100
+        return min(100, max(0, $score));
+    }
+
+    /**
+     * Clear ML cache keys (fallback when tags not supported).
+     */
+    private function clearMLCacheKeys(): void
+    {
+        $keysToForget = [
+            'ml_user_factors',
+            'ml_item_factors',
+            'ml_cluster_centroids',
+            'ml_settings_cache',
+            'ml_health_status',
+        ];
+
+        foreach ($keysToForget as $key) {
+            Cache::forget($key);
+        }
+
+        // Clear user profile caches (pattern-based)
+        // Note: This is limited without tag support
+        Log::info('ML caches cleared using fallback method (no tag support)');
+    }
 }
+
 
 

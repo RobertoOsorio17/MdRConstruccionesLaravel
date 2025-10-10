@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Post;
 use App\Models\MLPostVector;
+use App\Services\ML\AdvancedTFIDFService;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -11,9 +12,12 @@ use Illuminate\Support\Facades\DB;
 /**
  * Enhanced Content Analysis Service with improved performance and accuracy.
  * Generates ML-friendly representations using optimized TF-IDF, caching, and batch processing.
+ *
+ * V2.1: Integrated with AdvancedTFIDFService for superior text analysis
  */
 class ContentAnalysisServiceV2
 {
+    private AdvancedTFIDFService $tfidfService;
     /**
      * Spanish stop words for content normalization (UTF-8 corrected).
      */
@@ -26,7 +30,16 @@ class ContentAnalysisServiceV2
     ];
 
     /**
+     * Constructor - Inject AdvancedTFIDFService
+     */
+    public function __construct(AdvancedTFIDFService $tfidfService)
+    {
+        $this->tfidfService = $tfidfService;
+    }
+
+    /**
      * Analyze post and generate vector representations with caching.
+     * Now uses AdvancedTFIDFService for superior text analysis
      */
     public function analyzePost(Post $post): MLPostVector
     {
@@ -54,7 +67,13 @@ class ContentAnalysisServiceV2
     }
 
     /**
-     * Generate optimized TF-IDF vector using cached vocabulary and IDF values.
+     * Generate optimized TF-IDF vector using AdvancedTFIDFService
+     *
+     * Now uses advanced features:
+     * - Spanish stemming
+     * - N-grams (1-3)
+     * - Sublinear TF scaling
+     * - L2 normalization
      */
     private function generateTFIDFVector(Post $post): array
     {
@@ -64,16 +83,42 @@ class ContentAnalysisServiceV2
             strip_tags($post->content ?? '')
         ]);
 
+        // Use AdvancedTFIDFService for superior vectorization
+        try {
+            $vector = $this->tfidfService->vectorize($text);
+            return $vector;
+        } catch (\Exception $e) {
+            \Log::warning('AdvancedTFIDFService failed, falling back to basic TF-IDF', [
+                'post_id' => $post->id,
+                'error' => $e->getMessage()
+            ]);
+
+            // Fallback to basic TF-IDF
+            return $this->generateBasicTFIDFVector($post);
+        }
+    }
+
+    /**
+     * Fallback basic TF-IDF vector generation
+     */
+    private function generateBasicTFIDFVector(Post $post): array
+    {
+        $text = implode(' ', [
+            $post->title ?? '',
+            $post->excerpt ?? '',
+            strip_tags($post->content ?? '')
+        ]);
+
         $tokens = $this->tokenize($text);
         $tokens = $this->removeStopWords($tokens);
-        
+
         // Get cached vocabulary and IDF
         $vocabulary = $this->getCachedVocabulary();
         $idf = $this->getCachedIDF();
-        
+
         // Calculate TF
         $tf = $this->calculateTF($tokens);
-        
+
         // Build TF-IDF vector
         $vector = [];
         foreach ($vocabulary as $term) {

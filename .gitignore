@@ -22,3 +22,41 @@
 Homestead.json
 Homestead.yaml
 Thumbs.db
+
+# Archivos de documentación del proyecto (excepto README.md)
+*_ANALYSIS.md
+*_COMPLETE*.md
+*_IMPLEMENTATION*.md
+*_FIXES*.md
+*_SUMMARY.md
+*_REPORT*.md
+*_AUDIT*.md
+*_ROADMAP*.md
+*_GUIDE*.md
+*_PLAN*.md
+*_CHECKLIST*.md
+*_ESTADO*.md
+*_RESUMEN*.md
+*_INSTRUCCIONES*.md
+*_MEJORAS*.md
+*_CORRECCION*.md
+*_CAMBIOS*.md
+ANALISIS_*.md
+IMPLEMENTACION_*.md
+RESUMEN_*.md
+MEJORAS_*.md
+TESTING_*.md
+DESIGN_*.md
+PROGRESS_*.md
+
+# Archivos comprimidos
+*.rar
+*.zip
+*.tar.gz
+*.7z
+
+# Archivos CSV de auditoría
+*_audit.csv
+*_summary.csv
+*_missing_*.csv
+backend_*.csv

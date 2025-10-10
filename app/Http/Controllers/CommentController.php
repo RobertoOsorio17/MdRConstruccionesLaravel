@@ -189,11 +189,16 @@ class CommentController extends Controller
                 abort(422, 'The parent comment does not belong to this post.');
             }
 
-            // ✅ FIXED: Validate maximum nesting depth (max 3 levels)
+            // ✅ FIXED: Validate maximum nesting depth with safety limit to prevent infinite loops
             $depth = 1;
+            $maxIterations = 10; // Safety limit to prevent infinite loops
+            $iterations = 0;
             $currentParent = $parentComment;
-            while ($currentParent->parent_id !== null) {
+
+            while ($currentParent->parent_id !== null && $iterations < $maxIterations) {
+                $iterations++;
                 $depth++;
+
                 if ($depth >= 3) {
                     return response()->json([
                         'success' => false,
@@ -201,10 +206,25 @@ class CommentController extends Controller
                         'error' => 'MAX_DEPTH_EXCEEDED'
                     ], 422);
                 }
+
                 $currentParent = Comment::find($currentParent->parent_id);
                 if (!$currentParent) {
-                    break; // Safety check
+                    break; // Safety check - parent was deleted
                 }
+            }
+
+            // If we hit max iterations, log warning and reject
+            if ($iterations >= $maxIterations) {
+                \Log::warning('Comment depth validation hit max iterations', [
+                    'parent_comment_id' => $validated['parent_id'],
+                    'iterations' => $iterations,
+                    'post_id' => $post->id
+                ]);
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Error validating comment depth. Please try replying to a different comment.',
+                    'error' => 'DEPTH_VALIDATION_ERROR'
+                ], 422);
             }
         }
 
@@ -313,7 +333,7 @@ class CommentController extends Controller
     }
 
     /**
-     * Sanitize comment content to mitigate XSS attacks.
+     * Sanitize comment content to mitigate XSS attacks while allowing safe basic formatting.
      */
     private function sanitizeCommentBody(?string $body): string
     {
@@ -322,8 +342,24 @@ class CommentController extends Controller
         // Remove script/style blocks explicitly.
         $body = preg_replace('/<\/(?:script|style)>/i', '', preg_replace('/<(script|style)[^>]*>.*?<\/\1>/is', '', $body));
 
-        // Strip all remaining HTML tags to store plain text content.
-        $body = strip_tags($body);
+        // Allow only safe HTML tags for basic formatting
+        $allowed_tags = '<b><i><em><strong><a><br><p>';
+        $body = strip_tags($body, $allowed_tags);
+
+        // Sanitize <a> tags to only allow href attribute and add security attributes
+        $body = preg_replace_callback(
+            '/<a\s+([^>]+)>/i',
+            function($matches) {
+                // Only allow href attribute with http/https URLs
+                if (preg_match('/href=["\'](https?:\/\/[^"\']+)["\']/', $matches[1], $href)) {
+                    $cleanUrl = htmlspecialchars($href[1], ENT_QUOTES, 'UTF-8');
+                    return '<a href="' . $cleanUrl . '" rel="nofollow noopener noreferrer" target="_blank">';
+                }
+                // If no valid href, remove the tag entirely
+                return '';
+            },
+            $body
+        );
 
         // Normalize whitespace and trim.
         $body = preg_replace("/\s+/u", ' ', $body);
@@ -477,7 +513,20 @@ class CommentController extends Controller
         }
 
         try {
+            // ✅ FIXED: Use pessimistic locking to prevent race conditions
             DB::transaction(function () use ($comment, $originalContent, $newContent, $request) {
+                // Lock the row to prevent concurrent modifications
+                $comment = Comment::where('id', $comment->id)->lockForUpdate()->first();
+
+                if (!$comment) {
+                    throw new \Exception('Comment not found or was deleted');
+                }
+
+                // Verify edit count hasn't changed (optimistic lock check)
+                if ($comment->edit_count >= 5 && !$request->user()->hasRole(['admin', 'moderator'])) {
+                    throw new \Exception('Edit limit reached during transaction');
+                }
+
                 // Create edit history record
                 $comment->captureEdit(
                     $originalContent,
@@ -493,7 +542,7 @@ class CommentController extends Controller
                     'edit_reason' => $request->edit_reason,
                     'edit_count' => $comment->edit_count + 1,
                 ]);
-            });
+            }, 3); // Retry up to 3 times on deadlock
 
             // Reload comment with relationships
             $comment->refresh();

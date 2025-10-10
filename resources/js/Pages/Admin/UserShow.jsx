@@ -152,20 +152,13 @@ const UserShow = ({ user, recentActivity = [], commentStats = {} }) => {
         setVerificationLoading(true);
         setUnverifyDialogOpen(false);
 
-        router.post(route('admin.users.unverify', user.id), {}, {
-            onFinish: () => setVerificationLoading(false)
-        });
-    };
-
-    const handleUnverifyUser = () => {
-        const notes = prompt('Notas de desverificación (opcional):');
-        if (notes === null) return; // User cancelled
-
-        setVerificationLoading(true);
         router.post(route('admin.users.unverify', user.id), {
-            verification_notes: notes
+            verification_notes: verificationNotes
         }, {
-            onFinish: () => setVerificationLoading(false)
+            onFinish: () => {
+                setVerificationLoading(false);
+                setVerificationNotes('');
+            }
         });
     };
 
@@ -602,6 +595,80 @@ const UserShow = ({ user, recentActivity = [], commentStats = {} }) => {
                     </Grid>
                 </Grid>
             </motion.div>
+
+            {/* Verify User Dialog */}
+            <Dialog
+                open={verifyDialogOpen}
+                onClose={() => setVerifyDialogOpen(false)}
+                maxWidth="sm"
+                fullWidth
+            >
+                <DialogTitle>Verificar Usuario</DialogTitle>
+                <DialogContent>
+                    <Typography variant="body2" sx={{ mb: 2, color: '#718096' }}>
+                        ¿Estás seguro de que deseas verificar a {user.name}?
+                    </Typography>
+                    <TextField
+                        fullWidth
+                        multiline
+                        rows={3}
+                        label="Notas de verificación (opcional)"
+                        value={verificationNotes}
+                        onChange={(e) => setVerificationNotes(e.target.value)}
+                        placeholder="Agrega notas sobre esta verificación..."
+                    />
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setVerifyDialogOpen(false)}>
+                        Cancelar
+                    </Button>
+                    <Button
+                        onClick={confirmVerifyUser}
+                        variant="contained"
+                        color="primary"
+                        disabled={verificationLoading}
+                    >
+                        Verificar
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* Unverify User Dialog */}
+            <Dialog
+                open={unverifyDialogOpen}
+                onClose={() => setUnverifyDialogOpen(false)}
+                maxWidth="sm"
+                fullWidth
+            >
+                <DialogTitle>Desverificar Usuario</DialogTitle>
+                <DialogContent>
+                    <Typography variant="body2" sx={{ mb: 2, color: '#718096' }}>
+                        ¿Estás seguro de que deseas desverificar a {user.name}?
+                    </Typography>
+                    <TextField
+                        fullWidth
+                        multiline
+                        rows={3}
+                        label="Notas de desverificación (opcional)"
+                        value={verificationNotes}
+                        onChange={(e) => setVerificationNotes(e.target.value)}
+                        placeholder="Agrega notas sobre esta desverificación..."
+                    />
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setUnverifyDialogOpen(false)}>
+                        Cancelar
+                    </Button>
+                    <Button
+                        onClick={confirmUnverifyUser}
+                        variant="contained"
+                        color="warning"
+                        disabled={verificationLoading}
+                    >
+                        Desverificar
+                    </Button>
+                </DialogActions>
+            </Dialog>
         </AdminLayoutNew>
     );
 };

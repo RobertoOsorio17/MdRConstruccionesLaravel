@@ -34,18 +34,27 @@ const MLInsights = ({ currentPostId, variant = 'full' }) => {
     const [expanded, setExpanded] = useState(false);
     const [showDetails, setShowDetails] = useState(false);
     
-    const { 
-        insights, 
-        getMLInsights, 
-        mlRecommendations, 
+    const {
+        insights,
+        getMLInsights,
+        mlRecommendations,
         getMLStats,
         getRecommendationExplanation,
-        loading 
+        loading,
+        error
     } = useMLRecommendations();
 
     useEffect(() => {
-        getMLInsights();
-    }, [getMLInsights]);
+        const loadInsights = async () => {
+            try {
+                await getMLInsights();
+            } catch (err) {
+                console.error('Error loading ML insights:', err);
+            }
+        };
+
+        loadInsights();
+    }, []);
 
     const mlStats = getMLStats();
 
@@ -138,7 +147,7 @@ const MLInsights = ({ currentPostId, variant = 'full' }) => {
                     {/* Stats principales */}
                     {insights && (
                         <Grid container spacing={2} sx={{ mb: 2 }}>
-                            <Grid size={{ xs: 3 }}>
+                            <Grid item xs={3}>
                                 <Box sx={{ textAlign: 'center' }}>
                                     <Typography variant="h4" fontWeight={700}>
                                         {insights.posts_read}
@@ -148,7 +157,7 @@ const MLInsights = ({ currentPostId, variant = 'full' }) => {
                                     </Typography>
                                 </Box>
                             </Grid>
-                            <Grid size={{ xs: 3 }}>
+                            <Grid item xs={3}>
                                 <Box sx={{ textAlign: 'center' }}>
                                     <Typography variant="h4" fontWeight={700}>
                                         {insights.reading_time}m
@@ -158,7 +167,7 @@ const MLInsights = ({ currentPostId, variant = 'full' }) => {
                                     </Typography>
                                 </Box>
                             </Grid>
-                            <Grid size={{ xs: 3 }}>
+                            <Grid item xs={3}>
                                 <Box sx={{ textAlign: 'center' }}>
                                     <Typography variant="h4" fontWeight={700}>
                                         {insights.engagement_rate}%
@@ -168,7 +177,7 @@ const MLInsights = ({ currentPostId, variant = 'full' }) => {
                                     </Typography>
                                 </Box>
                             </Grid>
-                            <Grid size={{ xs: 3 }}>
+                            <Grid item xs={3}>
                                 <Box sx={{ textAlign: 'center' }}>
                                     <Typography variant="h4" fontWeight={700}>
                                         {insights.recommendations_accuracy}%
@@ -279,13 +288,13 @@ const MLInsights = ({ currentPostId, variant = 'full' }) => {
                                                         Patrones de Lectura
                                                     </Typography>
                                                     <Grid container spacing={2}>
-                                                        <Grid size={{ xs: 6 }}>
+                                                        <Grid item xs={6}>
                                                             <Typography variant="body2">
                                                                 <strong>Horario preferido:</strong><br />
                                                                 {insights.reading_patterns.preferred_time}
                                                             </Typography>
                                                         </Grid>
-                                                        <Grid size={{ xs: 6 }}>
+                                                        <Grid item xs={6}>
                                                             <Typography variant="body2">
                                                                 <strong>Duración promedio:</strong><br />
                                                                 {insights.reading_patterns.avg_session_duration}m

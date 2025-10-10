@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 
 use Illuminate\Support\Facades\Route;
 
@@ -45,6 +45,10 @@ Route::middleware(['auth', 'auth.enhanced', 'role:admin,editor', 'admin.timeout'
     // Admin Dashboard
     Route::get('/dashboard', [App\Http\Controllers\Admin\DashboardController::class, 'index'])
         ->name('dashboard');
+
+    // Machine Learning Dashboard
+    Route::get('/ml/dashboard', [App\Http\Controllers\MLController::class, 'adminDashboard'])
+        ->name('ml.dashboard');
 
     // Export Routes
     Route::prefix('export')->name('export.')->group(function () {
@@ -411,6 +415,13 @@ Route::middleware(['auth', 'auth.enhanced', 'role:admin', 'admin.security', 'adm
             ->name('cleanup');
         Route::post('/', [App\Http\Controllers\Admin\NotificationController::class, 'store'])
             ->name('store');
+    });
+
+    // Machine Learning Management
+    Route::prefix('ml')->name('ml.')->group(function () {
+        Route::get('/dashboard', function () {
+            return \Inertia\Inertia::render('Admin/ML/Dashboard');
+        })->name('dashboard');
     });
 });
 

@@ -59,6 +59,10 @@ class User extends Authenticatable
         'remember_token',
         'created_at',
         'updated_at',
+        'ml_blocked', // ✅ ML auto-block protection
+        'ml_blocked_at',
+        'ml_blocked_reason',
+        'ml_anomaly_score',
     ];
 
     /**
@@ -107,6 +111,8 @@ class User extends Authenticatable
             'password' => 'hashed',
             'is_verified' => 'boolean',
             'verified_at' => 'datetime',
+            'ml_blocked' => 'boolean',
+            'ml_blocked_at' => 'datetime',
         ];
     }
 
@@ -796,5 +802,54 @@ class User extends Authenticatable
     public function updateLastLogin(): bool
     {
         return $this->update(['last_login_at' => now()]);
+    }
+
+    /**
+     * Block user due to ML anomaly detection
+     */
+    public function blockByML(int $anomalyScore, string $reason = 'Suspicious activity detected'): bool
+    {
+        $this->ml_blocked = true;
+        $this->ml_blocked_at = now();
+        $this->ml_blocked_reason = $reason;
+        $this->ml_anomaly_score = $anomalyScore;
+        return $this->save();
+    }
+
+    /**
+     * Unblock user from ML block
+     */
+    public function unblockByML(): bool
+    {
+        $this->ml_blocked = false;
+        $this->ml_blocked_at = null;
+        $this->ml_blocked_reason = null;
+        $this->ml_anomaly_score = 0;
+        return $this->save();
+    }
+
+    /**
+     * Check if user is blocked by ML
+     */
+    public function isMLBlocked(): bool
+    {
+        return $this->ml_blocked === true;
+    }
+
+    /**
+     * Get ML block information
+     */
+    public function getMLBlockInfo(): ?array
+    {
+        if (!$this->ml_blocked) {
+            return null;
+        }
+
+        return [
+            'blocked' => true,
+            'blocked_at' => $this->ml_blocked_at,
+            'reason' => $this->ml_blocked_reason,
+            'anomaly_score' => $this->ml_anomaly_score,
+        ];
     }
 }

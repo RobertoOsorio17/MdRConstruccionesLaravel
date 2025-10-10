@@ -42,11 +42,11 @@ class AuthenticatedSessionController extends Controller
      */
     public function store(LoginRequest $request): RedirectResponse
     {
+        // ✅ FIXED: Don't log full email, use masked version
         Log::info('Login attempt started', [
-            'email' => $request->email,
+            'email_hash' => hash('sha256', $request->email), // Hash instead of plain email
             'ip' => $request->ip(),
-            'user_agent' => $request->userAgent(),
-            'session_id' => session()->getId(),
+            'user_agent' => substr($request->userAgent(), 0, 100), // Limit length
             'timestamp' => now()->toISOString()
         ]);
 
@@ -97,11 +97,10 @@ class AuthenticatedSessionController extends Controller
                 ]);
             }
 
+            // ✅ FIXED: Don't log email in success logs
             Log::info('Credentials verified successfully', [
                 'user_id' => $user->id,
-                'user_email' => $user->email,
                 'ip' => $request->ip(),
-                'session_id' => session()->getId(),
                 'timestamp' => now()->toISOString()
             ]);
 
@@ -151,7 +150,6 @@ class AuthenticatedSessionController extends Controller
                 // No trusted device found - require 2FA
                 Log::info('User has 2FA enabled, requiring 2FA verification', [
                     'user_id' => $user->id,
-                    'user_email' => $user->email,
                     'timestamp' => now()->toISOString()
                 ]);
 
@@ -168,9 +166,9 @@ class AuthenticatedSessionController extends Controller
                 session()->put('login.password_hash', $user->password); // Verify password hasn't changed
                 session()->put('login.attempt_time', now()->timestamp); // Expire after 5 minutes
 
+                // ✅ FIXED: Don't log email
                 Log::info('2FA required - user NOT authenticated yet', [
                     'user_id' => $user->id,
-                    'user_email' => $user->email,
                     'timestamp' => now()->toISOString()
                 ]);
 
@@ -197,9 +195,9 @@ class AuthenticatedSessionController extends Controller
                 'last_login_ip' => $request->ip()
             ])->save();
 
+            // ✅ FIXED: Don't log email
             Log::info('User authenticated successfully (no 2FA)', [
                 'user_id' => $user->id,
-                'user_email' => $user->email,
                 'timestamp' => now()->toISOString()
             ]);
 
@@ -211,15 +209,14 @@ class AuthenticatedSessionController extends Controller
             }
             
         } catch (\Exception $e) {
+            // ✅ FIXED: Don't log email or session ID
             Log::error('Login failed', [
-                'email' => $request->email,
                 'error' => $e->getMessage(),
                 'ip' => $request->ip(),
-                'user_agent' => $request->userAgent(),
-                'session_id' => session()->getId(),
+                'user_agent' => substr($request->userAgent(), 0, 100),
                 'timestamp' => now()->toISOString()
             ]);
-            
+
             throw $e;
         }
     }
@@ -230,14 +227,11 @@ class AuthenticatedSessionController extends Controller
     public function destroy(Request $request): RedirectResponse
     {
         $userId = Auth::id();
-        $userEmail = Auth::user()?->email;
-        
+
+        // ✅ FIXED: Don't log email or session IDs
         Log::info('Logout initiated', [
             'user_id' => $userId,
-            'user_email' => $userEmail,
             'ip' => $request->ip(),
-            'user_agent' => $request->userAgent(),
-            'session_id' => session()->getId(),
             'timestamp' => now()->toISOString()
         ]);
 
@@ -245,12 +239,11 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->invalidate();
         $request->session()->regenerateToken();
-        
+
+        // ✅ FIXED: Minimal logging
         Log::info('Logout completed', [
             'former_user_id' => $userId,
-            'former_user_email' => $userEmail,
             'ip' => $request->ip(),
-            'new_session_id' => session()->getId(),
             'timestamp' => now()->toISOString()
         ]);
 

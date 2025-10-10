@@ -6,20 +6,33 @@ use App\Models\Post;
 use App\Models\MLPostVector;
 use App\Models\MLUserProfile;
 use App\Models\MLInteractionLog;
+use App\Services\ML\MatrixFactorizationService;
+use App\Services\ML\ExplainableAIService;
+use App\Helpers\MLSettingsHelper;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Orchestrates the hybrid recommendation engine combining content-based, collaborative, and trending signals.
  * Generates personalized suggestions, caches results, and logs interactions for continuous model improvement.
+ *
+ * V2.0: Integrated with MatrixFactorizationService and ExplainableAIService
  */
 class MLRecommendationService
 {
     private ContentAnalysisService $contentAnalysis;
+    private MatrixFactorizationService $matrixFactorization;
+    private ExplainableAIService $explainableAI;
 
-    public function __construct(ContentAnalysisService $contentAnalysis)
-    {
+    public function __construct(
+        ContentAnalysisService $contentAnalysis,
+        MatrixFactorizationService $matrixFactorization,
+        ExplainableAIService $explainableAI
+    ) {
         $this->contentAnalysis = $contentAnalysis;
+        $this->matrixFactorization = $matrixFactorization;
+        $this->explainableAI = $explainableAI;
     }
 
     /**
@@ -29,50 +42,82 @@ class MLRecommendationService
         string $sessionId = null,
         int $userId = null,
         int $currentPostId = null,
+        int $limit = null
+    ): array {
+        // Get settings
+        $params = MLSettingsHelper::getRecommendationParams();
+        $performanceConfig = MLSettingsHelper::getPerformanceConfig();
+
+        // Use settings for limit and cache timeout
+        $limit = $limit ?? $params['default_limit'];
+        $cacheTimeout = $params['cache_timeout'];
+        $cachingEnabled = $performanceConfig['enable_caching'];
+
+        $cacheKey = "ml_recommendations_{$userId}_{$sessionId}_{$currentPostId}_{$limit}";
+
+        // Use cache only if enabled in settings
+        if (!$cachingEnabled) {
+            return $this->generateRecommendations($sessionId, $userId, $currentPostId, $limit);
+        }
+
+        return Cache::remember($cacheKey, $cacheTimeout, function() use ($sessionId, $userId, $currentPostId, $limit) {
+            return $this->generateRecommendations($sessionId, $userId, $currentPostId, $limit);
+        });
+    }
+
+    /**
+     * Generate recommendations (extracted for cache control)
+     */
+    private function generateRecommendations(
+        string $sessionId = null,
+        int $userId = null,
+        int $currentPostId = null,
         int $limit = 10
     ): array {
-        $cacheKey = "ml_recommendations_{$userId}_{$sessionId}_{$currentPostId}_{$limit}";
-        
-        return Cache::remember($cacheKey, 300, function() use ($sessionId, $userId, $currentPostId, $limit) {
-            // Retrieve the user profile if it exists.
-            $userProfile = MLUserProfile::findByIdentifier($sessionId, $userId);
+        // Retrieve the user profile if it exists.
+        $userProfile = MLUserProfile::findByIdentifier($sessionId, $userId);
 
-            // Retrieve candidate posts.
-            $candidatePosts = $this->getCandidatePosts($currentPostId);
-            
-            if ($candidatePosts->isEmpty()) {
-                return [];
-            }
+        // Retrieve candidate posts.
+        $candidatePosts = $this->getCandidatePosts($currentPostId);
 
-            // Apply multiple recommendation strategies.
-            $recommendations = [];
+        if ($candidatePosts->isEmpty()) {
+            return [];
+        }
 
-            // 1. Content-based filtering.
+        // Apply multiple recommendation strategies based on settings.
+        $recommendations = [];
+
+        // 1. Content-based filtering (if enabled).
+        if (MLSettingsHelper::isAlgorithmEnabled('content_based')) {
             $contentBasedRecs = $this->getContentBasedRecommendations($currentPostId, $candidatePosts, $limit);
             $recommendations = array_merge($recommendations, $contentBasedRecs);
+        }
 
-            // 2. Collaborative filtering (when a user profile is present).
-            if ($userProfile) {
-                $collaborativeRecs = $this->getCollaborativeRecommendations($userProfile, $candidatePosts, $limit);
-                $recommendations = array_merge($recommendations, $collaborativeRecs);
+        // 2. Collaborative filtering (when a user profile is present and enabled).
+        if ($userProfile && MLSettingsHelper::isAlgorithmEnabled('collaborative')) {
+            $collaborativeRecs = $this->getCollaborativeRecommendations($userProfile, $candidatePosts, $limit);
+            $recommendations = array_merge($recommendations, $collaborativeRecs);
+        }
 
-                // 3. Personalized recommendations.
-                $personalizedRecs = $this->getPersonalizedRecommendations($userProfile, $candidatePosts, $limit);
-                $recommendations = array_merge($recommendations, $personalizedRecs);
-            }
+        // 3. Personalized/Hybrid recommendations (if enabled).
+        if ($userProfile && MLSettingsHelper::isAlgorithmEnabled('hybrid')) {
+            $personalizedRecs = $this->getPersonalizedRecommendations($userProfile, $candidatePosts, $limit);
+            $recommendations = array_merge($recommendations, $personalizedRecs);
+        }
 
-            // 4. Trending/popular posts.
+        // 4. Trending/popular posts (if enabled).
+        if (MLSettingsHelper::isAlgorithmEnabled('trending')) {
             $trendingRecs = $this->getTrendingRecommendations($candidatePosts, $limit);
             $recommendations = array_merge($recommendations, $trendingRecs);
+        }
 
-            // Combine and rank the recommendation sets.
-            $finalRecs = $this->combineAndRankRecommendations($recommendations, $userProfile, $limit);
+        // Combine and rank the recommendation sets.
+        $finalRecs = $this->combineAndRankRecommendations($recommendations, $userProfile, $limit);
 
-            // Log the recommendations for later analysis.
-            $this->logRecommendations($sessionId, $userId, $finalRecs);
-            
-            return $finalRecs;
-        });
+        // Log the recommendations for later analysis.
+        $this->logRecommendations($sessionId, $userId, $finalRecs);
+
+        return $finalRecs;
     }
 
     /**
@@ -157,20 +202,78 @@ class MLRecommendationService
     }
 
     /**
-     * Collaborative filtering recommendations.
+     * Collaborative filtering recommendations using Matrix Factorization.
+     *
+     * V2.0: Now uses MatrixFactorizationService with ALS algorithm
      */
     private function getCollaborativeRecommendations(MLUserProfile $userProfile, Collection $candidates, int $limit): array
     {
+        try {
+            // Use Matrix Factorization for collaborative filtering
+            $userId = $userProfile->user_id;
+
+            // Skip Matrix Factorization for guest users (no user_id)
+            if (!$userId) {
+                return $this->getBasicCollaborativeRecommendations($userProfile, $candidates, $limit);
+            }
+
+            // Get predictions from Matrix Factorization for each candidate
+            $recommendations = [];
+            foreach ($candidates as $post) {
+                try {
+                    $predictedRating = $this->matrixFactorization->predict($userId, $post->id);
+
+                    if ($predictedRating > 3.0) {
+                        $recommendations[] = [
+                            'post' => $post,
+                            'score' => $predictedRating / 5.0, // Normalize to 0-1
+                            'source' => 'collaborative',
+                            'reason' => 'Recommended based on users with similar preferences',
+                            'metadata' => [
+                                'predicted_rating' => $predictedRating,
+                                'algorithm' => 'Matrix Factorization (ALS)',
+                                'latent_factors' => 50
+                            ]
+                        ];
+                    }
+                } catch (\Exception $e) {
+                    // Skip this post if prediction fails
+                    Log::debug('Failed to predict rating for post', [
+                        'post_id' => $post->id,
+                        'error' => $e->getMessage()
+                    ]);
+                }
+            }
+
+            usort($recommendations, fn($a, $b) => $b['score'] <=> $a['score']);
+            return array_slice($recommendations, 0, $limit);
+
+        } catch (\Exception $e) {
+            Log::warning('Matrix Factorization failed, falling back to basic collaborative filtering', [
+                'user_id' => $userProfile->user_id,
+                'error' => $e->getMessage()
+            ]);
+
+            // Fallback to basic collaborative filtering
+            return $this->getBasicCollaborativeRecommendations($userProfile, $candidates, $limit);
+        }
+    }
+
+    /**
+     * Fallback basic collaborative filtering
+     */
+    private function getBasicCollaborativeRecommendations(MLUserProfile $userProfile, Collection $candidates, int $limit): array
+    {
         // Find similar user profiles.
         $similarUsers = $this->findSimilarUsers($userProfile, 10);
-        
+
         if (empty($similarUsers)) {
             return [];
         }
 
         $recommendations = [];
         $candidateIds = $candidates->pluck('id')->toArray();
-        
+
         // Aggregate posts liked by similar users.
         $popularAmongSimilar = MLInteractionLog::whereIn('user_id', array_keys($similarUsers))
             ->whereIn('post_id', $candidateIds)
@@ -186,7 +289,7 @@ class MLRecommendationService
             $post = $candidates->firstWhere('id', $popular->post_id);
             if ($post) {
                 $score = ($popular->interaction_count / count($similarUsers)) * ($popular->avg_rating / 5.0);
-                
+
                 $recommendations[] = [
                     'post' => $post,
                     'score' => $score,
@@ -300,42 +403,94 @@ class MLRecommendationService
 
     /**
      * Combine and rank the aggregated recommendations.
+     * V2.0: Now includes ExplainableAI explanations
      */
     private function combineAndRankRecommendations(array $allRecommendations, MLUserProfile $userProfile = null, int $limit = 10): array
     {
         // Group by post ID to avoid duplicates.
         $grouped = [];
-        
+
         foreach ($allRecommendations as $rec) {
             $postId = $rec['post']->id;
-            
+
             if (!isset($grouped[$postId])) {
                 $grouped[$postId] = $rec;
                 $grouped[$postId]['combined_score'] = 0;
                 $grouped[$postId]['sources'] = [];
+                $grouped[$postId]['algorithm_weights'] = [];
             }
-            
-            // Source weighting.
+
+            // Source weighting from settings.
+            $algorithmWeights = MLSettingsHelper::getAlgorithmWeights();
             $sourceWeights = [
-                'content_based' => 0.3,
-                'collaborative' => 0.25,
-                'personalized' => 0.35,
-                'trending' => 0.1
+                'content_based' => $algorithmWeights['content'],
+                'collaborative' => $algorithmWeights['collaborative'],
+                'personalized' => $algorithmWeights['hybrid'],
+                'trending' => $algorithmWeights['trending']
             ];
-            
+
             $weight = $sourceWeights[$rec['source']] ?? 0.1;
             $grouped[$postId]['combined_score'] += $rec['score'] * $weight;
             $grouped[$postId]['sources'][] = $rec['source'];
+            $grouped[$postId]['algorithm_weights'][$rec['source']] = $weight;
         }
 
         // Apply a diversity boost.
         $final = array_values($grouped);
         $final = $this->applyDiversityBoost($final);
-        
+
         // Sort by the final combined score.
         usort($final, fn($a, $b) => $b['combined_score'] <=> $a['combined_score']);
-        
-        return array_slice($final, 0, $limit);
+
+        // Filter by minimum confidence (if configured and we have enough recommendations)
+        $params = MLSettingsHelper::getRecommendationParams();
+        $minConfidence = $params['min_confidence'];
+        if ($minConfidence > 0 && count($final) > $limit) {
+            $filtered = array_filter($final, function($rec) use ($minConfidence) {
+                return ($rec['combined_score'] ?? 0) >= $minConfidence;
+            });
+
+            // Only apply filter if we still have enough recommendations
+            if (count($filtered) >= $limit) {
+                $final = array_values($filtered);
+            }
+        }
+
+        // Add explanations using ExplainableAI (if enabled in settings)
+        $explainableConfig = MLSettingsHelper::getExplainableAIConfig();
+        $final = array_slice($final, 0, $limit);
+
+        if ($explainableConfig['include_explanations']) {
+            foreach ($final as &$rec) {
+                try {
+                    $explanation = $this->explainableAI->explainRecommendation(
+                        $rec['post'],
+                        $userProfile,
+                        [
+                            'source' => $rec['source'] ?? 'hybrid',
+                            'score' => $rec['combined_score'],
+                            'algorithm_weights' => $rec['algorithm_weights'] ?? [],
+                            'metadata' => $rec['metadata'] ?? [],
+                            'detail_level' => $explainableConfig['detail_level']
+                        ]
+                    );
+                    $rec['explanation'] = $explanation;
+                } catch (\Exception $e) {
+                    Log::warning('Failed to generate explanation', [
+                        'post_id' => $rec['post']->id,
+                        'error' => $e->getMessage()
+                    ]);
+                    $rec['explanation'] = null;
+                }
+            }
+        } else {
+            // Set null explanations if disabled
+            foreach ($final as &$rec) {
+                $rec['explanation'] = null;
+            }
+        }
+
+        return $final;
     }
 
     /**
@@ -343,12 +498,18 @@ class MLRecommendationService
      */
     private function applyDiversityBoost(array $recommendations): array
     {
+        // Get diversity boost from settings
+        $params = MLSettingsHelper::getRecommendationParams();
+        $diversityBoost = $params['diversity_boost'];
+
+        // Calculate penalty based on diversity boost (higher boost = higher penalty for duplicates)
+        $categoryPenalty = 1.0 - $diversityBoost; // 0.3 boost = 0.7 penalty
+
         $seenCategories = [];
-        $categoryPenalty = 0.9; // Penalty for repeated categories.
-        
+
         foreach ($recommendations as &$rec) {
             $categories = $rec['post']->categories->pluck('id')->toArray();
-            
+
             foreach ($categories as $categoryId) {
                 if (isset($seenCategories[$categoryId])) {
                     $rec['combined_score'] *= $categoryPenalty;
@@ -356,7 +517,7 @@ class MLRecommendationService
                 $seenCategories[$categoryId] = true;
             }
         }
-        
+
         return $recommendations;
     }
 

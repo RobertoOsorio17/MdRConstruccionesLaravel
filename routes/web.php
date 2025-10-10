@@ -34,8 +34,8 @@ Route::middleware('check.blog')->group(function () {
     Route::get('/blog/{post:slug}', [PostController::class, 'show'])->name('blog.show');
 });
 
-// ✅ Search Routes (with rate limiting)
-Route::middleware(['throttle:60,1'])->group(function () {
+// ✅ Search Routes (with rate limiting - reduced from 60 to 20 req/min to prevent scraping)
+Route::middleware(['throttle:20,1'])->group(function () {
     Route::get('/search', [SearchController::class, 'index'])->name('search.index');
 });
 
@@ -191,15 +191,27 @@ Route::middleware(['auth', 'auth.enhanced', 'track.device'])->group(function () 
         Route::delete('/', [App\Http\Controllers\DeviceSessionController::class, 'destroyInactive'])->name('destroy-inactive');
     });
 
-    // Two Factor Authentication Routes
+    // ✅ Two Factor Authentication Routes (with rate limiting to prevent brute force)
     Route::prefix('user/two-factor-authentication')->name('two-factor.')->group(function () {
         Route::get('/', [App\Http\Controllers\Auth\TwoFactorController::class, 'show'])->name('show');
-        Route::post('/', [App\Http\Controllers\Auth\TwoFactorController::class, 'store'])->name('enable');
-        Route::post('/confirm', [App\Http\Controllers\Auth\TwoFactorController::class, 'confirm'])->name('confirm');
-        Route::delete('/', [App\Http\Controllers\Auth\TwoFactorController::class, 'destroy'])->name('disable');
-        Route::get('/qr-code', [App\Http\Controllers\Auth\TwoFactorController::class, 'qrCode'])->name('qr-code');
-        Route::post('/recovery-codes', [App\Http\Controllers\Auth\TwoFactorController::class, 'recoveryCodes'])->name('recovery-codes');
-        Route::post('/recovery-codes/regenerate', [App\Http\Controllers\Auth\TwoFactorController::class, 'regenerate'])->name('recovery-codes.regenerate');
+        Route::post('/', [App\Http\Controllers\Auth\TwoFactorController::class, 'store'])
+            ->middleware('throttle:5,1') // Max 5 enable attempts per minute
+            ->name('enable');
+        Route::post('/confirm', [App\Http\Controllers\Auth\TwoFactorController::class, 'confirm'])
+            ->middleware('throttle:5,1') // Max 5 verification attempts per minute (critical!)
+            ->name('confirm');
+        Route::delete('/', [App\Http\Controllers\Auth\TwoFactorController::class, 'destroy'])
+            ->middleware('throttle:3,1') // Max 3 disable attempts per minute
+            ->name('disable');
+        Route::get('/qr-code', [App\Http\Controllers\Auth\TwoFactorController::class, 'qrCode'])
+            ->middleware('throttle:10,1') // Max 10 QR code generations per minute
+            ->name('qr-code');
+        Route::post('/recovery-codes', [App\Http\Controllers\Auth\TwoFactorController::class, 'recoveryCodes'])
+            ->middleware('throttle:5,1') // Max 5 recovery code requests per minute
+            ->name('recovery-codes');
+        Route::post('/recovery-codes/regenerate', [App\Http\Controllers\Auth\TwoFactorController::class, 'regenerate'])
+            ->middleware('throttle:3,1') // Max 3 regenerations per minute
+            ->name('recovery-codes.regenerate');
     });
 
     // User Profile Management

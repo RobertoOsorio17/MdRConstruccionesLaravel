@@ -50,18 +50,24 @@ class PostController extends Controller
                 'published_posts_count' => Post::where('status', 'published')->count()
             ]);
 
-        // Enhanced search functionality
+        // Enhanced search functionality with SQL injection protection
         if ($request->has('search') && !empty($request->search)) {
-            $searchTerm = $request->search;
+            // ✅ FIXED: Sanitize search term to prevent SQL injection
+            $searchTerm = trim($request->search);
+            // Escape special LIKE characters
+            $searchTerm = str_replace(['%', '_'], ['\%', '\_'], $searchTerm);
+            // Limit length to prevent DoS
+            $searchTerm = substr($searchTerm, 0, 100);
+
             $query->where(function ($q) use ($searchTerm) {
-                $q->where('title', 'like', '%' . $searchTerm . '%')
-                  ->orWhere('excerpt', 'like', '%' . $searchTerm . '%')
-                  ->orWhere('content', 'like', '%' . $searchTerm . '%')
+                $q->where('title', 'like', "%{$searchTerm}%")
+                  ->orWhere('excerpt', 'like', "%{$searchTerm}%")
+                  ->orWhere('content', 'like', "%{$searchTerm}%")
                   ->orWhereHas('categories', function ($catQuery) use ($searchTerm) {
-                      $catQuery->where('name', 'like', '%' . $searchTerm . '%');
+                      $catQuery->where('name', 'like', "%{$searchTerm}%");
                   })
                   ->orWhereHas('tags', function ($tagQuery) use ($searchTerm) {
-                      $tagQuery->where('name', 'like', '%' . $searchTerm . '%');
+                      $tagQuery->where('name', 'like', "%{$searchTerm}%");
                   });
             });
         }
@@ -318,12 +324,17 @@ class PostController extends Controller
             });
         }
 
-        // Search functionality
+        // Search functionality with SQL injection protection
         if ($request->has('search') && !empty($request->search)) {
-            $query->where(function ($q) use ($request) {
-                $q->where('title', 'like', '%' . $request->search . '%')
-                  ->orWhere('excerpt', 'like', '%' . $request->search . '%')
-                  ->orWhere('content', 'like', '%' . $request->search . '%');
+            // ✅ FIXED: Sanitize search term
+            $searchTerm = trim($request->search);
+            $searchTerm = str_replace(['%', '_'], ['\%', '\_'], $searchTerm);
+            $searchTerm = substr($searchTerm, 0, 100);
+
+            $query->where(function ($q) use ($searchTerm) {
+                $q->where('title', 'like', "%{$searchTerm}%")
+                  ->orWhere('excerpt', 'like', "%{$searchTerm}%")
+                  ->orWhere('content', 'like', "%{$searchTerm}%");
             });
         }
 

@@ -1,0 +1,940 @@
+import React, { useState, useEffect } from 'react';
+import MainLayout from '@/Layouts/MainLayout';
+import { Head, useForm, Link } from '@inertiajs/react';
+import {
+    Box,
+    Container,
+    Grid,
+    Card,
+    CardContent,
+    Typography,
+    TextField,
+    Button,
+    FormControlLabel,
+    Checkbox,
+    Alert,
+    Select,
+    MenuItem,
+    FormControl,
+    InputLabel,
+    alpha,
+    useTheme,
+    Stack,
+    Chip,
+    Divider,
+    Accordion,
+    AccordionSummary,
+    AccordionDetails,
+    Avatar,
+    Rating,
+    Breadcrumbs,
+    CircularProgress,
+    InputAdornment,
+    Link as MuiLink,
+} from '@mui/material';
+import {
+    Phone,
+    Email,
+    LocationOn,
+    WhatsApp,
+    Send,
+    Schedule,
+    CheckCircle,
+    AccessTime,
+    Person,
+    Message,
+    Business,
+    ExpandMore,
+    HelpOutline,
+    Verified,
+    TrendingUp,
+    Shield,
+    Euro,
+    NavigateNext,
+    CheckCircleOutline,
+} from '@mui/icons-material';
+import { motion } from 'framer-motion';
+import PrivacyPolicyModal from '@/Components/PrivacyPolicyModal';
+
+// Main component - simplified without reCAPTCHA and Google Maps for now
+export default function Contact({ contactInfo, services, seo, flash }) {
+    const theme = useTheme();
+    const [submitted, setSubmitted] = useState(false);
+    const [privacyModalOpen, setPrivacyModalOpen] = useState(false);
+    const [isAvailable, setIsAvailable] = useState(false);
+
+    const { data, setData, post, processing, errors, reset } = useForm({
+        name: '',
+        email: '',
+        phone: '',
+        service: '',
+        message: '',
+        privacy_accepted: false,
+        recaptcha_token: '',
+    });
+
+    // Check availability based on working hours
+    useEffect(() => {
+        const checkAvailability = () => {
+            const now = new Date();
+            const day = now.getDay();
+            const hour = now.getHours();
+
+            if (day >= 1 && day <= 5) {
+                setIsAvailable(hour >= 8 && hour < 18);
+            } else if (day === 6) {
+                setIsAvailable(hour >= 9 && hour < 14);
+            } else {
+                setIsAvailable(false);
+            }
+        };
+
+        checkAvailability();
+        const interval = setInterval(checkAvailability, 60000);
+        return () => clearInterval(interval);
+    }, []);
+
+    // Glassmorphism style premium
+    const glassStyle = {
+        background: alpha('#ffffff', 0.85),
+        backdropFilter: 'blur(20px)',
+        borderRadius: 4,
+        border: `1px solid ${alpha('#ffffff', 0.4)}`,
+        boxShadow: `0 12px 40px 0 ${alpha('#000000', 0.12)}`,
+        transition: 'all 0.3s ease-in-out',
+        '&:hover': {
+            boxShadow: `0 16px 48px 0 ${alpha('#000000', 0.16)}`,
+            transform: 'translateY(-4px)',
+        },
+    };
+
+    const handleSubmit = (e) => {
+        e.preventDefault();
+
+        post(route('contact.submit'), {
+            preserveScroll: true,
+            onSuccess: () => {
+                setSubmitted(true);
+                reset();
+                setTimeout(() => setSubmitted(false), 5000);
+            },
+        });
+    };
+
+    // Animation variants
+    const containerVariants = {
+        hidden: { opacity: 0 },
+        visible: {
+            opacity: 1,
+            transition: {
+                staggerChildren: 0.1,
+            },
+        },
+    };
+
+    const itemVariants = {
+        hidden: { opacity: 0, y: 20 },
+        visible: {
+            opacity: 1,
+            y: 0,
+            transition: {
+                duration: 0.5,
+            },
+        },
+    };
+
+    const contactMethods = [
+        {
+            icon: <Phone sx={{ fontSize: 40 }} />,
+            title: 'Teléfono',
+            value: '+34 123 456 789',
+            color: theme.palette.primary.main,
+            action: 'tel:+34123456789',
+            description: 'Llámanos ahora',
+        },
+        {
+            icon: <Email sx={{ fontSize: 40 }} />,
+            title: 'Email',
+            value: 'info@mdrconstrucciones.com',
+            color: theme.palette.secondary.main,
+            action: 'mailto:info@mdrconstrucciones.com',
+            description: 'Escríbenos',
+        },
+        {
+            icon: <WhatsApp sx={{ fontSize: 40 }} />,
+            title: 'WhatsApp',
+            value: '+34 123 456 789',
+            color: '#25D366',
+            action: 'https://wa.me/34123456789',
+            description: 'Chat directo',
+        },
+        {
+            icon: <LocationOn sx={{ fontSize: 40 }} />,
+            title: 'Dirección',
+            value: 'Calle Principal 123, Madrid',
+            color: theme.palette.error.main,
+            action: 'https://maps.google.com/?q=Calle+Principal+123+Madrid',
+            description: 'Visítanos',
+        },
+    ];
+
+    const servicesList = [
+        'Reformas Integrales',
+        'Construcción Nueva',
+        'Rehabilitación',
+        'Diseño de Interiores',
+        'Proyectos Comerciales',
+        'Otro',
+    ];
+
+    const workingHours = [
+        { day: 'Lunes - Viernes', hours: '8:00 - 18:00' },
+        { day: 'Sábados', hours: '9:00 - 14:00' },
+        { day: 'Domingos', hours: 'Cerrado' },
+    ];
+
+    const faqs = [
+        {
+            question: '¿Cuánto tiempo tarda una reforma integral?',
+            answer: 'El tiempo depende del tamaño y complejidad del proyecto. Una reforma integral de un piso de 80m² suele tardar entre 6-8 semanas. Realizamos una planificación detallada antes de comenzar para garantizar el cumplimiento de plazos.',
+        },
+        {
+            question: '¿Ofrecen presupuesto sin compromiso?',
+            answer: 'Sí, ofrecemos presupuestos completamente gratuitos y sin compromiso. Visitamos tu propiedad, evaluamos el proyecto y te entregamos un presupuesto detallado en 24-48 horas.',
+        },
+        {
+            question: '¿Qué garantías ofrecen en sus trabajos?',
+            answer: 'Todos nuestros trabajos incluyen garantía de 2 años en mano de obra y hasta 10 años en elementos estructurales. Además, trabajamos solo con materiales de primeras marcas que incluyen sus propias garantías.',
+        },
+        {
+            question: '¿Se encargan de los permisos y licencias?',
+            answer: 'Sí, nos encargamos de toda la gestión de permisos, licencias y trámites necesarios con el ayuntamiento y comunidad de vecinos. Incluido en nuestro servicio integral.',
+        },
+        {
+            question: '¿Puedo seguir viviendo en casa durante la reforma?',
+            answer: 'Depende del tipo de reforma. En reformas parciales (cocina, baño) es posible con algunas molestias. En reformas integrales recomendamos desalojar temporalmente para mayor seguridad y rapidez.',
+        },
+        {
+            question: '¿Qué formas de pago aceptan?',
+            answer: 'Aceptamos transferencia bancaria, tarjeta y efectivo. Trabajamos con un sistema de pagos por fases: 40% al inicio, 40% a mitad de obra y 20% final. También ofrecemos financiación sin intereses.',
+        },
+    ];
+
+    const testimonials = [
+        {
+            name: 'María González',
+            role: 'Reforma Integral - Chamberí',
+            rating: 5,
+            comment: 'Excelente trabajo en nuestra reforma integral. Cumplieron plazos, presupuesto y la calidad superó nuestras expectativas. Muy profesionales.',
+            avatar: 'M',
+        },
+        {
+            name: 'Carlos Ruiz',
+            role: 'Construcción Nueva - Pozuelo',
+            rating: 5,
+            comment: 'Construyeron nuestra casa desde cero. Atentos a cada detalle, transparentes en costes y siempre disponibles. 100% recomendables.',
+            avatar: 'C',
+        },
+        {
+            name: 'Ana Martínez',
+            role: 'Diseño de Interiores - Salamanca',
+            rating: 5,
+            comment: 'El equipo de diseño transformó completamente nuestro hogar. Ideas innovadoras, ejecución impecable. Estamos encantados con el resultado.',
+            avatar: 'A',
+        },
+    ];
+
+    const whyChooseUs = [
+        {
+            icon: <Verified sx={{ fontSize: 50 }} />,
+            title: '+8 Años de Experiencia',
+            description: 'Más de 500 proyectos completados con éxito en Madrid y alrededores.',
+            color: theme.palette.primary.main,
+        },
+        {
+            icon: <Shield sx={{ fontSize: 50 }} />,
+            title: 'Garantía Total',
+            description: 'Garantía de 2 años en mano de obra y hasta 10 años en estructuras.',
+            color: theme.palette.success.main,
+        },
+        {
+            icon: <TrendingUp sx={{ fontSize: 50 }} />,
+            title: 'Calidad Premium',
+            description: 'Trabajamos solo con materiales de primeras marcas y profesionales certificados.',
+            color: theme.palette.warning.main,
+        },
+        {
+            icon: <Euro sx={{ fontSize: 50 }} />,
+            title: 'Precio Justo',
+            description: 'Presupuestos transparentes sin sorpresas. Financiación disponible sin intereses.',
+            color: theme.palette.info.main,
+        },
+    ];
+
+    const mapContainerStyle = {
+        width: '100%',
+        height: '400px',
+        borderRadius: '16px',
+    };
+
+    const center = {
+        lat: 40.4168,
+        lng: -3.7038,
+    };
+
+    return (
+        <MainLayout>
+            <Head title={seo?.title || 'Contacto - MDR Construcciones'} />
+
+            {/* Hero Section Premium with Background Image */}
+            <Box
+                sx={{
+                    position: 'relative',
+                    minHeight: { xs: '300px', md: '400px' },
+                    background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
+                    color: 'white',
+                    display: 'flex',
+                    alignItems: 'center',
+                    overflow: 'hidden',
+                    '&::before': {
+                        content: '""',
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        backgroundImage: 'url(/images/hero-contact.jpg)',
+                        backgroundSize: 'cover',
+                        backgroundPosition: 'center',
+                        opacity: 0.2,
+                    },
+                    '&::after': {
+                        content: '""',
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.8)} 0%, ${alpha(theme.palette.primary.dark, 0.9)} 100%)`,
+                    },
+                }}
+            >
+                <Container maxWidth="lg" sx={{ position: 'relative', zIndex: 2, py: { xs: 6, md: 8 } }}>
+                    {/* Breadcrumbs */}
+                    <Breadcrumbs
+                        separator={<NavigateNext fontSize="small" />}
+                        sx={{ mb: 3, color: 'white' }}
+                    >
+                        <MuiLink
+                            component={Link}
+                            href="/"
+                            sx={{ color: 'white', textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}
+                        >
+                            Inicio
+                        </MuiLink>
+                        <Typography color="white">Contacto</Typography>
+                    </Breadcrumbs>
+
+                    <motion.div
+                        initial={{ opacity: 0, y: 30 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.8 }}
+                    >
+                        <Typography
+                            variant="h1"
+                            fontWeight="800"
+                            gutterBottom
+                            sx={{
+                                fontSize: { xs: '2.5rem', md: '3.5rem' },
+                                textShadow: '0 4px 12px rgba(0,0,0,0.3)',
+                                mb: 2,
+                            }}
+                        >
+                            Hablemos de tu Proyecto
+                        </Typography>
+                        <Typography
+                            variant="h5"
+                            sx={{
+                                opacity: 0.95,
+                                maxWidth: 700,
+                                fontWeight: 300,
+                                fontSize: { xs: '1.1rem', md: '1.3rem' },
+                                mb: 3,
+                            }}
+                        >
+                            Estamos listos para convertir tus ideas en realidad. Contáctanos y recibe una consulta gratuita.
+                        </Typography>
+
+                        {/* Availability and Response Time Indicators */}
+                        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ mt: 3 }}>
+                            <Chip
+                                icon={isAvailable ? <CheckCircleOutline /> : <Schedule />}
+                                label={isAvailable ? 'Disponibles Ahora' : 'Fuera de Horario'}
+                                color={isAvailable ? 'success' : 'default'}
+                                sx={{
+                                    bgcolor: isAvailable ? alpha('#4CAF50', 0.9) : alpha('#fff', 0.2),
+                                    color: 'white',
+                                    fontWeight: 600,
+                                    px: 2,
+                                    py: 2.5,
+                                }}
+                            />
+                            <Chip
+                                icon={<AccessTime />}
+                                label="Respondemos en < 24h"
+                                sx={{
+                                    bgcolor: alpha('#fff', 0.2),
+                                    color: 'white',
+                                    fontWeight: 600,
+                                    px: 2,
+                                    py: 2.5,
+                                }}
+                            />
+                        </Stack>
+                    </motion.div>
+                </Container>
+            </Box>
+
+            <Container maxWidth="lg" sx={{ mb: 10 }}>
+                {/* Success Alert */}
+                {(submitted || flash?.success) && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0 }}
+                    >
+                        <Alert
+                            severity="success"
+                            icon={<CheckCircle />}
+                            sx={{ mb: 4, ...glassStyle }}
+                        >
+                            {flash?.success || '¡Gracias por tu mensaje! Te contactaremos en las próximas 24 horas.'}
+                        </Alert>
+                    </motion.div>
+                )}
+
+                <Grid container spacing={4}>
+                    {/* Contact Form - Left Side */}
+                    <Grid item xs={12} md={7}>
+                        <motion.div
+                            variants={itemVariants}
+                            initial="hidden"
+                            animate="visible"
+                        >
+                            <Card sx={{ ...glassStyle, height: '100%' }}>
+                                <CardContent sx={{ p: { xs: 3, md: 4 } }}>
+                                    <Typography variant="h4" fontWeight="bold" gutterBottom>
+                                        Envíanos un Mensaje
+                                    </Typography>
+                                    <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
+                                        Completa el formulario y nos pondremos en contacto contigo lo antes posible.
+                                    </Typography>
+
+                                    <Box component="form" onSubmit={handleSubmit}>
+                                        <Grid container spacing={3}>
+                                            <Grid item xs={12} sm={6}>
+                                                <motion.div
+                                                    whileHover={{ scale: 1.02 }}
+                                                    whileFocus={{ scale: 1.02 }}
+                                                >
+                                                    <TextField
+                                                        fullWidth
+                                                        label="Nombre completo"
+                                                        value={data.name}
+                                                        onChange={(e) => setData('name', e.target.value)}
+                                                        error={!!errors.name}
+                                                        helperText={errors.name}
+                                                        required
+                                                        variant="outlined"
+                                                        InputProps={{
+                                                            startAdornment: (
+                                                                <InputAdornment position="start">
+                                                                    <Person color={errors.name ? 'error' : 'action'} />
+                                                                </InputAdornment>
+                                                            ),
+                                                        }}
+                                                        sx={{
+                                                            '& .MuiOutlinedInput-root': {
+                                                                backgroundColor: alpha('#fff', 0.9),
+                                                            },
+                                                        }}
+                                                    />
+                                                </motion.div>
+                                            </Grid>
+                                            <Grid item xs={12} sm={6}>
+                                                <motion.div
+                                                    whileHover={{ scale: 1.02 }}
+                                                    whileFocus={{ scale: 1.02 }}
+                                                >
+                                                    <TextField
+                                                        fullWidth
+                                                        label="Email"
+                                                        type="email"
+                                                        value={data.email}
+                                                        onChange={(e) => setData('email', e.target.value)}
+                                                        error={!!errors.email}
+                                                        helperText={errors.email}
+                                                        required
+                                                        variant="outlined"
+                                                        InputProps={{
+                                                            startAdornment: (
+                                                                <InputAdornment position="start">
+                                                                    <Email color={errors.email ? 'error' : 'action'} />
+                                                                </InputAdornment>
+                                                            ),
+                                                        }}
+                                                        sx={{
+                                                            '& .MuiOutlinedInput-root': {
+                                                                backgroundColor: alpha('#fff', 0.9),
+                                                            },
+                                                        }}
+                                                    />
+                                                </motion.div>
+                                            </Grid>
+
+
+                                            <Grid item xs={12} sm={6}>
+                                                <motion.div
+                                                    whileHover={{ scale: 1.02 }}
+                                                    whileFocus={{ scale: 1.02 }}
+                                                >
+                                                    <TextField
+                                                        fullWidth
+                                                        label="Teléfono"
+                                                        value={data.phone}
+                                                        onChange={(e) => setData('phone', e.target.value)}
+                                                        error={!!errors.phone}
+                                                        helperText={errors.phone}
+                                                        variant="outlined"
+                                                        InputProps={{
+                                                            startAdornment: (
+                                                                <InputAdornment position="start">
+                                                                    <Phone color={errors.phone ? 'error' : 'action'} />
+                                                                </InputAdornment>
+                                                            ),
+                                                        }}
+                                                        sx={{
+                                                            '& .MuiOutlinedInput-root': {
+                                                                backgroundColor: alpha('#fff', 0.9),
+                                                            },
+                                                        }}
+                                                    />
+                                                </motion.div>
+                                            </Grid>
+                                            <Grid item xs={12} sm={6}>
+                                                <motion.div
+                                                    whileHover={{ scale: 1.02 }}
+                                                    whileFocus={{ scale: 1.02 }}
+                                                >
+                                                    <FormControl fullWidth>
+                                                        <InputLabel>Servicio de Interés</InputLabel>
+                                                        <Select
+                                                            value={data.service}
+                                                            onChange={(e) => setData('service', e.target.value)}
+                                                            label="Servicio de Interés"
+                                                            startAdornment={
+                                                                <InputAdornment position="start">
+                                                                    <Business color="action" />
+                                                                </InputAdornment>
+                                                            }
+                                                            sx={{
+                                                                backgroundColor: alpha('#fff', 0.9),
+                                                            }}
+                                                        >
+                                                            {servicesList.map((service) => (
+                                                                <MenuItem key={service} value={service}>
+                                                                    {service}
+                                                                </MenuItem>
+                                                            ))}
+                                                        </Select>
+                                                    </FormControl>
+                                                </motion.div>
+                                            </Grid>
+                                            <Grid item xs={12}>
+                                                <motion.div
+                                                    whileHover={{ scale: 1.01 }}
+                                                    whileFocus={{ scale: 1.01 }}
+                                                >
+                                                    <TextField
+                                                        fullWidth
+                                                        label="Mensaje"
+                                                        multiline
+                                                        rows={6}
+                                                        value={data.message}
+                                                        onChange={(e) => setData('message', e.target.value)}
+                                                        error={!!errors.message}
+                                                        helperText={errors.message}
+                                                        required
+                                                        variant="outlined"
+                                                        InputProps={{
+                                                            startAdornment: (
+                                                                <InputAdornment position="start" sx={{ alignSelf: 'flex-start', mt: 2 }}>
+                                                                    <Message color={errors.message ? 'error' : 'action'} />
+                                                                </InputAdornment>
+                                                            ),
+                                                        }}
+                                                        sx={{
+                                                            '& .MuiOutlinedInput-root': {
+                                                                backgroundColor: alpha('#fff', 0.9),
+                                                            },
+                                                        }}
+                                                    />
+                                                </motion.div>
+                                            </Grid>
+                                            <Grid item xs={12}>
+                                                <FormControlLabel
+                                                    control={
+                                                        <Checkbox
+                                                            checked={data.privacy_accepted}
+                                                            onChange={(e) => setData('privacy_accepted', e.target.checked)}
+                                                            color="primary"
+                                                        />
+                                                    }
+                                                    label={
+                                                        <Typography variant="body2">
+                                                            Acepto la{' '}
+                                                            <MuiLink
+                                                                component="button"
+                                                                type="button"
+                                                                onClick={(e) => {
+                                                                    e.preventDefault();
+                                                                    setPrivacyModalOpen(true);
+                                                                }}
+                                                                sx={{
+                                                                    color: theme.palette.primary.main,
+                                                                    textDecoration: 'none',
+                                                                    fontWeight: 600,
+                                                                    '&:hover': {
+                                                                        textDecoration: 'underline',
+                                                                    },
+                                                                }}
+                                                            >
+                                                                política de privacidad
+                                                            </MuiLink>
+                                                        </Typography>
+                                                    }
+                                                />
+                                                {errors.privacy_accepted && (
+                                                    <Typography variant="caption" color="error" display="block">
+                                                        {errors.privacy_accepted}
+                                                    </Typography>
+                                                )}
+                                            </Grid>
+                                            <Grid item xs={12}>
+                                                <motion.div
+                                                    whileHover={{ scale: 1.02 }}
+                                                    whileTap={{ scale: 0.98 }}
+                                                >
+                                                    <Button
+                                                        type="submit"
+                                                        variant="contained"
+                                                        size="large"
+                                                        fullWidth
+                                                        disabled={processing}
+                                                        startIcon={processing ? <CircularProgress size={20} color="inherit" /> : <Send />}
+                                                        sx={{
+                                                            py: 2,
+                                                            fontSize: '1.1rem',
+                                                            fontWeight: 600,
+                                                            background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
+                                                            boxShadow: `0 8px 24px ${alpha(theme.palette.primary.main, 0.4)}`,
+                                                            '&:hover': {
+                                                                boxShadow: `0 12px 32px ${alpha(theme.palette.primary.main, 0.5)}`,
+                                                            },
+                                                        }}
+                                                    >
+                                                        {processing ? 'Enviando...' : 'Enviar Mensaje'}
+                                                    </Button>
+                                                </motion.div>
+                                            </Grid>
+                                        </Grid>
+                                    </Box>
+                                </CardContent>
+                            </Card>
+                        </motion.div>
+                    </Grid>
+
+                    {/* Contact Info - Right Side */}
+                    <Grid item xs={12} md={5}>
+                        <Stack spacing={3}>
+                            {/* Contact Methods */}
+                            <motion.div
+                                variants={containerVariants}
+                                initial="hidden"
+                                animate="visible"
+                            >
+                                {contactMethods.map((method, index) => (
+                                    <motion.div
+                                        key={index}
+                                        variants={itemVariants}
+                                        whileHover={{ scale: 1.03 }}
+                                        style={{ marginBottom: 16 }}
+                                    >
+                                        <Card
+                                            component="a"
+                                            href={method.action}
+                                            target="_blank"
+                                            sx={{
+                                                ...glassStyle,
+                                                textDecoration: 'none',
+                                                cursor: 'pointer',
+                                            }}
+                                        >
+                                            <CardContent>
+                                                <Stack direction="row" spacing={2} alignItems="center">
+                                                    <Box
+                                                        sx={{
+                                                            background: alpha(method.color, 0.1),
+                                                            borderRadius: 2,
+                                                            p: 1.5,
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                        }}
+                                                    >
+                                                        {React.cloneElement(method.icon, { sx: { color: method.color } })}
+                                                    </Box>
+                                                    <Box flex={1}>
+                                                        <Typography variant="caption" color="text.secondary" display="block">
+                                                            {method.title}
+                                                        </Typography>
+                                                        <Typography variant="h6" fontWeight="600" color="text.primary">
+                                                            {method.value}
+                                                        </Typography>
+                                                    </Box>
+                                                </Stack>
+                                            </CardContent>
+                                        </Card>
+                                    </motion.div>
+                                ))}
+                            </motion.div>
+
+
+                            {/* Working Hours */}
+                            <motion.div
+                                variants={itemVariants}
+                                initial="hidden"
+                                animate="visible"
+                            >
+                                <Card sx={glassStyle}>
+                                    <CardContent>
+                                        <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 2 }}>
+                                            <AccessTime color="primary" />
+                                            <Typography variant="h6" fontWeight="bold">
+                                                Horario de Atención
+                                            </Typography>
+                                        </Stack>
+                                        <Divider sx={{ mb: 2 }} />
+                                        <Stack spacing={1.5}>
+                                            {workingHours.map((schedule, index) => (
+                                                <Box
+                                                    key={index}
+                                                    sx={{
+                                                        display: 'flex',
+                                                        justifyContent: 'space-between',
+                                                        alignItems: 'center',
+                                                        p: 1.5,
+                                                        borderRadius: 2,
+                                                        backgroundColor: alpha(theme.palette.primary.main, 0.05),
+                                                    }}
+                                                >
+                                                    <Typography variant="body2" fontWeight="500">
+                                                        {schedule.day}
+                                                    </Typography>
+                                                    <Chip
+                                                        label={schedule.hours}
+                                                        size="small"
+                                                        color={schedule.hours === 'Cerrado' ? 'default' : 'primary'}
+                                                        variant="outlined"
+                                                    />
+                                                </Box>
+                                            ))}
+                                        </Stack>
+                                    </CardContent>
+                                </Card>
+                            </motion.div>
+
+                            {/* Map Card */}
+                            <motion.div
+                                variants={itemVariants}
+                                initial="hidden"
+                                animate="visible"
+                            >
+                                <Card sx={glassStyle}>
+                                    <CardContent>
+                                        <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 2 }}>
+                                            <MapIcon color="primary" />
+                                            <Typography variant="h6" fontWeight="bold">
+                                                Ubicación
+                                            </Typography>
+                                        </Stack>
+                                        <Box
+                                            sx={{
+                                                width: '100%',
+                                                height: 250,
+                                                borderRadius: 2,
+                                                overflow: 'hidden',
+                                                backgroundColor: alpha(theme.palette.grey[300], 0.3),
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                            }}
+                                        >
+                                            {/* Google Maps Placeholder */}
+                                            <Typography variant="body2" color="text.secondary">
+                                                Mapa de ubicación
+                                            </Typography>
+                                        </Box>
+                                        <Button
+                                            fullWidth
+                                            variant="outlined"
+                                            startIcon={<LocationOn />}
+                                            href="https://maps.google.com/?q=Calle+Principal+123+Madrid"
+                                            target="_blank"
+                                            sx={{ mt: 2 }}
+                                        >
+                                            Ver en Google Maps
+                                        </Button>
+                                    </CardContent>
+                                </Card>
+                            </motion.div>
+                        </Stack>
+                    </Grid>
+                </Grid>
+
+                {/* Why Choose Us Section */}
+                <Box sx={{ mt: 10, mb: 8 }}>
+                    <Typography variant="h3" fontWeight="bold" gutterBottom align="center" sx={{ mb: 6 }}>
+                        ¿Por Qué Elegirnos?
+                    </Typography>
+                    <Grid container spacing={4}>
+                        {whyChooseUs.map((item, index) => (
+                            <Grid item xs={12} sm={6} md={3} key={index}>
+                                <motion.div
+                                    initial={{ opacity: 0, y: 20 }}
+                                    whileInView={{ opacity: 1, y: 0 }}
+                                    viewport={{ once: true }}
+                                    transition={{ delay: index * 0.1 }}
+                                >
+                                    <Card sx={{ ...glassStyle, height: '100%', textAlign: 'center' }}>
+                                        <CardContent sx={{ p: 3 }}>
+                                            <Box
+                                                sx={{
+                                                    display: 'inline-flex',
+                                                    p: 2,
+                                                    borderRadius: '50%',
+                                                    bgcolor: alpha(item.color, 0.1),
+                                                    mb: 2,
+                                                }}
+                                            >
+                                                {React.cloneElement(item.icon, { sx: { color: item.color } })}
+                                            </Box>
+                                            <Typography variant="h6" fontWeight="600" gutterBottom>
+                                                {item.title}
+                                            </Typography>
+                                            <Typography variant="body2" color="text.secondary">
+                                                {item.description}
+                                            </Typography>
+                                        </CardContent>
+                                    </Card>
+                                </motion.div>
+                            </Grid>
+                        ))}
+                    </Grid>
+                </Box>
+
+                {/* Testimonials Section */}
+                <Box sx={{ mt: 10, mb: 8 }}>
+                    <Typography variant="h3" fontWeight="bold" gutterBottom align="center" sx={{ mb: 2 }}>
+                        Lo Que Dicen Nuestros Clientes
+                    </Typography>
+                    <Typography variant="body1" color="text.secondary" align="center" sx={{ mb: 6, maxWidth: 700, mx: 'auto' }}>
+                        La satisfacción de nuestros clientes es nuestra mejor carta de presentación
+                    </Typography>
+                    <Grid container spacing={4}>
+                        {testimonials.map((testimonial, index) => (
+                            <Grid item xs={12} md={4} key={index}>
+                                <motion.div
+                                    initial={{ opacity: 0, scale: 0.9 }}
+                                    whileInView={{ opacity: 1, scale: 1 }}
+                                    viewport={{ once: true }}
+                                    transition={{ delay: index * 0.1 }}
+                                >
+                                    <Card sx={{ ...glassStyle, height: '100%' }}>
+                                        <CardContent sx={{ p: 3 }}>
+                                            <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 2 }}>
+                                                <Avatar
+                                                    sx={{
+                                                        bgcolor: theme.palette.primary.main,
+                                                        width: 56,
+                                                        height: 56,
+                                                        fontSize: '1.5rem',
+                                                    }}
+                                                >
+                                                    {testimonial.avatar}
+                                                </Avatar>
+                                                <Box>
+                                                    <Typography variant="h6" fontWeight="600">
+                                                        {testimonial.name}
+                                                    </Typography>
+                                                    <Typography variant="caption" color="text.secondary">
+                                                        {testimonial.role}
+                                                    </Typography>
+                                                </Box>
+                                            </Stack>
+                                            <Rating value={testimonial.rating} readOnly sx={{ mb: 2 }} />
+                                            <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                                                "{testimonial.comment}"
+                                            </Typography>
+                                        </CardContent>
+                                    </Card>
+                                </motion.div>
+                            </Grid>
+                        ))}
+                    </Grid>
+                </Box>
+
+                {/* FAQ Section */}
+                <Box sx={{ mt: 10, mb: 8 }}>
+                    <Typography variant="h3" fontWeight="bold" gutterBottom align="center" sx={{ mb: 2 }}>
+                        Preguntas Frecuentes
+                    </Typography>
+                    <Typography variant="body1" color="text.secondary" align="center" sx={{ mb: 6, maxWidth: 700, mx: 'auto' }}>
+                        Resolvemos tus dudas más comunes sobre nuestros servicios
+                    </Typography>
+                    <Box sx={{ maxWidth: 900, mx: 'auto' }}>
+                        {faqs.map((faq, index) => (
+                            <Accordion
+                                key={index}
+                                sx={{
+                                    ...glassStyle,
+                                    mb: 2,
+                                    '&:before': { display: 'none' },
+                                }}
+                            >
+                                <AccordionSummary expandIcon={<ExpandMore />}>
+                                    <Stack direction="row" spacing={2} alignItems="center">
+                                        <HelpOutline color="primary" />
+                                        <Typography fontWeight="600">{faq.question}</Typography>
+                                    </Stack>
+                                </AccordionSummary>
+                                <AccordionDetails>
+                                    <Typography color="text.secondary" sx={{ pl: 5 }}>
+                                        {faq.answer}
+                                    </Typography>
+                                </AccordionDetails>
+                            </Accordion>
+                        ))}
+                    </Box>
+                </Box>
+            </Container>
+
+            {/* Privacy Policy Modal */}
+            <PrivacyPolicyModal
+                open={privacyModalOpen}
+                onClose={() => setPrivacyModalOpen(false)}
+            />
+        </MainLayout>
+    );
+}
+

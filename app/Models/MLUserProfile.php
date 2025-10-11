@@ -27,12 +27,27 @@ class MLUserProfile extends Model
         'engagement_rate',
         'total_posts_read',
         'return_rate',
-        'user_cluster',
+        'user_cluster', // ✅ Validated: 0-4 range
         'cluster_confidence',
         'last_activity',
         'profile_updated_at',
         'model_version'
     ];
+
+    /**
+     * ✅ FIXED: Validate user_cluster range (0-4)
+     */
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::saving(function ($model) {
+            if ($model->user_cluster !== null) {
+                // Clamp cluster value between 0 and 4
+                $model->user_cluster = max(0, min(4, $model->user_cluster));
+            }
+        });
+    }
 
     protected $casts = [
         'reading_patterns' => 'array',
@@ -75,23 +90,26 @@ class MLUserProfile extends Model
      */
     public function updateCategoryPreferences(array $categoryInteractions): void
     {
-        $preferences = $this->category_preferences ?? [];
-        
-        foreach ($categoryInteractions as $categoryId => $weight) {
-            $preferences[$categoryId] = ($preferences[$categoryId] ?? 0) + $weight;
-        }
+        // ✅ FIXED: Wrap in transaction for atomicity
+        \DB::transaction(function () use ($categoryInteractions) {
+            $preferences = $this->category_preferences ?? [];
 
-        // Normalize preference weights.
-        $total = array_sum($preferences);
-        if ($total > 0) {
-            foreach ($preferences as $categoryId => $value) {
-                $preferences[$categoryId] = $value / $total;
+            foreach ($categoryInteractions as $categoryId => $weight) {
+                $preferences[$categoryId] = ($preferences[$categoryId] ?? 0) + $weight;
             }
-        }
 
-        $this->category_preferences = $preferences;
-        $this->profile_updated_at = now();
-        $this->save();
+            // Normalize preference weights.
+            $total = array_sum($preferences);
+            if ($total > 0) {
+                foreach ($preferences as $categoryId => $value) {
+                    $preferences[$categoryId] = $value / $total;
+                }
+            }
+
+            $this->category_preferences = $preferences;
+            $this->profile_updated_at = now();
+            $this->save();
+        });
     }
 
     /**
@@ -99,26 +117,29 @@ class MLUserProfile extends Model
      */
     public function updateTagInterests(array $tagInteractions): void
     {
-        $interests = $this->tag_interests ?? [];
-        
-        foreach ($tagInteractions as $tagId => $weight) {
-            $interests[$tagId] = ($interests[$tagId] ?? 0) + $weight;
-        }
+        // ✅ FIXED: Wrap in transaction for atomicity
+        \DB::transaction(function () use ($tagInteractions) {
+            $interests = $this->tag_interests ?? [];
 
-        // Normalize and keep only the top tags.
-        arsort($interests);
-        $interests = array_slice($interests, 0, 20, true); // Top 20 tags
-
-        $total = array_sum($interests);
-        if ($total > 0) {
-            foreach ($interests as $tagId => $value) {
-                $interests[$tagId] = $value / $total;
+            foreach ($tagInteractions as $tagId => $weight) {
+                $interests[$tagId] = ($interests[$tagId] ?? 0) + $weight;
             }
-        }
 
-        $this->tag_interests = $interests;
-        $this->profile_updated_at = now();
-        $this->save();
+            // Normalize and keep only the top tags.
+            arsort($interests);
+            $interests = array_slice($interests, 0, 20, true); // Top 20 tags
+
+            $total = array_sum($interests);
+            if ($total > 0) {
+                foreach ($interests as $tagId => $value) {
+                    $interests[$tagId] = $value / $total;
+                }
+            }
+
+            $this->tag_interests = $interests;
+            $this->profile_updated_at = now();
+            $this->save();
+        });
     }
 
     /**

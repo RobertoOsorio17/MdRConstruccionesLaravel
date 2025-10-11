@@ -84,9 +84,10 @@ class TwoFactorController extends Controller
             return response()->json(['error' => 'Two factor authentication is not enabled.'], 400);
         }
 
+        // ✅ FIXED: Don't log user email in plain text
         \Log::info('Recovery codes accessed', [
             'user_id' => $user->id,
-            'user_email' => $user->email,
+            'email_hash' => hash('sha256', $user->email),
             'ip' => $request->ip(),
             'timestamp' => now()->toISOString()
         ]);
@@ -118,7 +119,7 @@ class TwoFactorController extends Controller
         if ($attempts >= 5) {
             \Log::warning('Too many 2FA confirmation attempts', [
                 'user_id' => $user->id,
-                'user_email' => $user->email,
+                'email_hash' => hash('sha256', $user->email),
                 'ip' => $request->ip()
             ]);
 
@@ -144,7 +145,7 @@ class TwoFactorController extends Controller
 
             \Log::warning('Invalid 2FA confirmation code', [
                 'user_id' => $user->id,
-                'user_email' => $user->email,
+                'email_hash' => hash('sha256', $user->email),
                 'ip' => $request->ip(),
                 'attempts' => $attempts + 1
             ]);
@@ -331,7 +332,7 @@ class TwoFactorController extends Controller
 
                 \Log::warning('Invalid 2FA code attempt', [
                     'user_id' => $user->id,
-                    'user_email' => $user->email,
+                    'email_hash' => hash('sha256', $user->email),
                     'ip' => $request->ip(),
                     'attempts' => $attempts + 1,
                     'code_provided' => substr($request->code, 0, 2) . '****', // Log only first 2 digits for security
@@ -373,7 +374,7 @@ class TwoFactorController extends Controller
 
                     \Log::info('2FA recovery code used', [
                         'user_id' => $user->id,
-                        'user_email' => $user->email,
+                        'email_hash' => hash('sha256', $user->email),
                         'remaining_codes' => count($recoveryCodes),
                         'ip' => $request->ip()
                     ]);
@@ -389,7 +390,7 @@ class TwoFactorController extends Controller
 
                 \Log::warning('Invalid 2FA recovery code attempt', [
                     'user_id' => $user->id,
-                    'user_email' => $user->email,
+                    'email_hash' => hash('sha256', $user->email),
                     'ip' => $request->ip(),
                     'attempts' => $attempts + 1,
                     'timestamp' => now()->toISOString()
@@ -430,7 +431,7 @@ class TwoFactorController extends Controller
         // Log successful 2FA verification
         \Log::info('2FA verification successful', [
             'user_id' => $user->id,
-            'user_email' => $user->email,
+            'email_hash' => hash('sha256', $user->email),
             'ip' => $request->ip(),
             'method' => $request->filled('code') ? 'code' : 'recovery_code'
         ]);

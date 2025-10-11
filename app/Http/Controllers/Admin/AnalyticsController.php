@@ -19,6 +19,8 @@ use Inertia\Inertia;
 /**
  * Drives the analytical reporting section of the admin panel by aggregating behavioral and content metrics into actionable summaries.
  * Supplies data endpoints and dashboard views that power trend visualizations and operational decisions for administrators.
+ *
+ * ✅ SECURITY FIX: Middleware applied in routes (routes/web.php) instead of constructor for Laravel 11+ compatibility
  */
 class AnalyticsController extends Controller
 {
@@ -43,7 +45,8 @@ class AnalyticsController extends Controller
      */
     public function getUserAnalytics(Request $request)
     {
-        $period = $request->get('period', '30'); // Days of history to retrieve.
+        // ✅ FIX: Validate and sanitize period to prevent TypeError in subDays()
+        $period = max(1, min(365, (int)$request->get('period', 30)));
         $startDate = Carbon::now()->subDays($period);
 
         return Cache::remember("analytics.users.{$period}days", 300, function () use ($startDate) {
@@ -64,7 +67,8 @@ class AnalyticsController extends Controller
      */
     public function getContentAnalytics(Request $request)
     {
-        $period = $request->get('period', '30');
+        // ✅ FIX: Validate and sanitize period
+        $period = max(1, min(365, (int)$request->get('period', 30)));
         $startDate = Carbon::now()->subDays($period);
 
         return Cache::remember("analytics.content.{$period}days", 300, function () use ($startDate) {
@@ -85,7 +89,8 @@ class AnalyticsController extends Controller
      */
     public function getServiceAnalytics(Request $request)
     {
-        $period = $request->get('period', '30');
+        // ✅ FIX: Validate and sanitize period
+        $period = max(1, min(365, (int)$request->get('period', 30)));
         $startDate = Carbon::now()->subDays($period);
 
         return Cache::remember("analytics.services.{$period}days", 300, function () use ($startDate) {
@@ -106,7 +111,8 @@ class AnalyticsController extends Controller
      */
     public function getProjectAnalytics(Request $request)
     {
-        $period = $request->get('period', '30');
+        // ✅ FIX: Validate and sanitize period
+        $period = max(1, min(365, (int)$request->get('period', 30)));
         $startDate = Carbon::now()->subDays($period);
 
         return Cache::remember("analytics.projects.{$period}days", 300, function () use ($startDate) {

@@ -332,7 +332,7 @@ class User extends Authenticatable
     }
     
     /**
-     * Verificar si este usuario le gusta un post especÃƒÆ’Ã‚Â­fico
+     * Verificar si este usuario le gusta un post específico
      */
     public function hasLiked($post)
     {
@@ -355,7 +355,7 @@ class User extends Authenticatable
     }
     
     /**
-     * Verificar si este usuario tiene guardado un post especÃƒÆ’Ã‚Â­fico
+     * Verificar si este usuario tiene guardado un post específico
      */
     public function hasBookmarked($post)
     {
@@ -418,14 +418,16 @@ class User extends Authenticatable
 
     /**
      * Obtener el rol principal del usuario (mayor nivel)
+     *
+     * ✅ FIXED: Added return type to prevent null pointer exceptions
      */
-    public function getPrimaryRole()
+    public function getPrimaryRole(): ?Role
     {
         return $this->roles()->active()->byLevel()->first();
     }
 
     /**
-     * Verificar si el usuario tiene un rol especÃƒÆ’Ã‚Â­fico
+     * Verificar si el usuario tiene un rol específico
      * Verifica tanto el campo 'role' como las relaciones en la tabla 'roles'
      */
     public function hasRole(string|array $roleName): bool
@@ -464,7 +466,7 @@ class User extends Authenticatable
     }
 
     /**
-     * Verificar si el usuario tiene un permiso especÃƒÆ’Ã‚Â­fico
+     * Verificar si el usuario tiene un permiso específico
      */
     public function hasPermission(string $permission): bool
     {
@@ -474,7 +476,7 @@ class User extends Authenticatable
     }
 
     /**
-     * Verificar si el usuario puede acceder a un mÃƒÆ’Ã‚Â³dulo
+     * Verificar si el usuario puede acceder a un módulo
      */
     public function canAccessModule(string $module): bool
     {
@@ -484,7 +486,7 @@ class User extends Authenticatable
     }
 
     /**
-     * Verificar si el usuario puede realizar una acciÃƒÆ’Ã‚Â³n en un mÃƒÆ’Ã‚Â³dulo
+     * Verificar si el usuario puede realizar una acción en un módulo
      */
     public function canDo(string $action, string $module = null): bool
     {
@@ -561,7 +563,7 @@ class User extends Authenticatable
     }
 
     /**
-     * MÃƒÆ’Ã‚Â©todo helper para obtener la URL del avatar
+     * Método helper para obtener la URL del avatar
      */
     public function getAvatarUrl()
     {
@@ -585,7 +587,7 @@ class User extends Authenticatable
     }
     
     /**
-     * Obtener la biografÃƒÆ’Ã‚Â­a formateada
+     * Obtener la biografía formateada
      */
     public function getFormattedBioAttribute()
     {
@@ -597,7 +599,7 @@ class User extends Authenticatable
     }
     
     /**
-     * Verificar si el perfil estÃƒÆ’Ã‚Â¡ completo
+     * Verificar si el perfil está completo
      */
     public function getIsProfileCompleteAttribute()
     {
@@ -806,12 +808,15 @@ class User extends Authenticatable
 
     /**
      * Block user due to ML anomaly detection
+     *
+     * ✅ FIXED: Sanitize reason to prevent XSS
      */
     public function blockByML(int $anomalyScore, string $reason = 'Suspicious activity detected'): bool
     {
         $this->ml_blocked = true;
         $this->ml_blocked_at = now();
-        $this->ml_blocked_reason = $reason;
+        // ✅ Sanitize reason before storing
+        $this->ml_blocked_reason = strip_tags($reason);
         $this->ml_anomaly_score = $anomalyScore;
         return $this->save();
     }

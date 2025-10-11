@@ -154,17 +154,17 @@ class PostController extends Controller
             $validated['published_at'] = now();
         }
 
-        // Guarantee slug uniqueness when generated.
+        // ✅ FIX: Generate slug if empty
         if (empty($validated['slug'])) {
             $validated['slug'] = Str::slug($validated['title']);
-            
-        // Ensure uniqueness.
-            $originalSlug = $validated['slug'];
-            $counter = 1;
-            while (Post::where('slug', $validated['slug'])->exists()) {
-                $validated['slug'] = $originalSlug . '-' . $counter;
-                $counter++;
-            }
+        }
+
+        // ✅ FIX: Ensure slug uniqueness (moved outside unreachable branch)
+        $originalSlug = $validated['slug'];
+        $counter = 1;
+        while (Post::where('slug', $validated['slug'])->exists()) {
+            $validated['slug'] = $originalSlug . '-' . $counter;
+            $counter++;
         }
 
         // Finalize the author attribution.
@@ -177,16 +177,21 @@ class PostController extends Controller
             $validated['published_at'] = $validated['published_at'] ?? null;
         }
 
-        $post = Post::create($validated);
+        // ✅ FIX: Wrap post creation and relationships in transaction
+        $post = \DB::transaction(function () use ($validated) {
+            $post = Post::create($validated);
 
-        // Attach categories and tags.
-        if (!empty($validated['categories'])) {
-            $post->categories()->attach($validated['categories']);
-        }
+            // Attach categories and tags.
+            if (!empty($validated['categories'])) {
+                $post->categories()->attach($validated['categories']);
+            }
 
-        if (!empty($validated['tags'])) {
-            $post->tags()->attach($validated['tags']);
-        }
+            if (!empty($validated['tags'])) {
+                $post->tags()->attach($validated['tags']);
+            }
+
+            return $post;
+        });
 
         // Generate success message with post details
         $statusText = match($post->status) {

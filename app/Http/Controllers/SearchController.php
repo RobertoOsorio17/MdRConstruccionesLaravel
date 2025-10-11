@@ -123,7 +123,7 @@ class SearchController extends Controller
                   ->orWhere('seo_title', 'LIKE', "%{$query}%")
                   ->orWhere('seo_description', 'LIKE', "%{$query}%");
             })
-            ->with(['user:id,name', 'category:id,name,slug']);
+            ->with(['author:id,name', 'categories:id,name,slug']);
 
         // Filter by category
         if ($categoryId) {
@@ -216,7 +216,8 @@ class SearchController extends Controller
     {
         $projectsQuery = Project::where(function ($q) use ($query) {
             $q->where('title', 'LIKE', "%{$query}%")
-              ->orWhere('description', 'LIKE', "%{$query}%")
+              ->orWhere('summary', 'LIKE', "%{$query}%")
+              ->orWhere('body', 'LIKE', "%{$query}%")
               ->orWhere('location', 'LIKE', "%{$query}%");
         });
 
@@ -239,11 +240,11 @@ class SearchController extends Controller
                 'type' => 'project',
                 'title' => $project->title,
                 'slug' => $project->slug,
-                'description' => $project->description,
-                'image' => $project->featured_image,
+                'description' => $project->summary,
+                'image' => $project->cover_image ?? null,
                 'location' => $project->location,
-                'completion_date' => $project->completion_date?->format('d/m/Y'),
-                'highlight' => $this->highlightText($project->description ?? $project->title, $query),
+                'completion_date' => $project->end_date?->format('d/m/Y'),
+                'highlight' => $this->highlightText($project->summary ?? $project->title, $query),
             ];
         });
     }

@@ -40,12 +40,13 @@ class ReadingTimeService
         $lists = $this->countLists($content);
         
         // 2. Calculate text reading time
-        $wordCount = str_word_count($textContent);
+        // ✅ FIX: Use Unicode-aware word count for Spanish and other languages
+        $wordCount = $this->countWords($textContent);
         $textMinutes = $wordCount / self::AVERAGE_READING_SPEED;
-        
+
         // 3. Calculate code reading time
         foreach ($codeBlocks as $code) {
-            $codeWords = str_word_count(strip_tags($code));
+            $codeWords = $this->countWords(strip_tags($code));
             $textMinutes += $codeWords / self::CODE_READING_SPEED;
             $textMinutes += self::CODE_BLOCK_OVERHEAD / 60; // Add overhead
         }
@@ -194,6 +195,26 @@ class ReadingTimeService
         }
         
         return "{$hours}h {$mins}min de lectura";
+    }
+
+    /**
+     * ✅ FIX: Unicode-aware word count for Spanish and other languages
+     *
+     * str_word_count() is ASCII-only and doesn't count words with accents correctly.
+     * This method uses regex to count words with Unicode letters.
+     */
+    private function countWords(string $text): int
+    {
+        if (empty($text)) {
+            return 0;
+        }
+
+        // Match sequences of Unicode letters (including accented characters)
+        // \p{L} matches any Unicode letter
+        // \p{M} matches any Unicode mark (accents, diacritics)
+        preg_match_all('/[\p{L}\p{M}]+/u', $text, $matches);
+
+        return count($matches[0]);
     }
 }
 

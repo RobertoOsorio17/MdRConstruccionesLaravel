@@ -36,7 +36,8 @@ export const DashboardStatsSkeleton = () => {
     return (
         <Grid container spacing={3}>
             {[1, 2, 3, 4].map((item) => (
-                <Grid item xs={12} sm={6} md={3} key={item}>
+                {/* ✅ FIX: Use new Grid API */}
+                <Grid size={{ xs: 12, sm: 6, md: 3 }} key={item}>
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -150,6 +151,12 @@ export const TableSkeleton = ({ rows = 5, columns = 4 }) => {
 
 // Chart Skeleton
 export const ChartSkeleton = ({ height = 300 }) => {
+    // ✅ FIX: Pre-calculate bar heights outside render to avoid Math.random() causing re-renders
+    const barHeights = React.useMemo(() =>
+        [65, 45, 75, 55, 85, 40, 70], // Predefined heights for consistent animation
+        []
+    );
+
     return (
         <Card
             sx={{
@@ -176,15 +183,15 @@ export const ChartSkeleton = ({ height = 300 }) => {
                         sx={{ backgroundColor: 'rgba(255, 255, 255, 0.1)' }}
                     />
                 </Box>
-                
+
                 <Box sx={{ height: height - 120, position: 'relative' }}>
                     {/* Chart bars simulation */}
                     <Box sx={{ display: 'flex', alignItems: 'end', height: '100%', gap: 1 }}>
-                        {Array.from({ length: 7 }).map((_, index) => (
+                        {barHeights.map((barHeight, index) => (
                             <motion.div
                                 key={index}
                                 initial={{ height: 0 }}
-                                animate={{ height: `${Math.random() * 80 + 20}%` }}
+                                animate={{ height: `${barHeight}%` }}
                                 transition={{ delay: index * 0.1, duration: 0.5 }}
                                 style={{
                                     flex: 1,

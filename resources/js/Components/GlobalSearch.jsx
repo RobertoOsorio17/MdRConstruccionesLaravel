@@ -32,7 +32,6 @@ const GlobalSearch = ({ open, onClose }) => {
     const [query, setQuery] = useState('');
     const [results, setResults] = useState([]);
     const [loading, setLoading] = useState(false);
-    const [searchTimeout, setSearchTimeout] = useState(null);
 
     const glassStyle = {
         background: alpha('#ffffff', 0.95),
@@ -44,80 +43,79 @@ const GlobalSearch = ({ open, onClose }) => {
 
     useEffect(() => {
         if (query.length >= 2) {
-            // Clear previous timeout
-            if (searchTimeout) {
-                clearTimeout(searchTimeout);
-            }
+            setLoading(true);
 
-            // Set new timeout for debounced search
+            // Debounce search
             const timeout = setTimeout(() => {
                 performSearch();
             }, 300);
 
-            setSearchTimeout(timeout);
+            return () => clearTimeout(timeout);
         } else {
             setResults([]);
+            setLoading(false);
         }
-
-        return () => {
-            if (searchTimeout) {
-                clearTimeout(searchTimeout);
-            }
-        };
     }, [query]);
 
     const performSearch = async () => {
         setLoading(true);
         try {
             const response = await axios.get('/api/search', {
-                params: { q: query }
+                params: {
+                    q: query,
+                    per_page: 10 // Limit results for quick search
+                }
             });
 
-            // Handle different response formats
-            const data = response.data.data || response.data.results || response.data;
+            console.log('Search response:', response.data);
+
+            // Handle response format from SearchController
+            const data = response.data;
+
+            if (!data.success) {
+                console.error('Search failed:', data.message);
+                setResults([]);
+                setLoading(false);
+                return;
+            }
 
             // Transform data to expected format
             const transformedResults = [];
 
-            if (data.posts && data.posts.data) {
-                data.posts.data.forEach(post => {
+            // The SearchController returns paginated data in data.data.data
+            const posts = data.data?.data || data.data || [];
+
+            console.log('Posts found:', posts);
+
+            if (Array.isArray(posts)) {
+                posts.forEach(post => {
                     transformedResults.push({
                         id: `post-${post.id}`,
                         type: 'post',
-                        title: post.title,
-                        excerpt: post.excerpt || post.content?.substring(0, 150),
+                        title: post.highlighted_title || post.title,
+                        excerpt: post.highlighted_excerpt || post.excerpt || post.content?.substring(0, 150) || '',
                         url: `/blog/${post.slug}`
                     });
                 });
             }
 
-            if (data.services && data.services.data) {
-                data.services.data.forEach(service => {
-                    transformedResults.push({
-                        id: `service-${service.id}`,
-                        type: 'service',
-                        title: service.name,
-                        excerpt: service.description?.substring(0, 150),
-                        url: `/servicios/${service.slug}`
-                    });
-                });
-            }
-
-            if (data.projects && data.projects.data) {
-                data.projects.data.forEach(project => {
-                    transformedResults.push({
-                        id: `project-${project.id}`,
-                        type: 'project',
-                        title: project.title,
-                        excerpt: project.description?.substring(0, 150),
-                        url: `/proyectos/${project.slug}`
-                    });
-                });
-            }
-
+            console.log('Transformed results:', transformedResults);
             setResults(transformedResults);
         } catch (error) {
             console.error('Search error:', error);
+
+            // Show user-friendly error message
+            if (error.response) {
+                // Server responded with error
+                console.error('Server error:', error.response.data);
+            } else if (error.request) {
+                // Request made but no response
+                console.error('No response from server');
+            } else {
+                // Error setting up request
+                console.error('Request setup error:', error.message);
+            }
+
             setResults([]);
         } finally {
             setLoading(false);
@@ -265,9 +263,20 @@ const GlobalSearch = ({ open, onClose }) => {
                                                 <ListItemText
                                                     primary={
                                                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                            <Typography variant="body1" sx={{ fontWeight: 600 }}>
-                                                                {result.title}
-                                                            </Typography>
+                                                            <Typography
+                                                                variant="body1"
+                                                                sx={{
+                                                                    fontWeight: 600,
+                                                                    '& mark.search-highlight': {
+                                                                        backgroundColor: '#fef08a',
+                                                                        color: '#854d0e',
+                                                                        padding: '2px 4px',
+                                                                        borderRadius: '2px',
+                                                                        fontWeight: 700,
+                                                                    }
+                                                                }}
+                                                                dangerouslySetInnerHTML={{ __html: result.title }}
+                                                            />
                                                             <Chip
                                                                 label={getTypeLabel(result.type)}
                                                                 size="small"
@@ -289,10 +298,16 @@ const GlobalSearch = ({ open, onClose }) => {
                                                                 display: '-webkit-box',
                                                                 WebkitLineClamp: 2,
                                                                 WebkitBoxOrient: 'vertical',
+                                                                '& mark.search-highlight': {
+                                                                    backgroundColor: '#fef08a',
+                                                                    color: '#854d0e',
+                                                                    padding: '2px 4px',
+                                                                    borderRadius: '2px',
+                                                                    fontWeight: 700,
+                                                                }
                                                             }}
-                                                        >
-                                                            {result.excerpt}
-                                                        </Typography>
+                                                            dangerouslySetInnerHTML={{ __html: result.excerpt }}
+                                                        />
                                                     }
                                                 />
                                             </ListItemButton>

@@ -172,6 +172,12 @@ export const SearchResultsGridSkeleton = ({ count = 6 }) => {
 
 // Search Suggestions Skeleton
 export const SearchSuggestionsSkeleton = ({ count = 5 }) => {
+    // ✅ FIX: Pre-calculate widths outside render to avoid Math.random() causing re-renders
+    const widths = React.useMemo(() =>
+        Array.from({ length: count }, (_, i) => 60 + (i * 8) % 40),
+        [count]
+    );
+
     return (
         <Stack spacing={1} sx={{ p: 2 }}>
             {Array.from({ length: count }).map((_, index) => (
@@ -190,7 +196,7 @@ export const SearchSuggestionsSkeleton = ({ count = 5 }) => {
                         />
                         <Skeleton
                             variant="text"
-                            width={`${60 + Math.random() * 40}%`}
+                            width={`${widths[index]}%`}
                             height={20}
                             sx={{ bgcolor: 'rgba(59, 130, 246, 0.1)' }}
                         />

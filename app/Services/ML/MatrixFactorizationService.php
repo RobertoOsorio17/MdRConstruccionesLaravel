@@ -23,74 +23,131 @@ class MatrixFactorizationService
 
     /**
      * Train matrix factorization model using ALS.
+     * ✅ FIXED: Added optimistic locking to prevent concurrent training conflicts
      *
      * @return array ['user_factors' => array, 'item_factors' => array, 'metrics' => array]
+     * @throws \Exception If concurrent training is detected
      */
     public function train(): array
     {
         Log::info('Starting Matrix Factorization training');
 
-        // Build interaction matrix
-        $interactionData = $this->buildInteractionMatrix();
-        
-        if (empty($interactionData['matrix'])) {
-            throw new \Exception('Insufficient interaction data for matrix factorization');
-        }
+        // ✅ OPTIMISTIC LOCKING: Check if training is already in progress
+        $lockKey = 'ml_training_lock';
+        $lockValue = Cache::get($lockKey);
 
-        $matrix = $interactionData['matrix'];
-        $userIds = $interactionData['user_ids'];
-        $itemIds = $interactionData['item_ids'];
+        if ($lockValue) {
+            $lockAge = now()->diffInSeconds($lockValue);
 
-        // Initialize factor matrices randomly
-        $userFactors = $this->initializeFactors(count($userIds), $this->numFactors);
-        $itemFactors = $this->initializeFactors(count($itemIds), $this->numFactors);
-
-        // Perform ALS iterations
-        $previousLoss = PHP_FLOAT_MAX;
-        $converged = false;
-
-        for ($iter = 0; $iter < $this->numIterations; $iter++) {
-            // Update user factors
-            $userFactors = $this->updateUserFactors($matrix, $userFactors, $itemFactors);
-
-            // Update item factors
-            $itemFactors = $this->updateItemFactors($matrix, $userFactors, $itemFactors);
-
-            // Calculate loss
-            $loss = $this->calculateLoss($matrix, $userFactors, $itemFactors);
-
-            Log::info("ALS Iteration {$iter}: Loss = {$loss}");
-
-            // Check convergence
-            if (abs($previousLoss - $loss) < $this->convergenceThreshold) {
-                $converged = true;
-                Log::info("Converged at iteration {$iter}");
-                break;
+            // If lock is older than 30 minutes, it's probably stale
+            if ($lockAge < 1800) {
+                throw new \Exception('Matrix Factorization training already in progress. Please wait.');
             }
 
-            $previousLoss = $loss;
+            Log::warning('Stale training lock detected, clearing it', [
+                'lock_age_seconds' => $lockAge
+            ]);
         }
 
-        // Map factors back to original IDs
-        $userFactorMap = array_combine($userIds, $userFactors);
-        $itemFactorMap = array_combine($itemIds, $itemFactors);
+        // Acquire lock (expires in 30 minutes)
+        Cache::put($lockKey, now(), 1800);
 
-        // Cache the trained model
-        Cache::put('ml_user_factors', $userFactorMap, now()->addDays(7));
-        Cache::put('ml_item_factors', $itemFactorMap, now()->addDays(7));
+        try {
+            // Get current version number
+            $currentVersion = Cache::get('ml_model_version', 0);
+            $newVersion = $currentVersion + 1;
 
-        return [
-            'user_factors' => $userFactorMap,
-            'item_factors' => $itemFactorMap,
-            'metrics' => [
-                'final_loss' => $previousLoss,
-                'iterations' => $iter + 1,
-                'converged' => $converged,
-                'num_users' => count($userIds),
-                'num_items' => count($itemIds),
-                'num_factors' => $this->numFactors
-            ]
-        ];
+            Log::info('Training ML model', [
+                'current_version' => $currentVersion,
+                'new_version' => $newVersion
+            ]);
+
+            // Build interaction matrix
+            $interactionData = $this->buildInteractionMatrix();
+
+            if (empty($interactionData['matrix'])) {
+                throw new \Exception('Insufficient interaction data for matrix factorization');
+            }
+
+            $matrix = $interactionData['matrix'];
+            $userIds = $interactionData['user_ids'];
+            $itemIds = $interactionData['item_ids'];
+
+            // Initialize factor matrices randomly
+            $userFactors = $this->initializeFactors(count($userIds), $this->numFactors);
+            $itemFactors = $this->initializeFactors(count($itemIds), $this->numFactors);
+
+            // Perform ALS iterations
+            $previousLoss = PHP_FLOAT_MAX;
+            $converged = false;
+
+            for ($iter = 0; $iter < $this->numIterations; $iter++) {
+                // Update user factors
+                $userFactors = $this->updateUserFactors($matrix, $userFactors, $itemFactors);
+
+                // Update item factors
+                $itemFactors = $this->updateItemFactors($matrix, $userFactors, $itemFactors);
+
+                // Calculate loss
+                $loss = $this->calculateLoss($matrix, $userFactors, $itemFactors);
+
+                Log::info("ALS Iteration {$iter}: Loss = {$loss}");
+
+                // Check convergence
+                if (abs($previousLoss - $loss) < $this->convergenceThreshold) {
+                    $converged = true;
+                    Log::info("Converged at iteration {$iter}");
+                    break;
+                }
+
+                $previousLoss = $loss;
+            }
+
+            // Map factors back to original IDs
+            $userFactorMap = array_combine($userIds, $userFactors);
+            $itemFactorMap = array_combine($itemIds, $itemFactors);
+
+            // ✅ ATOMIC UPDATE: Save model with version check
+            DB::transaction(function () use ($userFactorMap, $itemFactorMap, $newVersion, $currentVersion) {
+                // Verify version hasn't changed (optimistic locking)
+                $actualVersion = Cache::get('ml_model_version', 0);
+
+                if ($actualVersion !== $currentVersion) {
+                    throw new \Exception('Model version conflict detected. Another training process completed first.');
+                }
+
+                // Cache the trained model with new version
+                Cache::put('ml_user_factors', $userFactorMap, now()->addDays(7));
+                Cache::put('ml_item_factors', $itemFactorMap, now()->addDays(7));
+                Cache::put('ml_model_version', $newVersion, now()->addDays(7));
+                Cache::put('ml_model_trained_at', now(), now()->addDays(7));
+
+                Log::info('ML model saved successfully', [
+                    'version' => $newVersion,
+                    'num_users' => count($userFactorMap),
+                    'num_items' => count($itemFactorMap)
+                ]);
+            });
+
+            return [
+                'user_factors' => $userFactorMap,
+                'item_factors' => $itemFactorMap,
+                'metrics' => [
+                    'final_loss' => $previousLoss,
+                    'iterations' => $iter + 1,
+                    'converged' => $converged,
+                    'num_users' => count($userIds),
+                    'num_items' => count($itemIds),
+                    'num_factors' => $this->numFactors,
+                    'version' => $newVersion
+                ]
+            ];
+
+        } finally {
+            // ✅ Always release lock
+            Cache::forget($lockKey);
+            Log::info('Training lock released');
+        }
     }
 
     /**

@@ -53,16 +53,28 @@ class MLRecommendationService
         $cacheTimeout = $params['cache_timeout'];
         $cachingEnabled = $performanceConfig['enable_caching'];
 
-        $cacheKey = "ml_recommendations_{$userId}_{$sessionId}_{$currentPostId}_{$limit}";
+        // ✅ FIXED: Improve cache key to include algorithm context
+        $algorithmWeights = MLSettingsHelper::getAlgorithmWeights();
+        $algorithmHash = md5(json_encode($algorithmWeights));
+        $cacheKey = "ml_recommendations_{$userId}_{$sessionId}_{$currentPostId}_{$limit}_{$algorithmHash}";
 
         // Use cache only if enabled in settings
         if (!$cachingEnabled) {
             return $this->generateRecommendations($sessionId, $userId, $currentPostId, $limit);
         }
 
-        return Cache::remember($cacheKey, $cacheTimeout, function() use ($sessionId, $userId, $currentPostId, $limit) {
-            return $this->generateRecommendations($sessionId, $userId, $currentPostId, $limit);
-        });
+        // ✅ FIXED: Check if cache driver supports tagging before using tags
+        try {
+            // Try to use tags if supported (Redis, Memcached)
+            return Cache::tags(['ml_recommendations'])->remember($cacheKey, $cacheTimeout, function() use ($sessionId, $userId, $currentPostId, $limit) {
+                return $this->generateRecommendations($sessionId, $userId, $currentPostId, $limit);
+            });
+        } catch (\BadMethodCallException $e) {
+            // Fallback to regular cache for drivers that don't support tags (file, database)
+            return Cache::remember($cacheKey, $cacheTimeout, function() use ($sessionId, $userId, $currentPostId, $limit) {
+                return $this->generateRecommendations($sessionId, $userId, $currentPostId, $limit);
+            });
+        }
     }
 
     /**
@@ -122,10 +134,15 @@ class MLRecommendationService
 
     /**
      * Retrieve candidate posts for recommendation.
+     *
+     * ✅ FIXED: Make candidate limit configurable
      */
     private function getCandidatePosts(int $currentPostId = null): Collection
     {
-        $query = Post::with(['categories', 'tags', 'author'])
+        // ✅ Get limit from config instead of hardcoding
+        $candidateLimit = config('ml.candidate_posts_limit', 100);
+
+        $query = Post::with(['categories', 'tags', 'author', 'mlVector'])
             ->where('status', 'published')
             ->where('published_at', '<=', now());
 
@@ -134,7 +151,7 @@ class MLRecommendationService
         }
 
         return $query->orderBy('published_at', 'desc')
-            ->limit(100) // Limit candidates for performance.
+            ->limit($candidateLimit)
             ->get();
     }
 
@@ -152,11 +169,18 @@ class MLRecommendationService
             return [];
         }
 
+        // ✅ FIXED: Eager load all vectors at once to prevent N+1 queries
+        $candidateIds = $candidates->pluck('id')->toArray();
+        $vectors = MLPostVector::whereIn('post_id', $candidateIds)
+            ->get()
+            ->keyBy('post_id');
+
         $recommendations = [];
-        
+
         foreach ($candidates as $candidate) {
-            $candidateVector = MLPostVector::where('post_id', $candidate->id)->first();
-            
+            // ✅ Use pre-loaded vector from collection
+            $candidateVector = $vectors->get($candidate->id);
+
             if (!$candidateVector) {
                 // Analyze the post if it lacks a vector.
                 $candidateVector = $this->contentAnalysis->analyzePost($candidate);
@@ -167,12 +191,12 @@ class MLRecommendationService
                 $currentVector->content_vector ?? [],
                 $candidateVector->content_vector ?? []
             );
-            
+
             $categorySimilarity = MLPostVector::cosineSimilarity(
                 $currentVector->category_vector ?? [],
                 $candidateVector->category_vector ?? []
             );
-            
+
             $tagSimilarity = MLPostVector::cosineSimilarity(
                 $currentVector->tag_vector ?? [],
                 $candidateVector->tag_vector ?? []
@@ -180,7 +204,7 @@ class MLRecommendationService
 
             // Combined score.
             $score = ($contentSimilarity * 0.5) + ($categorySimilarity * 0.3) + ($tagSimilarity * 0.2);
-            
+
             if ($score > 0.1) { // Minimum threshold.
                 $recommendations[] = [
                     'post' => $candidate,
@@ -370,19 +394,26 @@ class MLRecommendationService
     private function getTrendingRecommendations(Collection $candidates, int $limit): array
     {
         $recommendations = [];
-        
+
+        // ✅ FIXED: Batch query for engagement scores instead of individual queries
+        $candidateIds = $candidates->pluck('id')->toArray();
+
+        $engagementScores = MLInteractionLog::whereIn('post_id', $candidateIds)
+            ->where('created_at', '>', now()->subDays(7))
+            ->groupBy('post_id')
+            ->selectRaw('post_id, AVG(engagement_score) as avg_engagement')
+            ->pluck('avg_engagement', 'post_id');
+
         foreach ($candidates as $candidate) {
             // Calculate a trending score based on recent engagement.
-            $recentEngagement = MLInteractionLog::where('post_id', $candidate->id)
-                ->where('created_at', '>', now()->subDays(7))
-                ->avg('engagement_score') ?? 0;
+            $recentEngagement = $engagementScores->get($candidate->id, 0);
 
             $viewsScore = min(($candidate->views_count ?? 0) / 1000, 1.0);
             $likesScore = min(($candidate->likes_count ?? 0) / 100, 1.0);
             $commentsScore = min(($candidate->comments_count ?? 0) / 50, 1.0);
-            
+
             $score = ($recentEngagement * 0.4) + ($viewsScore * 0.3) + ($likesScore * 0.2) + ($commentsScore * 0.1);
-            
+
             if ($score > 0.1) {
                 $recommendations[] = [
                     'post' => $candidate,
@@ -407,6 +438,15 @@ class MLRecommendationService
      */
     private function combineAndRankRecommendations(array $allRecommendations, MLUserProfile $userProfile = null, int $limit = 10): array
     {
+        // ✅ FIX: Cache algorithm weights outside loop to avoid repeated config pulls
+        $algorithmWeights = MLSettingsHelper::getAlgorithmWeights();
+        $sourceWeights = [
+            'content_based' => $algorithmWeights['content'],
+            'collaborative' => $algorithmWeights['collaborative'],
+            'personalized' => $algorithmWeights['hybrid'],
+            'trending' => $algorithmWeights['trending']
+        ];
+
         // Group by post ID to avoid duplicates.
         $grouped = [];
 
@@ -420,15 +460,7 @@ class MLRecommendationService
                 $grouped[$postId]['algorithm_weights'] = [];
             }
 
-            // Source weighting from settings.
-            $algorithmWeights = MLSettingsHelper::getAlgorithmWeights();
-            $sourceWeights = [
-                'content_based' => $algorithmWeights['content'],
-                'collaborative' => $algorithmWeights['collaborative'],
-                'personalized' => $algorithmWeights['hybrid'],
-                'trending' => $algorithmWeights['trending']
-            ];
-
+            // ✅ FIX: Use pre-loaded weights instead of pulling config in loop
             $weight = $sourceWeights[$rec['source']] ?? 0.1;
             $grouped[$postId]['combined_score'] += $rec['score'] * $weight;
             $grouped[$postId]['sources'][] = $rec['source'];
@@ -553,7 +585,7 @@ class MLRecommendationService
     {
         $score = 0;
         $categories = $post->categories;
-        
+
         if ($categories->isEmpty()) {
             return 0;
         }
@@ -563,7 +595,9 @@ class MLRecommendationService
             $score += $preference;
         }
 
-        return min($score / $categories->count(), 1.0);
+        // ✅ FIXED: Prevent division by zero
+        $count = $categories->count();
+        return $count > 0 ? min($score / $count, 1.0) : 0;
     }
 
     /**
@@ -573,7 +607,7 @@ class MLRecommendationService
     {
         $score = 0;
         $tags = $post->tags;
-        
+
         if ($tags->isEmpty()) {
             return 0;
         }
@@ -583,7 +617,9 @@ class MLRecommendationService
             $score += $interest;
         }
 
-        return min($score / $tags->count(), 1.0);
+        // ✅ FIXED: Prevent division by zero
+        $count = $tags->count();
+        return $count > 0 ? min($score / $count, 1.0) : 0;
     }
 
     /**
@@ -859,53 +895,52 @@ class MLRecommendationService
     /**
      * ML improvements: helper methods for new capabilities
      */
-    private function calculateEnhancedCategoryScore(Post $post, array $categoryPreferences): float
-    {
-        // Improved category score implementation
-        return $this->calculateCategoryScore($post, $categoryPreferences);
-    }
-    
-    private function calculateEnhancedPatternScore(Post $post, array $readingPatterns): float
-    {
-        return $this->calculatePatternScore($post, $readingPatterns);
-    }
-    
-    private function calculateEngagementCompatibility(Post $post, array $engagementHistory): float
-    {
-        // Score basado en historial de engagement
-        $contentLength = strlen(strip_tags($post->content ?? ''));
-        $lengthCategory = $this->categorizeContentLength($contentLength);
-        
-        return $engagementHistory[$lengthCategory] ?? 0.5;
-    }
-    
-    private function calculateEnhancedLengthScore(Post $post, MLUserProfile $userProfile): float
-    {
-        return $this->calculateLengthScore($post, $userProfile);
-    }
-    
     private function getRecentViews(int $postId, int $days): int
     {
-        return MLInteractionLog::where('post_id', $postId)
-            ->where('interaction_type', 'view')
-            ->where('created_at', '>', now()->subDays($days))
-            ->count();
+        // ✅ Use static cache to prevent repeated queries for same post
+        static $cache = [];
+        $key = "{$postId}_{$days}_views";
+
+        if (!isset($cache[$key])) {
+            $cache[$key] = MLInteractionLog::where('post_id', $postId)
+                ->where('interaction_type', 'view')
+                ->where('created_at', '>', now()->subDays($days))
+                ->count();
+        }
+
+        return $cache[$key];
     }
-    
+
     private function getRecentLikes(int $postId, int $days): int
     {
-        return MLInteractionLog::where('post_id', $postId)
-            ->where('interaction_type', 'like')
-            ->where('created_at', '>', now()->subDays($days))
-            ->count();
+        // ✅ Use static cache to prevent repeated queries for same post
+        static $cache = [];
+        $key = "{$postId}_{$days}_likes";
+
+        if (!isset($cache[$key])) {
+            $cache[$key] = MLInteractionLog::where('post_id', $postId)
+                ->where('interaction_type', 'like')
+                ->where('created_at', '>', now()->subDays($days))
+                ->count();
+        }
+
+        return $cache[$key];
     }
-    
+
     private function getRecentShares(int $postId, int $days): int
     {
-        return MLInteractionLog::where('post_id', $postId)
-            ->where('interaction_type', 'share')
-            ->where('created_at', '>', now()->subDays($days))
-            ->count();
+        // ✅ Use static cache to prevent repeated queries for same post
+        static $cache = [];
+        $key = "{$postId}_{$days}_shares";
+
+        if (!isset($cache[$key])) {
+            $cache[$key] = MLInteractionLog::where('post_id', $postId)
+                ->where('interaction_type', 'share')
+                ->where('created_at', '>', now()->subDays($days))
+                ->count();
+        }
+
+        return $cache[$key];
     }
     
     /**
@@ -913,21 +948,30 @@ class MLRecommendationService
      */
     private function logRecommendations(string $sessionId = null, int $userId = null, array $recommendations): void
     {
+        // ✅ FIXED: Batch insert to prevent N queries
+        $records = [];
+
         foreach ($recommendations as $index => $rec) {
-            MLInteractionLog::create([
+            $records[] = [
                 'session_id' => $sessionId,
                 'user_id' => $userId,
                 'post_id' => $rec['post']->id,
                 'interaction_type' => 'view',
                 'recommendation_source' => $rec['source'],
-                'recommendation_context' => [
+                'recommendation_context' => json_encode([
                     'algorithm' => $rec['source'],
                     'reason' => $rec['reason'],
                     'metadata' => $rec['metadata'] ?? []
-                ],
+                ]),
                 'recommendation_score' => $rec['combined_score'] ?? $rec['score'],
                 'recommendation_position' => $index + 1,
-            ]);
+                'created_at' => now(),
+                'updated_at' => now(),
+            ];
+        }
+
+        if (!empty($records)) {
+            MLInteractionLog::insert($records);
         }
     }
 

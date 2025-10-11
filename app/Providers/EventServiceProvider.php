@@ -3,8 +3,10 @@
 namespace App\Providers;
 
 use App\Events\MaintenanceModeToggled;
+use App\Events\PostCreated;
 use App\Events\SettingChanged;
 use App\Listeners\ClearRelatedCache;
+use App\Listeners\InvalidateMLCacheOnPostCreated;
 use App\Listeners\LogSettingChange;
 use App\Listeners\NotifyAdminsOfChange;
 use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
@@ -29,6 +31,10 @@ class EventServiceProvider extends ServiceProvider
         MaintenanceModeToggled::class => [
             ClearRelatedCache::class,
             NotifyAdminsOfChange::class,
+        ],
+        // ✅ FIXED: Register ML cache invalidation on new posts
+        PostCreated::class => [
+            InvalidateMLCacheOnPostCreated::class,
         ],
     ];
 }

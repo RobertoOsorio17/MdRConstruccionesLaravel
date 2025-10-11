@@ -220,11 +220,15 @@ const SearchResults = ({
                         Intenta con otros términos de búsqueda, revisa la ortografía o explora nuestras categorías.
                     </Typography>
 
+                    {/* ✅ FIX: Use correct payload structure for suggestions */}
                     <Stack direction="row" spacing={1} justifyContent="center" sx={{ flexWrap: 'wrap', gap: 1 }}>
                         <Button
                             variant="outlined"
                             size="small"
-                            onClick={() => onResultClick?.({ type: 'suggestion', query: 'construcción' })}
+                            onClick={() => {
+                                // Navigate to search with query instead of calling onResultClick
+                                window.location.href = '/search?q=construcción';
+                            }}
                             sx={{
                                 borderColor: THEME.primary[200],
                                 color: THEME.primary[600],
@@ -239,7 +243,9 @@ const SearchResults = ({
                         <Button
                             variant="outlined"
                             size="small"
-                            onClick={() => onResultClick?.({ type: 'suggestion', query: 'reformas' })}
+                            onClick={() => {
+                                window.location.href = '/search?q=reformas';
+                            }}
                             sx={{
                                 borderColor: THEME.primary[200],
                                 color: THEME.primary[600],
@@ -254,7 +260,9 @@ const SearchResults = ({
                         <Button
                             variant="outlined"
                             size="small"
-                            onClick={() => onResultClick?.({ type: 'suggestion', query: 'materiales' })}
+                            onClick={() => {
+                                window.location.href = '/search?q=materiales';
+                            }}
                             sx={{
                                 borderColor: THEME.primary[200],
                                 color: THEME.primary[600],

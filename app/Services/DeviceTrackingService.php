@@ -164,30 +164,40 @@ class DeviceTrackingService
         $cacheKey = 'geo_ip_' . $ip;
 
         // Try to get from cache first
-        return \Cache::remember($cacheKey, 86400, function () use ($ip) {
-            try {
-                // Use ip-api.com free service (45 requests/minute limit)
-                $response = \Http::timeout(3)->get("http://ip-api.com/json/{$ip}", [
-                    'fields' => 'status,country,city,lat,lon'
-                ]);
+        // ✅ FIX: Only cache successful lookups, not failures
+        $cached = \Cache::get($cacheKey);
+        if ($cached !== null) {
+            return $cached;
+        }
 
-                if ($response->successful() && $response->json('status') === 'success') {
-                    return [
-                        'country' => $response->json('country'),
-                        'city' => $response->json('city'),
-                        'latitude' => $response->json('lat'),
-                        'longitude' => $response->json('lon'),
-                    ];
-                }
-            } catch (\Exception $e) {
-                \Log::warning('Geolocation lookup failed', [
-                    'ip' => $ip,
-                    'error' => $e->getMessage()
-                ]);
+        try {
+            // ✅ SECURITY FIX: Use HTTPS instead of HTTP to prevent MITM attacks
+            $response = \Http::timeout(3)->get("https://ip-api.com/json/{$ip}", [
+                'fields' => 'status,country,city,lat,lon'
+            ]);
+
+            if ($response->successful() && $response->json('status') === 'success') {
+                $geoData = [
+                    'country' => $response->json('country'),
+                    'city' => $response->json('city'),
+                    'latitude' => $response->json('lat'),
+                    'longitude' => $response->json('lon'),
+                ];
+
+                // ✅ FIX: Cache successful lookups for 24 hours
+                \Cache::put($cacheKey, $geoData, 86400);
+
+                return $geoData;
             }
+        } catch (\Exception $e) {
+            \Log::warning('Geolocation lookup failed', [
+                'ip' => $ip,
+                'error' => $e->getMessage()
+            ]);
+        }
 
-            return [];
-        });
+        // ✅ FIX: Return empty array on failure (don't cache failures)
+        return [];
     }
 
     /**

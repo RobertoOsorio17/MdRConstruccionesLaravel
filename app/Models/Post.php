@@ -237,10 +237,12 @@ class Post extends Model
 
     /**
      * Get the SEO description or fall back to excerpt.
+     * ✅ FIX: Handle NULL excerpt to prevent strip_tags crash
      */
     public function getSeoDescriptionAttribute($value): string
     {
-        return $value ?: Str::limit(strip_tags($this->excerpt), 160);
+        $excerpt = $this->excerpt ?? '';
+        return $value ?: Str::limit(strip_tags($excerpt), 160);
     }
 
     /**
@@ -284,10 +286,12 @@ class Post extends Model
 
     /**
      * Obtener el tiempo estimado de lectura en minutos
+     * ✅ FIX: Handle NULL content to prevent strip_tags crash
      */
     public function getReadingTimeAttribute()
     {
-        $wordCount = str_word_count(strip_tags($this->content));
+        $content = $this->content ?? '';
+        $wordCount = str_word_count(strip_tags($content));
         $readingTime = ceil($wordCount / 200); // Promedio 200 palabras por minuto
         return max(1, $readingTime);
     }

@@ -34,21 +34,25 @@ class SearchService
         // ✅ FIXED: Enforce maximum per page limit
         $perPage = min($perPage, self::MAX_PER_PAGE);
         $startTime = microtime(true);
-        
+
         // Validate and sanitize query
         $query = $this->sanitizeQuery($query);
-        
+
         if (strlen($query) < self::MIN_QUERY_LENGTH) {
             return $this->emptyResults();
         }
 
-        // Build search results
-        $results = $this->performSearch($query, $filters, $perPage, $page);
-        
-        // Record analytics
+        // ✅ NEW: Cache search results for better performance
+        $cacheKey = "search_results:" . md5($query . json_encode($filters) . $perPage . $page);
+
+        $results = Cache::remember($cacheKey, self::CACHE_TTL, function () use ($query, $filters, $perPage, $page) {
+            return $this->performSearch($query, $filters, $perPage, $page);
+        });
+
+        // Record analytics (outside cache to track all searches)
         $responseTime = microtime(true) - $startTime;
         $this->recordSearchAnalytics($query, $results['total'], $filters, $responseTime);
-        
+
         return $results;
     }
 
@@ -72,26 +76,27 @@ class SearchService
             $analyticsSuggestions = SearchAnalytics::getSuggestions($query, $limit);
             $suggestions = $suggestions->merge($analyticsSuggestions);
             
+            // ✅ FIX: Use mb_strtolower for proper UTF-8 handling (accents, ñ, etc.)
             // Get suggestions from post titles
             $postSuggestions = Post::select('title')
                 ->where('title', 'LIKE', '%' . $query . '%')
                 ->where('status', 'published')
                 ->limit($limit)
                 ->pluck('title')
-                ->map(fn($title) => strtolower($title))
+                ->map(fn($title) => mb_strtolower($title, 'UTF-8'))
                 ->unique();
-            
+
             $suggestions = $suggestions->merge($postSuggestions);
-            
+
             // Get suggestions from categories
             $categorySuggestions = Category::select('name')
                 ->where('name', 'LIKE', '%' . $query . '%')
                 ->limit($limit)
                 ->pluck('name')
-                ->map(fn($name) => strtolower($name));
-            
+                ->map(fn($name) => mb_strtolower($name, 'UTF-8'));
+
             $suggestions = $suggestions->merge($categorySuggestions);
-            
+
             return $suggestions->unique()->take($limit)->values()->toArray();
         });
     }
@@ -159,14 +164,23 @@ class SearchService
             ];
         });
 
+        // ✅ FIX: Ensure from/to metadata is valid when page exceeds results
+        $from = $total > 0 ? ($page - 1) * $perPage + 1 : 0;
+        $to = min($page * $perPage, $total);
+
+        // ✅ FIX: Ensure from <= to
+        if ($from > $to) {
+            $from = $to;
+        }
+
         return [
             'data' => $transformedPosts,
             'total' => $total,
             'per_page' => $perPage,
             'current_page' => $page,
-            'last_page' => ceil($total / $perPage),
-            'from' => ($page - 1) * $perPage + 1,
-            'to' => min($page * $perPage, $total),
+            'last_page' => $total > 0 ? ceil($total / $perPage) : 1,
+            'from' => $from,
+            'to' => $to,
         ];
     }
 
@@ -245,15 +259,17 @@ class SearchService
 
     /**
      * Highlight search terms in text
+     * ✅ FIX: Handle nullable text parameter
      */
-    private function highlightText(string $text, string $query): string
+    private function highlightText(?string $text, string $query): string
     {
-        if (empty($query) || empty($text)) {
-            return $text;
+        // ✅ FIX: Return empty string if text is null
+        if ($text === null || empty($query) || empty($text)) {
+            return $text ?? '';
         }
 
         $words = explode(' ', $query);
-        
+
         foreach ($words as $word) {
             if (strlen($word) >= 2) {
                 $text = preg_replace(
@@ -332,10 +348,16 @@ class SearchService
 
     /**
      * Record search analytics
+     * ✅ FIX: Handle CLI/queue context where request() is unavailable
      */
     private function recordSearchAnalytics(string $query, int $total, array $filters, float $responseTime): void
     {
         try {
+            // ✅ FIX: Skip analytics recording when running in console (CLI, queue workers)
+            if (app()->runningInConsole()) {
+                return;
+            }
+
             SearchAnalytics::recordSearch(
                 $query,
                 $total,

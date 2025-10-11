@@ -87,8 +87,10 @@ if (config('app.debug')) {
 
 // Machine Learning API Routes
 Route::prefix('api/ml')->name('ml.')->group(function () {
-    // Public routes (no authentication required)
-    Route::get('/recommendations', [MLController::class, 'getRecommendations'])->name('recommendations');
+    // ✅ SECURITY FIX: Public routes with aggressive rate limiting to prevent abuse
+    Route::middleware(['throttle:10,1'])->group(function () {
+        Route::get('/recommendations', [MLController::class, 'getRecommendations'])->name('recommendations');
+    });
 
     // User routes (require authentication and ban check)
     Route::middleware(['auth', 'auth.enhanced'])->group(function () {

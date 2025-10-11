@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     Box,
     Paper,
@@ -71,6 +71,11 @@ const SearchFilters = ({
     const [isExpanded, setIsExpanded] = useState(false);
     const [localFilters, setLocalFilters] = useState(filters);
 
+    // ✅ FIX: Sync local state when external filters change
+    useEffect(() => {
+        setLocalFilters(filters);
+    }, [filters]);
+
     // Handle filter change
     const handleFilterChange = (key, value) => {
         const newFilters = { ...localFilters, [key]: value };
@@ -87,8 +92,11 @@ const SearchFilters = ({
         onClearFilters?.();
     };
 
-    // Get active filters count
-    const activeFiltersCount = Object.keys(localFilters).filter(key => localFilters[key]).length;
+    // ✅ FIX: Get active filters count - exclude empty strings and null values
+    const activeFiltersCount = Object.keys(localFilters).filter(key => {
+        const value = localFilters[key];
+        return value !== null && value !== undefined && value !== '';
+    }).length;
 
     // Get filter chips
     const getFilterChips = () => {

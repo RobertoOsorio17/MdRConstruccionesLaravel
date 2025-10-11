@@ -20,6 +20,7 @@ import {
 } from '@mui/icons-material';
 import { motion, AnimatePresence } from 'framer-motion';
 import { router } from '@inertiajs/react';
+import SafeHighlightedText from './SafeHighlightedText'; // ✅ SECURITY FIX: Safe highlighting component
 
 // Premium design system
 const THEME = {
@@ -184,6 +185,7 @@ const SearchResultCard = ({
                     <motion.div variants={contentVariants}>
                         {/* Header with actions */}
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+                            {/* ✅ SECURITY FIX: Use SafeHighlightedText instead of dangerouslySetInnerHTML */}
                             <Typography
                                 variant="h6"
                                 component="h3"
@@ -192,19 +194,14 @@ const SearchResultCard = ({
                                     color: THEME.text.primary,
                                     lineHeight: 1.3,
                                     flex: 1,
-                                    mr: 2,
-                                    '& mark.search-highlight': {
-                                        backgroundColor: THEME.primary[100],
-                                        color: THEME.primary[800],
-                                        padding: '2px 4px',
-                                        borderRadius: 1,
-                                        fontWeight: 700
-                                    }
+                                    mr: 2
                                 }}
-                                dangerouslySetInnerHTML={{ 
-                                    __html: result.highlighted_title || result.title 
-                                }}
-                            />
+                            >
+                                <SafeHighlightedText
+                                    text={result.title}
+                                    highlightedText={result.highlighted_title}
+                                />
+                            </Typography>
 
                             {/* Action buttons */}
                             <AnimatePresence>

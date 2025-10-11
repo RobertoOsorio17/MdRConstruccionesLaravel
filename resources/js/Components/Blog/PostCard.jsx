@@ -1,6 +1,6 @@
 import React, { memo, useState } from 'react';
 import { Card, CardMedia, CardContent, Box, Typography, Stack, Chip, Avatar, Skeleton, IconButton, Tooltip } from '@mui/material';
-import { Link, usePage } from '@inertiajs/react';
+import { Link, usePage, router } from '@inertiajs/react';
 import ScheduleIcon from '@mui/icons-material/Schedule';
 import ImageIcon from '@mui/icons-material/Image';
 import BrokenImageIcon from '@mui/icons-material/BrokenImage';
@@ -259,23 +259,46 @@ const PostCard = memo(({ post, getPostImage }) => {
 
   const { auth } = usePage().props;
 
-  // Memoize expensive calculations
+  // ✅ FIX: Use reading_time from backend or calculate from word count, not character count
   const readingTime = React.useMemo(() => {
-    return Math.max(1, Math.ceil((post.content?.length || 500) / 200));
-  }, [post.content?.length]);
+    // Prefer backend-calculated reading time
+    if (post.reading_time && post.reading_time > 0) {
+      return post.reading_time;
+    }
+
+    // Fallback: Calculate from content (words, not characters)
+    // Average reading speed: 200 words per minute
+    const content = post.content || post.excerpt || '';
+    const wordCount = content.split(/\s+/).filter(word => word.length > 0).length;
+    const minutes = Math.ceil(wordCount / 200);
+    return Math.max(1, minutes);
+  }, [post.reading_time, post.content, post.excerpt]);
 
   const formattedDate = React.useMemo(() => {
-    if (!post.created_at) return '1 min';
-    const date = new Date(post.created_at);
+    // ✅ FIX: Validate date before parsing
+    if (!post.created_at && !post.published_at) return 'Fecha desconocida';
+
+    // Prefer published_at over created_at for published posts
+    const dateString = post.published_at || post.created_at;
+    const date = new Date(dateString);
+
+    // ✅ FIX: Check if date is valid
+    if (isNaN(date.getTime())) {
+      console.warn('Invalid date:', dateString);
+      return 'Fecha inválida';
+    }
+
     const now = new Date();
     const diffTime = Math.abs(now - date);
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
+    if (diffDays === 0) return 'Hoy';
     if (diffDays === 1) return 'Hace 1 día';
     if (diffDays < 7) return `Hace ${diffDays} días`;
     if (diffDays < 30) return `Hace ${Math.ceil(diffDays / 7)} semanas`;
-    return `Hace ${Math.ceil(diffDays / 30)} meses`;
-  }, [post.created_at]);
+    if (diffDays < 365) return `Hace ${Math.ceil(diffDays / 30)} meses`;
+    return `Hace ${Math.ceil(diffDays / 365)} años`;
+  }, [post.created_at, post.published_at]);
 
   // Handle like functionality
   const handleLike = async (e) => {
@@ -283,7 +306,11 @@ const PostCard = memo(({ post, getPostImage }) => {
     e.stopPropagation();
 
     if (!auth.user) {
-      window.location.href = '/login';
+      // ✅ FIX: Use Inertia router instead of full page reload
+      router.visit('/login', {
+        preserveState: true,
+        preserveScroll: true
+      });
       return;
     }
 
@@ -309,7 +336,11 @@ const PostCard = memo(({ post, getPostImage }) => {
     e.stopPropagation();
 
     if (!auth.user) {
-      window.location.href = '/login';
+      // ✅ FIX: Use Inertia router instead of full page reload
+      router.visit('/login', {
+        preserveState: true,
+        preserveScroll: true
+      });
       return;
     }
 

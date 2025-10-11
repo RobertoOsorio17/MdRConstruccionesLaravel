@@ -25,38 +25,60 @@ class SessionTimeout
             $user = Auth::user();
             $userId = $user->id;
             $lastActivity = session('last_activity');
+            $sessionStart = session('session_start');
             $currentTime = time();
 
-        // Get role-based timeout (admin users get shorter timeout for security).
+            // ✅ FIXED: Initialize session start time if not set
+            if (!$sessionStart) {
+                session(['session_start' => $currentTime]);
+                $sessionStart = $currentTime;
+            }
+
+            // Get role-based timeout (admin users get shorter timeout for security).
             $timeout = $this->getRoleBasedTimeout($user);
 
             $timeSinceActivity = $lastActivity ? ($currentTime - $lastActivity) : 0;
+            $totalSessionTime = $currentTime - $sessionStart;
+
+            // ✅ FIXED: Absolute session timeout (max 8 hours for regular users, 4 hours for admins)
+            $absoluteTimeout = $this->getAbsoluteTimeout($user);
 
             Log::debug('Session timeout check', [
                 'user_id' => $userId,
                 'user_roles' => $this->getUserRoles($user),
-                'timeout_minutes' => $timeout / 60,
+                'idle_timeout_minutes' => $timeout / 60,
+                'absolute_timeout_minutes' => $absoluteTimeout / 60,
                 'last_activity' => $lastActivity ? date('Y-m-d H:i:s', $lastActivity) : 'never',
+                'session_start' => date('Y-m-d H:i:s', $sessionStart),
                 'current_time' => date('Y-m-d H:i:s', $currentTime),
                 'time_since_activity_minutes' => round($timeSinceActivity / 60, 2),
-                'will_timeout' => $lastActivity && $timeSinceActivity > $timeout,
+                'total_session_minutes' => round($totalSessionTime / 60, 2),
+                'will_timeout_idle' => $lastActivity && $timeSinceActivity > $timeout,
+                'will_timeout_absolute' => $totalSessionTime > $absoluteTimeout,
                 'route' => $request->route()?->getName(),
-                'url' => $request->url(),
-                'session_id' => session()->getId()
+                'url' => $request->url()
             ]);
 
-            if ($lastActivity && $timeSinceActivity > $timeout) {
+            // ✅ FIXED: Check both idle timeout AND absolute timeout
+            $idleExpired = $lastActivity && $timeSinceActivity > $timeout;
+            $absoluteExpired = $totalSessionTime > $absoluteTimeout;
+
+            if ($idleExpired || $absoluteExpired) {
+                $reason = $idleExpired ? 'inactivity' : 'maximum session duration reached';
+
                 Log::warning('Session timeout triggered - forcing logout', [
                     'user_id' => $userId,
-                    'user_email' => $user->email,
                     'user_roles' => $this->getUserRoles($user),
-                    'timeout_minutes' => $timeout / 60,
+                    'reason' => $reason,
+                    'idle_timeout_minutes' => $timeout / 60,
+                    'absolute_timeout_minutes' => $absoluteTimeout / 60,
                     'last_activity' => date('Y-m-d H:i:s', $lastActivity),
+                    'session_start' => date('Y-m-d H:i:s', $sessionStart),
                     'time_since_activity_minutes' => round($timeSinceActivity / 60, 2),
+                    'total_session_minutes' => round($totalSessionTime / 60, 2),
                     'ip' => $request->ip(),
-                    'user_agent' => $request->userAgent(),
+                    'user_agent' => substr($request->userAgent(), 0, 100),
                     'route' => $request->route()?->getName(),
-                    'session_id' => session()->getId(),
                     'timestamp' => now()->toISOString()
                 ]);
 
@@ -64,16 +86,21 @@ class SessionTimeout
                 session()->invalidate();
                 session()->regenerateToken();
 
+                $message = $absoluteExpired
+                    ? 'Your session expired after reaching the maximum duration. Please log in again for security.'
+                    : 'Your session expired due to inactivity. Please log in again.';
+
                 if ($request->expectsJson()) {
                     return response()->json([
                         'error' => 'Session expired.',
-                        'message' => 'Your session expired due to inactivity. Please log in again.',
+                        'message' => $message,
+                        'reason' => $reason,
                         'timeout_minutes' => $timeout / 60
                     ], 401);
                 }
 
                 return redirect()->route('login')
-                    ->with('warning', 'Your session expired due to inactivity. Please log in again.');
+                    ->with('warning', $message);
             }
 
             // Update the last activity timestamp.
@@ -142,5 +169,24 @@ class SessionTimeout
         }
 
         return array_unique($userRoles);
+    }
+
+    /**
+     * Get absolute session timeout (maximum session duration regardless of activity)
+     *
+     * ✅ NEW: Prevents sessions from living forever
+     *
+     * @param $user
+     * @return int Timeout in seconds
+     */
+    private function getAbsoluteTimeout($user): int
+    {
+        // Admin and editor roles get shorter absolute timeout (4 hours)
+        if ($user->hasRole('admin') || $user->hasRole('editor')) {
+            return 4 * 3600; // 4 hours
+        }
+
+        // Regular users get 8 hours maximum session duration
+        return 8 * 3600; // 8 hours
     }
 }

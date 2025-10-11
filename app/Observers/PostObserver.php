@@ -3,6 +3,7 @@
 namespace App\Observers;
 
 use App\Models\Post;
+use App\Events\PostCreated;
 use App\Services\CacheService;
 
 /**
@@ -20,9 +21,14 @@ class PostObserver
 
     /**
      * Handle the Post "created" event.
+     * ✅ FIXED: Dispatch PostCreated event for ML cache invalidation
      */
     public function created(Post $post): void
     {
+        // ✅ Dispatch event for ML cache invalidation
+        event(new PostCreated($post));
+
+        // Invalidate general caches
         $this->invalidateCache($post);
     }
 

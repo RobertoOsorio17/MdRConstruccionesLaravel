@@ -25,6 +25,8 @@ class ContactRequest extends Model
         'message',
         'attachments',
         'status',
+        'type', // 'contact' or 'budget_request'
+        'metadata', // JSON field for additional data
         'read_at',
         'responded_at',
         'responded_by',
@@ -42,6 +44,7 @@ class ContactRequest extends Model
 
     protected $casts = [
         'attachments' => 'array',
+        'metadata' => 'array', // Cast JSON to array
         'read_at' => 'datetime',
         'responded_at' => 'datetime',
         'created_at' => 'datetime',

@@ -186,6 +186,18 @@ export default function ServiceShow({ service, relatedServices = [], seo = {}, a
         privacy_accepted: false,
     });
 
+    // ✅ FIX: Pre-calculate floating element positions outside render
+    const floatingElements = React.useMemo(() => [
+        { top: '10%', left: '5%', width: 100, height: 100 },
+        { top: '30%', left: '80%', width: 150, height: 150 },
+        { top: '60%', left: '15%', width: 120, height: 120 },
+        { top: '20%', left: '90%', width: 90, height: 90 },
+        { top: '75%', left: '70%', width: 130, height: 130 },
+        { top: '50%', left: '40%', width: 80, height: 80 },
+        { top: '85%', left: '25%', width: 110, height: 110 },
+        { top: '40%', left: '60%', width: 95, height: 95 },
+    ], []);
+
     useEffect(() => {
         setMounted(true);
         // Check favorite status when component mounts
@@ -307,17 +319,17 @@ export default function ServiceShow({ service, relatedServices = [], seo = {}, a
                 {/* Animated Background Elements */}
                 {mounted && (
                     <>
-                        {[...Array(8)].map((_, i) => (
+                        {floatingElements.map((element, i) => (
                             <motion.div
                                 key={i}
                                 variants={floatingVariants}
                                 animate="animate"
                                 style={{
                                     position: 'absolute',
-                                    top: `${Math.random() * 100}%`,
-                                    left: `${Math.random() * 100}%`,
-                                    width: `${60 + Math.random() * 120}px`,
-                                    height: `${60 + Math.random() * 120}px`,
+                                    top: element.top,
+                                    left: element.left,
+                                    width: `${element.width}px`,
+                                    height: `${element.height}px`,
                                     background: `radial-gradient(circle, ${THEME.primary[200]}30 0%, transparent 70%)`,
                                     borderRadius: '50%',
                                     filter: 'blur(2px)',

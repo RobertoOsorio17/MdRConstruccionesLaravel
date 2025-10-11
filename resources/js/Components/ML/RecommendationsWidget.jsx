@@ -160,7 +160,8 @@ const RecommendationsWidget = ({
             {loading && (
                 <Grid container spacing={3}>
                     {[...Array(limit)].map((_, index) => (
-                        <Grid item xs={12} sm={6} md={4} key={index}>
+                        {/* ✅ FIX: Use new Grid API */}
+                        <Grid size={{ xs: 12, sm: 6, md: 4 }} key={index}>
                             <Skeleton variant="rectangular" height={200} sx={{ borderRadius: 2, mb: 1 }} />
                             <Skeleton variant="text" width="80%" />
                             <Skeleton variant="text" width="60%" />
@@ -188,7 +189,8 @@ const RecommendationsWidget = ({
                     >
                         <Grid container spacing={compact ? 2 : 3}>
                             {recommendations.map((post, index) => (
-                                <Grid item xs={12} sm={compact ? 12 : 6} md={compact ? 12 : 4} key={post.id}>
+                                {/* ✅ FIX: Use new Grid API */}
+                                <Grid size={{ xs: 12, sm: compact ? 12 : 6, md: compact ? 12 : 4 }} key={post.id}>
                                     <RecommendationCard
                                         post={post}
                                         position={index + 1}

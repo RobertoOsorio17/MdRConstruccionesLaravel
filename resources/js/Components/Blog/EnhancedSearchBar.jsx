@@ -28,6 +28,7 @@ import {
     Close as CloseIcon
 } from '@mui/icons-material';
 import { motion, AnimatePresence } from 'framer-motion';
+import SafeHighlightedText from './SafeHighlightedText'; // ✅ SECURITY FIX: Safe highlighting component
 import { useSearch } from '@/Hooks/useSearch';
 
 // Premium design system
@@ -93,6 +94,8 @@ const EnhancedSearchBar = ({
     const inputRef = useRef(null);
     const popperRef = useRef(null);
     const anchorRef = useRef(null);
+    // ✅ FIX: Add concurrency guard for quick search
+    const quickSearchAbortController = useRef(null);
 
     // Keyboard shortcut (Ctrl+K / Cmd+K)
     useEffect(() => {
@@ -132,11 +135,31 @@ const EnhancedSearchBar = ({
         updateQuery(value);
         setSelectedIndex(-1);
 
+        // ✅ FIX: Cancel previous quick search request
+        if (quickSearchAbortController.current) {
+            quickSearchAbortController.current.abort();
+        }
+
         // Show quick results for queries >= 2 characters
         if (value.length >= 2) {
             setShowQuickResults(true);
-            const results = await quickSearch(value);
-            setQuickResults(results);
+
+            // ✅ FIX: Create new abort controller for this request
+            quickSearchAbortController.current = new AbortController();
+
+            try {
+                const results = await quickSearch(value);
+                // Only update if this request wasn't aborted
+                if (!quickSearchAbortController.current.signal.aborted) {
+                    setQuickResults(results);
+                }
+            } catch (error) {
+                // Ignore abort errors
+                if (error.name !== 'AbortError') {
+                    console.error('Quick search error:', error);
+                    setQuickResults([]);
+                }
+            }
         } else {
             setShowQuickResults(false);
             setQuickResults([]);
@@ -148,6 +171,9 @@ const EnhancedSearchBar = ({
         if (!isOpen) return;
 
         const totalItems = getTotalSuggestionItems();
+
+        // ✅ FIX: Prevent division by zero when no items available
+        if (totalItems === 0) return;
 
         switch (event.key) {
             case 'ArrowDown':
@@ -187,14 +213,37 @@ const EnhancedSearchBar = ({
             const selectedItem = getSelectedItem();
             if (selectedItem) {
                 if (selectedItem.type === 'result') {
-                    onResultSelect?.(selectedItem.data);
+                    // ✅ FIX: Add fallback navigation if onResultSelect fails
+                    try {
+                        onResultSelect?.(selectedItem.data);
+                    } catch (error) {
+                        console.error('Result selection error:', error);
+                        // Fallback: navigate to search results
+                        if (query.trim()) {
+                            navigateToResults(query);
+                        }
+                    }
                 } else {
                     updateQuery(selectedItem.text);
-                    navigateToResults(selectedItem.text);
+                    // ✅ FIX: Add try/catch for navigation
+                    try {
+                        navigateToResults(selectedItem.text);
+                    } catch (error) {
+                        console.error('Navigation error:', error);
+                        // Fallback: use window.location
+                        window.location.href = `/search?q=${encodeURIComponent(selectedItem.text)}`;
+                    }
                 }
             }
         } else if (query.trim()) {
-            navigateToResults();
+            // ✅ FIX: Add try/catch for navigation
+            try {
+                navigateToResults();
+            } catch (error) {
+                console.error('Navigation error:', error);
+                // Fallback: use window.location
+                window.location.href = `/search?q=${encodeURIComponent(query)}`;
+            }
         }
         setIsOpen(false);
     };
@@ -485,15 +534,14 @@ const SearchSuggestionsList = ({
                                     </ListItemIcon>
                                     <ListItemText
                                         primary={
-                                            <Typography
-                                                variant="body2"
+                                            /* ✅ SECURITY FIX: Use SafeHighlightedText instead of dangerouslySetInnerHTML */
+                                            <SafeHighlightedText
+                                                text={result.title}
+                                                highlightedText={result.highlighted_title}
                                                 sx={{
                                                     fontWeight: 500,
                                                     color: selectedIndex === itemIndex ?
                                                         THEME.primary[700] : THEME.text.primary
-                                                }}
-                                                dangerouslySetInnerHTML={{
-                                                    __html: result.highlighted_title || result.title
                                                 }}
                                             />
                                         }

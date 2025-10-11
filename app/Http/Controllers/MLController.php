@@ -176,9 +176,10 @@ class MLController extends Controller
                 )
             ];
 
-            // Calculate engagement score before anomaly detection
+            // ✅ FIXED: Calculate engagement score before anomaly detection
             $engagementScore = $this->calculateEngagementScore($interactionData);
-            $interactionData['engagement_score'] = $engagementScore;
+            // Clamp score between 0-100 to prevent invalid values
+            $interactionData['engagement_score'] = max(0, min(100, $engagementScore));
 
             // Detect anomalies (if enabled in settings)
             $anomalyConfig = MLSettingsHelper::getAnomalyDetectionConfig();

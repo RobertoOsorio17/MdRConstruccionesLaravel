@@ -114,9 +114,10 @@ class DashboardController extends Controller
                 ];
             });
 
-        // Popular posts (most viewed within the last 30 days).
+        // ✅ FIX: Popular posts - Filter by published_at instead of created_at
         $popularPosts = Post::published()
-            ->where('created_at', '>=', Carbon::now()->subDays(30))
+            ->whereNotNull('published_at')
+            ->where('published_at', '>=', Carbon::now()->subDays(30))
             ->orderBy('views_count', 'desc')
             ->limit(5)
             ->get(['id', 'title', 'slug', 'views_count', 'published_at'])
@@ -186,14 +187,34 @@ class DashboardController extends Controller
             return $stats;
         });
 
-        // User growth trends.
+        // ✅ FIX: User growth trends - Use single query with groupBy instead of 60 queries
+        $startDate = Carbon::now()->subDays(29)->startOfDay();
+        $endDate = Carbon::now()->endOfDay();
+
+        // Get new users grouped by date
+        $newUsersByDate = User::whereBetween('created_at', [$startDate, $endDate])
+            ->select(DB::raw('DATE(created_at) as date'), DB::raw('COUNT(*) as count'))
+            ->groupBy('date')
+            ->pluck('count', 'date')
+            ->toArray();
+
+        // Get active users grouped by date
+        $activeUsersByDate = User::whereBetween('last_login_at', [$startDate, $endDate])
+            ->select(DB::raw('DATE(last_login_at) as date'), DB::raw('COUNT(*) as count'))
+            ->groupBy('date')
+            ->pluck('count', 'date')
+            ->toArray();
+
+        // Build the stats array with all 30 days
         $userGrowthStats = [];
         for ($i = 29; $i >= 0; $i--) {
             $date = Carbon::now()->subDays($i);
+            $dateStr = $date->format('Y-m-d');
+
             $userGrowthStats[] = [
-                'date' => $date->format('Y-m-d'),
-                'new_users' => User::whereDate('created_at', $date)->count(),
-                'active_users' => User::whereDate('last_login_at', $date)->count(),
+                'date' => $dateStr,
+                'new_users' => $newUsersByDate[$dateStr] ?? 0,
+                'active_users' => $activeUsersByDate[$dateStr] ?? 0,
             ];
         }
 

@@ -23,6 +23,8 @@ export const useSearch = (initialQuery = '', initialFilters = {}) => {
     const debounceTimeoutRef = useRef(null);
     const suggestionsTimeoutRef = useRef(null);
     const abortControllerRef = useRef(null);
+    // ✅ FIX: Add abort controller for quick search
+    const quickSearchAbortControllerRef = useRef(null);
 
     // Load search history from localStorage
     useEffect(() => {
@@ -186,14 +188,29 @@ export const useSearch = (initialQuery = '', initialFilters = {}) => {
     }, []);
 
     const quickSearch = useCallback(async (searchQuery) => {
+        // ✅ FIX: Cancel previous quick search request
+        if (quickSearchAbortControllerRef.current) {
+            quickSearchAbortControllerRef.current.abort();
+        }
+
+        // Create new abort controller
+        quickSearchAbortControllerRef.current = new AbortController();
+
         try {
-            const response = await axios.get(`/api/search/quick?q=${encodeURIComponent(searchQuery)}&limit=5`);
-            
+            const response = await axios.get(
+                `/api/search/quick?q=${encodeURIComponent(searchQuery)}&limit=5`,
+                { signal: quickSearchAbortControllerRef.current.signal }
+            );
+
             if (response.data.success) {
                 return response.data.data;
             }
             return [];
         } catch (error) {
+            // Ignore abort errors
+            if (error.name === 'AbortError' || error.name === 'CanceledError') {
+                return [];
+            }
             console.error('Quick search error:', error);
             return [];
         }

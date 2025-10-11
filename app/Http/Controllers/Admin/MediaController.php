@@ -117,12 +117,12 @@ class MediaController extends Controller
                 ], 422);
             }
 
-            // Validate file type
-            $allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml', 'video/mp4', 'video/webm', 'application/pdf'];
+            // Validate file type (✅ SECURITY FIX: Removed SVG to prevent XSS attacks)
+            $allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'video/mp4', 'video/webm', 'application/pdf'];
             if (!in_array($file->getMimeType(), $allowedTypes)) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'File type is not allowed.'
+                    'message' => 'File type is not allowed. Supported: JPEG, PNG, GIF, WebP, MP4, WebM, PDF.'
                 ], 422);
             }
 
@@ -204,8 +204,9 @@ class MediaController extends Controller
             $bytes = bin2hex(fread($handle, 8));
             fclose($handle);
 
+            // ✅ SECURITY FIX: Use str_starts_with instead of strpos to prevent false positives
             foreach ($allowedMagicBytes as $magic) {
-                if (strpos($bytes, $magic) !== false) {
+                if (str_starts_with($bytes, $magic)) {
                     return true;
                 }
             }
@@ -320,7 +321,7 @@ class MediaController extends Controller
     public function bulkDelete(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'files' => 'required|array|max:100', // Limit to 100 files per operation
+            'files' => 'required|array|max:50', // ✅ SECURITY: Reduced from 100 to 50 to prevent DoS
             'files.*' => 'string',
         ]);
 
@@ -385,6 +386,7 @@ class MediaController extends Controller
 
     /**
      * Validate path to prevent path traversal attacks.
+     * ✅ SECURITY FIX: Enhanced validation with realpath() verification
      */
     private function isValidPath(string $path): bool
     {
@@ -393,11 +395,13 @@ class MediaController extends Controller
 
         // Check for path traversal attempts
         if (strpos($normalizedPath, '..') !== false) {
+            \Log::warning('Path traversal attempt detected', ['path' => $path]);
             return false;
         }
 
         // Check for absolute paths
         if (strpos($normalizedPath, '/') === 0 || preg_match('/^[a-zA-Z]:/', $normalizedPath)) {
+            \Log::warning('Absolute path rejected', ['path' => $path]);
             return false;
         }
 
@@ -405,13 +409,40 @@ class MediaController extends Controller
         $allowedPrefixes = ['uploads/', 'media/', 'images/'];
         $isAllowed = false;
         foreach ($allowedPrefixes as $prefix) {
-            if (strpos($normalizedPath, $prefix) === 0) {
+            if (str_starts_with($normalizedPath, $prefix)) {
                 $isAllowed = true;
                 break;
             }
         }
 
-        return $isAllowed;
+        if (!$isAllowed) {
+            \Log::warning('Path not in allowed directories', ['path' => $path]);
+            return false;
+        }
+
+        // ✅ SECURITY FIX: Verify with realpath that resolved path is within public storage
+        $publicPath = Storage::disk('public')->path('');
+        $fullPath = $publicPath . DIRECTORY_SEPARATOR . $normalizedPath;
+        $realPath = realpath($fullPath);
+
+        // If file doesn't exist yet, check parent directory
+        if ($realPath === false && file_exists(dirname($fullPath))) {
+            $realPath = realpath(dirname($fullPath)) . DIRECTORY_SEPARATOR . basename($fullPath);
+        }
+
+        // Verify the real path is within the public storage directory
+        if ($realPath && str_starts_with($realPath, realpath($publicPath))) {
+            return true;
+        }
+
+        \Log::warning('Path validation failed on realpath check', [
+            'path' => $path,
+            'normalized' => $normalizedPath,
+            'full_path' => $fullPath,
+            'real_path' => $realPath,
+        ]);
+
+        return false;
     }
 
     /**

@@ -166,7 +166,8 @@ export default function TestimonialsIndex({ testimonials, projectTypes, filters 
                 {/* Testimonials Grid */}
                 <Grid container spacing={3}>
                     {testimonials.data.map((testimonial, index) => (
-                        <Grid item xs={12} md={6} key={testimonial.id}>
+                        {/* ✅ FIX: Use new Grid API */}
+                        <Grid size={{ xs: 12, md: 6 }} key={testimonial.id}>
                             <motion.div
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}

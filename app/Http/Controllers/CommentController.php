@@ -7,6 +7,7 @@ use App\Models\Comment;
 use App\Models\CommentEdit;
 use App\Models\Post;
 use App\Http\Requests\UpdateCommentRequest;
+use App\Helpers\DeviceFingerprintHelper;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\RateLimiter;
@@ -38,16 +39,17 @@ class CommentController extends Controller
         }
 
         // Check if post allows comments.
-        if ($post->status !== 'published') {
+        if ($post->status !== 'published' || $post->trashed()) {
             abort(404);
         }
 
-        // Rate limiting: max 3 comments per minute per IP.
+        // ✅ FIX: Rate limiting with proper callback return value
         $executed = RateLimiter::attempt(
             'comments:' . $request->ip(),
             $perMinute = 3,
             function () {
-                // Empty callback.
+                // ✅ FIX: Return true to indicate successful execution
+                return true;
             }
         );
 
@@ -109,9 +111,16 @@ class CommentController extends Controller
             $validated['author_name'] = null;
             $validated['author_email'] = null;
         } else {
-            // Guest user - check IP comment limit (max 2 comments per IP per post).
+            // ✅ FIXED: Use device fingerprinting for guest comment limits
+            $clientData = DeviceFingerprintHelper::parseClientData($request);
+            $deviceFingerprint = DeviceFingerprintHelper::generate($request, $clientData);
+
+            // Guest user - check device fingerprint comment limit (max 2 comments per device per post)
             $guestCommentsCount = Comment::where('post_id', $post->id)
-                ->where('ip_address', $request->ip())
+                ->where(function ($query) use ($request, $deviceFingerprint) {
+                    $query->where('device_fingerprint', $deviceFingerprint)
+                          ->orWhere('ip_address', $request->ip());
+                })
                 ->whereNull('user_id') // Only count guest comments.
                 ->count();
 
@@ -119,6 +128,7 @@ class CommentController extends Controller
                 // Log the guest comment limit reached.
                 \Log::info('Guest user reached comment limit', [
                     'ip' => $request->ip(),
+                    'device_fingerprint' => $deviceFingerprint,
                     'post_id' => $post->id,
                     'post_title' => $post->title,
                     'existing_comments' => $guestCommentsCount,
@@ -147,13 +157,13 @@ class CommentController extends Controller
                     'string',
                     'min:2',
                     'max:100',
-                    'regex:/^[a-zA-Z\s\-\'\.]+$/', // ✅ Only letters, spaces, hyphens, apostrophes, dots
+                    // ✅ FIX: Support Unicode letters (ñ, á, é, etc.) for Spanish names
+                    'regex:/^[\p{L}\p{M}\s\-\'\.]+$/u', // Unicode letters, marks, spaces, hyphens, apostrophes, dots
                 ],
                 'author_email' => [
                     'required',
-                    'email',
+                    'email:rfc,dns', // ✅ FIXED: Use Laravel's built-in strict email validation
                     'max:255',
-                    'regex:/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/', // ✅ Strict email format
                 ],
                 'parent_id' => [
                     'nullable',
@@ -253,6 +263,12 @@ class CommentController extends Controller
         $comment->status = $validated['status'];
         $comment->ip_address = $request->ip();
         $comment->user_agent = $request->userAgent();
+
+        // ✅ FIXED: Store device fingerprint for guest comments
+        if (!Auth::check()) {
+            $clientData = DeviceFingerprintHelper::parseClientData($request);
+            $comment->device_fingerprint = DeviceFingerprintHelper::generate($request, $clientData);
+        }
 
         // Set user_id if authenticated
         if (Auth::check()) {
@@ -481,25 +497,7 @@ class CommentController extends Controller
         // Authorize the action using policy
         $this->authorize('update', $comment);
 
-        // Check if comment can be edited (24-hour window)
-        if (!$comment->canBeEditedBy($request->user())) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Los comentarios solo pueden editarse dentro de las 24 horas posteriores a su publicación.',
-                'error' => 'EDIT_WINDOW_EXPIRED'
-            ], 403);
-        }
-
-        // Check edit limit (maximum 5 edits for regular users)
-        if ($comment->hasReachedEditLimit($request->user())) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Has alcanzado el límite máximo de 5 ediciones para este comentario.',
-                'error' => 'EDIT_LIMIT_REACHED'
-            ], 403);
-        }
-
-        // Store original content for history
+        // Store original content for history (outside transaction for comparison)
         $originalContent = $comment->body;
         $newContent = $this->sanitizeCommentBody($request->body);
 
@@ -513,22 +511,27 @@ class CommentController extends Controller
         }
 
         try {
-            // ✅ FIXED: Use pessimistic locking to prevent race conditions
+            // ✅ RACE CONDITION FIX: All validations inside transaction with pessimistic locking
             DB::transaction(function () use ($comment, $originalContent, $newContent, $request) {
-                // Lock the row to prevent concurrent modifications
-                $comment = Comment::where('id', $comment->id)->lockForUpdate()->first();
+                // Lock the row FIRST to prevent concurrent modifications
+                $lockedComment = Comment::where('id', $comment->id)->lockForUpdate()->first();
 
-                if (!$comment) {
+                if (!$lockedComment) {
                     throw new \Exception('Comment not found or was deleted');
                 }
 
-                // Verify edit count hasn't changed (optimistic lock check)
-                if ($comment->edit_count >= 5 && !$request->user()->hasRole(['admin', 'moderator'])) {
-                    throw new \Exception('Edit limit reached during transaction');
+                // Check edit window (24 hours) inside transaction
+                if (!$lockedComment->canBeEditedBy($request->user())) {
+                    throw new \Exception('EDIT_WINDOW_EXPIRED');
+                }
+
+                // Check edit limit inside transaction (prevents race condition)
+                if ($lockedComment->hasReachedEditLimit($request->user())) {
+                    throw new \Exception('EDIT_LIMIT_REACHED');
                 }
 
                 // Create edit history record
-                $comment->captureEdit(
+                $lockedComment->captureEdit(
                     $originalContent,
                     $newContent,
                     $request->user(),
@@ -536,11 +539,11 @@ class CommentController extends Controller
                 );
 
                 // Update comment
-                $comment->update([
+                $lockedComment->update([
                     'body' => $newContent,
                     'edited_at' => now(),
                     'edit_reason' => $request->edit_reason,
-                    'edit_count' => $comment->edit_count + 1,
+                    'edit_count' => $lockedComment->edit_count + 1,
                 ]);
             }, 3); // Retry up to 3 times on deadlock
 
@@ -564,7 +567,43 @@ class CommentController extends Controller
                 ]
             ]);
 
+        } catch (\Illuminate\Database\QueryException $e) {
+            // ✅ FIXED: Handle deadlocks specifically
+            if ($e->getCode() === '40001' || str_contains($e->getMessage(), 'Deadlock')) {
+                \Log::warning('Deadlock detected while updating comment', [
+                    'comment_id' => $comment->id,
+                    'user_id' => Auth::id(),
+                    'error' => $e->getMessage()
+                ]);
+
+                return response()->json([
+                    'success' => false,
+                    'message' => 'El sistema está ocupado. Por favor, intenta nuevamente.',
+                    'error' => 'DEADLOCK'
+                ], 409);
+            }
+
+            // Other database errors
+            throw $e;
+
         } catch (\Exception $e) {
+            // Handle specific transaction exceptions
+            if ($e->getMessage() === 'EDIT_WINDOW_EXPIRED') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Los comentarios solo pueden editarse dentro de las 24 horas posteriores a su publicación.',
+                    'error' => 'EDIT_WINDOW_EXPIRED'
+                ], 403);
+            }
+
+            if ($e->getMessage() === 'EDIT_LIMIT_REACHED') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Has alcanzado el límite máximo de 5 ediciones para este comentario.',
+                    'error' => 'EDIT_LIMIT_REACHED'
+                ], 403);
+            }
+
             \Log::error('Error updating comment', [
                 'comment_id' => $comment->id,
                 'user_id' => Auth::id(),

@@ -25,6 +25,7 @@ class Comment extends Model
         'status', // Allow setting (will be validated by policies)
         'ip_address',
         'user_agent',
+        'device_fingerprint', // ✅ FIXED: Added for device tracking
         'edited_at',
         'edit_reason',
         'edit_count',
@@ -46,6 +47,7 @@ class Comment extends Model
         'status',
         'ip_address',
         'user_agent',
+        'device_fingerprint', // ✅ FIXED: Added for protection
         'spam_score',
     ];
 

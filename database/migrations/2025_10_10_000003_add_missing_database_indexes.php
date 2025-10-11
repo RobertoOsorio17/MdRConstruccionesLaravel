@@ -13,75 +13,110 @@ return new class extends Migration
     {
         Schema::table('comments', function (Blueprint $table) {
             // ✅ Composite index for filtering comments by post, status, and ordering
-            $table->index(['post_id', 'status', 'created_at'], 'idx_comments_post_status_created');
+            if (!Schema::hasIndex('comments', 'idx_comments_post_status_created')) {
+                $table->index(['post_id', 'status', 'created_at'], 'idx_comments_post_status_created');
+            }
 
             // ✅ Index for parent_id to optimize nested comment queries
-            $table->index('parent_id', 'idx_comments_parent');
+            if (!Schema::hasIndex('comments', 'idx_comments_parent')) {
+                $table->index('parent_id', 'idx_comments_parent');
+            }
 
             // ✅ Index for IP address filtering (admin reports)
-            $table->index('ip_address', 'idx_comments_ip');
+            if (!Schema::hasIndex('comments', 'idx_comments_ip')) {
+                $table->index('ip_address', 'idx_comments_ip');
+            }
         });
 
         Schema::table('user_interactions', function (Blueprint $table) {
             // ✅ Composite index for user interactions lookup
-            $table->index(['user_id', 'interactable_type', 'interactable_id'], 'idx_user_interactions_lookup');
+            if (!Schema::hasIndex('user_interactions', 'idx_user_interactions_lookup')) {
+                $table->index(['user_id', 'interactable_type', 'interactable_id'], 'idx_user_interactions_lookup');
+            }
 
             // ✅ Index for specific interaction types
-            $table->index(['interactable_type', 'interactable_id', 'type'], 'idx_interactions_type');
+            if (!Schema::hasIndex('user_interactions', 'idx_interactions_type')) {
+                $table->index(['interactable_type', 'interactable_id', 'type'], 'idx_interactions_type');
+            }
         });
 
         Schema::table('posts', function (Blueprint $table) {
             // ✅ Composite index for published posts ordering
-            $table->index(['status', 'published_at', 'featured'], 'idx_posts_published_featured');
+            if (!Schema::hasIndex('posts', 'idx_posts_published_featured')) {
+                $table->index(['status', 'published_at', 'featured'], 'idx_posts_published_featured');
+            }
 
             // ✅ Index for slug lookup
-            if (!Schema::hasIndex('posts', 'posts_slug_index')) {
+            if (!Schema::hasIndex('posts', 'posts_slug_index') && !Schema::hasIndex('posts', 'idx_posts_slug')) {
                 $table->index('slug', 'idx_posts_slug');
             }
 
             // ✅ Index for views count (popular posts)
-            $table->index('views_count', 'idx_posts_views');
+            if (!Schema::hasIndex('posts', 'idx_posts_views')) {
+                $table->index('views_count', 'idx_posts_views');
+            }
         });
 
         Schema::table('user_follows', function (Blueprint $table) {
             // ✅ Composite index for follower/following lookups
-            $table->index(['follower_id', 'following_id'], 'idx_follows_follower_following');
-            $table->index(['following_id', 'follower_id'], 'idx_follows_following_follower');
+            if (!Schema::hasIndex('user_follows', 'idx_follows_follower_following')) {
+                $table->index(['follower_id', 'following_id'], 'idx_follows_follower_following');
+            }
+            if (!Schema::hasIndex('user_follows', 'idx_follows_following_follower')) {
+                $table->index(['following_id', 'follower_id'], 'idx_follows_following_follower');
+            }
         });
 
         Schema::table('notifications', function (Blueprint $table) {
             // ✅ Composite index for unread notifications
-            $table->index(['user_id', 'read_at', 'created_at'], 'idx_notifications_user_unread');
+            if (!Schema::hasIndex('notifications', 'idx_notifications_user_unread')) {
+                $table->index(['user_id', 'read_at', 'created_at'], 'idx_notifications_user_unread');
+            }
         });
 
         Schema::table('user_devices', function (Blueprint $table) {
-            // ✅ Index for device fingerprint lookup
-            $table->index('device_fingerprint', 'idx_devices_fingerprint');
-            $table->index(['user_id', 'last_used_at'], 'idx_devices_user_activity');
+            // ✅ Index for device_id lookup (column exists as device_id, not device_fingerprint)
+            if (!Schema::hasIndex('user_devices', 'user_devices_device_id_index') && !Schema::hasIndex('user_devices', 'idx_devices_device_id')) {
+                $table->index('device_id', 'idx_devices_device_id');
+            }
+
+            // Check if the composite index already exists
+            if (!Schema::hasIndex('user_devices', 'user_devices_user_id_last_used_at_index') && !Schema::hasIndex('user_devices', 'idx_devices_user_activity')) {
+                $table->index(['user_id', 'last_used_at'], 'idx_devices_user_activity');
+            }
         });
 
         Schema::table('admin_audit_logs', function (Blueprint $table) {
             // ✅ Composite index for admin activity tracking
-            $table->index(['user_id', 'created_at'], 'idx_audit_user_date');
-            $table->index(['action', 'created_at'], 'idx_audit_action_date');
+            if (!Schema::hasIndex('admin_audit_logs', 'idx_audit_user_date')) {
+                $table->index(['user_id', 'created_at'], 'idx_audit_user_date');
+            }
+            if (!Schema::hasIndex('admin_audit_logs', 'idx_audit_action_date')) {
+                $table->index(['action', 'created_at'], 'idx_audit_action_date');
+            }
         });
 
         Schema::table('ml_interaction_logs', function (Blueprint $table) {
-            // ✅ Indexes for ML queries
-            $table->index(['user_id', 'created_at'], 'idx_ml_user_date');
-            $table->index(['interactable_type', 'interactable_id'], 'idx_ml_interactable');
+            // ✅ Indexes for ML queries (using actual column names: post_id, not interactable_*)
+            if (!Schema::hasIndex('ml_interaction_logs', 'idx_ml_user_date')) {
+                $table->index(['user_id', 'created_at'], 'idx_ml_user_date');
+            }
+            if (!Schema::hasIndex('ml_interaction_logs', 'idx_ml_post_interaction')) {
+                $table->index(['post_id', 'interaction_type'], 'idx_ml_post_interaction');
+            }
         });
 
-        Schema::table('search_analytics', function (Blueprint $table) {
-            // ✅ Index for search term analytics
-            $table->index('search_term', 'idx_search_term');
-            $table->index('created_at', 'idx_search_date');
-        });
+        // Skip search_analytics - already has indexes in create migration
+        // (idx_search_query_normalized, idx_search_created_at, idx_search_results_date)
 
         Schema::table('contact_requests', function (Blueprint $table) {
             // ✅ Indexes for admin filtering
-            $table->index(['status', 'created_at'], 'idx_contacts_status_date');
-            $table->index('ip_address', 'idx_contacts_ip');
+            if (!Schema::hasIndex('contact_requests', 'idx_contacts_status_date')) {
+                $table->index(['status', 'created_at'], 'idx_contacts_status_date');
+            }
+            if (!Schema::hasIndex('contact_requests', 'idx_contacts_ip')) {
+                $table->index('ip_address', 'idx_contacts_ip');
+            }
         });
     }
 
@@ -117,8 +152,12 @@ return new class extends Migration
         });
 
         Schema::table('user_devices', function (Blueprint $table) {
-            $table->dropIndex('idx_devices_fingerprint');
-            $table->dropIndex('idx_devices_user_activity');
+            if (Schema::hasIndex('user_devices', 'idx_devices_device_id')) {
+                $table->dropIndex('idx_devices_device_id');
+            }
+            if (Schema::hasIndex('user_devices', 'idx_devices_user_activity')) {
+                $table->dropIndex('idx_devices_user_activity');
+            }
         });
 
         Schema::table('admin_audit_logs', function (Blueprint $table) {
@@ -127,14 +166,15 @@ return new class extends Migration
         });
 
         Schema::table('ml_interaction_logs', function (Blueprint $table) {
-            $table->dropIndex('idx_ml_user_date');
-            $table->dropIndex('idx_ml_interactable');
+            if (Schema::hasIndex('ml_interaction_logs', 'idx_ml_user_date')) {
+                $table->dropIndex('idx_ml_user_date');
+            }
+            if (Schema::hasIndex('ml_interaction_logs', 'idx_ml_post_interaction')) {
+                $table->dropIndex('idx_ml_post_interaction');
+            }
         });
 
-        Schema::table('search_analytics', function (Blueprint $table) {
-            $table->dropIndex('idx_search_term');
-            $table->dropIndex('idx_search_date');
-        });
+        // Skip search_analytics - indexes managed in create migration
 
         Schema::table('contact_requests', function (Blueprint $table) {
             $table->dropIndex('idx_contacts_status_date');

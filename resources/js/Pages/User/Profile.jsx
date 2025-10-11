@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Head } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
+import axios from 'axios';
 import {
     Box,
     Container,
@@ -125,37 +126,112 @@ const UserProfile = ({
         }
     };
 
-    // Interaction handlers (placeholder - implement with actual API calls)
+    // ✅ FIX: Implement actual interaction handlers with API calls
     const handleLike = async (postId) => {
-        console.log('Like post:', postId);
+        try {
+            const response = await axios.post(`/posts/${postId}/like`);
+            if (response.data.success) {
+                // Refresh the page data to update like counts
+                router.reload({ only: ['user'] });
+            }
+        } catch (error) {
+            console.error('Error liking post:', error);
+            setNotification({
+                open: true,
+                message: 'Error al dar like. Inténtalo de nuevo.',
+                severity: 'error'
+            });
+        }
     };
 
     const handleBookmark = async (postId) => {
-        console.log('Bookmark post:', postId);
+        try {
+            const response = await axios.post(`/posts/${postId}/bookmark`);
+            if (response.data.success) {
+                // Refresh the page data to update bookmark status
+                router.reload({ only: ['user'] });
+            }
+        } catch (error) {
+            console.error('Error bookmarking post:', error);
+            setNotification({
+                open: true,
+                message: 'Error al guardar. Inténtalo de nuevo.',
+                severity: 'error'
+            });
+        }
     };
 
     const handleShare = (post) => {
+        const url = window.location.origin + `/blog/${post.slug}`;
+
         if (navigator.share) {
             navigator.share({
                 title: post.title,
                 text: post.excerpt || post.content?.substring(0, 100),
-                url: window.location.origin + `/blog/${post.slug}`
-            });
+                url: url
+            }).catch(err => console.log('Error sharing:', err));
         } else {
-            navigator.clipboard.writeText(window.location.origin + `/blog/${post.slug}`);
+            navigator.clipboard.writeText(url).then(() => {
+                setNotification({
+                    open: true,
+                    message: 'Enlace copiado al portapapeles',
+                    severity: 'success'
+                });
+            });
         }
     };
 
     const handleLikeComment = async (commentId) => {
-        console.log('Like comment:', commentId);
+        try {
+            const response = await axios.post(`/comments/${commentId}/like`);
+            if (response.data.success) {
+                router.reload({ only: ['user'] });
+            }
+        } catch (error) {
+            console.error('Error liking comment:', error);
+            setNotification({
+                open: true,
+                message: 'Error al dar like al comentario.',
+                severity: 'error'
+            });
+        }
     };
 
     const handleDislikeComment = async (commentId) => {
-        console.log('Dislike comment:', commentId);
+        try {
+            const response = await axios.post(`/comments/${commentId}/dislike`);
+            if (response.data.success) {
+                router.reload({ only: ['user'] });
+            }
+        } catch (error) {
+            console.error('Error disliking comment:', error);
+            setNotification({
+                open: true,
+                message: 'Error al dar dislike al comentario.',
+                severity: 'error'
+            });
+        }
     };
 
     const handleRemoveFavoriteService = async (serviceId) => {
-        console.log('Remove favorite service:', serviceId);
+        try {
+            const response = await axios.delete(`/api/services/${serviceId}/favorite`);
+            if (response.data.success) {
+                router.reload({ only: ['user'] });
+                setNotification({
+                    open: true,
+                    message: 'Servicio eliminado de favoritos',
+                    severity: 'success'
+                });
+            }
+        } catch (error) {
+            console.error('Error removing favorite service:', error);
+            setNotification({
+                open: true,
+                message: 'Error al eliminar de favoritos.',
+                severity: 'error'
+            });
+        }
     };
 
     const handleContactService = (service) => {

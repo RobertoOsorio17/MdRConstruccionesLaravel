@@ -421,17 +421,43 @@ class ContactController extends Controller
         }
 
         try {
-            // Store the budget request
-            $budgetData = array_merge($validated, [
+            // ✅ BUGFIX: Store the budget request in database instead of just logging
+            $contactRequest = ContactRequest::create([
+                'name' => strip_tags($validated['name']),
+                'email' => strip_tags($validated['email']),
+                'phone' => strip_tags($validated['phone']),
+                'service' => strip_tags($validated['service']),
+                'message' => strip_tags($validated['description']),
                 'type' => 'budget_request',
+                'status' => 'new',
                 'ip_address' => $request->ip(),
                 'user_agent' => $request->userAgent(),
-                'created_at' => now(),
-                'updated_at' => now(),
+                'metadata' => json_encode([
+                    'property_type' => $validated['property_type'],
+                    'property_size' => $validated['property_size'] ?? null,
+                    'budget_range' => $validated['budget_range'] ?? null,
+                    'timeline' => $validated['timeline'] ?? null,
+                ]),
             ]);
 
-            // For now, just log it
-            Log::info('New budget request submission', $budgetData);
+            // Log creation for tracking
+            Log::info('New budget request submission', [
+                'id' => $contactRequest->id,
+                'name' => $contactRequest->name,
+                'email' => $contactRequest->email,
+                'service' => $contactRequest->service,
+                'property_type' => $validated['property_type'],
+                'ip' => $request->ip(),
+            ]);
+
+            // Send email notification to admin
+            $adminEmail = config('mail.admin_email', config('mail.from.address'));
+            $adminNotifiable = new \App\Models\AnonymousNotifiable($adminEmail, 'Admin');
+            $adminNotifiable->notify(new \App\Notifications\NewContactRequestNotification($contactRequest));
+
+            // Send confirmation email to user
+            $userNotifiable = new \App\Models\AnonymousNotifiable($contactRequest->email, $contactRequest->name);
+            $userNotifiable->notify(new \App\Notifications\ContactRequestConfirmation($contactRequest));
 
             session()->flash('success', 'Budget request received! Our team will contact you in the next few hours to schedule a free visit.');
             return redirect()->back();

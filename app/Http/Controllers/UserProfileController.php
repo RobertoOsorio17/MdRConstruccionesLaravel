@@ -80,12 +80,21 @@ class UserProfileController extends Controller
         ->get();
 
         // 4. Load approved comments made by the user with post details.
+        // ✅ FIX: Eager load interaction counts to prevent N+1 queries
         $userComments = $user->comments()
             ->approved()
             ->with([
                 'post:id,title,slug,user_id',
                 'post.author:id,name,avatar,is_verified',
                 'user:id,name,avatar,is_verified'
+            ])
+            ->withCount([
+                'interactions as likes_count' => function ($query) {
+                    $query->where('type', 'like');
+                },
+                'interactions as dislikes_count' => function ($query) {
+                    $query->where('type', 'dislike');
+                }
             ])
             ->orderBy('created_at', 'desc')
             ->get();
@@ -102,13 +111,14 @@ class UserProfileController extends Controller
         foreach ($userComments as $comment) {
             $comment->user_liked = $comment->isLikedBy($user);
             $comment->user_disliked = $comment->isDislikedBy($user);
-            $comment->likes_count = $comment->likes()->count();
-            $comment->dislikes_count = $comment->dislikes()->count();
+            // ✅ FIX: Use pre-loaded counts instead of querying in loop
+            // likes_count and dislikes_count are already loaded via withCount()
         }
 
         // Compile augmented statistics for quick display in the dashboard.
         $stats = [
-            'favoriteServicesCount' => $user->favoriteServices()->count(),
+            // ✅ FIX: Use pre-loaded count instead of redundant query
+            'favoriteServicesCount' => $user->favorite_services_count ?? 0,
             'postsCount' => $userPosts->count(),
             'likedPostsCount' => $likedPosts->count(),
             'savedPostsCount' => $savedPosts->count(),

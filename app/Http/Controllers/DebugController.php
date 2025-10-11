@@ -19,6 +19,14 @@ use Inertia\Inertia;
 class DebugController extends Controller
 {
     /**
+     * ✅ SECURITY FIX: Protect all debug endpoints with authentication and authorization
+     */
+    public function __construct()
+    {
+        $this->middleware(['auth', 'can:access-debug']);
+    }
+
+    /**
      * Display the system debugging dashboard.
      */
     public function index()

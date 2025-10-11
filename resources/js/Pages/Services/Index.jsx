@@ -30,25 +30,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import MainLayout from '@/Layouts/MainLayout';
 import GlassmorphismHero from '@/Components/Services/GlassmorphismHero';
 import GlassmorphismServiceCard from '@/Components/Services/GlassmorphismServiceCard';
-
-// Premium design theme
-const THEME = {
-    primary: {
-        50: '#eff6ff',
-        100: '#dbeafe',
-        200: '#bfdbfe',
-        300: '#93c5fd',
-        400: '#60a5fa',
-        500: '#3b82f6',
-        600: '#2563eb',
-        700: '#1d4ed8',
-    },
-    text: {
-        primary: '#0f172a',
-        secondary: '#475569',
-        muted: '#94a3b8',
-    }
-};
+import { useAppTheme } from '@/theme/ThemeProvider';
+import SkeletonGrid from '@/Components/UI/SkeletonGrid';
 
 const getServiceIcon = (iconName) => {
     const icons = {
@@ -63,6 +46,7 @@ const getServiceIcon = (iconName) => {
 };
 
 export default function ServicesIndex({ services = [], featuredServices = [], stats = {} }) {
+    const { designSystem } = useAppTheme();
     const [searchTerm, setSearchTerm] = useState('');
     const [filterType, setFilterType] = useState('all');
     const [isLoading, setIsLoading] = useState(false);
@@ -135,12 +119,12 @@ export default function ServicesIndex({ services = [], featuredServices = [], st
                         color="inherit"
                         sx={{
                             textDecoration: 'none',
-                            '&:hover': { color: THEME.primary[600] }
+                            '&:hover': { color: designSystem.colors.primary[600] }
                         }}
                     >
                         Inicio
                     </MuiLink>
-                    <Typography color={THEME.text.primary} fontWeight={500}>
+                    <Typography color={designSystem.colors.text.primary} fontWeight={500}>
                         Servicios
                     </Typography>
                 </Breadcrumbs>
@@ -180,7 +164,7 @@ export default function ServicesIndex({ services = [], featuredServices = [], st
                                 variant="h4"
                                 sx={{
                                     fontWeight: 700,
-                                    color: THEME.text.primary,
+                                    color: designSystem.colors.text.primary,
                                     mb: 1
                                 }}
                             >
@@ -188,7 +172,7 @@ export default function ServicesIndex({ services = [], featuredServices = [], st
                                  filterType === 'featured' ? 'Servicios Destacados' :
                                  'Servicios Populares'}
                             </Typography>
-                            <Typography variant="body1" color={THEME.text.secondary}>
+                            <Typography variant="body1" color={designSystem.colors.text.secondary}>
                                 {servicesWithIcons.length} servicios disponibles
                             </Typography>
                         </Box>
@@ -200,10 +184,10 @@ export default function ServicesIndex({ services = [], featuredServices = [], st
                                 variant={filterType === 'all' ? 'filled' : 'outlined'}
                                 onClick={() => handleFilterChange('all')}
                                 sx={{
-                                    bgcolor: filterType === 'all' ? THEME.primary[500] : 'transparent',
-                                    color: filterType === 'all' ? 'white' : THEME.text.secondary,
+                                    bgcolor: filterType === 'all' ? designSystem.colors.primary[500] : 'transparent',
+                                    color: filterType === 'all' ? 'white' : designSystem.colors.text.secondary,
                                     '&:hover': {
-                                        bgcolor: filterType === 'all' ? THEME.primary[600] : THEME.primary[50]
+                                        bgcolor: filterType === 'all' ? designSystem.colors.primary[600] : designSystem.colors.primary[50]
                                     }
                                 }}
                             />
@@ -212,10 +196,10 @@ export default function ServicesIndex({ services = [], featuredServices = [], st
                                 variant={filterType === 'featured' ? 'filled' : 'outlined'}
                                 onClick={() => handleFilterChange('featured')}
                                 sx={{
-                                    bgcolor: filterType === 'featured' ? THEME.primary[500] : 'transparent',
-                                    color: filterType === 'featured' ? 'white' : THEME.text.secondary,
+                                    bgcolor: filterType === 'featured' ? designSystem.colors.primary[500] : 'transparent',
+                                    color: filterType === 'featured' ? 'white' : designSystem.colors.text.secondary,
                                     '&:hover': {
-                                        bgcolor: filterType === 'featured' ? THEME.primary[600] : THEME.primary[50]
+                                        bgcolor: filterType === 'featured' ? designSystem.colors.primary[600] : designSystem.colors.primary[50]
                                     }
                                 }}
                             />
@@ -224,10 +208,10 @@ export default function ServicesIndex({ services = [], featuredServices = [], st
                                 variant={filterType === 'popular' ? 'filled' : 'outlined'}
                                 onClick={() => handleFilterChange('popular')}
                                 sx={{
-                                    bgcolor: filterType === 'popular' ? THEME.primary[500] : 'transparent',
-                                    color: filterType === 'popular' ? 'white' : THEME.text.secondary,
+                                    bgcolor: filterType === 'popular' ? designSystem.colors.primary[500] : 'transparent',
+                                    color: filterType === 'popular' ? 'white' : designSystem.colors.text.secondary,
                                     '&:hover': {
-                                        bgcolor: filterType === 'popular' ? THEME.primary[600] : THEME.primary[50]
+                                        bgcolor: filterType === 'popular' ? designSystem.colors.primary[600] : designSystem.colors.primary[50]
                                     }
                                 }}
                             />
@@ -238,21 +222,17 @@ export default function ServicesIndex({ services = [], featuredServices = [], st
                 {/* Glassmorphism Services Grid */}
                 <AnimatePresence mode="wait">
                     {isLoading ? (
-                        <Grid container spacing={4}>
-                            {[...Array(6)].map((_, index) => (
-                                <Grid item xs={12} md={6} lg={4} key={index}>
-                                    <Skeleton
-                                        variant="rectangular"
-                                        height={400}
-                                        sx={{ borderRadius: 4 }}
-                                    />
-                                </Grid>
-                            ))}
-                        </Grid>
+                        <SkeletonGrid 
+                            variant="card" 
+                            count={6} 
+                            columns={{ xs: 1, sm: 2, md: 2, lg: 3 }}
+                            spacing={4}
+                            height={400}
+                        />
                     ) : servicesWithIcons.length > 0 ? (
                         <Grid container spacing={4}>
                             {servicesWithIcons.map((service, index) => (
-                                <Grid item xs={12} md={6} lg={4} key={service.id}>
+                                <Grid item xs={12} sm={6} md={6} lg={4} key={service.id}>
                                     <GlassmorphismServiceCard
                                         service={service}
                                         index={index}
@@ -283,7 +263,7 @@ export default function ServicesIndex({ services = [], featuredServices = [], st
                                 <ConstructionIcon
                                     sx={{
                                         fontSize: 64,
-                                        color: THEME.text.muted,
+                                        color: designSystem.colors.text.muted,
                                         mb: 2
                                     }}
                                 />
@@ -291,7 +271,7 @@ export default function ServicesIndex({ services = [], featuredServices = [], st
                                     variant="h5"
                                     sx={{
                                         fontWeight: 600,
-                                        color: THEME.text.primary,
+                                        color: designSystem.colors.text.primary,
                                         mb: 2
                                     }}
                                 >
@@ -300,7 +280,7 @@ export default function ServicesIndex({ services = [], featuredServices = [], st
                                 <Typography
                                     variant="body1"
                                     sx={{
-                                        color: THEME.text.secondary,
+                                        color: designSystem.colors.text.secondary,
                                         mb: 3
                                     }}
                                 >
@@ -314,10 +294,10 @@ export default function ServicesIndex({ services = [], featuredServices = [], st
                                             handleFilterChange('all');
                                         }}
                                         sx={{
-                                            bgcolor: THEME.primary[500],
+                                            bgcolor: designSystem.colors.primary[500],
                                             color: 'white',
                                             '&:hover': {
-                                                bgcolor: THEME.primary[600]
+                                                bgcolor: designSystem.colors.primary[600]
                                             }
                                         }}
                                     />
@@ -334,8 +314,8 @@ export default function ServicesIndex({ services = [], featuredServices = [], st
                     position: 'relative',
                     py: 8,
                     background: `linear-gradient(135deg,
-                        ${THEME.primary[500]} 0%,
-                        ${THEME.primary[700]} 100%
+                        ${designSystem.colors.primary[500]} 0%,
+                        ${designSystem.colors.primary[700]} 100%
                     )`,
                     color: 'white',
                     overflow: 'hidden',
@@ -388,7 +368,7 @@ export default function ServicesIndex({ services = [], featuredServices = [], st
                                     href="/contacto"
                                     sx={{
                                         bgcolor: 'white',
-                                        color: THEME.primary[600],
+                                        color: designSystem.colors.primary[600],
                                         px: 4,
                                         py: 1.5,
                                         fontSize: '1.1rem',

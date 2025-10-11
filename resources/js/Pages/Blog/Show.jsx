@@ -570,7 +570,7 @@ const BlogShow = ({ post, suggestedPosts, seo }) => {
             >
                 <Grid container spacing={{ xs: 2, sm: 3, md: 4, lg: 5 }}>
                     {/* Contenido del artículo */}
-                    <Grid item xs={12} lg={9}>
+                    <Grid item xs={12} md={8} lg={9}>
                         <AnimatedSection>
                             <Paper
                                 elevation={0}
@@ -860,7 +860,7 @@ const BlogShow = ({ post, suggestedPosts, seo }) => {
                     </Grid>
 
                     {/* Sidebar responsive */}
-                    <Grid item xs={12} lg={3}>
+                    <Grid item xs={12} md={4} lg={3}>
                         <Box
                             sx={{
                                 position: { xs: 'static', lg: 'sticky' },

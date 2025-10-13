@@ -10,7 +10,8 @@ import {
     IconButton,
     Collapse,
     LinearProgress,
-    Badge
+    Badge,
+    useTheme
 } from '@mui/material';
 import {
     Psychology as AIIcon,
@@ -26,6 +27,7 @@ import { motion } from 'framer-motion';
 import { Link } from '@inertiajs/react';
 
 const RecommendationCard = ({ post, position, onView, showExplanation = false, compact = false }) => {
+    const theme = useTheme();
     const [expanded, setExpanded] = useState(false);
 
     const mlData = post.ml_data || post.explanation || {};
@@ -98,20 +100,37 @@ const RecommendationCard = ({ post, position, onView, showExplanation = false, c
                     overflow: 'hidden',
                     borderRadius: compact ? 2 : 3,
                     transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                    background: compact
-                        ? 'rgba(255, 255, 255, 0.7)'
-                        : 'rgba(255, 255, 255, 0.95)',
+                    background: theme.palette.mode === 'dark'
+                        ? (compact
+                            ? 'rgba(30, 30, 30, 0.7)'
+                            : 'rgba(30, 30, 30, 0.95)')
+                        : (compact
+                            ? 'rgba(255, 255, 255, 0.7)'
+                            : 'rgba(255, 255, 255, 0.95)'),
                     backdropFilter: 'blur(10px)',
-                    border: compact
-                        ? '1px solid rgba(5, 150, 105, 0.15)'
-                        : '1px solid rgba(5, 150, 105, 0.1)',
-                    boxShadow: compact
-                        ? '0 2px 8px rgba(5, 150, 105, 0.08)'
-                        : '0 4px 12px rgba(5, 150, 105, 0.1)',
+                    WebkitBackdropFilter: 'blur(10px)',
+                    border: theme.palette.mode === 'dark'
+                        ? (compact
+                            ? '1px solid rgba(255, 255, 255, 0.15)'
+                            : '1px solid rgba(255, 255, 255, 0.1)')
+                        : (compact
+                            ? '1px solid rgba(5, 150, 105, 0.15)'
+                            : '1px solid rgba(5, 150, 105, 0.1)'),
+                    boxShadow: theme.palette.mode === 'dark'
+                        ? (compact
+                            ? '0 2px 8px rgba(0, 0, 0, 0.4)'
+                            : '0 4px 12px rgba(0, 0, 0, 0.5)')
+                        : (compact
+                            ? '0 2px 8px rgba(5, 150, 105, 0.08)'
+                            : '0 4px 12px rgba(5, 150, 105, 0.1)'),
                     '&:hover': {
-                        boxShadow: compact
-                            ? '0 4px 16px rgba(5, 150, 105, 0.15)'
-                            : '0 8px 24px rgba(5, 150, 105, 0.2)',
+                        boxShadow: theme.palette.mode === 'dark'
+                            ? (compact
+                                ? '0 4px 16px rgba(0, 0, 0, 0.6)'
+                                : '0 8px 24px rgba(0, 0, 0, 0.7)')
+                            : (compact
+                                ? '0 4px 16px rgba(5, 150, 105, 0.15)'
+                                : '0 8px 24px rgba(5, 150, 105, 0.2)'),
                         borderColor: 'primary.main',
                         '& .card-image': {
                             transform: 'scale(1.1)',

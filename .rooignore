@@ -1,0 +1,13 @@
+﻿node_modules/
+vendor/
+dist/
+build/
+.cache/
+.tmp/
+.git/
+.idea/
+.vscode/
+coverage/
+.env
+.DS_Store
+Thumbs.db

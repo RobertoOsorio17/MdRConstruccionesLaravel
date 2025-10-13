@@ -21,7 +21,8 @@ import {
     MenuItem,
     Divider,
     Slide,
-    Backdrop
+    Backdrop,
+    Badge
 } from '@mui/material';
 import {
     Menu as MenuIcon,
@@ -42,7 +43,8 @@ import {
     Info as CompanyIcon,
     ContactMail as ContactIcon,
     Close as CloseIcon,
-    Search as SearchIcon
+    Search as SearchIcon,
+    Notifications as NotificationsIcon
 } from '@mui/icons-material';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link, usePage, router } from '@inertiajs/react';
@@ -52,6 +54,10 @@ import GlobalSearch from '@/Components/GlobalSearch';
 import TwoFactorWarningBanner from '@/Components/Security/TwoFactorWarningBanner';
 import { useAppTheme } from '@/theme/ThemeProvider';
 import DarkModeToggle from '@/Components/UI/DarkModeToggle';
+import MegaMenu from '@/Components/Navigation/MegaMenu';
+import Breadcrumbs from '@/Components/Navigation/Breadcrumbs';
+import KeyboardShortcuts from '@/Components/Navigation/KeyboardShortcuts';
+import useScrollTrigger from '@/Hooks/useScrollTrigger';
 
 // Componente de menú de usuario
 const UserMenu = () => {
@@ -77,18 +83,38 @@ const UserMenu = () => {
             <Box sx={{ display: 'flex', gap: 1 }}>
                 <Button
                     onClick={() => router.visit('/login')}
-                    color="inherit"
                     startIcon={<LoginIcon />}
-                    sx={{ fontWeight: 500 }}
+                    sx={{
+                        fontWeight: 500,
+                        color: (theme) => theme.palette.mode === 'dark' ? '#fff' : 'text.primary',
+                        '&:hover': {
+                            background: (theme) => theme.palette.mode === 'dark'
+                                ? 'rgba(255, 255, 255, 0.1)'
+                                : 'rgba(0, 0, 0, 0.04)'
+                        }
+                    }}
                 >
                     Entrar
                 </Button>
                 <Button
                     onClick={() => router.visit('/register')}
                     variant="outlined"
-                    color="inherit"
                     startIcon={<RegisterIcon />}
-                    sx={{ fontWeight: 500 }}
+                    sx={{
+                        fontWeight: 500,
+                        color: (theme) => theme.palette.mode === 'dark' ? '#fff' : 'text.primary',
+                        borderColor: (theme) => theme.palette.mode === 'dark'
+                            ? 'rgba(255, 255, 255, 0.3)'
+                            : 'rgba(0, 0, 0, 0.23)',
+                        '&:hover': {
+                            borderColor: (theme) => theme.palette.mode === 'dark'
+                                ? 'rgba(255, 255, 255, 0.5)'
+                                : 'rgba(0, 0, 0, 0.4)',
+                            background: (theme) => theme.palette.mode === 'dark'
+                                ? 'rgba(255, 255, 255, 0.1)'
+                                : 'rgba(0, 0, 0, 0.04)'
+                        }
+                    }}
                 >
                     Registro
                 </Button>
@@ -249,6 +275,8 @@ const MainLayoutContent = ({ children }) => {
     const isTablet = useMediaQuery(theme.breakpoints.between('sm', 'md'));
     const [mobileOpen, setMobileOpen] = useState(false);
     const [searchOpen, setSearchOpen] = useState(false);
+    const [megaMenuAnchor, setMegaMenuAnchor] = useState(null);
+    const scrolled = useScrollTrigger(50);
     const page = usePage();
     const { url } = page;
     const auth = useAuth();
@@ -259,6 +287,18 @@ const MainLayoutContent = ({ children }) => {
 
     const handleSearchClose = () => {
         setSearchOpen(false);
+    };
+
+    const handleMegaMenuOpen = (event) => {
+        setMegaMenuAnchor(event.currentTarget);
+    };
+
+    const handleMegaMenuClose = () => {
+        setMegaMenuAnchor(null);
+    };
+
+    const handleMegaMenuNavigate = (href) => {
+        router.visit(href);
     };
 
     const navigationItems = [
@@ -526,71 +566,227 @@ const MainLayoutContent = ({ children }) => {
 
     return (
         <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-            {/* Header */}
-            <AppBar position="sticky" elevation={1}>
+            {/* Header con Glassmorphism Premium y Shrink Effect */}
+            <AppBar
+                position="sticky"
+                elevation={0}
+                sx={{
+                    background: (theme) => theme.palette.mode === 'dark'
+                        ? 'linear-gradient(145deg, rgba(30, 30, 30, 0.95) 0%, rgba(18, 18, 18, 0.9) 100%)'
+                        : 'linear-gradient(145deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.9) 100%)',
+                    backdropFilter: 'blur(20px)',
+                    WebkitBackdropFilter: 'blur(20px)',
+                    borderBottom: (theme) => theme.palette.mode === 'dark'
+                        ? '1px solid rgba(255, 255, 255, 0.1)'
+                        : '1px solid rgba(255, 255, 255, 0.3)',
+                    boxShadow: scrolled
+                        ? '0 6px 30px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(255, 255, 255, 0.15)'
+                        : (theme) => theme.palette.mode === 'dark'
+                            ? '0 4px 24px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.05)'
+                            : '0 4px 24px rgba(0, 0, 0, 0.06), 0 0 0 1px rgba(255, 255, 255, 0.2)',
+                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                    '&::before': {
+                        content: '""',
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        background: (theme) => theme.palette.mode === 'dark'
+                            ? 'linear-gradient(145deg, rgba(59, 130, 246, 0.04) 0%, rgba(147, 197, 253, 0.04) 100%)'
+                            : 'linear-gradient(145deg, rgba(59, 130, 246, 0.02) 0%, rgba(147, 197, 253, 0.02) 100%)',
+                        pointerEvents: 'none'
+                    }
+                }}
+            >
                 <Container maxWidth="lg">
-                    <Toolbar sx={{ justifyContent: 'space-between' }}>
-                        {/* Logo */}
-                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                            <BuildIcon sx={{ mr: 1, color: 'primary.main' }} />
+                    <Toolbar sx={{ 
+                        justifyContent: 'space-between', 
+                        py: scrolled ? 0.5 : 1,
+                        minHeight: scrolled ? 56 : 64,
+                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+                    }}>
+                        {/* Logo con animación */}
+                        <Box
+                            sx={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                cursor: 'pointer',
+                                transition: 'transform 0.3s ease',
+                                '&:hover': {
+                                    transform: 'scale(1.05)'
+                                }
+                            }}
+                            onClick={() => router.visit('/')}
+                        >
+                            <BuildIcon
+                                sx={{
+                                    mr: 1,
+                                    color: 'primary.main',
+                                    fontSize: 28,
+                                    filter: 'drop-shadow(0 2px 4px rgba(59, 130, 246, 0.3))'
+                                }}
+                            />
                             <Typography
                                 variant="h6"
-                                onClick={() => router.visit('/')}
                                 sx={{
-                                    cursor: 'pointer',
                                     fontWeight: 700,
                                     textDecoration: 'none',
-                                    color: 'inherit',
+                                    color: 'text.primary',
+                                    letterSpacing: '-0.02em'
                                 }}
                             >
                                 MDR Construcciones
                             </Typography>
                         </Box>
 
-                        {/* Desktop Navigation */}
+                        {/* Desktop Navigation - Reorganizado con MegaMenu */}
                         {!isMobile && (
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                                {navigationItems.slice(0, -1).map((item) => (
-                                    <Button
-                                        key={item.title}
-                                        onClick={() => router.visit(item.href)}
-                                        color={isActive(item.href) ? 'primary' : 'inherit'}
-                                        sx={{ 
-                                            fontWeight: isActive(item.href) ? 600 : 400,
-                                            minHeight: 44,
-                                            px: 2
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                {/* Navegación Principal */}
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mr: 2 }}>
+                                    {navigationItems.slice(0, -1).map((item) => {
+                                        const isServiciosMenu = item.title === 'Servicios';
+                                        return (
+                                            <Button
+                                                key={item.title}
+                                                onClick={(e) => {
+                                                    if (isServiciosMenu) {
+                                                        handleMegaMenuOpen(e);
+                                                    } else {
+                                                        router.visit(item.href);
+                                                    }
+                                                }}
+                                                onMouseEnter={(e) => {
+                                                    if (isServiciosMenu) {
+                                                        handleMegaMenuOpen(e);
+                                                    }
+                                                }}
+                                                sx={{
+                                                    fontWeight: isActive(item.href) ? 600 : 450,
+                                                    minHeight: scrolled ? 40 : 44,
+                                                    px: 2,
+                                                    color: isActive(item.href) ? 'primary.main' : 'text.primary',
+                                                    position: 'relative',
+                                                    borderRadius: 2,
+                                                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                                                    '&::before': {
+                                                        content: '""',
+                                                        position: 'absolute',
+                                                        bottom: 8,
+                                                        left: '50%',
+                                                        transform: 'translateX(-50%)',
+                                                        width: isActive(item.href) ? '60%' : '0%',
+                                                        height: '3px',
+                                                        background: 'linear-gradient(90deg, rgba(59, 130, 246, 1), rgba(99, 102, 241, 1))',
+                                                        borderRadius: '2px',
+                                                        transition: 'width 0.3s ease',
+                                                        boxShadow: isActive(item.href) ? '0 0 8px rgba(59, 130, 246, 0.5)' : 'none'
+                                                    },
+                                                    '&:hover': {
+                                                        background: 'linear-gradient(145deg, rgba(59, 130, 246, 0.08) 0%, rgba(59, 130, 246, 0.04) 100%)',
+                                                        '&::before': {
+                                                            width: '60%'
+                                                        }
+                                                    }
+                                                }}
+                                            >
+                                                {item.title}
+                                            </Button>
+                                        );
+                                    })}
+                                </Box>
+
+                                {/* Separador visual */}
+                                <Box sx={{
+                                    width: '1px',
+                                    height: '32px',
+                                    background: 'linear-gradient(180deg, transparent, rgba(0,0,0,0.1), transparent)',
+                                    mx: 1
+                                }} />
+
+                                {/* Acciones de Usuario */}
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                    <IconButton
+                                        onClick={handleSearchOpen}
+                                        sx={{
+                                            minWidth: scrolled ? 40 : 44,
+                                            minHeight: scrolled ? 40 : 44,
+                                            borderRadius: 2,
+                                            transition: 'all 0.3s ease',
+                                            '&:hover': {
+                                                background: 'linear-gradient(145deg, rgba(59, 130, 246, 0.1) 0%, rgba(59, 130, 246, 0.05) 100%)',
+                                                transform: 'scale(1.05)'
+                                            }
                                         }}
                                     >
-                                        {item.title}
+                                        <SearchIcon sx={{ color: 'text.primary', fontSize: scrolled ? '1.3rem' : '1.5rem' }} />
+                                    </IconButton>
+
+                                    {!auth.isGuest && (
+                                        <IconButton
+                                            onClick={() => router.visit('/notifications')}
+                                            sx={{
+                                                minWidth: scrolled ? 40 : 44,
+                                                minHeight: scrolled ? 40 : 44,
+                                                borderRadius: 2,
+                                                transition: 'all 0.3s ease',
+                                                '&:hover': {
+                                                    background: 'linear-gradient(145deg, rgba(59, 130, 246, 0.1) 0%, rgba(59, 130, 246, 0.05) 100%)',
+                                                    transform: 'scale(1.05)'
+                                                }
+                                            }}
+                                        >
+                                            <Badge
+                                                badgeContent={auth.user?.unread_notifications || 0}
+                                                color="error"
+                                                max={99}
+                                                sx={{
+                                                    '& .MuiBadge-badge': {
+                                                        fontSize: '0.65rem',
+                                                        minWidth: 18,
+                                                        height: 18,
+                                                        padding: '0 4px',
+                                                        boxShadow: '0 2px 8px rgba(239, 68, 68, 0.4)',
+                                                        animation: auth.user?.unread_notifications > 0 ? 'pulse 2s infinite' : 'none',
+                                                        '@keyframes pulse': {
+                                                            '0%, 100%': { opacity: 1 },
+                                                            '50%': { opacity: 0.7 }
+                                                        }
+                                                    }
+                                                }}
+                                            >
+                                                <NotificationsIcon sx={{ color: 'text.primary', fontSize: scrolled ? '1.3rem' : '1.5rem' }} />
+                                            </Badge>
+                                        </IconButton>
+                                    )}
+
+                                    <DarkModeToggle />
+                                    <Button
+                                        variant="contained"
+                                        onClick={() => router.visit('/contacto')}
+                                        sx={{
+                                            ml: 1,
+                                            minHeight: scrolled ? 40 : 44,
+                                            px: scrolled ? 2.5 : 3,
+                                            borderRadius: 2,
+                                            fontSize: scrolled ? '0.85rem' : '0.9rem',
+                                            background: 'linear-gradient(45deg, #F5A524 30%, #F7B850 90%)',
+                                            color: '#000',
+                                            fontWeight: 600,
+                                            boxShadow: '0 4px 12px rgba(245, 165, 36, 0.3)',
+                                            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                                            '&:hover': {
+                                                background: 'linear-gradient(45deg, #D4891E 30%, #F5A524 90%)',
+                                                transform: 'translateY(-2px)',
+                                                boxShadow: '0 6px 20px rgba(245, 165, 36, 0.4)'
+                                            }
+                                        }}
+                                    >
+                                        Pide Presupuesto
                                     </Button>
-                                ))}
-                                <IconButton
-                                    onClick={handleSearchOpen}
-                                    color="inherit"
-                                    sx={{
-                                        ml: 1,
-                                        minWidth: 44,
-                                        minHeight: 44,
-                                        '&:hover': {
-                                            backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                                        }
-                                    }}
-                                >
-                                    <SearchIcon />
-                                </IconButton>
-                                <DarkModeToggle />
-                                <Button
-                                    variant="contained"
-                                    color="warning"
-                                    onClick={() => router.visit('/contacto')}
-                                    sx={{ 
-                                        ml: 2,
-                                        minHeight: 44
-                                    }}
-                                >
-                                    Pide Presupuesto
-                                </Button>
-                                <UserMenu />
+                                    <UserMenu />
+                                </Box>
                             </Box>
                         )}
 
@@ -618,8 +814,22 @@ const MainLayoutContent = ({ children }) => {
                 {drawer}
             </Drawer>
 
+            {/* MegaMenu para Servicios */}
+            <MegaMenu
+                anchorEl={megaMenuAnchor}
+                open={Boolean(megaMenuAnchor)}
+                onClose={handleMegaMenuClose}
+                onNavigate={handleMegaMenuNavigate}
+            />
+
+            {/* Keyboard Shortcuts */}
+            <KeyboardShortcuts onSearch={handleSearchOpen} />
+
             {/* 2FA Warning Banner */}
             <TwoFactorWarningBanner flash={page.props.flash} security={page.props.security} />
+
+            {/* Breadcrumbs */}
+            <Breadcrumbs />
 
             {/* Main Content */}
             <Box 

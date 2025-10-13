@@ -8,7 +8,8 @@ import {
     ToggleButtonGroup,
     ToggleButton,
     Skeleton,
-    Fade
+    Fade,
+    useTheme
 } from '@mui/material';
 import {
     Psychology as AIIcon,
@@ -30,6 +31,7 @@ const RecommendationsWidget = ({
     variant = 'grid', // 'grid' | 'carousel' | 'list'
     compact = false // Modo compacto para sidebar
 }) => {
+    const theme = useTheme();
     const [selectedAlgorithm, setSelectedAlgorithm] = useState('hybrid');
     const [recommendations, setRecommendations] = useState([]);
     
@@ -85,10 +87,17 @@ const RecommendationsWidget = ({
                 ...(compact && {
                     p: 2.5,
                     borderRadius: 3,
-                    background: 'rgba(255, 255, 255, 0.95)',
-                    backdropFilter: 'blur(15px)',
-                    border: '1px solid rgba(5, 150, 105, 0.1)',
-                    boxShadow: '0 8px 32px rgba(5, 150, 105, 0.08)',
+                    background: theme.palette.mode === 'dark'
+                        ? 'linear-gradient(145deg, rgba(30, 30, 30, 0.98) 0%, rgba(18, 18, 18, 0.95) 100%)'
+                        : 'linear-gradient(145deg, rgba(255, 255, 255, 0.98) 0%, rgba(255, 255, 255, 0.95) 100%)',
+                    backdropFilter: 'blur(20px)',
+                    WebkitBackdropFilter: 'blur(20px)',
+                    border: theme.palette.mode === 'dark'
+                        ? '1px solid rgba(255, 255, 255, 0.1)'
+                        : '1px solid rgba(5, 150, 105, 0.1)',
+                    boxShadow: theme.palette.mode === 'dark'
+                        ? '0 8px 32px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.05)'
+                        : '0 8px 32px rgba(5, 150, 105, 0.08)',
                     position: 'relative',
                     overflow: 'hidden',
                     '&::before': {

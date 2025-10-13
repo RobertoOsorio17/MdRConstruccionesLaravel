@@ -10,7 +10,8 @@ import {
     IconButton,
     Tooltip,
     Avatar,
-    Divider
+    Divider,
+    useTheme
 } from '@mui/material';
 import {
     ArrowForward as ArrowForwardIcon,
@@ -76,13 +77,14 @@ const THEME = {
     }
 };
 
-const GlassmorphismServiceCard = ({ 
-    service, 
-    index = 0, 
+const GlassmorphismServiceCard = ({
+    service,
+    index = 0,
     onFavoriteToggle,
     onShare,
-    featured = false 
+    featured = false
 }) => {
+    const theme = useTheme();
     const [isHovered, setIsHovered] = useState(false);
     const [isFavorited, setIsFavorited] = useState(false);
 
@@ -154,21 +156,30 @@ const GlassmorphismServiceCard = ({
             whileHover="hover"
             onHoverStart={() => setIsHovered(true)}
             onHoverEnd={() => setIsHovered(false)}
+            style={{ height: '100%', width: '100%' }}
         >
             <Card
                 component={Link}
                 href={`/servicios/${service.slug}`}
                 sx={{
                     height: '100%',
+                    width: '100%',
                     display: 'flex',
                     flexDirection: 'column',
                     position: 'relative',
                     borderRadius: 4,
                     overflow: 'hidden',
                     textDecoration: 'none',
-                    background: featured ? GLASS_THEME.glass.accent : GLASS_THEME.glass.primary,
-                    backdropFilter: GLASS_THEME.blur.md,
-                    border: featured ? GLASS_THEME.border.accent : GLASS_THEME.border.glass,
+                    background: theme.palette.mode === 'dark'
+                        ? (featured
+                            ? 'linear-gradient(145deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.9) 100%)'
+                            : 'linear-gradient(145deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.9) 100%)')
+                        : (featured ? GLASS_THEME.glass.accent : GLASS_THEME.glass.primary),
+                    backdropFilter: 'blur(20px)',
+                    WebkitBackdropFilter: 'blur(20px)',
+                    border: theme.palette.mode === 'dark'
+                        ? (featured ? '1px solid rgba(59, 130, 246, 0.3)' : '1px solid rgba(255, 255, 255, 0.1)')
+                        : (featured ? GLASS_THEME.border.accent : GLASS_THEME.border.glass),
                     boxShadow: isHovered ? GLASS_THEME.shadow.hover : GLASS_THEME.shadow.glass,
                     transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
                     cursor: 'pointer',
@@ -179,9 +190,11 @@ const GlassmorphismServiceCard = ({
                         left: 0,
                         right: 0,
                         bottom: 0,
-                        background: featured 
+                        background: featured
                             ? 'linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(147, 197, 253, 0.05) 100%)'
-                            : 'linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%)',
+                            : (theme.palette.mode === 'dark'
+                                ? 'linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%)'
+                                : 'linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%)'),
                         pointerEvents: 'none',
                         opacity: isHovered ? 1 : 0,
                         transition: 'opacity 0.3s ease'
@@ -308,7 +321,7 @@ const GlassmorphismServiceCard = ({
                                 sx={{
                                     fontWeight: 700,
                                     mb: 2,
-                                    color: THEME.text.primary,
+                                    color: theme.palette.mode === 'dark' ? '#f1f5f9' : THEME.text.primary,
                                     lineHeight: 1.3,
                                     display: '-webkit-box',
                                     WebkitLineClamp: 2,
@@ -325,7 +338,7 @@ const GlassmorphismServiceCard = ({
                             <Typography
                                 variant="body2"
                                 sx={{
-                                    color: THEME.text.secondary,
+                                    color: theme.palette.mode === 'dark' ? '#94a3b8' : THEME.text.secondary,
                                     mb: 3,
                                     lineHeight: 1.6,
                                     display: '-webkit-box',
@@ -345,7 +358,12 @@ const GlassmorphismServiceCard = ({
                                     {service.features.slice(0, 3).map((feature, idx) => (
                                         <Box key={idx} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                             <CheckIcon sx={{ fontSize: 16, color: THEME.primary[500] }} />
-                                            <Typography variant="caption" sx={{ color: THEME.text.secondary }}>
+                                            <Typography
+                                                variant="caption"
+                                                sx={{
+                                                    color: theme.palette.mode === 'dark' ? '#94a3b8' : THEME.text.secondary
+                                                }}
+                                            >
                                                 {feature}
                                             </Typography>
                                         </Box>
@@ -354,24 +372,32 @@ const GlassmorphismServiceCard = ({
                             </motion.div>
                         )}
 
-                        <Divider sx={{ my: 2, opacity: 0.3 }} />
+                        <Divider sx={{ my: 2, opacity: theme.palette.mode === 'dark' ? 0.2 : 0.3 }} />
 
                         {/* Service Meta */}
                         <motion.div variants={itemVariants}>
                             <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
                                 <Stack direction="row" alignItems="center" spacing={1}>
-                                    <ScheduleIcon sx={{ fontSize: 16, color: THEME.text.muted }} />
-                                    <Typography variant="caption" sx={{ color: THEME.text.muted }}>
+                                    <ScheduleIcon sx={{
+                                        fontSize: 16,
+                                        color: theme.palette.mode === 'dark' ? '#64748b' : THEME.text.muted
+                                    }} />
+                                    <Typography
+                                        variant="caption"
+                                        sx={{
+                                            color: theme.palette.mode === 'dark' ? '#64748b' : THEME.text.muted
+                                        }}
+                                    >
                                         {service.duration || '2-4 semanas'}
                                     </Typography>
                                 </Stack>
-                                
+
                                 {service.price_range && (
                                     <Stack direction="row" alignItems="center" spacing={0.5}>
                                         <EuroIcon sx={{ fontSize: 14, color: THEME.primary[500] }} />
-                                        <Typography 
-                                            variant="caption" 
-                                            sx={{ 
+                                        <Typography
+                                            variant="caption"
+                                            sx={{
                                                 color: THEME.primary[600],
                                                 fontWeight: 600
                                             }}

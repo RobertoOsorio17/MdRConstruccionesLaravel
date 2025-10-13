@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Head, Link, useForm } from '@inertiajs/react';
 import AdminLayout from '@/Layouts/AdminLayout';
+import ServiceV2Fields from '@/Components/Admin/ServiceV2Fields';
 import {
     Box,
     Paper,
@@ -12,7 +13,9 @@ import {
     FormControlLabel,
     IconButton,
     Alert,
-    Chip
+    Chip,
+    Tabs,
+    Tab
 } from '@mui/material';
 import {
     Save as SaveIcon,
@@ -23,13 +26,24 @@ import {
 
 const ServiceForm = ({ service = null }) => {
     const isEditing = !!service;
-    
+    const [activeTab, setActiveTab] = useState(0);
+
     const { data, setData, post, put, processing, errors } = useForm({
         title: service?.title || '',
         excerpt: service?.excerpt || '',
         body: service?.body || '',
         icon: service?.icon || '',
+        featured_image: service?.featured_image || '',
+        video_url: service?.video_url || '',
         faq: service?.faq || [],
+        metrics: service?.metrics || [],
+        benefits: service?.benefits || [],
+        process_steps: service?.process_steps || [],
+        guarantees: service?.guarantees || [],
+        certifications: service?.certifications || [],
+        gallery: service?.gallery || [],
+        cta_primary_text: service?.cta_primary_text || '',
+        cta_secondary_text: service?.cta_secondary_text || '',
         sort_order: service?.sort_order || 0,
         is_active: service?.is_active ?? true,
         featured: service?.featured ?? false,
@@ -141,50 +155,74 @@ const ServiceForm = ({ service = null }) => {
                             </Grid>
                         </Paper>
 
-                        {/* FAQ Section */}
+                        {/* Tabs for FAQ and ServicesV2 Fields */}
                         <Paper sx={{ p: 4, borderRadius: 3 }}>
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
-                                <Typography variant="h6" fontWeight="bold">
-                                    Preguntas Frecuentes
-                                </Typography>
-                                <Button onClick={addFaqItem} startIcon={<AddIcon />} variant="outlined" size="small">
-                                    Añadir FAQ
-                                </Button>
-                            </Box>
-                            
-                            {data.faq.map((faqItem, index) => (
-                                <Box key={index} sx={{ mb: 3, p: 3, border: 1, borderColor: 'divider', borderRadius: 2 }}>
-                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-                                        <Chip label={`FAQ ${index + 1}`} size="small" />
-                                        <IconButton onClick={() => removeFaqItem(index)} color="error" size="small">
-                                            <DeleteIcon />
-                                        </IconButton>
+                            <Tabs value={activeTab} onChange={(e, newValue) => setActiveTab(newValue)} sx={{ mb: 3 }}>
+                                <Tab label="Preguntas Frecuentes" />
+                                <Tab label="Componentes ServicesV2" />
+                            </Tabs>
+
+                            {/* FAQ Tab */}
+                            {activeTab === 0 && (
+                                <Box>
+                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
+                                        <Typography variant="h6" fontWeight="bold">
+                                            Preguntas Frecuentes
+                                        </Typography>
+                                        <Button onClick={addFaqItem} startIcon={<AddIcon />} variant="outlined" size="small">
+                                            Añadir FAQ
+                                        </Button>
                                     </Box>
-                                    
-                                    <Grid container spacing={2}>
-                                        <Grid item xs={12}>
-                                            <TextField
-                                                fullWidth
-                                                label="Pregunta"
-                                                value={faqItem.question}
-                                                onChange={(e) => updateFaqItem(index, 'question', e.target.value)}
-                                                required
-                                            />
-                                        </Grid>
-                                        <Grid item xs={12}>
-                                            <TextField
-                                                fullWidth
-                                                label="Respuesta"
-                                                value={faqItem.answer}
-                                                onChange={(e) => updateFaqItem(index, 'answer', e.target.value)}
-                                                multiline
-                                                rows={3}
-                                                required
-                                            />
-                                        </Grid>
-                                    </Grid>
+
+                                    {data.faq.map((faqItem, index) => (
+                                        <Box key={index} sx={{ mb: 3, p: 3, border: 1, borderColor: 'divider', borderRadius: 2 }}>
+                                            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+                                                <Chip label={`FAQ ${index + 1}`} size="small" />
+                                                <IconButton onClick={() => removeFaqItem(index)} color="error" size="small">
+                                                    <DeleteIcon />
+                                                </IconButton>
+                                            </Box>
+
+                                            <Grid container spacing={2}>
+                                                <Grid item xs={12}>
+                                                    <TextField
+                                                        fullWidth
+                                                        label="Pregunta"
+                                                        value={faqItem.question}
+                                                        onChange={(e) => updateFaqItem(index, 'question', e.target.value)}
+                                                        required
+                                                    />
+                                                </Grid>
+                                                <Grid item xs={12}>
+                                                    <TextField
+                                                        fullWidth
+                                                        label="Respuesta"
+                                                        value={faqItem.answer}
+                                                        onChange={(e) => updateFaqItem(index, 'answer', e.target.value)}
+                                                        multiline
+                                                        rows={3}
+                                                        required
+                                                    />
+                                                </Grid>
+                                                <Grid item xs={12}>
+                                                    <TextField
+                                                        fullWidth
+                                                        label="Categoría (opcional)"
+                                                        value={faqItem.category || ''}
+                                                        onChange={(e) => updateFaqItem(index, 'category', e.target.value)}
+                                                        placeholder="Plazos, Presupuesto, Garantías..."
+                                                    />
+                                                </Grid>
+                                            </Grid>
+                                        </Box>
+                                    ))}
                                 </Box>
-                            ))}
+                            )}
+
+                            {/* ServicesV2 Tab */}
+                            {activeTab === 1 && (
+                                <ServiceV2Fields data={data} setData={setData} errors={errors} />
+                            )}
                         </Paper>
                     </Grid>
                     

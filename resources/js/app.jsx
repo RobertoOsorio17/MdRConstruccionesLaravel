@@ -6,6 +6,7 @@ import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { createRoot } from 'react-dom/client';
 import { AppThemeProvider } from '@/theme/ThemeProvider';
 import ErrorBoundary from '@/Components/ErrorBoundary';
+import { registerServiceWorker, setupPWAInstallPrompt } from '@/Utils/registerServiceWorker';
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 
@@ -47,3 +48,9 @@ createInertiaApp({
         showSpinner: true,
     },
 });
+
+// Register Service Worker for PWA functionality
+registerServiceWorker();
+
+// Setup PWA install prompt
+setupPWAInstallPrompt();

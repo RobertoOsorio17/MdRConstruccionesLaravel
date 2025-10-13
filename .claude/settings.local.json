@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(php -r \"file_put_contents(''app/Exceptions/ML/MLTrainingException.php'', ''<?php\nnamespace App\\Exceptions\\ML;\nclass MLTrainingException extends MLException\n{\n    protected string $errorCode = \"\"ML_TRAINING_ERROR\"\";\n    protected int $httpStatusCode = 500;\n    public static function insufficientData(string $dataType, int $required, int $actual): self\n    {\n        return new self(\"\"Insufficient {$dataType} for training. Required: {$required}, Actual: {$actual}\"\", [\"\"data_type\"\" => $dataType, \"\"required\"\" => $required, \"\"actual\"\" => $actual]);\n    }\n}'');\")",
+      "Bash(php -r \"file_put_contents(''app/Exceptions/ML/MLProfileUpdateException.php'', ''<?php\nnamespace App\\Exceptions\\ML;\nclass MLProfileUpdateException extends MLException\n{\n    protected string $errorCode = \"\"ML_PROFILE_UPDATE_ERROR\"\";\n    protected int $httpStatusCode = 500;\n    public static function updateFailed(string $reason): self\n    {\n        return new self(\"\"Failed to update ML user profile: {$reason}\"\", [\"\"reason\"\" => $reason]);\n    }\n}'');\")",
+      "mcp__sequential-thinking__sequentialthinking_tools",
+      "mcp__chrome-devtools__list_pages",
+      "mcp__chrome-devtools__take_screenshot",
+      "mcp__chrome-devtools__take_snapshot",
+      "Read(//tmp/chrome-devtools-mcp-fLrpQC/**)",
+      "mcp__chrome-devtools__evaluate_script",
+      "mcp__chrome-devtools__list_console_messages",
+      "mcp__chrome-devtools__wait_for"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

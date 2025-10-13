@@ -223,20 +223,56 @@ const CommentItem = ({ comment, onReply, onDelete, onEdit, level = 0 }) => {
                     p: 3,
                     border: comment.is_own_pending
                         ? `1px dashed ${theme.palette.warning.main}`
-                        : `1px solid ${alpha(theme.palette.divider, 0.1)}`,
-                    borderRadius: 2,
-                    backgroundColor: comment.is_own_pending
-                        ? alpha(theme.palette.warning.light, 0.2)
-                        : level > 0
-                            ? alpha(theme.palette.grey[50], 0.5)
-                            : 'white',
+                        : theme.palette.mode === 'dark'
+                            ? `1px solid rgba(255, 255, 255, 0.1)`
+                            : `1px solid rgba(255, 255, 255, 0.3)`,
+                    borderRadius: 3,
+                    background: comment.is_own_pending
+                        ? `linear-gradient(145deg, ${alpha(theme.palette.warning.light, 0.3)}, ${alpha(theme.palette.warning.light, 0.2)})`
+                        : theme.palette.mode === 'dark'
+                            ? level > 0
+                                ? 'linear-gradient(145deg, rgba(40, 40, 40, 0.7) 0%, rgba(25, 25, 25, 0.5) 100%)'
+                                : 'linear-gradient(145deg, rgba(45, 45, 45, 0.8) 0%, rgba(30, 30, 30, 0.6) 100%)'
+                            : level > 0
+                                ? 'linear-gradient(145deg, rgba(255, 255, 255, 0.7) 0%, rgba(255, 255, 255, 0.5) 100%)'
+                                : 'linear-gradient(145deg, rgba(255, 255, 255, 0.8) 0%, rgba(255, 255, 255, 0.6) 100%)',
+                    backdropFilter: 'blur(12px)',
+                    WebkitBackdropFilter: 'blur(12px)',
+                    boxShadow: theme.palette.mode === 'dark'
+                        ? '0 4px 16px rgba(0, 0, 0, 0.4)'
+                        : '0 4px 16px rgba(0, 0, 0, 0.06)',
+                    position: 'relative',
+                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                    '&::before': {
+                        content: '""',
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: '3px',
+                        height: '100%',
+                        background: level > 0
+                            ? 'linear-gradient(180deg, rgba(99, 102, 241, 0.6), rgba(147, 197, 253, 0.6))'
+                            : 'linear-gradient(180deg, rgba(59, 130, 246, 0.8), rgba(99, 102, 241, 0.8))',
+                        borderRadius: '3px 0 0 3px',
+                        opacity: 0,
+                        transition: 'opacity 0.3s ease'
+                    },
                     '&:hover': {
-                        boxShadow: '0 2px 8px rgba(0,0,0,0.05)'
+                        boxShadow: theme.palette.mode === 'dark'
+                            ? '0 8px 24px rgba(59, 130, 246, 0.25)'
+                            : '0 8px 24px rgba(59, 130, 246, 0.12)',
+                        transform: 'translateY(-2px)',
+                        '&::before': {
+                            opacity: 1
+                        }
                     },
                     '&:target': {
-                        backgroundColor: alpha(theme.palette.primary.main, 0.1),
+                        background: `linear-gradient(145deg, ${alpha(theme.palette.primary.main, 0.15)}, ${alpha(theme.palette.primary.main, 0.1)})`,
                         border: `2px solid ${theme.palette.primary.main}`,
-                        animation: 'highlight 2s ease-in-out'
+                        animation: 'highlight 2s ease-in-out',
+                        '&::before': {
+                            opacity: 1
+                        }
                     }
                 }}
             >
@@ -632,12 +668,47 @@ const CommentForm = ({
                 elevation={0}
                 sx={{
                     p: 3,
-                    border: `1px solid ${alpha(theme.palette.divider, 0.2)}`,
+                    border: theme.palette.mode === 'dark'
+                        ? '1px solid rgba(255, 255, 255, 0.1)'
+                        : '1px solid rgba(255, 255, 255, 0.3)',
                     borderRadius: 3,
-                    backgroundColor: parentId ? alpha(theme.palette.grey[50], 0.3) : 'white',
-                    transition: 'all 0.3s ease',
+                    background: theme.palette.mode === 'dark'
+                        ? parentId
+                            ? 'linear-gradient(145deg, rgba(40, 40, 40, 0.7) 0%, rgba(25, 25, 25, 0.5) 100%)'
+                            : 'linear-gradient(145deg, rgba(45, 45, 45, 0.85) 0%, rgba(30, 30, 30, 0.7) 100%)'
+                        : parentId
+                            ? 'linear-gradient(145deg, rgba(255, 255, 255, 0.7) 0%, rgba(255, 255, 255, 0.5) 100%)'
+                            : 'linear-gradient(145deg, rgba(255, 255, 255, 0.85) 0%, rgba(255, 255, 255, 0.7) 100%)',
+                    backdropFilter: 'blur(12px)',
+                    WebkitBackdropFilter: 'blur(12px)',
+                    boxShadow: theme.palette.mode === 'dark'
+                        ? '0 4px 16px rgba(0, 0, 0, 0.4)'
+                        : '0 4px 16px rgba(0, 0, 0, 0.06)',
+                    position: 'relative',
+                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                    '&::before': {
+                        content: '""',
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        background: theme.palette.mode === 'dark'
+                            ? 'linear-gradient(145deg, rgba(59, 130, 246, 0.05) 0%, rgba(147, 197, 253, 0.05) 100%)'
+                            : 'linear-gradient(145deg, rgba(59, 130, 246, 0.03) 0%, rgba(147, 197, 253, 0.03) 100%)',
+                        borderRadius: 3,
+                        pointerEvents: 'none'
+                    },
                     '&:hover': {
-                        boxShadow: `0 0 0 2px ${alpha(theme.palette.primary.main, 0.1)}`
+                        boxShadow: theme.palette.mode === 'dark'
+                            ? '0 8px 24px rgba(59, 130, 246, 0.25)'
+                            : '0 8px 24px rgba(59, 130, 246, 0.12)',
+                        transform: 'translateY(-2px)',
+                        border: `1px solid ${alpha(theme.palette.primary.main, theme.palette.mode === 'dark' ? 0.4 : 0.2)}`
+                    },
+                    '&:focus-within': {
+                        boxShadow: `0 0 0 3px ${alpha(theme.palette.primary.main, theme.palette.mode === 'dark' ? 0.2 : 0.1)}`,
+                        border: `1px solid ${theme.palette.primary.main}`
                     }
                 }}
             >
@@ -950,17 +1021,58 @@ const CommentsSection = ({ postId, postSlug, comments: initialComments = [] }) =
     }, [auth.isGuest]);
 
     return (
-        <Box id="comments-section" sx={{ mt: 6 }}>
+        <Box
+            id="comments-section"
+            sx={{
+                mt: 6,
+                p: { xs: 3, md: 4 },
+                borderRadius: { xs: 3, md: 4 },
+                background: theme.palette.mode === 'dark'
+                    ? 'linear-gradient(145deg, rgba(30, 30, 30, 0.95) 0%, rgba(18, 18, 18, 0.85) 100%)'
+                    : 'linear-gradient(145deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.85) 100%)',
+                backdropFilter: 'blur(20px)',
+                WebkitBackdropFilter: 'blur(20px)',
+                border: theme.palette.mode === 'dark'
+                    ? '1px solid rgba(255, 255, 255, 0.1)'
+                    : '1px solid rgba(255, 255, 255, 0.3)',
+                boxShadow: theme.palette.mode === 'dark'
+                    ? '0 8px 32px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.05)'
+                    : '0 8px 32px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(255, 255, 255, 0.2)',
+                position: 'relative',
+                overflow: 'hidden',
+                '&::before': {
+                    content: '""',
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    background: theme.palette.mode === 'dark'
+                        ? 'linear-gradient(145deg, rgba(59, 130, 246, 0.08) 0%, rgba(147, 197, 253, 0.08) 50%, rgba(99, 102, 241, 0.08) 100%)'
+                        : 'linear-gradient(145deg, rgba(59, 130, 246, 0.05) 0%, rgba(147, 197, 253, 0.05) 50%, rgba(99, 102, 241, 0.05) 100%)',
+                    pointerEvents: 'none',
+                    zIndex: 0
+                }
+            }}
+        >
             {/* Header de la sección mejorado */}
-            <Box sx={{ 
-                display: 'flex', 
-                alignItems: 'center', 
+            <Box sx={{
+                display: 'flex',
+                alignItems: 'center',
                 justifyContent: 'space-between',
                 mb: 4,
                 p: 3,
                 borderRadius: 3,
-                background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.05)} 0%, ${alpha(theme.palette.secondary.main, 0.05)} 100%)`,
-                border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`
+                background: theme.palette.mode === 'dark'
+                    ? 'linear-gradient(135deg, rgba(40, 40, 40, 0.6) 0%, rgba(25, 25, 25, 0.4) 100%)'
+                    : 'linear-gradient(135deg, rgba(255, 255, 255, 0.6) 0%, rgba(255, 255, 255, 0.4) 100%)',
+                backdropFilter: 'blur(10px)',
+                border: `1px solid ${alpha(theme.palette.primary.main, theme.palette.mode === 'dark' ? 0.3 : 0.15)}`,
+                boxShadow: theme.palette.mode === 'dark'
+                    ? '0 4px 16px rgba(59, 130, 246, 0.15)'
+                    : '0 4px 16px rgba(59, 130, 246, 0.08)',
+                position: 'relative',
+                zIndex: 1
             }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                     <CommentIcon sx={{ color: 'primary.main', fontSize: 28 }} />

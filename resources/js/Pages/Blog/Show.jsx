@@ -16,7 +16,6 @@ import {
     Link,
     Button,
     Divider,
-    Grid,
     Card,
     CardMedia,
     CardContent,
@@ -87,6 +86,7 @@ const BlogShow = ({ post, suggestedPosts, seo }) => {
     const [personalizedSuggestions, setPersonalizedSuggestions] = useState([]);
     const [loadingPersonalized, setLoadingPersonalized] = useState(false);
     const [showMobileTOC, setShowMobileTOC] = useState(false);
+    const [readingProgress, setReadingProgress] = useState(0);
     const [notification, setNotification] = useState({
         open: false,
         message: '',
@@ -226,10 +226,18 @@ const BlogShow = ({ post, suggestedPosts, seo }) => {
         };
     }, [auth.isAuthenticated, post.id]); // Quitamos endTracking de las dependencias
 
-    // Handle scroll events
+    // Handle scroll events y reading progress
     useEffect(() => {
         const handleScroll = () => {
             setShowScrollTop(window.scrollY > 500);
+
+            // Calculate reading progress
+            const windowHeight = window.innerHeight;
+            const documentHeight = document.documentElement.scrollHeight;
+            const scrollTop = window.scrollY;
+            const trackLength = documentHeight - windowHeight;
+            const progress = Math.min((scrollTop / trackLength) * 100, 100);
+            setReadingProgress(progress);
 
             // Update active section
             const headings = document.querySelectorAll('[id^="heading-"]');
@@ -246,6 +254,7 @@ const BlogShow = ({ post, suggestedPosts, seo }) => {
         };
 
         window.addEventListener('scroll', handleScroll);
+        handleScroll(); // Initial call
         return () => window.removeEventListener('scroll', handleScroll);
     }, []);
 
@@ -254,7 +263,32 @@ const BlogShow = ({ post, suggestedPosts, seo }) => {
     };
 
     const scrollToSection = (id) => {
-        document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
+        const element = document.getElementById(id);
+        if (element) {
+            const offset = 100; // Offset para el navbar sticky
+            const elementPosition = element.getBoundingClientRect().top;
+            const offsetPosition = elementPosition + window.scrollY - offset;
+
+            window.scrollTo({
+                top: offsetPosition,
+                behavior: 'smooth'
+            });
+
+            // Highlight temporal del heading
+            element.style.transition = 'all 0.3s ease';
+            element.style.backgroundColor = 'rgba(59, 130, 246, 0.1)';
+            element.style.padding = '8px';
+            element.style.borderRadius = '8px';
+            element.style.marginLeft = '-8px';
+            element.style.marginRight = '-8px';
+
+            setTimeout(() => {
+                element.style.backgroundColor = 'transparent';
+                element.style.padding = '0';
+                element.style.marginLeft = '0';
+                element.style.marginRight = '0';
+            }, 2000);
+        }
     };
 
     const sharePost = (platform) => {
@@ -402,6 +436,41 @@ const BlogShow = ({ post, suggestedPosts, seo }) => {
                 <meta name="article:author" content={post.author?.name} />
             </Head>
 
+            {/* Reading Progress Indicator */}
+            <Box
+                sx={{
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    height: '4px',
+                    zIndex: 9999,
+                    background: 'linear-gradient(90deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%)',
+                    backdropFilter: 'blur(10px)'
+                }}
+            >
+                <Box
+                    sx={{
+                        height: '100%',
+                        width: `${readingProgress}%`,
+                        background: 'linear-gradient(90deg, #3b82f6 0%, #6366f1 50%, #8b5cf6 100%)',
+                        boxShadow: '0 0 20px rgba(59, 130, 246, 0.6), 0 0 40px rgba(99, 102, 241, 0.4)',
+                        transition: 'width 0.1s ease-out',
+                        position: 'relative',
+                        '&::after': {
+                            content: '""',
+                            position: 'absolute',
+                            right: 0,
+                            top: 0,
+                            bottom: 0,
+                            width: '40px',
+                            background: 'linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4))',
+                            filter: 'blur(8px)'
+                        }
+                    }}
+                />
+            </Box>
+
             {/* ML Interaction Tracker - Invisible component */}
             <InteractionTracker post={post} enabled={true} />
 
@@ -433,44 +502,88 @@ const BlogShow = ({ post, suggestedPosts, seo }) => {
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.8 }}
                     >
-                        <Breadcrumbs
-                            aria-label="breadcrumb"
+                        <Box
                             sx={{
-                                color: 'white',
+                                display: 'inline-flex',
                                 mb: 3,
-                                '& .MuiBreadcrumbs-separator': { color: 'white' }
+                                px: 3,
+                                py: 1.5,
+                                borderRadius: 3,
+                                background: 'linear-gradient(145deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.08) 100%)',
+                                backdropFilter: 'blur(12px)',
+                                WebkitBackdropFilter: 'blur(12px)',
+                                border: '1px solid rgba(255, 255, 255, 0.2)',
+                                boxShadow: '0 4px 16px rgba(0, 0, 0, 0.2)',
+                                transition: 'all 0.3s ease',
+                                '&:hover': {
+                                    background: 'linear-gradient(145deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0.12) 100%)',
+                                    transform: 'translateY(-2px)',
+                                    boxShadow: '0 6px 20px rgba(0, 0, 0, 0.25)'
+                                }
                             }}
                         >
-                            <Link
-                                color="inherit"
-                                href="/"
+                            <Breadcrumbs
+                                aria-label="breadcrumb"
                                 sx={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    textDecoration: 'none',
-                                    '&:hover': { textDecoration: 'underline' }
+                                    color: 'white',
+                                    '& .MuiBreadcrumbs-separator': {
+                                        color: 'rgba(255, 255, 255, 0.7)',
+                                        mx: 1
+                                    }
                                 }}
                             >
-                                <HomeIcon sx={{ mr: 0.5, fontSize: 16 }} />
-                                Inicio
-                            </Link>
-                            <Link
-                                color="inherit"
-                                href="/blog"
-                                sx={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    textDecoration: 'none',
-                                    '&:hover': { textDecoration: 'underline' }
-                                }}
-                            >
-                                <ArticleIcon sx={{ mr: 0.5, fontSize: 16 }} />
-                                Blog
-                            </Link>
-                            <Typography color="white" sx={{ display: 'flex', alignItems: 'center' }}>
-                                {post.title}
-                            </Typography>
-                        </Breadcrumbs>
+                                <Link
+                                    color="inherit"
+                                    href="/"
+                                    sx={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        textDecoration: 'none',
+                                        transition: 'all 0.2s ease',
+                                        '&:hover': {
+                                            textDecoration: 'none',
+                                            transform: 'scale(1.05)',
+                                            textShadow: '0 0 8px rgba(255, 255, 255, 0.8)'
+                                        }
+                                    }}
+                                >
+                                    <HomeIcon sx={{ mr: 0.5, fontSize: 18 }} />
+                                    Inicio
+                                </Link>
+                                <Link
+                                    color="inherit"
+                                    href="/blog"
+                                    sx={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        textDecoration: 'none',
+                                        transition: 'all 0.2s ease',
+                                        '&:hover': {
+                                            textDecoration: 'none',
+                                            transform: 'scale(1.05)',
+                                            textShadow: '0 0 8px rgba(255, 255, 255, 0.8)'
+                                        }
+                                    }}
+                                >
+                                    <ArticleIcon sx={{ mr: 0.5, fontSize: 18 }} />
+                                    Blog
+                                </Link>
+                                <Typography
+                                    color="white"
+                                    sx={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        fontWeight: 600,
+                                        maxWidth: { xs: '150px', sm: '300px', md: '400px' },
+                                        overflow: 'hidden',
+                                        textOverflow: 'ellipsis',
+                                        whiteSpace: 'nowrap'
+                                    }}
+                                >
+                                    {post.title}
+                                </Typography>
+                            </Breadcrumbs>
+                        </Box>
 
                         <Typography
                             variant="h1"
@@ -501,10 +614,39 @@ const BlogShow = ({ post, suggestedPosts, seo }) => {
                             </Typography>
                         )}
 
-                        <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
+                        <Box
+                            sx={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                flexWrap: 'wrap',
+                                gap: 2,
+                                p: 2.5,
+                                borderRadius: 3,
+                                background: 'linear-gradient(145deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.08) 100%)',
+                                backdropFilter: 'blur(12px)',
+                                WebkitBackdropFilter: 'blur(12px)',
+                                border: '1px solid rgba(255, 255, 255, 0.2)',
+                                boxShadow: '0 4px 16px rgba(0, 0, 0, 0.2)',
+                                transition: 'all 0.3s ease',
+                                '&:hover': {
+                                    background: 'linear-gradient(145deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0.12) 100%)',
+                                    transform: 'translateY(-2px)',
+                                    boxShadow: '0 6px 20px rgba(0, 0, 0, 0.25)'
+                                }
+                            }}
+                        >
                             <Avatar
                                 src={post.author?.avatar}
-                                sx={{ width: 48, height: 48 }}
+                                sx={{
+                                    width: 56,
+                                    height: 56,
+                                    border: '3px solid rgba(255, 255, 255, 0.3)',
+                                    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
+                                    transition: 'transform 0.3s ease',
+                                    '&:hover': {
+                                        transform: 'scale(1.1)'
+                                    }
+                                }}
                             />
                             <Box>
                                 <Typography
@@ -513,14 +655,17 @@ const BlogShow = ({ post, suggestedPosts, seo }) => {
                                     variant="h6"
                                     sx={{
                                         color: 'white',
-                                        fontWeight: 600,
+                                        fontWeight: 700,
                                         display: 'flex',
                                         alignItems: 'center',
                                         gap: 1,
                                         textDecoration: 'none',
                                         cursor: post.author?.id ? 'pointer' : 'default',
+                                        textShadow: '0 2px 4px rgba(0, 0, 0, 0.5)',
+                                        transition: 'all 0.2s ease',
                                         '&:hover': post.author?.id ? {
-                                            textDecoration: 'underline'
+                                            textShadow: '0 0 12px rgba(255, 255, 255, 0.8)',
+                                            transform: 'scale(1.02)'
                                         } : {}
                                     }}
                                 >
@@ -528,28 +673,86 @@ const BlogShow = ({ post, suggestedPosts, seo }) => {
                                     {post.author?.is_verified && (
                                         <VerifiedIcon
                                             sx={{
-                                                color: '#1976d2',
-                                                fontSize: '1.2rem'
+                                                color: '#60a5fa',
+                                                fontSize: '1.3rem',
+                                                filter: 'drop-shadow(0 0 4px rgba(96, 165, 250, 0.6))'
                                             }}
                                         />
                                     )}
                                 </Typography>
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, color: alpha(theme.palette.common.white, 0.8) }}>
-                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                        <ScheduleIcon sx={{ fontSize: 16 }} />
-                                        <Typography variant="body2">
+                                <Box
+                                    sx={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        flexWrap: 'wrap',
+                                        gap: { xs: 1.5, sm: 2 },
+                                        color: 'rgba(255, 255, 255, 0.9)',
+                                        mt: 0.5
+                                    }}
+                                >
+                                    <Box
+                                        sx={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: 0.5,
+                                            px: 1.5,
+                                            py: 0.5,
+                                            borderRadius: 2,
+                                            background: 'rgba(255, 255, 255, 0.1)',
+                                            backdropFilter: 'blur(8px)',
+                                            transition: 'all 0.2s ease',
+                                            '&:hover': {
+                                                background: 'rgba(255, 255, 255, 0.15)',
+                                                transform: 'scale(1.05)'
+                                            }
+                                        }}
+                                    >
+                                        <ScheduleIcon sx={{ fontSize: 18, filter: 'drop-shadow(0 0 4px rgba(255, 255, 255, 0.5))' }} />
+                                        <Typography variant="body2" sx={{ fontWeight: 500 }}>
                                             {formatDate(post.published_at)}
                                         </Typography>
                                     </Box>
-                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                        <ViewsIcon sx={{ fontSize: 16 }} />
-                                        <Typography variant="body2">
+                                    <Box
+                                        sx={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: 0.5,
+                                            px: 1.5,
+                                            py: 0.5,
+                                            borderRadius: 2,
+                                            background: 'rgba(255, 255, 255, 0.1)',
+                                            backdropFilter: 'blur(8px)',
+                                            transition: 'all 0.2s ease',
+                                            '&:hover': {
+                                                background: 'rgba(255, 255, 255, 0.15)',
+                                                transform: 'scale(1.05)'
+                                            }
+                                        }}
+                                    >
+                                        <ViewsIcon sx={{ fontSize: 18, filter: 'drop-shadow(0 0 4px rgba(255, 255, 255, 0.5))' }} />
+                                        <Typography variant="body2" sx={{ fontWeight: 500 }}>
                                             {post.views_count || 0} vistas
                                         </Typography>
                                     </Box>
-                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                        <CommentIcon sx={{ fontSize: 16 }} />
-                                        <Typography variant="body2">
+                                    <Box
+                                        sx={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: 0.5,
+                                            px: 1.5,
+                                            py: 0.5,
+                                            borderRadius: 2,
+                                            background: 'rgba(255, 255, 255, 0.1)',
+                                            backdropFilter: 'blur(8px)',
+                                            transition: 'all 0.2s ease',
+                                            '&:hover': {
+                                                background: 'rgba(255, 255, 255, 0.15)',
+                                                transform: 'scale(1.05)'
+                                            }
+                                        }}
+                                    >
+                                        <CommentIcon sx={{ fontSize: 18, filter: 'drop-shadow(0 0 4px rgba(255, 255, 255, 0.5))' }} />
+                                        <Typography variant="body2" sx={{ fontWeight: 500 }}>
                                             {post.comments_count || 0} comentarios
                                         </Typography>
                                     </Box>
@@ -568,299 +771,19 @@ const BlogShow = ({ post, suggestedPosts, seo }) => {
                     px: { xs: 2, sm: 3, md: 4 }
                 }}
             >
-                <Grid container spacing={{ xs: 2, sm: 3, md: 4, lg: 5 }}>
-                    {/* Contenido del artículo */}
-                    <Grid item xs={12} md={8} lg={9}>
-                        <AnimatedSection>
-                            <Paper
-                                elevation={0}
-                                sx={{
-                                    p: { xs: 2.5, sm: 3, md: 4, lg: 5 },
-                                    borderRadius: { xs: 2, md: 3 },
-                                    background: 'white',
-                                    boxShadow: '0 8px 32px rgba(0,0,0,0.06)',
-                                    border: '1px solid rgba(255,255,255,0.2)',
-                                    backdropFilter: 'blur(10px)',
-                                    position: 'relative',
-                                    overflow: 'hidden',
-                                    mb: { xs: 2, md: 3 },
-                                    '&::before': {
-                                        content: '""',
-                                        position: 'absolute',
-                                        top: 0,
-                                        left: 0,
-                                        right: 0,
-                                        height: '4px',
-                                        background: 'linear-gradient(90deg, #2563eb, #3b82f6, #60a5fa)',
-                                        borderRadius: '3px 3px 0 0'
-                                    }
-                                }}
-                            >
-                                {/* Categorías y etiquetas */}
-                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 4, flexWrap: 'wrap', gap: 2 }}>
-                                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                                        {/* Categorías */}
-                                        {post.categories && post.categories.length > 0 && (
-                                            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                                                {post.categories.map((category) => (
-                                                    <Chip
-                                                        key={category.id}
-                                                        label={category.name}
-                                                        variant="filled"
-                                                        size="small"
-                                                        icon={<CategoryIcon />}
-                                                        sx={{
-                                                            borderRadius: 2,
-                                                            backgroundColor: category.color || theme.palette.primary.main,
-                                                            color: 'white',
-                                                            '&:hover': {
-                                                                opacity: 0.8
-                                                            }
-                                                        }}
-                                                    />
-                                                ))}
-                                            </Box>
-                                        )}
-
-                                        {/* Etiquetas */}
-                                        {post.tags && post.tags.length > 0 && (
-                                            <TagsDisplay
-                                                tags={post.tags}
-                                                size="small"
-                                                variant="outlined"
-                                                showLabel={true}
-                                                maxTags={8}
-                                                clickable={true}
-                                                spacing={0.5}
-                                            />
-                                        )}
-                                    </Box>
-
-                                    <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-                                        {/* Botón de Like */}
-                                        <AuthSwitch
-                                            authenticated={
-                                                <Tooltip title={isLiked ? "Ya no me gusta" : "Me gusta"}>
-                                                    <IconButton
-                                                        onClick={handleLike}
-                                                        sx={{
-                                                            color: isLiked ? theme.palette.error.main : theme.palette.action.active,
-                                                            '&:hover': {
-                                                                backgroundColor: alpha(theme.palette.error.main, 0.1),
-                                                                transform: 'scale(1.1)'
-                                                            },
-                                                            transition: 'all 0.2s ease'
-                                                        }}
-                                                    >
-                                                        {isLiked ? <FavoriteIcon /> : <FavoriteBorderIcon />}
-                                                    </IconButton>
-                                                </Tooltip>
-                                            }
-                                            guest={
-                                                <Tooltip title="Inicia sesión para dar me gusta">
-                                                    <IconButton
-                                                        onClick={() => setShowLoginModal(true)}
-                                                        sx={{
-                                                            color: theme.palette.action.active,
-                                                            '&:hover': {
-                                                                backgroundColor: alpha(theme.palette.primary.main, 0.1)
-                                                            }
-                                                        }}
-                                                    >
-                                                        <FavoriteBorderIcon />
-                                                    </IconButton>
-                                                </Tooltip>
-                                            }
-                                        />
-
-                                        {likesCount > 0 && (
-                                            <Typography variant="body2" color="text.secondary">
-                                                {likesCount}
-                                            </Typography>
-                                        )}
-
-                                        {/* Botón de Bookmark */}
-                                        <AuthSwitch
-                                            authenticated={
-                                                <Tooltip title={isBookmarked ? "Quitar de guardados" : "Guardar artículo"}>
-                                                    <IconButton
-                                                        onClick={handleBookmark}
-                                                        sx={{
-                                                            color: isBookmarked ? theme.palette.warning.main : theme.palette.action.active,
-                                                            '&:hover': {
-                                                                backgroundColor: alpha(theme.palette.warning.main, 0.1),
-                                                                transform: 'scale(1.1)'
-                                                            },
-                                                            transition: 'all 0.2s ease'
-                                                        }}
-                                                    >
-                                                        {isBookmarked ? <BookmarkIcon /> : <BookmarkBorderIcon />}
-                                                    </IconButton>
-                                                </Tooltip>
-                                            }
-                                            guest={
-                                                <Tooltip title="Inicia sesión para guardar artículos">
-                                                    <IconButton
-                                                        onClick={() => setShowLoginModal(true)}
-                                                        sx={{
-                                                            color: theme.palette.action.active,
-                                                            '&:hover': {
-                                                                backgroundColor: alpha(theme.palette.primary.main, 0.1)
-                                                            }
-                                                        }}
-                                                    >
-                                                        <BookmarkBorderIcon />
-                                                    </IconButton>
-                                                </Tooltip>
-                                            }
-                                        />
-
-                                        {/* Botón de Compartir */}
-                                        <Tooltip title="Compartir artículo">
-                                            <IconButton
-                                                onClick={() => setShowShareMenu(!showShareMenu)}
-                                                sx={{
-                                                    color: theme.palette.primary.main,
-                                                    '&:hover': {
-                                                        backgroundColor: alpha(theme.palette.primary.main, 0.1),
-                                                        transform: 'scale(1.1)'
-                                                    },
-                                                    transition: 'all 0.2s ease'
-                                                }}
-                                            >
-                                                <ShareIcon />
-                                            </IconButton>
-                                        </Tooltip>
-
-                                        {/* Botón CTA Premium */}
-                                        <AuthSwitch
-                                            authenticated={
-                                                <Button
-                                                    variant="contained"
-                                                    startIcon={<PersonIcon />}
-                                                    onClick={handleFollowAuthor}
-                                                    sx={{
-                                                        borderRadius: 3,
-                                                        background: `linear-gradient(45deg, ${theme.palette.success.main}, ${theme.palette.success.dark})`,
-                                                        '&:hover': {
-                                                            transform: 'scale(1.05)',
-                                                            boxShadow: theme.shadows[8]
-                                                        },
-                                                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
-                                                    }}
-                                                >
-                                                    Seguir autor
-                                                </Button>
-                                            }
-                                            guest={
-                                                <Button
-                                                    variant="contained"
-                                                    startIcon={<RegisterIcon />}
-                                                    onClick={() => setShowLoginModal(true)}
-                                                    sx={{
-                                                        borderRadius: 3,
-                                                        background: `linear-gradient(45deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
-                                                        '&:hover': {
-                                                            transform: 'scale(1.05)',
-                                                            boxShadow: theme.shadows[8]
-                                                        },
-                                                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
-                                                    }}
-                                                >
-                                                    Únete gratis
-                                                </Button>
-                                            }
-                                        />
-                                    </Box>
-                                </Box>
-
-                                {/* Menú de compartir */}
-                                <AnimatePresence>
-                                    {showShareMenu && (
-                                        <motion.div
-                                            initial={{ opacity: 0, y: -10 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            exit={{ opacity: 0, y: -10 }}
-                                            transition={{ duration: 0.2 }}
-                                        >
-                                            <Paper
-                                                elevation={8}
-                                                sx={{
-                                                    p: 2,
-                                                    mb: 3,
-                                                    borderRadius: 3,
-                                                    display: 'flex',
-                                                    gap: 1,
-                                                    justifyContent: 'center',
-                                                    backgroundColor: theme.palette.grey[50]
-                                                }}
-                                            >
-                                                <Tooltip title="Compartir en Facebook">
-                                                    <IconButton
-                                                        onClick={() => sharePost('facebook')}
-                                                        sx={{ color: '#1877f2' }}
-                                                    >
-                                                        <FacebookIcon />
-                                                    </IconButton>
-                                                </Tooltip>
-                                                <Tooltip title="Compartir en Twitter">
-                                                    <IconButton
-                                                        onClick={() => sharePost('twitter')}
-                                                        sx={{ color: '#1da1f2' }}
-                                                    >
-                                                        <TwitterIcon />
-                                                    </IconButton>
-                                                </Tooltip>
-                                                <Tooltip title="Compartir en LinkedIn">
-                                                    <IconButton
-                                                        onClick={() => sharePost('linkedin')}
-                                                        sx={{ color: '#0077b5' }}
-                                                    >
-                                                        <LinkedInIcon />
-                                                    </IconButton>
-                                                </Tooltip>
-                                                <Tooltip title="Compartir por WhatsApp">
-                                                    <IconButton
-                                                        onClick={() => sharePost('whatsapp')}
-                                                        sx={{ color: '#25d366' }}
-                                                    >
-                                                        <WhatsAppIcon />
-                                                    </IconButton>
-                                                </Tooltip>
-                                            </Paper>
-                                        </motion.div>
-                                    )}
-                                </AnimatePresence>
-
-                                <Divider sx={{ mb: 4 }} />
-
-                                {/* Contenido del artículo */}
-                                <Box
-                                    className="blog-content tinymce-content"
-                                    dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(post.content) }}
-                                />
-                            </Paper>
-                        </AnimatedSection>
-
-                        {/* Sección de comentarios */}
-                        <Box id="comments-section" sx={{ mt: 6 }}>
-                            <CommentsSection
-                                postId={post.id}
-                                postSlug={post.slug}
-                                comments={post.comments || []}
-                            />
-                        </Box>
-
-                        {/* ML Insights Widget */}
-                        <AnimatedSection>
-                            <Box sx={{ mt: 6 }}>
-                                <MLInsights variant="full" />
-                            </Box>
-                        </AnimatedSection>
-                    </Grid>
-
-                    {/* Sidebar responsive */}
-                    <Grid item xs={12} md={4} lg={3}>
+                <Box
+                    sx={{
+                        display: 'flex',
+                        flexDirection: { xs: 'column', sm: 'row' },
+                        gap: { xs: 2, sm: 3, md: 4, lg: 5 }
+                    }}
+                >
+                    {/* Sidebar - Tabla de contenidos y Recomendaciones */}
+                    <Box sx={{
+                        width: { xs: '100%', sm: '33.33%', md: '33.33%', lg: '25%' },
+                        order: { xs: 2, sm: 2 },
+                        flexShrink: 0
+                    }}>
                         <Box
                             sx={{
                                 position: { xs: 'static', lg: 'sticky' },
@@ -870,7 +793,7 @@ const BlogShow = ({ post, suggestedPosts, seo }) => {
                                 overflowY: { lg: 'auto' },
                                 width: '100%',
                                 maxWidth: '100%',
-                                mt: { xs: 3, lg: 0 },
+                                mt: { xs: 3, sm: 0 },
                                 '&::-webkit-scrollbar': {
                                     width: '4px',
                                 },
@@ -897,24 +820,27 @@ const BlogShow = ({ post, suggestedPosts, seo }) => {
                                     <Paper
                                         elevation={0}
                                         sx={{
-                                            display: { xs: 'block', lg: 'block' },
+                                            display: { xs: 'block', sm: 'block' },
                                             p: { xs: 2.5, md: 3 },
                                             mb: { xs: 2.5, md: 3 },
-                                            borderRadius: { xs: 2, md: 3 },
-                                            background: 'rgba(255, 255, 255, 0.95)',
-                                            backdropFilter: 'blur(15px)',
-                                            border: '1px solid rgba(37, 99, 235, 0.1)',
-                                            boxShadow: '0 8px 32px rgba(37, 99, 235, 0.08)',
+                                            borderRadius: { xs: 3, md: 4 },
+                                            background: theme.palette.mode === 'dark'
+                                                ? 'linear-gradient(145deg, rgba(30, 30, 30, 0.95) 0%, rgba(18, 18, 18, 0.85) 100%)'
+                                                : 'linear-gradient(145deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.85) 100%)',
+                                            backdropFilter: 'blur(20px)',
+                                            WebkitBackdropFilter: 'blur(20px)',
+                                            border: theme.palette.mode === 'dark'
+                                                ? '1px solid rgba(255, 255, 255, 0.1)'
+                                                : '1px solid rgba(255, 255, 255, 0.3)',
+                                            boxShadow: theme.palette.mode === 'dark'
+                                                ? '0 8px 32px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.05)'
+                                                : '0 8px 32px rgba(59, 130, 246, 0.12), 0 0 0 1px rgba(255, 255, 255, 0.2)',
                                             position: 'relative',
                                             overflow: 'hidden',
                                             width: '100%',
                                             maxWidth: '100%',
                                             boxSizing: 'border-box',
-                                            transition: 'all 0.3s ease',
-                                            '&:hover': {
-                                                transform: 'translateY(-2px)',
-                                                boxShadow: '0 12px 40px rgba(37, 99, 235, 0.12)',
-                                            },
+                                            transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
                                             '&::before': {
                                                 content: '""',
                                                 position: 'absolute',
@@ -922,7 +848,31 @@ const BlogShow = ({ post, suggestedPosts, seo }) => {
                                                 left: 0,
                                                 width: '4px',
                                                 height: '100%',
-                                                background: 'linear-gradient(180deg, #2563eb, #3b82f6)',
+                                                background: 'linear-gradient(180deg, rgba(59, 130, 246, 0.8), rgba(99, 102, 241, 0.8))',
+                                                borderRadius: '4px 0 0 4px',
+                                                boxShadow: '0 0 12px rgba(59, 130, 246, 0.4)'
+                                            },
+                                            '&::after': {
+                                                content: '""',
+                                                position: 'absolute',
+                                                top: 0,
+                                                left: 0,
+                                                right: 0,
+                                                bottom: 0,
+                                                background: theme.palette.mode === 'dark'
+                                                    ? 'linear-gradient(145deg, rgba(59, 130, 246, 0.05) 0%, rgba(147, 197, 253, 0.05) 50%, rgba(99, 102, 241, 0.05) 100%)'
+                                                    : 'linear-gradient(145deg, rgba(59, 130, 246, 0.03) 0%, rgba(147, 197, 253, 0.03) 50%, rgba(99, 102, 241, 0.03) 100%)',
+                                                pointerEvents: 'none',
+                                                borderRadius: { xs: 3, md: 4 }
+                                            },
+                                            '&:hover': {
+                                                transform: 'translateY(-4px) scale(1.01)',
+                                                boxShadow: theme.palette.mode === 'dark'
+                                                    ? '0 16px 48px rgba(59, 130, 246, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.1)'
+                                                    : '0 16px 48px rgba(59, 130, 246, 0.18), 0 0 0 1px rgba(255, 255, 255, 0.3)',
+                                                '&::before': {
+                                                    boxShadow: '0 0 20px rgba(59, 130, 246, 0.6)'
+                                                }
                                             }
                                         }}
                                     >
@@ -939,35 +889,62 @@ const BlogShow = ({ post, suggestedPosts, seo }) => {
                                         <TocIcon sx={{ mr: 1 }} />
                                         Tabla de contenidos
                                     </Typography>
-                                    <List dense>
-                                        {tableOfContents.map((item) => (
-                                            <ListItem
+                                    <List dense sx={{ position: 'relative', zIndex: 1 }}>
+                                        {tableOfContents.map((item, index) => (
+                                            <motion.div
                                                 key={item.id}
-                                                button
-                                                onClick={() => scrollToSection(item.id)}
-                                                sx={{
-                                                    pl: item.level - 1,
-                                                    borderRadius: 2,
-                                                    mb: 0.5,
-                                                    backgroundColor: activeSection === item.id
-                                                        ? alpha(theme.palette.primary.main, 0.1)
-                                                        : 'transparent',
-                                                    '&:hover': {
-                                                        backgroundColor: alpha(theme.palette.primary.main, 0.05)
-                                                    }
-                                                }}
+                                                initial={{ opacity: 0, x: -10 }}
+                                                animate={{ opacity: 1, x: 0 }}
+                                                transition={{ delay: index * 0.05, duration: 0.3 }}
                                             >
-                                                <ListItemText
-                                                    primary={item.text}
-                                                    primaryTypographyProps={{
-                                                        fontSize: '0.9rem',
-                                                        fontWeight: activeSection === item.id ? 600 : 400,
-                                                        color: activeSection === item.id
-                                                            ? theme.palette.primary.main
-                                                            : theme.palette.text.secondary
+                                                <ListItem
+                                                    button
+                                                    onClick={() => scrollToSection(item.id)}
+                                                    sx={{
+                                                        pl: (item.level - 1) * 2,
+                                                        borderRadius: 2,
+                                                        mb: 0.5,
+                                                        position: 'relative',
+                                                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                                                        background: activeSection === item.id
+                                                            ? 'linear-gradient(90deg, rgba(59, 130, 246, 0.12) 0%, rgba(59, 130, 246, 0.06) 100%)'
+                                                            : 'transparent',
+                                                        '&::before': {
+                                                            content: '""',
+                                                            position: 'absolute',
+                                                            left: 0,
+                                                            top: '50%',
+                                                            transform: 'translateY(-50%)',
+                                                            width: '3px',
+                                                            height: activeSection === item.id ? '70%' : '0%',
+                                                            background: 'linear-gradient(180deg, rgba(59, 130, 246, 1), rgba(99, 102, 241, 1))',
+                                                            borderRadius: '0 2px 2px 0',
+                                                            transition: 'height 0.3s ease',
+                                                            boxShadow: activeSection === item.id ? '0 0 8px rgba(59, 130, 246, 0.5)' : 'none'
+                                                        },
+                                                        '&:hover': {
+                                                            background: 'linear-gradient(90deg, rgba(59, 130, 246, 0.08) 0%, rgba(59, 130, 246, 0.04) 100%)',
+                                                            transform: 'translateX(4px)',
+                                                            '&::before': {
+                                                                height: '50%'
+                                                            }
+                                                        }
                                                     }}
-                                                />
-                                            </ListItem>
+                                                >
+                                                    <ListItemText
+                                                        primary={item.text}
+                                                        primaryTypographyProps={{
+                                                            fontSize: '0.9rem',
+                                                            fontWeight: activeSection === item.id ? 650 : 450,
+                                                            color: activeSection === item.id
+                                                                ? theme.palette.primary.main
+                                                                : theme.palette.text.secondary,
+                                                            transition: 'all 0.3s ease',
+                                                            letterSpacing: activeSection === item.id ? '0.01em' : '0'
+                                                        }}
+                                                    />
+                                                </ListItem>
+                                            </motion.div>
                                         ))}
                                     </List>
                                 </Paper>
@@ -1240,8 +1217,344 @@ const BlogShow = ({ post, suggestedPosts, seo }) => {
                                 </motion.div>
                             )}
                         </Box>
-                    </Grid>
-                </Grid>
+                    </Box>
+
+                    {/* Contenido del artículo */}
+                    <Box sx={{
+                        width: { xs: '100%', sm: '66.67%', md: '66.67%', lg: '75%' },
+                        order: { xs: 1, sm: 1 },
+                        flexGrow: 1
+                    }}>
+                        <AnimatedSection>
+                            <Paper
+                                elevation={0}
+                                sx={{
+                                    p: { xs: 2.5, sm: 3, md: 4, lg: 5 },
+                                    borderRadius: { xs: 3, md: 4 },
+                                    background: theme.palette.mode === 'dark'
+                                        ? 'linear-gradient(145deg, rgba(30, 30, 30, 0.98) 0%, rgba(18, 18, 18, 0.95) 100%)'
+                                        : 'linear-gradient(145deg, rgba(255, 255, 255, 0.98) 0%, rgba(255, 255, 255, 0.95) 100%)',
+                                    backdropFilter: 'blur(20px)',
+                                    WebkitBackdropFilter: 'blur(20px)',
+                                    boxShadow: theme.palette.mode === 'dark'
+                                        ? '0 8px 32px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.05)'
+                                        : '0 8px 32px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(255, 255, 255, 0.2)',
+                                    border: theme.palette.mode === 'dark'
+                                        ? '1px solid rgba(255, 255, 255, 0.1)'
+                                        : '1px solid rgba(255, 255, 255, 0.3)',
+                                    position: 'relative',
+                                    overflow: 'hidden',
+                                    mb: { xs: 2, md: 3 },
+                                    transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+                                    '&:hover': {
+                                        boxShadow: theme.palette.mode === 'dark'
+                                            ? '0 12px 48px rgba(59, 130, 246, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.1)'
+                                            : '0 12px 48px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(255, 255, 255, 0.3)',
+                                        transform: 'translateY(-2px)'
+                                    },
+                                    '&::before': {
+                                        content: '""',
+                                        position: 'absolute',
+                                        top: 0,
+                                        left: 0,
+                                        right: 0,
+                                        height: '4px',
+                                        background: 'linear-gradient(90deg, rgba(59, 130, 246, 1) 0%, rgba(99, 102, 241, 1) 50%, rgba(139, 92, 246, 1) 100%)',
+                                        borderRadius: '4px 4px 0 0',
+                                        boxShadow: '0 0 20px rgba(59, 130, 246, 0.5)'
+                                    },
+                                    '&::after': {
+                                        content: '""',
+                                        position: 'absolute',
+                                        top: 0,
+                                        left: 0,
+                                        right: 0,
+                                        bottom: 0,
+                                        background: theme.palette.mode === 'dark'
+                                            ? 'linear-gradient(145deg, rgba(59, 130, 246, 0.04) 0%, rgba(147, 197, 253, 0.04) 50%, rgba(99, 102, 241, 0.04) 100%)'
+                                            : 'linear-gradient(145deg, rgba(59, 130, 246, 0.02) 0%, rgba(147, 197, 253, 0.02) 50%, rgba(99, 102, 241, 0.02) 100%)',
+                                        pointerEvents: 'none',
+                                        borderRadius: { xs: 3, md: 4 }
+                                    }
+                                }}
+                            >
+                                {/* Categorías y etiquetas */}
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 4, flexWrap: 'wrap', gap: 2 }}>
+                                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                                        {/* Categorías */}
+                                        {post.categories && post.categories.length > 0 && (
+                                            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                                                {post.categories.map((category, index) => (
+                                                    <motion.div
+                                                        key={category.id}
+                                                        initial={{ opacity: 0, scale: 0.8, y: -10 }}
+                                                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                                                        transition={{ delay: index * 0.1, duration: 0.3 }}
+                                                        whileHover={{ scale: 1.05, y: -2 }}
+                                                        whileTap={{ scale: 0.95 }}
+                                                    >
+                                                        <Chip
+                                                            label={category.name}
+                                                            variant="filled"
+                                                            size="small"
+                                                            icon={<CategoryIcon />}
+                                                            sx={{
+                                                                borderRadius: 2,
+                                                                backgroundColor: category.color || theme.palette.primary.main,
+                                                                color: 'white',
+                                                                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
+                                                                transition: 'all 0.3s ease',
+                                                                '&:hover': {
+                                                                    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.25)',
+                                                                    filter: 'brightness(1.1)'
+                                                                }
+                                                            }}
+                                                        />
+                                                    </motion.div>
+                                                ))}
+                                            </Box>
+                                        )}
+
+                                        {/* Etiquetas */}
+                                        {post.tags && post.tags.length > 0 && (
+                                            <TagsDisplay
+                                                tags={post.tags}
+                                                size="small"
+                                                variant="outlined"
+                                                showLabel={true}
+                                                maxTags={8}
+                                                clickable={true}
+                                                spacing={0.5}
+                                            />
+                                        )}
+                                    </Box>
+
+                                    <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                                        {/* Botón de Like */}
+                                        <AuthSwitch
+                                            authenticated={
+                                                <Tooltip title={isLiked ? "Ya no me gusta" : "Me gusta"}>
+                                                    <IconButton
+                                                        onClick={handleLike}
+                                                        sx={{
+                                                            color: isLiked ? theme.palette.error.main : theme.palette.action.active,
+                                                            '&:hover': {
+                                                                backgroundColor: alpha(theme.palette.error.main, 0.1),
+                                                                transform: 'scale(1.1)'
+                                                            },
+                                                            transition: 'all 0.2s ease'
+                                                        }}
+                                                    >
+                                                        {isLiked ? <FavoriteIcon /> : <FavoriteBorderIcon />}
+                                                    </IconButton>
+                                                </Tooltip>
+                                            }
+                                            guest={
+                                                <Tooltip title="Inicia sesión para dar me gusta">
+                                                    <IconButton
+                                                        onClick={() => setShowLoginModal(true)}
+                                                        sx={{
+                                                            color: theme.palette.action.active,
+                                                            '&:hover': {
+                                                                backgroundColor: alpha(theme.palette.primary.main, 0.1)
+                                                            }
+                                                        }}
+                                                    >
+                                                        <FavoriteBorderIcon />
+                                                    </IconButton>
+                                                </Tooltip>
+                                            }
+                                        />
+
+                                        {likesCount > 0 && (
+                                            <Typography variant="body2" color="text.secondary">
+                                                {likesCount}
+                                            </Typography>
+                                        )}
+
+                                        {/* Botón de Bookmark */}
+                                        <AuthSwitch
+                                            authenticated={
+                                                <Tooltip title={isBookmarked ? "Quitar de guardados" : "Guardar artículo"}>
+                                                    <IconButton
+                                                        onClick={handleBookmark}
+                                                        sx={{
+                                                            color: isBookmarked ? theme.palette.warning.main : theme.palette.action.active,
+                                                            '&:hover': {
+                                                                backgroundColor: alpha(theme.palette.warning.main, 0.1),
+                                                                transform: 'scale(1.1)'
+                                                            },
+                                                            transition: 'all 0.2s ease'
+                                                        }}
+                                                    >
+                                                        {isBookmarked ? <BookmarkIcon /> : <BookmarkBorderIcon />}
+                                                    </IconButton>
+                                                </Tooltip>
+                                            }
+                                            guest={
+                                                <Tooltip title="Inicia sesión para guardar artículos">
+                                                    <IconButton
+                                                        onClick={() => setShowLoginModal(true)}
+                                                        sx={{
+                                                            color: theme.palette.action.active,
+                                                            '&:hover': {
+                                                                backgroundColor: alpha(theme.palette.primary.main, 0.1)
+                                                            }
+                                                        }}
+                                                    >
+                                                        <BookmarkBorderIcon />
+                                                    </IconButton>
+                                                </Tooltip>
+                                            }
+                                        />
+
+                                        {/* Botón de Compartir */}
+                                        <Tooltip title="Compartir artículo">
+                                            <IconButton
+                                                onClick={() => setShowShareMenu(!showShareMenu)}
+                                                sx={{
+                                                    color: theme.palette.primary.main,
+                                                    '&:hover': {
+                                                        backgroundColor: alpha(theme.palette.primary.main, 0.1),
+                                                        transform: 'scale(1.1)'
+                                                    },
+                                                    transition: 'all 0.2s ease'
+                                                }}
+                                            >
+                                                <ShareIcon />
+                                            </IconButton>
+                                        </Tooltip>
+
+                                        {/* Botón CTA Premium */}
+                                        <AuthSwitch
+                                            authenticated={
+                                                <Button
+                                                    variant="contained"
+                                                    startIcon={<PersonIcon />}
+                                                    onClick={handleFollowAuthor}
+                                                    sx={{
+                                                        borderRadius: 3,
+                                                        background: `linear-gradient(45deg, ${theme.palette.success.main}, ${theme.palette.success.dark})`,
+                                                        '&:hover': {
+                                                            transform: 'scale(1.05)',
+                                                            boxShadow: theme.shadows[8]
+                                                        },
+                                                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+                                                    }}
+                                                >
+                                                    Seguir autor
+                                                </Button>
+                                            }
+                                            guest={
+                                                <Button
+                                                    variant="contained"
+                                                    startIcon={<RegisterIcon />}
+                                                    onClick={() => setShowLoginModal(true)}
+                                                    sx={{
+                                                        borderRadius: 3,
+                                                        background: `linear-gradient(45deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+                                                        '&:hover': {
+                                                            transform: 'scale(1.05)',
+                                                            boxShadow: theme.shadows[8]
+                                                        },
+                                                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+                                                    }}
+                                                >
+                                                    Únete gratis
+                                                </Button>
+                                            }
+                                        />
+                                    </Box>
+                                </Box>
+
+                                {/* Menú de compartir */}
+                                <AnimatePresence>
+                                    {showShareMenu && (
+                                        <motion.div
+                                            initial={{ opacity: 0, y: -10 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            exit={{ opacity: 0, y: -10 }}
+                                            transition={{ duration: 0.2 }}
+                                        >
+                                            <Paper
+                                                elevation={8}
+                                                sx={{
+                                                    p: 2,
+                                                    mb: 3,
+                                                    borderRadius: 3,
+                                                    display: 'flex',
+                                                    gap: 1,
+                                                    justifyContent: 'center',
+                                                    backgroundColor: theme.palette.grey[50]
+                                                }}
+                                            >
+                                                <Tooltip title="Compartir en Facebook">
+                                                    <IconButton
+                                                        onClick={() => sharePost('facebook')}
+                                                        sx={{ color: '#1877f2' }}
+                                                    >
+                                                        <FacebookIcon />
+                                                    </IconButton>
+                                                </Tooltip>
+                                                <Tooltip title="Compartir en Twitter">
+                                                    <IconButton
+                                                        onClick={() => sharePost('twitter')}
+                                                        sx={{ color: '#1da1f2' }}
+                                                    >
+                                                        <TwitterIcon />
+                                                    </IconButton>
+                                                </Tooltip>
+                                                <Tooltip title="Compartir en LinkedIn">
+                                                    <IconButton
+                                                        onClick={() => sharePost('linkedin')}
+                                                        sx={{ color: '#0077b5' }}
+                                                    >
+                                                        <LinkedInIcon />
+                                                    </IconButton>
+                                                </Tooltip>
+                                                <Tooltip title="Compartir por WhatsApp">
+                                                    <IconButton
+                                                        onClick={() => sharePost('whatsapp')}
+                                                        sx={{ color: '#25d366' }}
+                                                    >
+                                                        <WhatsAppIcon />
+                                                    </IconButton>
+                                                </Tooltip>
+                                            </Paper>
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
+
+                                <Divider sx={{ mb: 4 }} />
+
+                                {/* Contenido del artículo */}
+                                <Box
+                                    className="blog-content tinymce-content"
+                                    data-theme={theme.palette.mode}
+                                    dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(post.content) }}
+                                />
+                            </Paper>
+                        </AnimatedSection>
+
+                        {/* Sección de comentarios */}
+                        <Box id="comments-section" sx={{ mt: 6 }}>
+                            <CommentsSection
+                                postId={post.id}
+                                postSlug={post.slug}
+                                comments={post.comments || []}
+                            />
+                        </Box>
+
+                        {/* ML Insights Widget */}
+                        {false && (
+                            <AnimatedSection>
+                                <Box sx={{ mt: 6 }}>
+                                    <MLInsights variant="full" />
+                                </Box>
+                            </AnimatedSection>
+                        )}
+                    </Box>
+                </Box>
             </Container>
 
             {/* Botón scroll to top mejorado */}

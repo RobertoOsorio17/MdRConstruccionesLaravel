@@ -31,7 +31,7 @@ class ServiceV2DataSeeder extends Seeder
 
         // Actualizar con datos ServicesV2
         $service->update([
-            'featured_image' => '/images/services/construccion-viviendas-hero.jpg',
+            'featured_image' => 'https://images.unsplash.com/photo-1600585154526-990dced4db0d?w=1920&h=1080&fit=crop',
             'video_url' => null,
             'cta_primary_text' => 'SOLICITAR ASESORÍA GRATUITA',
             'cta_secondary_text' => 'DESCARGAR CATÁLOGO PDF',
@@ -171,48 +171,48 @@ class ServiceV2DataSeeder extends Seeder
             'gallery' => [
                 [
                     'id' => 1,
-                    'url' => '/images/gallery/villa-1.jpg',
-                    'thumbnail' => '/images/gallery/villa-1-thumb.jpg',
+                    'url' => 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=1200&h=800&fit=crop',
+                    'thumbnail' => 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=400&h=300&fit=crop',
                     'title' => 'Villa Mediterránea - Vista Frontal',
                     'category' => 'Viviendas',
                     'description' => 'Proyecto residencial en Marbella con vistas al mar'
                 ],
                 [
                     'id' => 2,
-                    'url' => '/images/gallery/villa-2.jpg',
-                    'thumbnail' => '/images/gallery/villa-2-thumb.jpg',
+                    'url' => 'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=1200&h=800&fit=crop',
+                    'thumbnail' => 'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=400&h=300&fit=crop',
                     'title' => 'Salón Principal con Vistas',
                     'category' => 'Interiores',
                     'description' => 'Espacios amplios y luminosos con acabados premium'
                 ],
                 [
                     'id' => 3,
-                    'url' => '/images/gallery/villa-3.jpg',
-                    'thumbnail' => '/images/gallery/villa-3-thumb.jpg',
+                    'url' => 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1200&h=800&fit=crop',
+                    'thumbnail' => 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=400&h=300&fit=crop',
                     'title' => 'Piscina Infinity y Terraza',
                     'category' => 'Exteriores',
                     'description' => 'Zona de piscina con vistas panorámicas'
                 ],
                 [
                     'id' => 4,
-                    'url' => '/images/gallery/modern-1.jpg',
-                    'thumbnail' => '/images/gallery/modern-1-thumb.jpg',
+                    'url' => 'https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?w=1200&h=800&fit=crop',
+                    'thumbnail' => 'https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?w=400&h=300&fit=crop',
                     'title' => 'Casa Moderna Minimalista',
                     'category' => 'Viviendas',
                     'description' => 'Diseño contemporáneo con líneas limpias'
                 ],
                 [
                     'id' => 5,
-                    'url' => '/images/gallery/kitchen-1.jpg',
-                    'thumbnail' => '/images/gallery/kitchen-1-thumb.jpg',
+                    'url' => 'https://images.unsplash.com/photo-1556912173-46c336c7fd55?w=1200&h=800&fit=crop',
+                    'thumbnail' => 'https://images.unsplash.com/photo-1556912173-46c336c7fd55?w=400&h=300&fit=crop',
                     'title' => 'Cocina de Diseño',
                     'category' => 'Interiores',
                     'description' => 'Cocina equipada con electrodomésticos de alta gama'
                 ],
                 [
                     'id' => 6,
-                    'url' => '/images/gallery/garden-1.jpg',
-                    'thumbnail' => '/images/gallery/garden-1-thumb.jpg',
+                    'url' => 'https://images.unsplash.com/photo-1600607687644-c7171b42498b?w=1200&h=800&fit=crop',
+                    'thumbnail' => 'https://images.unsplash.com/photo-1600607687644-c7171b42498b?w=400&h=300&fit=crop',
                     'title' => 'Jardín Mediterráneo',
                     'category' => 'Exteriores',
                     'description' => 'Paisajismo con especies autóctonas'

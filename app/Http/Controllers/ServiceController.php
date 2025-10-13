@@ -66,7 +66,7 @@ class ServiceController extends Controller
             ->limit(3)
             ->get(['id', 'title', 'slug', 'excerpt', 'icon']);
 
-        return Inertia::render('Services/Show.v2', [
+        return Inertia::render('Services/Show', [
             'service' => [
                 'id' => $service->id,
                 'title' => $service->title,

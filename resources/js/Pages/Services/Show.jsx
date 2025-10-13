@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { Head } from '@inertiajs/react';
-import { Box, ThemeProvider, createTheme } from '@mui/material';
+import { Box, ThemeProvider, createTheme, Snackbar, Alert } from '@mui/material';
 import MainLayout from '@/Layouts/MainLayout';
 import designSystem from '@/theme/designSystem';
+import { trackEvent } from '@/Utils/trackEvent';
 
 // ServicesV2 Components
 import ServiceHero from '@/Components/ServicesV2/Hero/ServiceHero';
@@ -33,6 +34,7 @@ import ContactFormModal from '@/Components/ServicesV2/CTA/ContactFormModal';
 export default function ShowV2({ service, testimonials = [], relatedServices = [], seo = {}, auth = {} }) {
     const [contactModalOpen, setContactModalOpen] = useState(false);
     const [isFavorite, setIsFavorite] = useState(false);
+    const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
     // Crear tema MUI con design system
     const theme = createTheme({
@@ -66,8 +68,13 @@ export default function ShowV2({ service, testimonials = [], relatedServices = [
     });
 
     // Handlers
-    const handleOpenContactModal = () => {
+    const handleOpenContactModal = (source = 'unknown') => {
         setContactModalOpen(true);
+        trackEvent('contact_modal_open', {
+            service: service.slug,
+            service_id: service.id,
+            source: source
+        });
     };
 
     const handleCloseContactModal = () => {
@@ -75,6 +82,14 @@ export default function ShowV2({ service, testimonials = [], relatedServices = [
     };
 
     const handleShare = () => {
+        const shareMethod = navigator.share ? 'native' : 'clipboard';
+
+        trackEvent('service_share', {
+            service: service.slug,
+            service_id: service.id,
+            method: shareMethod
+        });
+
         if (navigator.share) {
             navigator.share({
                 title: service.title,
@@ -84,13 +99,32 @@ export default function ShowV2({ service, testimonials = [], relatedServices = [
         } else {
             // Fallback: copiar URL al clipboard
             navigator.clipboard.writeText(window.location.href);
-            alert('URL copiada al portapapeles');
+            setSnackbar({
+                open: true,
+                message: 'URL copiada al portapapeles',
+                severity: 'success'
+            });
         }
     };
 
     const handleFavorite = () => {
+        const newFavoriteState = !isFavorite;
+        setIsFavorite(newFavoriteState);
+
+        trackEvent('service_favorite', {
+            service: service.slug,
+            service_id: service.id,
+            action: newFavoriteState ? 'add' : 'remove'
+        });
+
+        setSnackbar({
+            open: true,
+            message: newFavoriteState ? 'Agregado a favoritos' : 'Eliminado de favoritos',
+            severity: 'success'
+        });
+
         // TODO: Implementar toggle de favorito con backend
-        setIsFavorite(!isFavorite);
+        // router.post(`/api/services/${service.id}/favorite`)
     };
 
     // Configuración de CTAs
@@ -110,9 +144,9 @@ export default function ShowV2({ service, testimonials = [], relatedServices = [
 
     // Badges para el hero
     const heroBadges = [
-        { icon: '⭐', text: `${service.average_rating || 5}/5 Rating` },
-        { icon: '💬', text: `${service.reviews_count || 0} Reviews` },
-        { icon: '✅', text: 'Garantía 10 años' }
+        { icon: '⭐', value: `${service.average_rating || 5}/5`, text: 'Rating' },
+        { icon: '💬', value: `${service.reviews_count || 0}`, text: 'Reviews' },
+        { icon: '✅', value: '10', text: 'Años Garantía' }
     ];
 
     // Caso de estudio (si existe en el servicio o usar ejemplo)
@@ -132,12 +166,54 @@ export default function ShowV2({ service, testimonials = [], relatedServices = [
         testimonial: testimonials[0] || null
     };
 
+    // Schema.org markup para SEO
+    const schemaMarkup = {
+        "@context": "https://schema.org",
+        "@type": "Service",
+        "name": service.title,
+        "description": service.excerpt,
+        "provider": {
+            "@type": "Organization",
+            "name": "MDR Construcciones",
+            "url": "https://mdrconstrucciones.com"
+        },
+        "areaServed": "España",
+        "offers": {
+            "@type": "Offer",
+            "availability": "https://schema.org/InStock"
+        },
+        ...(service.average_rating && {
+            "aggregateRating": {
+                "@type": "AggregateRating",
+                "ratingValue": service.average_rating,
+                "reviewCount": service.reviews_count || 0
+            }
+        })
+    };
+
     return (
         <ThemeProvider theme={theme}>
             <MainLayout>
                 <Head>
                     <title>{seo.title || `${service.title} - MDR Construcciones`}</title>
                     <meta name="description" content={seo.description || service.excerpt} />
+
+                    {/* Schema.org JSON-LD */}
+                    <script type="application/ld+json">
+                        {JSON.stringify(schemaMarkup)}
+                    </script>
+
+                    {/* Open Graph */}
+                    <meta property="og:title" content={service.title} />
+                    <meta property="og:description" content={service.excerpt} />
+                    <meta property="og:image" content={service.featured_image} />
+                    <meta property="og:type" content="website" />
+
+                    {/* Twitter Card */}
+                    <meta name="twitter:card" content="summary_large_image" />
+                    <meta name="twitter:title" content={service.title} />
+                    <meta name="twitter:description" content={service.excerpt} />
+                    <meta name="twitter:image" content={service.featured_image} />
                 </Head>
 
                 <Box
@@ -252,6 +328,23 @@ export default function ShowV2({ service, testimonials = [], relatedServices = [
                         service={service}
                         prefilledMessage={`Estoy interesado en el servicio: ${service.title}. Me gustaría recibir más información.`}
                     />
+
+                    {/* Snackbar for notifications */}
+                    <Snackbar
+                        open={snackbar.open}
+                        autoHideDuration={3000}
+                        onClose={() => setSnackbar({ ...snackbar, open: false })}
+                        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+                    >
+                        <Alert
+                            onClose={() => setSnackbar({ ...snackbar, open: false })}
+                            severity={snackbar.severity}
+                            variant="filled"
+                            sx={{ width: '100%' }}
+                        >
+                            {snackbar.message}
+                        </Alert>
+                    </Snackbar>
                 </Box>
             </MainLayout>
         </ThemeProvider>

@@ -408,6 +408,7 @@ const ServiceHero = ({
                                     </IconButton>
                                 )}
                             </Stack>
+                            </motion.div>
                         </Grid>
 
                         {/* Right Column: Badges (Desktop only) */}

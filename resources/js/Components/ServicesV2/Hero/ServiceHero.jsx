@@ -58,10 +58,11 @@ const ServiceHero = ({
     const { isMobile, isTablet } = useDeviceBreakpoints();
     const [videoPlaying, setVideoPlaying] = useState(false);
 
-    // Parallax effect ligero
+    // Parallax effect más pronunciado
     const { scrollY } = useScroll();
-    const y = useTransform(scrollY, [0, 500], [0, 150]);
-    const opacity = useTransform(scrollY, [0, 300], [1, 0]);
+    const y = useTransform(scrollY, [0, 500], [0, 250]);
+    const opacity = useTransform(scrollY, [0, 400], [1, 0]);
+    const scale = useTransform(scrollY, [0, 500], [1, 1.2]);
 
     const handlePrimaryCTA = () => {
         if (onOpenWizard) {
@@ -122,6 +123,7 @@ const ServiceHero = ({
                     right: 0,
                     bottom: 0,
                     y: isMobile ? 0 : y, // Desactivar parallax en mobile
+                    scale: isMobile ? 1 : scale, // Zoom effect en desktop
                     zIndex: 0
                 }}
             >
@@ -135,7 +137,8 @@ const ServiceHero = ({
                             width: '100%',
                             height: '100%',
                             objectFit: 'cover',
-                            objectPosition: 'center'
+                            objectPosition: 'center',
+                            filter: 'brightness(0.7) contrast(1.1)'
                         }}
                     >
                         <source src={service.video} type="video/mp4" />
@@ -149,12 +152,13 @@ const ServiceHero = ({
                             width: '100%',
                             height: '100%',
                             objectFit: 'cover',
-                            objectPosition: { xs: 'center', md: 'center' }
+                            objectPosition: { xs: 'center', md: 'center' },
+                            filter: 'brightness(0.7) contrast(1.1)'
                         }}
                     />
                 )}
 
-                {/* Overlay Gradient - Más oscuro en mobile para mejor legibilidad */}
+                {/* Overlay Gradient Premium - Más oscuro en mobile para mejor legibilidad */}
                 <Box
                     sx={{
                         position: 'absolute',
@@ -164,12 +168,44 @@ const ServiceHero = ({
                         bottom: 0,
                         background: {
                             xs: `linear-gradient(180deg,
-                                rgba(0,0,0,0.7) 0%,
-                                rgba(0,0,0,0.5) 100%)`,
+                                rgba(0,0,0,0.75) 0%,
+                                rgba(0,0,0,0.6) 50%,
+                                rgba(0,0,0,0.8) 100%)`,
                             md: `linear-gradient(135deg,
                                 ${designSystem.colors.surface.overlayDark} 0%,
-                                rgba(0,0,0,0.4) 100%)`
+                                rgba(0,0,0,0.3) 50%,
+                                rgba(0,0,0,0.6) 100%)`
                         }
+                    }}
+                />
+
+                {/* Decorative Gradient Orbs */}
+                <Box
+                    sx={{
+                        position: 'absolute',
+                        top: '20%',
+                        right: '10%',
+                        width: { xs: '200px', md: '400px' },
+                        height: { xs: '200px', md: '400px' },
+                        borderRadius: '50%',
+                        background: `radial-gradient(circle, ${designSystem.colors.primary[500]}40 0%, transparent 70%)`,
+                        filter: 'blur(60px)',
+                        pointerEvents: 'none',
+                        display: { xs: 'none', md: 'block' }
+                    }}
+                />
+                <Box
+                    sx={{
+                        position: 'absolute',
+                        bottom: '10%',
+                        left: '5%',
+                        width: { xs: '150px', md: '300px' },
+                        height: { xs: '150px', md: '300px' },
+                        borderRadius: '50%',
+                        background: `radial-gradient(circle, ${designSystem.colors.secondary[500]}30 0%, transparent 70%)`,
+                        filter: 'blur(50px)',
+                        pointerEvents: 'none',
+                        display: { xs: 'none', md: 'block' }
                     }}
                 />
             </motion.div>
@@ -186,9 +222,13 @@ const ServiceHero = ({
             >
                 <motion.div
                     style={{ opacity }}
-                    initial={{ opacity: 0, y: 30 }}
+                    initial={{ opacity: 0, y: 50 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.8, ease: [0.4, 0, 0.2, 1] }}
+                    transition={{
+                        duration: 1,
+                        ease: [0.4, 0, 0.2, 1],
+                        staggerChildren: 0.1
+                    }}
                 >
                     <Grid container spacing={4} alignItems="center">
                         {/* Left Column: Content */}
@@ -208,43 +248,64 @@ const ServiceHero = ({
                             )}
 
                             {/* Title */}
-                            <Typography
-                                variant="h1"
-                                sx={{
-                                    color: designSystem.colors.text.inverse,
-                                    fontWeight: 800,
-                                    fontSize: { xs: '2rem', sm: '2.5rem', md: '3.5rem', lg: '4rem' },
-                                    lineHeight: 1.1,
-                                    mb: designSystem.spacing[3],
-                                    textShadow: '0 2px 10px rgba(0,0,0,0.5)'
-                                }}
+                            <motion.div
+                                initial={{ opacity: 0, y: 30 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: 0.2, duration: 0.8 }}
                             >
-                                {service?.title || 'Servicio Premium'}
-                            </Typography>
+                                <Typography
+                                    variant="h1"
+                                    sx={{
+                                        color: designSystem.colors.text.inverse,
+                                        fontWeight: 800,
+                                        fontSize: { xs: '2rem', sm: '2.5rem', md: '3.5rem', lg: '4.5rem' },
+                                        lineHeight: 1.1,
+                                        mb: designSystem.spacing[3],
+                                        textShadow: '0 4px 20px rgba(0,0,0,0.6)',
+                                        background: `linear-gradient(135deg, #fff 0%, ${designSystem.colors.primary[100]} 100%)`,
+                                        WebkitBackgroundClip: 'text',
+                                        WebkitTextFillColor: 'transparent',
+                                        backgroundClip: 'text'
+                                    }}
+                                >
+                                    {service?.title || 'Servicio Premium'}
+                                </Typography>
+                            </motion.div>
 
                             {/* Subtitle */}
-                            <Typography
-                                variant="h5"
-                                sx={{
-                                    color: designSystem.colors.text.inverse,
-                                    fontWeight: 400,
-                                    fontSize: { xs: '1rem', sm: '1.25rem', md: '1.5rem' },
-                                    mb: designSystem.spacing[6],
-                                    opacity: 0.95,
-                                    maxWidth: 600,
+                            <motion.div
+                                initial={{ opacity: 0, y: 30 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: 0.4, duration: 0.8 }}
+                            >
+                                <Typography
+                                    variant="h5"
+                                    sx={{
+                                        color: designSystem.colors.text.inverse,
+                                        fontWeight: 400,
+                                        fontSize: { xs: '1rem', sm: '1.25rem', md: '1.5rem' },
+                                        mb: designSystem.spacing[6],
+                                        opacity: 0.95,
+                                        maxWidth: 600,
                                     lineHeight: 1.6,
                                     textShadow: '0 1px 5px rgba(0,0,0,0.5)'
                                 }}
                             >
                                 {service?.excerpt || 'Transformamos tus ideas en realidad con calidad y profesionalismo'}
                             </Typography>
+                            </motion.div>
 
                             {/* CTAs */}
-                            <Stack
-                                direction={{ xs: 'column', sm: 'row' }}
-                                spacing={designSystem.spacing[3]}
-                                sx={{ mb: designSystem.spacing[6] }}
+                            <motion.div
+                                initial={{ opacity: 0, y: 30 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: 0.6, duration: 0.8 }}
                             >
+                                <Stack
+                                    direction={{ xs: 'column', sm: 'row' }}
+                                    spacing={designSystem.spacing[3]}
+                                    sx={{ mb: designSystem.spacing[6] }}
+                                >
                                 <Button
                                     variant="contained"
                                     size="large"
@@ -254,14 +315,16 @@ const ServiceHero = ({
                                         background: `linear-gradient(135deg, ${designSystem.colors.primary[600]} 0%, ${designSystem.colors.accent.purple} 100%)`,
                                         color: designSystem.colors.text.inverse,
                                         px: designSystem.spacing[6],
-                                        py: designSystem.spacing[2],
+                                        py: designSystem.spacing[3],
                                         fontSize: '1.1rem',
                                         fontWeight: 700,
-                                        boxShadow: designSystem.shadows.colored.primary,
-                                        transition: designSystem.transitions.presets.allNormal,
+                                        boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
+                                        borderRadius: designSystem.borders.radius.xl,
+                                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                                         '&:hover': {
-                                            transform: 'translateY(-2px)',
-                                            boxShadow: designSystem.shadows.colored.primaryHover
+                                            transform: 'translateY(-4px) scale(1.02)',
+                                            boxShadow: '0 12px 48px rgba(0,0,0,0.4)',
+                                            background: `linear-gradient(135deg, ${designSystem.colors.primary[700]} 0%, ${designSystem.colors.accent.purple} 100%)`
                                         }
                                     }}
                                 >
@@ -278,22 +341,34 @@ const ServiceHero = ({
                                         color: designSystem.colors.text.inverse,
                                         borderWidth: 2,
                                         px: designSystem.spacing[6],
-                                        py: designSystem.spacing[2],
+                                        py: designSystem.spacing[3],
                                         fontSize: '1.1rem',
                                         fontWeight: 700,
+                                        borderRadius: designSystem.borders.radius.xl,
+                                        backdropFilter: 'blur(10px)',
+                                        background: 'rgba(255,255,255,0.05)',
+                                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                                         '&:hover': {
                                             borderColor: designSystem.colors.text.inverse,
                                             borderWidth: 2,
-                                            bgcolor: 'rgba(255,255,255,0.1)'
+                                            bgcolor: 'rgba(255,255,255,0.15)',
+                                            transform: 'translateY(-2px)',
+                                            boxShadow: '0 8px 24px rgba(255,255,255,0.1)'
                                         }
                                     }}
                                 >
                                     {ctaConfig.secondary?.label || 'Descargar Dossier'}
                                 </Button>
                             </Stack>
+                            </motion.div>
 
                             {/* Action Icons */}
-                            <Stack direction="row" spacing={designSystem.spacing[2]}>
+                            <motion.div
+                                initial={{ opacity: 0, x: -30 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ delay: 0.8, duration: 0.8 }}
+                            >
+                                <Stack direction="row" spacing={designSystem.spacing[2]}>
                                 <IconButton
                                     onClick={handleFavorite}
                                     sx={{

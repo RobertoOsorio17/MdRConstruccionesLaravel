@@ -220,96 +220,132 @@ export default function ShowV2({ service, testimonials = [], relatedServices = [
                     id="main-content"
                     sx={{
                         minHeight: '100vh',
-                        background: designSystem.colors.surface.primary
+                        background: `linear-gradient(180deg,
+                            ${designSystem.colors.surface.primary} 0%,
+                            ${designSystem.colors.primary[50]} 50%,
+                            ${designSystem.colors.surface.primary} 100%)`,
+                        position: 'relative',
+                        overflow: 'hidden',
+                        '&::before': {
+                            content: '""',
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            height: '100%',
+                            background: `radial-gradient(circle at 20% 50%, ${designSystem.colors.primary[100]}40 0%, transparent 50%),
+                                        radial-gradient(circle at 80% 80%, ${designSystem.colors.secondary[100]}30 0%, transparent 50%)`,
+                            pointerEvents: 'none',
+                            zIndex: 0,
+                            opacity: 0.5
+                        }
                     }}
                 >
                     {/* Hero Section */}
-                    <ServiceHero
-                        service={service}
-                        badges={heroBadges}
-                        ctaConfig={ctaConfig}
-                        onOpenWizard={handleOpenContactModal}
-                        onShare={handleShare}
-                        onFavorite={handleFavorite}
-                        isFavorite={isFavorite}
-                    />
+                    <Box sx={{ position: 'relative', zIndex: 1 }}>
+                        <ServiceHero
+                            service={service}
+                            badges={heroBadges}
+                            ctaConfig={ctaConfig}
+                            onOpenWizard={handleOpenContactModal}
+                            onShare={handleShare}
+                            onFavorite={handleFavorite}
+                            isFavorite={isFavorite}
+                        />
+                    </Box>
 
                     {/* Trust Highlights Section */}
                     {(service.metrics?.length > 0 || service.certifications?.length > 0) && (
-                        <TrustHighlights
-                            metrics={service.metrics || []}
-                            clientLogos={[]} // TODO: Agregar logos de clientes
-                            certifications={service.certifications || []}
-                            service={service.slug}
-                        />
+                        <Box sx={{ position: 'relative', zIndex: 1 }}>
+                            <TrustHighlights
+                                metrics={service.metrics || []}
+                                clientLogos={[]} // TODO: Agregar logos de clientes
+                                certifications={service.certifications || []}
+                                service={service.slug}
+                            />
+                        </Box>
                     )}
 
                     {/* Benefits Section */}
                     {service.benefits?.length > 0 && (
-                        <BenefitGrid
-                            benefits={service.benefits}
-                            columns={3}
-                            service={service.slug}
-                        />
+                        <Box sx={{ position: 'relative', zIndex: 1 }}>
+                            <BenefitGrid
+                                benefits={service.benefits}
+                                columns={3}
+                                service={service.slug}
+                            />
+                        </Box>
                     )}
 
                     {/* Case Study Section */}
                     {caseStudyData && (
-                        <CaseStudy
-                            caseData={caseStudyData}
-                            service={service.slug}
-                        />
+                        <Box sx={{ position: 'relative', zIndex: 1 }}>
+                            <CaseStudy
+                                caseData={caseStudyData}
+                                service={service.slug}
+                            />
+                        </Box>
                     )}
 
                     {/* Process Timeline Section */}
                     {service.process_steps?.length > 0 && (
-                        <ProcessTimeline
-                            steps={service.process_steps}
-                            orientation="auto"
-                            service={service.slug}
-                        />
+                        <Box sx={{ position: 'relative', zIndex: 1 }}>
+                            <ProcessTimeline
+                                steps={service.process_steps}
+                                orientation="auto"
+                                service={service.slug}
+                            />
+                        </Box>
                     )}
 
                     {/* Visual Gallery Section */}
                     {service.gallery?.length > 0 && (
-                        <VisualGallery
-                            images={service.gallery}
-                            categories={[...new Set(service.gallery.map(img => img.category).filter(Boolean))]}
-                            service={service.slug}
-                        />
+                        <Box sx={{ position: 'relative', zIndex: 1 }}>
+                            <VisualGallery
+                                images={service.gallery}
+                                categories={[...new Set(service.gallery.map(img => img.category).filter(Boolean))]}
+                                service={service.slug}
+                            />
+                        </Box>
                     )}
 
                     {/* Testimonials Section */}
                     {testimonials?.length > 0 && (
-                        <TestimonialsCarousel
-                            testimonials={testimonials}
-                            autoplay={true}
-                            autoplayDelay={5000}
-                            service={service.slug}
-                        />
+                        <Box sx={{ position: 'relative', zIndex: 1 }}>
+                            <TestimonialsCarousel
+                                testimonials={testimonials}
+                                autoplay={true}
+                                autoplayDelay={5000}
+                                service={service.slug}
+                            />
+                        </Box>
                     )}
 
                     {/* FAQ Section */}
                     {service.faq?.length > 0 && (
-                        <ServiceFAQ
-                            faqs={service.faq}
-                            searchable={true}
-                            service={service.slug}
-                        />
+                        <Box sx={{ position: 'relative', zIndex: 1 }}>
+                            <ServiceFAQ
+                                faqs={service.faq}
+                                searchable={true}
+                                service={service.slug}
+                            />
+                        </Box>
                     )}
 
                     {/* Guarantees Section */}
                     {service.guarantees?.length > 0 && (
-                        <GuaranteesBlock
-                            guarantees={service.guarantees}
-                            ctaConfig={{
-                                title: '¿Listo para empezar tu proyecto?',
-                                subtitle: 'Contáctanos hoy y descubre cómo podemos ayudarte con total garantía.',
-                                text: 'Solicitar Información'
-                            }}
-                            onCTAClick={handleOpenContactModal}
-                            service={service.slug}
-                        />
+                        <Box sx={{ position: 'relative', zIndex: 1 }}>
+                            <GuaranteesBlock
+                                guarantees={service.guarantees}
+                                ctaConfig={{
+                                    title: '¿Listo para empezar tu proyecto?',
+                                    subtitle: 'Contáctanos hoy y descubre cómo podemos ayudarte con total garantía.',
+                                    text: 'Solicitar Información'
+                                }}
+                                onCTAClick={handleOpenContactModal}
+                                service={service.slug}
+                            />
+                        </Box>
                     )}
 
                     {/* Sticky CTA */}

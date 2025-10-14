@@ -112,13 +112,28 @@ const GuaranteesBlock = ({
         <Box
             ref={ref}
             sx={{
-                py: { xs: designSystem.spacing[10], md: designSystem.spacing[16] },
-                background: `linear-gradient(135deg, 
-                    ${designSystem.colors.primary[50]} 0%, 
-                    ${designSystem.colors.surface.primary} 100%)`
+                py: { xs: designSystem.spacing[10], md: designSystem.spacing[20] },
+                background: `linear-gradient(135deg,
+                    ${designSystem.colors.primary[50]} 0%,
+                    ${designSystem.colors.accent.emerald[50]} 50%,
+                    ${designSystem.colors.surface.primary} 100%)`,
+                position: 'relative',
+                overflow: 'hidden',
+                '&::before': {
+                    content: '""',
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    background: `radial-gradient(circle at 20% 30%, ${designSystem.colors.accent.emerald[100]}40 0%, transparent 50%),
+                                radial-gradient(circle at 80% 70%, ${designSystem.colors.primary[100]}30 0%, transparent 50%)`,
+                    pointerEvents: 'none',
+                    zIndex: 0
+                }
             }}
         >
-            <Container maxWidth="lg">
+            <Container maxWidth="xl" sx={{ position: 'relative', zIndex: 1 }}>
                 {/* Header */}
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
@@ -156,7 +171,7 @@ const GuaranteesBlock = ({
                     initial="hidden"
                     animate={isVisible ? "visible" : "hidden"}
                 >
-                    <Grid container spacing={4} sx={{ mb: designSystem.spacing[8] }}>
+                    <Grid container spacing={5} sx={{ mb: designSystem.spacing[10] }}>
                         {displayGuarantees.map((guarantee, index) => {
                             const IconComponent = iconMap[guarantee.icon] || CheckCircle;
                             
@@ -166,12 +181,22 @@ const GuaranteesBlock = ({
                                         <GlassCard
                                             variant="medium"
                                             hover={true}
-                                            padding={4}
+                                            padding={5}
                                             sx={{
                                                 height: '100%',
                                                 textAlign: 'center',
                                                 position: 'relative',
-                                                borderTop: `3px solid ${designSystem.colors.accent.emerald[500]}`
+                                                borderTop: `5px solid ${designSystem.colors.accent.emerald[500]}`,
+                                                transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+                                                '&:hover': {
+                                                    transform: 'translateY(-12px) scale(1.02)',
+                                                    boxShadow: `0 24px 64px rgba(0,0,0,0.15)`,
+                                                    borderTopColor: designSystem.colors.accent.emerald[600],
+                                                    '& .guarantee-icon': {
+                                                        transform: 'scale(1.1) rotate(5deg)',
+                                                        boxShadow: '0 12px 32px rgba(0,0,0,0.2)'
+                                                    }
+                                                }
                                             }}
                                         >
                                             {/* Badge */}
@@ -179,16 +204,17 @@ const GuaranteesBlock = ({
                                                 <Box
                                                     sx={{
                                                         position: 'absolute',
-                                                        top: -12,
-                                                        right: designSystem.spacing[2],
-                                                        px: designSystem.spacing[2],
-                                                        py: designSystem.spacing[1],
+                                                        top: -16,
+                                                        right: designSystem.spacing[3],
+                                                        px: designSystem.spacing[3],
+                                                        py: designSystem.spacing[1.5],
                                                         borderRadius: designSystem.borders.radius.full,
                                                         background: `linear-gradient(135deg, ${designSystem.colors.accent.emerald[500]}, ${designSystem.colors.accent.emerald[700]})`,
                                                         color: designSystem.colors.text.inverse,
-                                                        fontSize: '0.75rem',
-                                                        fontWeight: 700,
-                                                        boxShadow: designSystem.shadows.colored.emerald
+                                                        fontSize: '0.875rem',
+                                                        fontWeight: 800,
+                                                        boxShadow: '0 8px 24px rgba(0,0,0,0.2)',
+                                                        border: `2px solid ${designSystem.colors.surface.primary}`
                                                     }}
                                                 >
                                                     {guarantee.badge}
@@ -197,22 +223,24 @@ const GuaranteesBlock = ({
 
                                             {/* Icon */}
                                             <Box
+                                                className="guarantee-icon"
                                                 sx={{
-                                                    width: 80,
-                                                    height: 80,
+                                                    width: 96,
+                                                    height: 96,
                                                     borderRadius: '50%',
-                                                    background: `linear-gradient(135deg, ${designSystem.colors.accent.emerald[100]}, ${designSystem.colors.accent.emerald[200]})`,
+                                                    background: `linear-gradient(135deg, ${designSystem.colors.accent.emerald[100]}, ${designSystem.colors.accent.emerald[300]})`,
                                                     display: 'flex',
                                                     alignItems: 'center',
                                                     justifyContent: 'center',
                                                     margin: '0 auto',
-                                                    mb: designSystem.spacing[3],
-                                                    boxShadow: designSystem.shadows.md
+                                                    mb: designSystem.spacing[4],
+                                                    boxShadow: '0 8px 24px rgba(0,0,0,0.1)',
+                                                    transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)'
                                                 }}
                                             >
                                                 <IconComponent
                                                     sx={{
-                                                        fontSize: '2.5rem',
+                                                        fontSize: '3rem',
                                                         color: designSystem.colors.accent.emerald[700]
                                                     }}
                                                 />
@@ -256,66 +284,84 @@ const GuaranteesBlock = ({
                 >
                     <GlassCard
                         variant="strong"
-                        padding={6}
+                        padding={8}
                         sx={{
                             textAlign: 'center',
-                            background: `linear-gradient(135deg, 
-                                ${designSystem.colors.primary[500]}, 
-                                ${designSystem.colors.primary[700]})`
+                            background: `linear-gradient(135deg,
+                                ${designSystem.colors.primary[500]},
+                                ${designSystem.colors.accent.purple},
+                                ${designSystem.colors.primary[700]})`,
+                            position: 'relative',
+                            overflow: 'hidden',
+                            '&::before': {
+                                content: '""',
+                                position: 'absolute',
+                                top: 0,
+                                left: 0,
+                                right: 0,
+                                bottom: 0,
+                                background: `radial-gradient(circle at 30% 50%, rgba(255,255,255,0.1) 0%, transparent 50%)`,
+                                pointerEvents: 'none'
+                            }
                         }}
                     >
-                        <Typography
-                            variant="h4"
-                            sx={{
-                                fontWeight: 800,
-                                mb: designSystem.spacing[2],
-                                color: designSystem.colors.text.inverse
-                            }}
-                        >
-                            {ctaConfig.title || '¿Listo para empezar tu proyecto?'}
-                        </Typography>
-                        <Typography
-                            variant="body1"
-                            sx={{
-                                color: designSystem.colors.text.inverse,
-                                opacity: 0.9,
-                                mb: designSystem.spacing[4],
-                                maxWidth: 600,
-                                mx: 'auto'
-                            }}
-                        >
-                            {ctaConfig.subtitle || 'Contáctanos hoy y descubre cómo podemos ayudarte a alcanzar tus objetivos con total garantía y profesionalismo.'}
-                        </Typography>
-                        <Stack
-                            direction={{ xs: 'column', sm: 'row' }}
-                            spacing={2}
-                            sx={{
-                                justifyContent: 'center'
-                            }}
-                        >
-                            <Button
-                                variant="contained"
-                                size="large"
-                                onClick={handleCTA}
+                        <Box sx={{ position: 'relative', zIndex: 1 }}>
+                            <Typography
+                                variant="h3"
                                 sx={{
-                                    background: designSystem.colors.text.inverse,
-                                    color: designSystem.colors.primary[700],
-                                    fontWeight: 700,
-                                    px: designSystem.spacing[6],
-                                    py: designSystem.spacing[2],
-                                    borderRadius: designSystem.borders.radius.full,
-                                    boxShadow: designSystem.shadows.xl,
-                                    '&:hover': {
-                                        background: designSystem.colors.surface.primary,
-                                        transform: 'translateY(-2px)',
-                                        boxShadow: designSystem.shadows['2xl']
-                                    },
-                                    transition: designSystem.transitions.allNormal
+                                    fontWeight: 900,
+                                    mb: designSystem.spacing[3],
+                                    color: designSystem.colors.text.inverse,
+                                    fontSize: { xs: '1.75rem', md: '2.5rem' }
                                 }}
                             >
-                                {ctaConfig.text || 'Solicitar Información'}
-                            </Button>
-                        </Stack>
+                                {ctaConfig.title || '¿Listo para empezar tu proyecto?'}
+                            </Typography>
+                            <Typography
+                                variant="h6"
+                                sx={{
+                                    color: designSystem.colors.text.inverse,
+                                    opacity: 0.95,
+                                    mb: designSystem.spacing[6],
+                                    maxWidth: 700,
+                                    mx: 'auto',
+                                    fontSize: { xs: '1rem', md: '1.25rem' }
+                                }}
+                            >
+                                {ctaConfig.subtitle || 'Contáctanos hoy y descubre cómo podemos ayudarte a alcanzar tus objetivos con total garantía y profesionalismo.'}
+                            </Typography>
+                            <Stack
+                                direction={{ xs: 'column', sm: 'row' }}
+                                spacing={3}
+                                sx={{
+                                    justifyContent: 'center'
+                                }}
+                            >
+                                <Button
+                                    variant="contained"
+                                    size="large"
+                                    onClick={handleCTA}
+                                    sx={{
+                                        background: designSystem.colors.text.inverse,
+                                        color: designSystem.colors.primary[700],
+                                        fontWeight: 800,
+                                        px: designSystem.spacing[8],
+                                        py: designSystem.spacing[3],
+                                        fontSize: '1.125rem',
+                                        borderRadius: designSystem.borders.radius.full,
+                                        boxShadow: '0 12px 40px rgba(0,0,0,0.3)',
+                                        '&:hover': {
+                                            background: designSystem.colors.surface.primary,
+                                            transform: 'translateY(-4px) scale(1.05)',
+                                            boxShadow: '0 16px 56px rgba(0,0,0,0.4)'
+                                        },
+                                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+                                    }}
+                                >
+                                    {ctaConfig.text || 'Solicitar Información'}
+                                </Button>
+                            </Stack>
+                        </Box>
                     </GlassCard>
                 </motion.div>
             </Container>

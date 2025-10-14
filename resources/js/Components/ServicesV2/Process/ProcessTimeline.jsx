@@ -24,20 +24,21 @@ import GlassCard from '../Shared/GlassCard';
  * @param {string} orientation - 'vertical' | 'horizontal' | 'auto' (default: 'auto')
  * @param {string} service - Slug del servicio para tracking
  */
-const ProcessTimeline = ({ 
-    steps = [], 
+const ProcessTimeline = ({
+    steps = [],
     orientation = 'auto',
     service = ''
 }) => {
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+    const isTablet = useMediaQuery(theme.breakpoints.down('lg'));
     const { ref, isVisible } = useIntersectionReveal({
         threshold: 0.2,
         onIntersect: () => trackSectionView('process', service)
     });
 
-    // Determinar orientación
-    const actualOrientation = orientation === 'auto' 
+    // Determinar orientación - siempre horizontal en desktop para aprovechar espacio
+    const actualOrientation = orientation === 'auto'
         ? (isMobile ? 'vertical' : 'horizontal')
         : orientation;
 
@@ -80,13 +81,28 @@ const ProcessTimeline = ({
         <Box
             ref={ref}
             sx={{
-                py: { xs: designSystem.spacing[10], md: designSystem.spacing[16] },
-                background: `linear-gradient(180deg, 
-                    ${designSystem.colors.surface.secondary} 0%, 
-                    ${designSystem.colors.surface.primary} 100%)`
+                py: { xs: designSystem.spacing[10], md: designSystem.spacing[20] },
+                background: `linear-gradient(180deg,
+                    ${designSystem.colors.surface.secondary} 0%,
+                    ${designSystem.colors.primary[50]} 50%,
+                    ${designSystem.colors.surface.primary} 100%)`,
+                position: 'relative',
+                overflow: 'hidden',
+                '&::before': {
+                    content: '""',
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    background: `radial-gradient(circle at 30% 20%, ${designSystem.colors.primary[100]}30 0%, transparent 50%),
+                                radial-gradient(circle at 70% 80%, ${designSystem.colors.accent.emerald[100]}20 0%, transparent 50%)`,
+                    pointerEvents: 'none',
+                    zIndex: 0
+                }
             }}
         >
-            <Container maxWidth="lg">
+            <Container maxWidth="xl" sx={{ position: 'relative', zIndex: 1 }}>
                 {/* Header */}
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
@@ -144,36 +160,42 @@ const ProcessTimeline = ({
                                     <GlassCard
                                         variant="medium"
                                         hover={true}
-                                        padding={4}
+                                        padding={5}
                                         sx={{
                                             height: '100%',
                                             position: 'relative',
-                                            borderTop: `4px solid ${designSystem.colors.primary[500]}`,
-                                            transition: designSystem.transitions.allNormal
+                                            borderTop: `5px solid ${designSystem.colors.primary[500]}`,
+                                            transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+                                            '&:hover': {
+                                                transform: 'translateY(-8px)',
+                                                boxShadow: `0 20px 60px rgba(0,0,0,0.15)`,
+                                                borderTopColor: designSystem.colors.accent.emerald
+                                            }
                                         }}
                                     >
                                         {/* Step Number Badge */}
                                         <Box
                                             sx={{
                                                 position: 'absolute',
-                                                top: -20,
-                                                left: designSystem.spacing[4],
-                                                width: 40,
-                                                height: 40,
+                                                top: -24,
+                                                left: designSystem.spacing[5],
+                                                width: 48,
+                                                height: 48,
                                                 borderRadius: '50%',
                                                 background: `linear-gradient(135deg, ${designSystem.colors.primary[500]}, ${designSystem.colors.primary[700]})`,
                                                 display: 'flex',
                                                 alignItems: 'center',
                                                 justifyContent: 'center',
-                                                boxShadow: designSystem.shadows.colored.primary,
-                                                zIndex: 2
+                                                boxShadow: '0 8px 24px rgba(0,0,0,0.2)',
+                                                zIndex: 2,
+                                                border: `3px solid ${designSystem.colors.surface.primary}`
                                             }}
                                         >
                                             <Typography
-                                                variant="body1"
+                                                variant="h6"
                                                 sx={{
                                                     color: designSystem.colors.text.inverse,
-                                                    fontWeight: 700
+                                                    fontWeight: 800
                                                 }}
                                             >
                                                 {index + 1}

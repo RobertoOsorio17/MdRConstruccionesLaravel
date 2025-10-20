@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTheme } from '@mui/material/styles';
 import {
     Box,
     Container,
@@ -44,7 +45,7 @@ const GLASS_THEME = {
     blur: {
         sm: 'blur(8px)',
         md: 'blur(12px)',
-        lg: 'blur(16px)'
+        lg: 'blur(12px)'
     },
     border: {
         glass: '1px solid rgba(255, 255, 255, 0.3)',
@@ -81,6 +82,8 @@ const GlassmorphismHero = ({
     filterType = 'all',
     stats = {}
 }) => {
+    const theme = useTheme();
+    const isDark = theme.palette.mode === 'dark';
     const [isSearchFocused, setIsSearchFocused] = useState(false);
     const [localSearchTerm, setLocalSearchTerm] = useState(searchTerm);
 
@@ -142,11 +145,15 @@ const GlassmorphismHero = ({
                 minHeight: '70vh',
                 display: 'flex',
                 alignItems: 'center',
-                background: `linear-gradient(135deg, 
-                    ${THEME.primary[50]} 0%, 
-                    ${THEME.primary[100]} 50%, 
-                    ${THEME.primary[50]} 100%
-                )`,
+                background: isDark
+                    ? `linear-gradient(135deg, 
+                        rgba(15,23,42,1) 0%,
+                        rgba(2,6,23,1) 60%,
+                        rgba(15,23,42,1) 100%)`
+                    : `linear-gradient(135deg, 
+                        ${THEME.primary[50]} 0%, 
+                        ${THEME.primary[100]} 50%, 
+                        ${THEME.primary[50]} 100%)`,
                 overflow: 'hidden',
                 '&::before': {
                     content: '""',
@@ -155,8 +162,11 @@ const GlassmorphismHero = ({
                     left: 0,
                     right: 0,
                     bottom: 0,
-                    background: `radial-gradient(circle at 30% 20%, ${THEME.primary[200]}40 0%, transparent 50%),
-                                radial-gradient(circle at 70% 80%, ${THEME.primary[300]}30 0%, transparent 50%)`,
+                    background: isDark
+                        ? `radial-gradient(circle at 30% 20%, rgba(59,130,246,0.15) 0%, transparent 50%),
+                           radial-gradient(circle at 70% 80%, rgba(99,102,241,0.12) 0%, transparent 50%)`
+                        : `radial-gradient(circle at 30% 20%, ${THEME.primary[200]}40 0%, transparent 50%),
+                           radial-gradient(circle at 70% 80%, ${THEME.primary[300]}30 0%, transparent 50%)`,
                     pointerEvents: 'none'
                 }
             }}
@@ -173,7 +183,7 @@ const GlassmorphismHero = ({
                     height: 100,
                     borderRadius: '50%',
                     background: `linear-gradient(135deg, ${THEME.primary[400]}20, ${THEME.primary[600]}10)`,
-                    backdropFilter: 'blur(20px)',
+                    backdropFilter: 'blur(12px)',
                     zIndex: 0
                 }}
             />
@@ -189,7 +199,7 @@ const GlassmorphismHero = ({
                     height: 80,
                     borderRadius: '30%',
                     background: `linear-gradient(135deg, ${THEME.primary[300]}15, ${THEME.primary[500]}08)`,
-                    backdropFilter: 'blur(15px)',
+                    backdropFilter: 'blur(12px)',
                     zIndex: 0,
                     animationDelay: '2s'
                 }}
@@ -213,7 +223,7 @@ const GlassmorphismHero = ({
                                             fontSize: { xs: '2.5rem', md: '3.5rem', lg: '4rem' },
                                             fontWeight: 800,
                                             lineHeight: 1.1,
-                                            color: THEME.text.primary,
+                                            color: isDark ? '#e5e7eb' : THEME.text.primary,
                                             mb: 2
                                         }}
                                     >
@@ -238,7 +248,7 @@ const GlassmorphismHero = ({
                                     <Typography
                                         variant="h6"
                                         sx={{
-                                            color: THEME.text.secondary,
+                                            color: isDark ? '#94a3b8' : THEME.text.secondary,
                                             lineHeight: 1.6,
                                             maxWidth: '600px',
                                             fontSize: { xs: '1.1rem', md: '1.25rem' }
@@ -257,16 +267,16 @@ const GlassmorphismHero = ({
                                             alignItems: 'center',
                                             p: 1,
                                             borderRadius: 3,
-                                            background: GLASS_THEME.glass.primary,
+                                            background: isDark ? 'linear-gradient(145deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.04) 100%)' : GLASS_THEME.glass.primary,
                                             backdropFilter: GLASS_THEME.blur.md,
-                                            border: isSearchFocused ? GLASS_THEME.border.accent : GLASS_THEME.border.glass,
-                                            boxShadow: isSearchFocused ? GLASS_THEME.shadow.hover : GLASS_THEME.shadow.glass,
+                                            border: isDark ? '1px solid rgba(255,255,255,0.12)' : (isSearchFocused ? GLASS_THEME.border.accent : GLASS_THEME.border.glass),
+                                            boxShadow: isDark ? '0 8px 32px rgba(0,0,0,0.45)' : (isSearchFocused ? GLASS_THEME.shadow.hover : GLASS_THEME.shadow.glass),
                                             transition: 'all 0.3s ease',
                                             maxWidth: 500
                                         }}
                                     >
                                         <IconButton sx={{ p: 1.5 }}>
-                                            <SearchIcon sx={{ color: THEME.primary[500] }} />
+                                            <SearchIcon sx={{ color: isDark ? '#60a5fa' : THEME.primary[500] }} />
                                         </IconButton>
                                         <InputBase
                                             placeholder="Buscar servicios..."
@@ -279,7 +289,7 @@ const GlassmorphismHero = ({
                                                 px: 1,
                                                 fontSize: '1rem',
                                                 '& input::placeholder': {
-                                                    color: THEME.text.muted,
+                                                    color: isDark ? '#94a3b8' : THEME.text.muted,
                                                     opacity: 1
                                                 }
                                             }}
@@ -294,7 +304,7 @@ const GlassmorphismHero = ({
                                                     '& .MuiSelect-select': {
                                                         py: 1,
                                                         fontSize: '0.9rem',
-                                                        color: THEME.text.secondary
+                                                        color: isDark ? '#cbd5e1' : THEME.text.secondary
                                                     }
                                                 }}
                                             >

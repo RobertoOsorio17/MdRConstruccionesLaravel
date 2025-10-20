@@ -62,7 +62,8 @@ const FloatingCTA = ({ onRequestQuote, showScrollTop = true }) => {
                     position: 'fixed',
                     bottom: { xs: 20, md: 32 },
                     right: { xs: 20, md: 32 },
-                    zIndex: 9999,
+                    // Debajo del Drawer móvil, por encima del contenido
+                    zIndex: 1198,
                 }}
             >
                 <Stack spacing={2} alignItems="flex-end">
@@ -216,7 +217,7 @@ const FloatingCTA = ({ onRequestQuote, showScrollTop = true }) => {
                             bottom: 0,
                             backgroundColor: 'rgba(0, 0, 0, 0.3)',
                             backdropFilter: 'blur(2px)',
-                            zIndex: 9998,
+                            zIndex: 1197,
                         }}
                     />
                 )}

@@ -156,16 +156,21 @@ class ContactController extends Controller
             }
         }
 
-        // ✅ reCAPTCHA verification (MANDATORY ALWAYS - production and development)
+        // ✅ reCAPTCHA verification (skip in non-production environments)
         $recaptchaToken = $validated['recaptcha_token'];
 
         if (!$recaptcha->isEnabled()) {
-            Log::error('reCAPTCHA is not enabled but form was submitted', [
+            if (app()->environment('production')) {
+                Log::error('reCAPTCHA is not enabled in production', [
+                    'ip' => $request->ip(),
+                ]);
+                return back()->withErrors([
+                    'email' => 'Error de configuración del sistema. Por favor, contáctanos por teléfono.'
+                ]);
+            }
+            // Allow bypass in non-production environments
+            Log::info('reCAPTCHA bypassed in non-production environment', [
                 'environment' => app()->environment(),
-                'ip' => $request->ip(),
-            ]);
-            return back()->withErrors([
-                'email' => 'Error de configuración del sistema. Por favor, contáctanos por teléfono.'
             ]);
         }
 

@@ -58,11 +58,14 @@ const ServiceHero = ({
     const { isMobile, isTablet } = useDeviceBreakpoints();
     const [videoPlaying, setVideoPlaying] = useState(false);
 
-    // Parallax effect más pronunciado
+    // Detectar preferencia de movimiento reducido
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    // Parallax effect más pronunciado (respeta prefers-reduced-motion)
     const { scrollY } = useScroll();
-    const y = useTransform(scrollY, [0, 500], [0, 250]);
+    const y = useTransform(scrollY, [0, 500], [0, prefersReducedMotion ? 0 : 250]);
     const opacity = useTransform(scrollY, [0, 400], [1, 0]);
-    const scale = useTransform(scrollY, [0, 500], [1, 1.2]);
+    const scale = useTransform(scrollY, [0, 500], [1, prefersReducedMotion ? 1 : 1.2]);
 
     const handlePrimaryCTA = () => {
         if (onOpenWizard) {
@@ -72,10 +75,13 @@ const ServiceHero = ({
     };
 
     const handleSecondaryCTA = () => {
-        trackCTAClick('secondary', ctaConfig.secondary?.label || 'Descargar Dossier', service?.slug);
-        // Implementar descarga de PDF
+        const label = ctaConfig.secondary?.label || 'Descargar Dossier';
+        trackCTAClick('secondary', label, service?.slug);
+        // Verificar si hay acción configurada
         if (ctaConfig.secondary?.onClick) {
             ctaConfig.secondary.onClick();
+        } else if (ctaConfig.secondary?.action) {
+            ctaConfig.secondary.action();
         }
     };
 
@@ -90,7 +96,7 @@ const ServiceHero = ({
         if (onFavorite) {
             onFavorite();
         }
-        trackCTAClick('micro', isFavorite ? 'Quitar Favorito' : 'Añadir Favorito', service?.slug);
+        trackCTAClick('micro', isFavorite ? 'Quitar de Favoritos' : 'Añadir a Favoritos', service?.slug);
     };
 
     // Badges por defecto si no se proporcionan
@@ -122,8 +128,8 @@ const ServiceHero = ({
                     left: 0,
                     right: 0,
                     bottom: 0,
-                    y: isMobile ? 0 : y, // Desactivar parallax en mobile
-                    scale: isMobile ? 1 : scale, // Zoom effect en desktop
+                    y: (isMobile || prefersReducedMotion) ? 0 : y,
+                    scale: (isMobile || prefersReducedMotion) ? 1 : scale,
                     zIndex: 0
                 }}
             >
@@ -133,6 +139,12 @@ const ServiceHero = ({
                         loop
                         muted
                         playsInline
+                        preload="metadata"
+                        poster={service?.featured_image}
+                        onError={(e) => {
+                            console.error('Error al cargar video:', e);
+                            setVideoPlaying(false);
+                        }}
                         style={{
                             width: '100%',
                             height: '100%',
@@ -140,14 +152,19 @@ const ServiceHero = ({
                             objectPosition: 'center',
                             filter: 'brightness(0.7) contrast(1.1)'
                         }}
+                        aria-label={`Video de ${service.title}`}
                     >
                         <source src={service.video} type="video/mp4" />
+                        Tu navegador no soporta el elemento de video.
                     </video>
                 ) : (
                     <Box
                         component="img"
                         src={service?.featured_image || '/images/hero-default.jpg'}
-                        alt={service?.title}
+                        alt={`Imagen principal de ${service?.title || 'servicio'}`}
+                        loading="eager"
+                        decoding="async"
+                        fetchpriority="high"
                         sx={{
                             width: '100%',
                             height: '100%',
@@ -371,11 +388,17 @@ const ServiceHero = ({
                                 <Stack direction="row" spacing={designSystem.spacing[2]}>
                                 <IconButton
                                     onClick={handleFavorite}
+                                    aria-label={isFavorite ? 'Quitar de favoritos' : 'Añadir a favoritos'}
+                                    aria-pressed={isFavorite}
                                     sx={{
                                         color: designSystem.colors.text.inverse,
                                         bgcolor: 'rgba(255,255,255,0.1)',
                                         '&:hover': {
                                             bgcolor: 'rgba(255,255,255,0.2)'
+                                        },
+                                        '&:focus-visible': {
+                                            outline: `2px solid ${designSystem.colors.text.inverse}`,
+                                            outlineOffset: '2px'
                                         }
                                     }}
                                 >
@@ -383,11 +406,16 @@ const ServiceHero = ({
                                 </IconButton>
                                 <IconButton
                                     onClick={handleShare}
+                                    aria-label="Compartir servicio"
                                     sx={{
                                         color: designSystem.colors.text.inverse,
                                         bgcolor: 'rgba(255,255,255,0.1)',
                                         '&:hover': {
                                             bgcolor: 'rgba(255,255,255,0.2)'
+                                        },
+                                        '&:focus-visible': {
+                                            outline: `2px solid ${designSystem.colors.text.inverse}`,
+                                            outlineOffset: '2px'
                                         }
                                     }}
                                 >
@@ -396,11 +424,16 @@ const ServiceHero = ({
                                 {service?.video && !videoPlaying && (
                                     <IconButton
                                         onClick={() => setVideoPlaying(true)}
+                                        aria-label="Reproducir video del servicio"
                                         sx={{
                                             color: designSystem.colors.text.inverse,
                                             bgcolor: 'rgba(255,255,255,0.1)',
                                             '&:hover': {
                                                 bgcolor: 'rgba(255,255,255,0.2)'
+                                            },
+                                            '&:focus-visible': {
+                                                outline: `2px solid ${designSystem.colors.text.inverse}`,
+                                                outlineOffset: '2px'
                                             }
                                         }}
                                     >
@@ -463,38 +496,41 @@ const ServiceHero = ({
             </Container>
 
             {/* Scroll Indicator */}
-            <motion.div
-                animate={{ y: [0, 10, 0] }}
-                transition={{ duration: 1.5, repeat: Infinity }}
-                style={{
-                    position: 'absolute',
-                    bottom: 30,
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    zIndex: 2
-                }}
-            >
-                <Box
-                    sx={{
-                        width: 30,
-                        height: 50,
-                        border: `2px solid ${designSystem.colors.text.inverse}`,
-                        borderRadius: designSystem.borders.radius.full,
-                        display: 'flex',
-                        justifyContent: 'center',
-                        pt: 1
+            {!prefersReducedMotion && (
+                <motion.div
+                    animate={{ y: [0, 10, 0] }}
+                    transition={{ duration: 1.5, repeat: Infinity }}
+                    style={{
+                        position: 'absolute',
+                        bottom: 30,
+                        left: '50%',
+                        transform: 'translateX(-50%)',
+                        zIndex: 2
                     }}
+                    aria-hidden="true"
                 >
                     <Box
                         sx={{
-                            width: 6,
-                            height: 10,
-                            bgcolor: designSystem.colors.text.inverse,
-                            borderRadius: designSystem.borders.radius.full
+                            width: 30,
+                            height: 50,
+                            border: `2px solid ${designSystem.colors.text.inverse}`,
+                            borderRadius: designSystem.borders.radius.full,
+                            display: 'flex',
+                            justifyContent: 'center',
+                            pt: 1
                         }}
-                    />
-                </Box>
-            </motion.div>
+                    >
+                        <Box
+                            sx={{
+                                width: 6,
+                                height: 10,
+                                bgcolor: designSystem.colors.text.inverse,
+                                borderRadius: designSystem.borders.radius.full
+                            }}
+                        />
+                    </Box>
+                </motion.div>
+            )}
         </Box>
     );
 };

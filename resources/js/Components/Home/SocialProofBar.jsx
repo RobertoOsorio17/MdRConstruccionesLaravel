@@ -1,15 +1,22 @@
 import React from 'react';
-import { Box, Container, Typography, Stack, Chip } from '@mui/material';
+import { Box, Container, Typography, Stack, Chip, useTheme } from '@mui/material';
 import { Star as StarIcon, Verified as VerifiedIcon, EmojiEvents as TrophyIcon } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 
 const SocialProofBar = ({ socialProof, prefersReducedMotion = false }) => {
+  const theme = useTheme();
+  const isDark = theme.palette.mode === 'dark';
+
   return (
     <Box
       sx={{
         py: 3,
-        background: 'linear-gradient(90deg, rgba(11, 107, 203, 0.05) 0%, rgba(245, 165, 36, 0.05) 100%)',
-        borderBottom: '1px solid rgba(0, 0, 0, 0.05)',
+        background: isDark
+          ? 'linear-gradient(90deg, rgba(59, 130, 246, 0.1) 0%, rgba(245, 165, 36, 0.1) 100%)'
+          : 'linear-gradient(90deg, rgba(11, 107, 203, 0.05) 0%, rgba(245, 165, 36, 0.05) 100%)',
+        borderBottom: isDark
+          ? '1px solid rgba(255, 255, 255, 0.1)'
+          : '1px solid rgba(0, 0, 0, 0.05)',
       }}
     >
       <Container

@@ -126,8 +126,13 @@ class ContentAnalysisService
     private function calculateTF(array $tokens): array
     {
         $tf = array_count_values($tokens);
+
+        if (empty($tf)) {
+            return [];
+        }
+
         $maxFreq = max($tf);
-        
+
         // Normalize TF values.
         foreach ($tf as $term => $freq) {
             $tf[$term] = $freq / $maxFreq;
@@ -161,14 +166,18 @@ class ContentAnalysisService
     {
         $totalDocs = Post::count();
         $idf = [];
-        
+
+        if ($totalDocs === 0) {
+            return $idf;
+        }
+
         foreach ($vocabulary as $term) {
             // Count documents containing the term (simplified).
             $docsWithTerm = Post::where('content', 'LIKE', "%{$term}%")
                 ->orWhere('title', 'LIKE', "%{$term}%")
                 ->orWhere('excerpt', 'LIKE', "%{$term}%")
                 ->count();
-            
+
             $idf[$term] = $docsWithTerm > 0 ? log($totalDocs / $docsWithTerm) : 0;
         }
 

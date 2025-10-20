@@ -25,7 +25,7 @@ class RegisteredUserController extends Controller
      */
     public function create(): Response
     {
-        return Inertia::render('Auth/RegisterMUI');
+        return Inertia::render('Auth/RegisterNew');
     }
 
     /**

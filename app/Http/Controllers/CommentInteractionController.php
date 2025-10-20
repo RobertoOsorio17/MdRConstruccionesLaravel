@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use App\Models\Comment;
 use App\Models\CommentInteraction;
 use App\Models\CommentReport;
@@ -15,6 +16,7 @@ use App\Models\CommentReport;
  */
 class CommentInteractionController extends Controller
 {
+    use AuthorizesRequests;
     /**
      * Store a like interaction for a comment.
      */

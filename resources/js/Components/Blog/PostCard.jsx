@@ -373,6 +373,12 @@ const PostCard = memo(({ post, getPostImage }) => {
     }
   };
 
+  // ✅ Validación: No renderizar si falta slug (evita links rotos)
+  if (!post?.slug) {
+    console.warn('PostCard: Post sin slug válido', post);
+    return null;
+  }
+
   return (
     <Card
       elevation={0}
@@ -380,6 +386,8 @@ const PostCard = memo(({ post, getPostImage }) => {
         borderRadius: 4,
         overflow: 'hidden',
         height: '100%',
+        minHeight: { xs: 'auto', sm: 520, md: 540 }, // ✅ Fixed minimum height for consistency
+        maxHeight: { xs: 'auto', sm: 540, md: 560 }, // ✅ Fixed maximum height to prevent overflow
         cursor: 'pointer',
         border: `1px solid ${THEME.border.main}`,
         backgroundColor: THEME.surface.primary,
@@ -462,7 +470,12 @@ const PostCard = memo(({ post, getPostImage }) => {
       href={`/blog/${post.slug}`}
       style={{ textDecoration: 'none', color: 'inherit' }}
     >
-      <Box sx={{ position: 'relative', overflow: 'hidden' }}>
+      <Box sx={{
+        position: 'relative',
+        overflow: 'hidden',
+        height: 200, // ✅ Fixed height for image container
+        flexShrink: 0 // ✅ Prevent image container from shrinking
+      }}>
         <ResponsiveImage
           src={getPostImage ? getPostImage(post) : (post.cover_image || post.featured_image || post.image)}
           alt={post.title}
@@ -470,6 +483,8 @@ const PostCard = memo(({ post, getPostImage }) => {
           lazy={true}
           objectFit="cover"
           sx={{
+            height: '100%', // ✅ Fill container height
+            width: '100%', // ✅ Fill container width
             transition: designSystem.transitions.presets.transform,
             '&:hover': {
               transform: 'scale(1.05)'
@@ -528,7 +543,7 @@ const PostCard = memo(({ post, getPostImage }) => {
       <CardContent
         className="card-content"
         sx={{
-          p: 4,
+          p: 3, // ✅ Reduced padding for better space utilization
           position: 'relative',
           zIndex: 2,
           background: 'linear-gradient(180deg, rgba(255,255,255,0.95) 0%, rgba(255,255,255,1) 100%)',
@@ -536,8 +551,10 @@ const PostCard = memo(({ post, getPostImage }) => {
           flexGrow: 1,
           display: 'flex',
           flexDirection: 'column',
-          gap: 2,
-          transition: 'transform 0.3s ease'
+          gap: 1.5, // ✅ Reduced gap for consistent spacing
+          transition: 'transform 0.3s ease',
+          minHeight: 0, // ✅ Allow flex children to shrink properly
+          overflow: 'hidden' // ✅ Prevent content overflow
         }}
       >
         <Typography
@@ -552,7 +569,8 @@ const PostCard = memo(({ post, getPostImage }) => {
             overflow: 'hidden',
             fontSize: THEME.typography.fontSize.lg,
             transition: 'color 0.2s ease',
-            minHeight: '2.5rem',
+            height: '2.75rem', // ✅ Fixed height instead of minHeight for consistency
+            flexShrink: 0, // ✅ Prevent title from shrinking
             '&:hover': {
               color: THEME.primary[600]
             }
@@ -572,8 +590,8 @@ const PostCard = memo(({ post, getPostImage }) => {
             lineHeight: THEME.typography.lineHeight.relaxed,
             fontSize: THEME.typography.fontSize.sm,
             fontWeight: THEME.typography.fontWeight.normal,
-            flexGrow: 1,
-            minHeight: '4.5rem'
+            height: '4.875rem', // ✅ Fixed height instead of flexGrow for consistency (3 lines * 1.625 line-height)
+            flexShrink: 0 // ✅ Prevent excerpt from shrinking
           }}
         >
           {post.excerpt || 'Descubre más sobre este interesante artículo de construcción y reformas.'}
@@ -581,11 +599,12 @@ const PostCard = memo(({ post, getPostImage }) => {
         <Box
           sx={{
             mt: 'auto',
-            pt: 2,
+            pt: 1.5, // ✅ Reduced padding for better spacing
             borderTop: `1px solid ${THEME.border.light}`,
+            flexShrink: 0 // ✅ Prevent footer from shrinking
           }}
         >
-          <Stack direction="row" alignItems="center" justifyContent="space-between">
+          <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ minHeight: 32 }}>
             <Stack direction="row" alignItems="center" spacing={1.5}>
               <Avatar
                 src={post.author?.avatar}
@@ -601,9 +620,13 @@ const PostCard = memo(({ post, getPostImage }) => {
               </Avatar>
               <Box>
                 <Typography
-                  component={post.author?.id ? Link : 'span'}
-                  href={post.author?.id ? `/user/${post.author.id}` : undefined}
+                  component="span"
                   variant="caption"
+                  onClick={post.author?.id ? (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    router.visit(`/user/${post.author.id}`);
+                  } : undefined}
                   sx={{
                     color: THEME.text.secondary,
                     fontWeight: THEME.typography.fontWeight.semibold,
@@ -664,9 +687,11 @@ const PostCard = memo(({ post, getPostImage }) => {
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
-              mt: 2,
-              pt: 2,
-              borderTop: `1px solid ${THEME.border.light}`
+              mt: 1.5, // ✅ Reduced margin for consistent spacing
+              pt: 1.5, // ✅ Reduced padding for consistent spacing
+              borderTop: `1px solid ${THEME.border.light}`,
+              minHeight: 52, // ✅ Fixed minimum height for interaction section
+              flexShrink: 0 // ✅ Prevent interaction section from shrinking
             }}>
               <Box sx={{ display: 'flex', gap: 1 }}>
                 <Tooltip title={isLiked ? "Quitar me gusta" : "Me gusta"}>

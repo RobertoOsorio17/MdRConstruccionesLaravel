@@ -46,10 +46,10 @@ class ServicesExport implements FromQuery, WithHeadings, WithMapping, WithStyles
 
         // Apply featured filter
         if (isset($this->filters['featured'])) {
-            $query->where('is_featured', $this->filters['featured']);
+            $query->where('featured', $this->filters['featured']);
         }
 
-        return $query->orderBy('created_at', 'desc');
+        return $query->withCount('favorites')->orderBy('created_at', 'desc');
     }
 
     /**
@@ -78,9 +78,9 @@ class ServicesExport implements FromQuery, WithHeadings, WithMapping, WithStyles
         return [
             $service->id,
             $service->title,
-            strip_tags(substr($service->description, 0, 100)) . '...',
+            strip_tags(substr($service->body, 0, 100)) . '...',
             ucfirst($service->status),
-            $service->is_featured ? 'Sí' : 'No',
+            $service->featured ? 'Sí' : 'No',
             $service->views_count ?? 0,
             $service->favorites_count ?? 0,
             $service->created_at->format('Y-m-d H:i:s'),

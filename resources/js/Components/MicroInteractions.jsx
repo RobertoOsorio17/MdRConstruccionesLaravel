@@ -25,7 +25,9 @@ const ScrollProgressBar = ({ prefersReducedMotion }) => {
         background: 'linear-gradient(90deg, #0B6BCB 0%, #F5A524 100%)',
         transformOrigin: '0%',
         scaleX,
-        zIndex: 9999,
+        // Debe quedar por debajo del Drawer móvil, pero por encima del contenido
+        zIndex: 1198,
+        pointerEvents: 'none',
       }}
     />
   );

@@ -45,7 +45,7 @@ const SEARCH_THEME = {
         overlay: 'rgba(0, 0, 0, 0.4)',
     },
     blur: {
-        strong: 'blur(20px)',
+        strong: 'blur(12px)',
         medium: 'blur(12px)',
     },
     shadows: {

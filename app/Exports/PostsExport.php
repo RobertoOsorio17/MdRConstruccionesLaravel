@@ -28,7 +28,7 @@ class PostsExport implements FromQuery, WithHeadings, WithMapping, WithStyles, S
      */
     public function query()
     {
-        $query = Post::with(['author', 'category']);
+        $query = Post::with(['user', 'categories'])->withCount('comments');
 
         // Apply search filter
         if (!empty($this->filters['search'])) {
@@ -46,12 +46,14 @@ class PostsExport implements FromQuery, WithHeadings, WithMapping, WithStyles, S
 
         // Apply category filter
         if (!empty($this->filters['category_id'])) {
-            $query->where('category_id', $this->filters['category_id']);
+            $query->whereHas('categories', function ($q) {
+                $q->where('categories.id', $this->filters['category_id']);
+            });
         }
 
         // Apply featured filter
         if (isset($this->filters['featured'])) {
-            $query->where('is_featured', $this->filters['featured']);
+            $query->where('featured', $this->filters['featured']);
         }
 
         return $query->orderBy('created_at', 'desc');
@@ -81,13 +83,15 @@ class PostsExport implements FromQuery, WithHeadings, WithMapping, WithStyles, S
      */
     public function map($post): array
     {
+        $categories = $post->categories->pluck('name')->join(', ') ?: 'Sin categoría';
+
         return [
             $post->id,
             $post->title,
-            $post->author ? $post->author->name : 'N/A',
-            $post->category ? $post->category->name : 'Sin categoría',
+            $post->user ? $post->user->name : 'N/A',
+            $categories,
             ucfirst($post->status),
-            $post->is_featured ? 'Sí' : 'No',
+            $post->featured ? 'Sí' : 'No',
             $post->views_count ?? 0,
             $post->comments_count ?? 0,
             $post->published_at ? $post->published_at->format('Y-m-d H:i:s') : 'No publicado',

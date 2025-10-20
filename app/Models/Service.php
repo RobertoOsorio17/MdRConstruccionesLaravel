@@ -48,6 +48,7 @@ class Service extends Model
         'price' => 'decimal:2',
         'metrics' => 'array',
         'benefits' => 'array',
+        'faq' => 'array',
         'process_steps' => 'array',
         'guarantees' => 'array',
         'certifications' => 'array',

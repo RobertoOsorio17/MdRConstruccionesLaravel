@@ -33,23 +33,19 @@ const CreateProject = () => {
         title: '',
         slug: '',
         summary: '',
-        description: '',
-        client: '',
+        body: '',
         location: '',
         budget_estimate: '',
         start_date: '',
         end_date: '',
-        status: 'planning',
+        status: 'draft',
         featured: false,
-        is_active: true,
     });
 
     const statusOptions = [
-        { value: 'planning', label: 'Planificación' },
-        { value: 'in_progress', label: 'En Progreso' },
+        { value: 'draft', label: 'Borrador' },
+        { value: 'published', label: 'Publicado' },
         { value: 'completed', label: 'Completado' },
-        { value: 'on_hold', label: 'En Espera' },
-        { value: 'cancelled', label: 'Cancelado' },
     ];
 
     const handleSubmit = (e) => {
@@ -200,10 +196,10 @@ const CreateProject = () => {
                                 <TextField
                                     fullWidth
                                     label="Descripción Completa"
-                                    value={data.description}
-                                    onChange={(e) => setData('description', e.target.value)}
-                                    error={!!errors.description}
-                                    helperText={errors.description}
+                                    value={data.body}
+                                    onChange={(e) => setData('body', e.target.value)}
+                                    error={!!errors.body}
+                                    helperText={errors.body}
                                     multiline
                                     rows={6}
                                 />

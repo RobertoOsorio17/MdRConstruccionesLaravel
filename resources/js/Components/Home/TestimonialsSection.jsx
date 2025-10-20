@@ -12,6 +12,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 const TestimonialsSection = ({ testimonials, prefersReducedMotion = false }) => {
   const theme = useTheme();
+  const isDark = theme.palette.mode === 'dark';
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [currentIndex, setCurrentIndex] = useState(0);
 
@@ -35,7 +36,9 @@ const TestimonialsSection = ({ testimonials, prefersReducedMotion = false }) => 
       component="section"
       sx={{
         py: { xs: 8, md: 12, xl: 16 },
-        background: 'linear-gradient(135deg, rgba(11, 107, 203, 0.02) 0%, rgba(245, 165, 36, 0.02) 100%)',
+        background: isDark
+          ? 'linear-gradient(135deg, rgba(59, 130, 246, 0.05) 0%, rgba(245, 165, 36, 0.05) 100%)'
+          : 'linear-gradient(135deg, rgba(11, 107, 203, 0.02) 0%, rgba(245, 165, 36, 0.02) 100%)',
         position: 'relative',
       }}
     >

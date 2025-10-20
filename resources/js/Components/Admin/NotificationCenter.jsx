@@ -16,6 +16,8 @@ import {
     Tabs,
     alpha,
     CircularProgress,
+    useTheme,
+    Skeleton,
 } from '@mui/material';
 import {
     Notifications as NotificationsIcon,
@@ -30,14 +32,19 @@ import {
     Error as ErrorIcon,
     CheckCircleOutline as SuccessIcon,
     Settings as SettingsIcon,
+    FileDownload as FileDownloadIcon,
+    Timeline as TimelineIcon,
 } from '@mui/icons-material';
 
 const NotificationCenter = () => {
+    const theme = useTheme();
     const [anchorEl, setAnchorEl] = useState(null);
     const [notifications, setNotifications] = useState([]);
     const [unreadCount, setUnreadCount] = useState(0);
     const [loading, setLoading] = useState(false);
+    const [initialLoading, setInitialLoading] = useState(true);
     const [filter, setFilter] = useState('all'); // all, unread, read
+    const [viewMode, setViewMode] = useState('list'); // list, timeline
     const [hasNewNotifications, setHasNewNotifications] = useState(false);
     const audioRef = useRef(null);
     const previousCountRef = useRef(0);
@@ -47,23 +54,23 @@ const NotificationCenter = () => {
     // Fetch notifications
     const fetchNotifications = async (showLoading = false) => {
         if (showLoading) setLoading(true);
-        
+
         try {
             const response = await fetch(route('admin.api.notifications.index', { limit: 20 }));
             const data = await response.json();
-            
+
             if (data.success) {
                 const newCount = data.unread_count;
-                
+
                 // Check if there are new notifications
                 if (newCount > previousCountRef.current && previousCountRef.current > 0) {
                     setHasNewNotifications(true);
                     playNotificationSound();
-                    
+
                     // Reset animation after 3 seconds
                     setTimeout(() => setHasNewNotifications(false), 3000);
                 }
-                
+
                 previousCountRef.current = newCount;
                 setNotifications(data.notifications);
                 setUnreadCount(newCount);
@@ -72,6 +79,7 @@ const NotificationCenter = () => {
             console.error('Error fetching notifications:', error);
         } finally {
             if (showLoading) setLoading(false);
+            setInitialLoading(false);
         }
     };
 
@@ -159,9 +167,9 @@ const NotificationCenter = () => {
                     'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
                 },
             });
-            
+
             setNotifications(prev => prev.filter(n => n.id !== notificationId));
-            
+
             // Update unread count if notification was unread
             const notification = notifications.find(n => n.id === notificationId);
             if (notification && !notification.read_at) {
@@ -170,6 +178,20 @@ const NotificationCenter = () => {
         } catch (error) {
             console.error('Error deleting notification:', error);
         }
+    };
+
+    const handleExport = () => {
+        // Export notifications as JSON
+        const dataStr = JSON.stringify(filteredNotifications, null, 2);
+        const dataBlob = new Blob([dataStr], { type: 'application/json' });
+        const url = URL.createObjectURL(dataBlob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `notifications-${new Date().toISOString().split('T')[0]}.json`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
     };
 
     const getNotificationIcon = (type) => {
@@ -204,13 +226,18 @@ const NotificationCenter = () => {
         return true;
     });
 
-    const glassmorphismStyles = {
-        background: 'rgba(255, 255, 255, 0.25)',
-        backdropFilter: 'blur(20px)',
-        WebkitBackdropFilter: 'blur(20px)',
-        border: '1px solid rgba(255, 255, 255, 0.18)',
-        boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.37)',
-        borderRadius: '16px',
+    // Neutral card styles instead of glassmorphism
+    const neutralCardStyles = {
+        background: theme.palette.mode === 'dark'
+            ? '#1e293b'
+            : '#ffffff',
+        border: theme.palette.mode === 'dark'
+            ? '1px solid rgba(255, 255, 255, 0.1)'
+            : '1px solid rgba(0, 0, 0, 0.1)',
+        boxShadow: theme.palette.mode === 'dark'
+            ? '0 4px 20px rgba(0, 0, 0, 0.5)'
+            : '0 4px 20px rgba(0, 0, 0, 0.1)',
+        borderRadius: '12px',
     };
 
     return (
@@ -263,7 +290,7 @@ const NotificationCenter = () => {
                 onClose={handleClose}
                 PaperProps={{
                     sx: {
-                        ...glassmorphismStyles,
+                        ...neutralCardStyles,
                         mt: 1.5,
                         width: 450,
                         maxHeight: 600,
@@ -274,20 +301,74 @@ const NotificationCenter = () => {
                 anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
             >
                 {/* Header */}
-                <Box sx={{ px: 2, py: 1.5, borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+                <Box sx={{
+                    px: 2,
+                    py: 1.5,
+                    borderBottom: theme.palette.mode === 'dark'
+                        ? '1px solid rgba(255, 255, 255, 0.1)'
+                        : '1px solid rgba(0, 0, 0, 0.1)'
+                }}>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                        <Typography variant="h6" fontWeight={700} sx={{ color: '#2D3748' }}>
+                        <Typography
+                            variant="h6"
+                            fontWeight={700}
+                            sx={{
+                                color: theme.palette.mode === 'dark' ? 'white' : '#2D3748'
+                            }}
+                        >
                             Notificaciones
                         </Typography>
-                        <Box sx={{ display: 'flex', gap: 1 }}>
+                        <Box sx={{ display: 'flex', gap: 0.5 }}>
+                            <Tooltip title={viewMode === 'list' ? 'Vista Timeline' : 'Vista Lista'}>
+                                <IconButton
+                                    size="small"
+                                    onClick={() => setViewMode(viewMode === 'list' ? 'timeline' : 'list')}
+                                    sx={{
+                                        color: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.6)'
+                                    }}
+                                >
+                                    <TimelineIcon sx={{ fontSize: 20 }} />
+                                </IconButton>
+                            </Tooltip>
+                            <Tooltip title="Exportar">
+                                <IconButton
+                                    size="small"
+                                    onClick={handleExport}
+                                    sx={{
+                                        color: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.6)'
+                                    }}
+                                >
+                                    <FileDownloadIcon sx={{ fontSize: 20 }} />
+                                </IconButton>
+                            </Tooltip>
                             <Tooltip title="Actualizar">
-                                <IconButton size="small" onClick={() => fetchNotifications(true)} disabled={loading}>
-                                    <RefreshIcon sx={{ fontSize: 20, animation: loading ? 'spin 1s linear infinite' : 'none' }} />
+                                <IconButton
+                                    size="small"
+                                    onClick={() => fetchNotifications(true)}
+                                    disabled={loading}
+                                    sx={{
+                                        color: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.6)'
+                                    }}
+                                >
+                                    <RefreshIcon sx={{
+                                        fontSize: 20,
+                                        animation: loading ? 'spin 1s linear infinite' : 'none',
+                                        '@keyframes spin': {
+                                            '0%': { transform: 'rotate(0deg)' },
+                                            '100%': { transform: 'rotate(360deg)' }
+                                        }
+                                    }} />
                                 </IconButton>
                             </Tooltip>
                             {unreadCount > 0 && (
                                 <Tooltip title="Marcar todas como leídas">
-                                    <IconButton size="small" onClick={handleMarkAllAsRead}>
+                                    <IconButton
+                                        size="small"
+                                        onClick={handleMarkAllAsRead}
+                                        sx={{
+                                            color: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.6)'
+                                        }}
+                                    >
                                         <DoneAllIcon sx={{ fontSize: 20 }} />
                                     </IconButton>
                                 </Tooltip>
@@ -308,6 +389,10 @@ const NotificationCenter = () => {
                                 fontSize: '0.875rem',
                                 textTransform: 'none',
                                 fontWeight: 500,
+                                color: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.6)',
+                                '&.Mui-selected': {
+                                    color: theme.palette.mode === 'dark' ? 'white' : 'primary.main'
+                                }
                             },
                         }}
                     >
@@ -319,7 +404,26 @@ const NotificationCenter = () => {
 
                 {/* Notifications List */}
                 <Box sx={{ maxHeight: 450, overflowY: 'auto' }}>
-                    {loading ? (
+                    {initialLoading ? (
+                        // Skeleton loaders for initial load
+                        <Box sx={{ px: 2, py: 1 }}>
+                            {[1, 2, 3, 4, 5].map((item) => (
+                                <Box key={item} sx={{ mb: 2 }}>
+                                    <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'flex-start' }}>
+                                        <Skeleton variant="circular" width={24} height={24} />
+                                        <Box sx={{ flex: 1 }}>
+                                            <Skeleton variant="text" width="80%" height={20} />
+                                            <Skeleton variant="text" width="60%" height={16} sx={{ mt: 0.5 }} />
+                                            <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
+                                                <Skeleton variant="rectangular" width={60} height={20} sx={{ borderRadius: 1 }} />
+                                                <Skeleton variant="text" width={80} height={16} />
+                                            </Box>
+                                        </Box>
+                                    </Box>
+                                </Box>
+                            ))}
+                        </Box>
+                    ) : loading ? (
                         <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
                             <CircularProgress size={32} />
                         </Box>
@@ -338,27 +442,53 @@ const NotificationCenter = () => {
                                         sx={{
                                             py: 1.5,
                                             px: 2,
-                                            borderBottom: '1px solid rgba(255,255,255,0.05)',
-                                            backgroundColor: notification.read_at ? 'transparent' : 'rgba(102, 126, 234, 0.05)',
+                                            borderBottom: theme.palette.mode === 'dark'
+                                                ? '1px solid rgba(255,255,255,0.05)'
+                                                : '1px solid rgba(0,0,0,0.05)',
+                                            backgroundColor: notification.read_at
+                                                ? 'transparent'
+                                                : theme.palette.mode === 'dark'
+                                                    ? 'rgba(102, 126, 234, 0.1)'
+                                                    : 'rgba(102, 126, 234, 0.05)',
                                             borderLeft: `4px solid ${getPriorityColor(notification.priority)}`,
                                             '&:hover': {
-                                                backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                                                backgroundColor: theme.palette.mode === 'dark'
+                                                    ? 'rgba(102, 126, 234, 0.15)'
+                                                    : 'rgba(102, 126, 234, 0.1)',
                                             },
                                         }}
                                     >
                                         <Box sx={{ display: 'flex', gap: 1.5, width: '100%', alignItems: 'flex-start' }}>
-                                            {/* Icon */}
-                                            <Box sx={{ mt: 0.5 }}>
+                                            {/* Icon with pulse animation for unread */}
+                                            <Box
+                                                sx={{
+                                                    mt: 0.5,
+                                                    animation: !notification.read_at ? 'iconPulse 2s ease-in-out infinite' : 'none',
+                                                    '@keyframes iconPulse': {
+                                                        '0%, 100%': {
+                                                            transform: 'scale(1)',
+                                                            opacity: 1
+                                                        },
+                                                        '50%': {
+                                                            transform: 'scale(1.1)',
+                                                            opacity: 0.8
+                                                        }
+                                                    }
+                                                }}
+                                            >
                                                 {getNotificationIcon(notification.type)}
                                             </Box>
 
                                             {/* Content */}
                                             <Box sx={{ flex: 1, minWidth: 0 }}>
                                                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 0.5 }}>
-                                                    <Typography 
-                                                        variant="body2" 
+                                                    <Typography
+                                                        variant="body2"
                                                         fontWeight={notification.read_at ? 400 : 600}
-                                                        sx={{ color: '#2D3748', pr: 1 }}
+                                                        sx={{
+                                                            color: theme.palette.mode === 'dark' ? 'white' : '#2D3748',
+                                                            pr: 1
+                                                        }}
                                                     >
                                                         {notification.title}
                                                     </Typography>
@@ -370,6 +500,19 @@ const NotificationCenter = () => {
                                                                 borderRadius: '50%',
                                                                 backgroundColor: '#667eea',
                                                                 flexShrink: 0,
+                                                                animation: 'dotPulse 2s ease-in-out infinite',
+                                                                '@keyframes dotPulse': {
+                                                                    '0%, 100%': {
+                                                                        transform: 'scale(1)',
+                                                                        opacity: 1,
+                                                                        boxShadow: '0 0 0 0 rgba(102, 126, 234, 0.7)'
+                                                                    },
+                                                                    '50%': {
+                                                                        transform: 'scale(1.2)',
+                                                                        opacity: 0.8,
+                                                                        boxShadow: '0 0 0 4px rgba(102, 126, 234, 0)'
+                                                                    }
+                                                                }
                                                             }}
                                                         />
                                                     )}

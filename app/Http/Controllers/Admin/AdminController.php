@@ -59,12 +59,12 @@ class AdminController extends Controller
                 'services' => [
                     'total' => Service::count(),
                     'active' => Service::where('is_active', true)->count(),
-                    'featured' => Service::where('is_featured', true)->count(),
+                    'featured' => Service::where('featured', true)->count(),
                 ],
                 'projects' => [
                     'total' => Project::count(),
                     'completed' => Project::where('status', 'completed')->count(),
-                    'in_progress' => Project::where('status', 'in_progress')->count(),
+                    'published' => Project::where('status', 'published')->count(),
                 ],
                 'system' => [
                     'audit_logs' => AdminAuditLog::count(),

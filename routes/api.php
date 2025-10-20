@@ -55,7 +55,7 @@ Route::prefix('search')->group(function () {
     Route::get('/popular', [SearchController::class, 'popular'])->name('api.search.popular');
 
     // Search analytics (protected - admin only)
-    Route::middleware(['auth', 'auth.enhanced', 'role:admin,editor'])
+    Route::middleware(['auth:sanctum', 'auth.enhanced', 'role:admin,editor'])
         ->get('/analytics', [SearchController::class, 'analytics'])
         ->name('api.search.analytics');
 });

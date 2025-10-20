@@ -90,6 +90,7 @@ const BeforeAfterSlider = ({ beforeImage, afterImage, title = "Transformación" 
                     <img
                         src={beforeImage || '/images/before-default.jpg'}
                         alt="Antes"
+                        loading="lazy"
                         style={{
                             width: '100%',
                             height: '100%',
@@ -125,6 +126,7 @@ const BeforeAfterSlider = ({ beforeImage, afterImage, title = "Transformación" 
                     <img
                         src={afterImage || '/images/after-default.jpg'}
                         alt="Después"
+                        loading="lazy"
                         style={{
                             width: '100%',
                             height: '100%',

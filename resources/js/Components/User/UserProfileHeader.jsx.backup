@@ -1,0 +1,367 @@
+/**
+ * UserProfileHeader - Header de perfil de usuario rediseñado
+ * 
+ * @created Octubre 2025 - Sistema unificado
+ */
+
+import React from 'react';
+import PropTypes from 'prop-types';
+import {
+    Box,
+    Avatar,
+    Typography,
+    Button,
+    Chip,
+    Stack,
+    IconButton,
+    CircularProgress,
+    alpha,
+    useTheme,
+    useMediaQuery
+} from '@mui/material';
+import {
+    LocationOn as LocationIcon,
+    Language as WebsiteIcon,
+    Email as EmailIcon,
+    PersonAdd as FollowIcon,
+    PersonRemove as UnfollowIcon,
+    Edit as EditIcon,
+    MoreVert as MoreIcon
+} from '@mui/icons-material';
+import { motion } from 'framer-motion';
+import { Link } from '@inertiajs/react';
+import VerificationBadge from './VerificationBadge';
+import designSystem from '@/theme/designSystem';
+
+export default function UserProfileHeader({
+    user,
+    isOwnProfile,
+    isFollowing,
+    followersCount,
+    onFollowToggle,
+    followLoading = false
+}) {
+    const theme = useTheme();
+    const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+
+    return (
+        <Box
+            component={motion.div}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            sx={{
+                position: 'relative',
+                borderRadius: designSystem.borders.radius.xl,
+                overflow: 'hidden',
+                background: designSystem.gradients.surface,
+                boxShadow: designSystem.shadows.lg,
+            }}
+        >
+            {/* Cover Image / Gradient Background */}
+            <Box
+                sx={{
+                    height: { xs: 120, md: 180 },
+                    background: designSystem.gradients.hero,
+                    position: 'relative',
+                    '&::after': {
+                        content: '""',
+                        position: 'absolute',
+                        bottom: 0,
+                        left: 0,
+                        right: 0,
+                        height: '50%',
+                        background: 'linear-gradient(to top, rgba(0,0,0,0.3), transparent)'
+                    }
+                }}
+            />
+
+            {/* Main Content */}
+            <Box sx={{ px: { xs: 3, md: 4 }, pb: 4, position: 'relative' }}>
+                {/* Avatar */}
+                <Box
+                    sx={{
+                        position: 'relative',
+                        mt: { xs: -8, md: -12 },
+                        mb: 2,
+                        display: 'flex',
+                        alignItems: 'flex-end',
+                        justifyContent: 'space-between'
+                    }}
+                >
+                    <Box sx={{ position: 'relative' }}>
+                        <Avatar
+                            src={user.avatar}
+                            component={motion.div}
+                            whileHover={{ scale: 1.05 }}
+                            sx={{
+                                width: { xs: 100, md: 140 },
+                                height: { xs: 100, md: 140 },
+                                border: `4px solid ${theme.palette.background.paper}`,
+                                boxShadow: designSystem.shadows.xl,
+                                fontSize: { xs: '2.5rem', md: '3.5rem' },
+                                fontWeight: 700,
+                                backgroundColor: designSystem.colors.primary[500],
+                                color: 'white'
+                            }}
+                        >
+                            {user.name?.charAt(0).toUpperCase()}
+                        </Avatar>
+
+                        {/* Verification Badge on Avatar */}
+                        {user.is_verified && (
+                            <Box
+                                sx={{
+                                    position: 'absolute',
+                                    bottom: 0,
+                                    right: 0,
+                                    transform: 'translate(10%, 10%)'
+                                }}
+                            >
+                                <VerificationBadge user={user} size="medium" />
+                            </Box>
+                        )}
+                    </Box>
+
+                    {/* Action Buttons - Desktop */}
+                    {!isMobile && (
+                        <Stack direction="row" spacing={1.5} sx={{ alignSelf: 'flex-start', mt: 2 }}>
+                            {isOwnProfile ? (
+                                <>
+                                    <Button
+                                        component={Link}
+                                        href="/profile/edit"
+                                        variant="contained"
+                                        startIcon={<EditIcon />}
+                                        size="large"
+                                        sx={{
+                                            boxShadow: designSystem.shadows.md,
+                                            '&:hover': {
+                                                boxShadow: designSystem.shadows.lg,
+                                                transform: 'translateY(-2px)'
+                                            }
+                                        }}
+                                    >
+                                        Editar Perfil
+                                    </Button>
+                                    <IconButton
+                                        size="large"
+                                        sx={{
+                                            bgcolor: alpha(theme.palette.primary.main, 0.1),
+                                            '&:hover': {
+                                                bgcolor: alpha(theme.palette.primary.main, 0.2)
+                                            }
+                                        }}
+                                    >
+                                        <MoreIcon />
+                                    </IconButton>
+                                </>
+                            ) : (
+                                <Button
+                                    variant={isFollowing ? 'outlined' : 'contained'}
+                                    startIcon={followLoading ? (
+                                        <CircularProgress size={16} color="inherit" />
+                                    ) : (
+                                        isFollowing ? <UnfollowIcon /> : <FollowIcon />
+                                    )}
+                                    onClick={onFollowToggle}
+                                    disabled={followLoading}
+                                    size="large"
+                                    sx={{
+                                        minWidth: 140,
+                                        boxShadow: !isFollowing ? designSystem.shadows.md : 'none',
+                                        '&:hover': {
+                                            boxShadow: designSystem.shadows.lg,
+                                            transform: 'translateY(-2px)'
+                                        }
+                                    }}
+                                >
+                                    {followLoading ? 'Procesando...' : (isFollowing ? 'Siguiendo' : 'Seguir')}
+                                </Button>
+                            )}
+                        </Stack>
+                    )}
+                </Box>
+
+                {/* User Info */}
+                <Box>
+                    {/* Name & Verification */}
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 0.5, flexWrap: 'wrap' }}>
+                        <Typography
+                            variant="h3"
+                            component="h1"
+                            sx={{
+                                fontWeight: 800,
+                                color: theme.palette.text.primary,
+                                fontSize: { xs: '1.75rem', md: '2.25rem' }
+                            }}
+                        >
+                            {user.name}
+                        </Typography>
+                    </Box>
+
+                    {/* Profession */}
+                    {user.profession && (
+                        <Typography
+                            variant="h6"
+                            sx={{
+                                color: theme.palette.text.secondary,
+                                fontWeight: 500,
+                                mb: 1.5,
+                                fontSize: { xs: '1rem', md: '1.125rem' }
+                            }}
+                        >
+                            {user.profession}
+                        </Typography>
+                    )}
+
+                    {/* Bio */}
+                    {user.bio && (
+                        <Typography
+                            variant="body1"
+                            sx={{
+                                color: theme.palette.text.secondary,
+                                mb: 2.5,
+                                maxWidth: 600,
+                                lineHeight: 1.6
+                            }}
+                        >
+                            {user.bio}
+                        </Typography>
+                    )}
+
+                    {/* Meta Info */}
+                    <Stack
+                        direction="row"
+                        spacing={2}
+                        flexWrap="wrap"
+                        sx={{ mb: 2.5 }}
+                    >
+                        {user.location && (
+                            <Chip
+                                icon={<LocationIcon />}
+                                label={user.location}
+                                variant="outlined"
+                                size="medium"
+                                sx={{
+                                    borderColor: alpha(theme.palette.primary.main, 0.3),
+                                    '&:hover': {
+                                        borderColor: theme.palette.primary.main,
+                                        backgroundColor: alpha(theme.palette.primary.main, 0.05)
+                                    }
+                                }}
+                            />
+                        )}
+                        {user.website && (
+                            <Chip
+                                icon={<WebsiteIcon />}
+                                label="Sitio web"
+                                variant="outlined"
+                                size="medium"
+                                component="a"
+                                href={user.website}
+                                target="_blank"
+                                clickable
+                                sx={{
+                                    borderColor: alpha(theme.palette.primary.main, 0.3),
+                                    '&:hover': {
+                                        borderColor: theme.palette.primary.main,
+                                        backgroundColor: alpha(theme.palette.primary.main, 0.05)
+                                    }
+                                }}
+                            />
+                        )}
+                        <Chip
+                            icon={<EmailIcon />}
+                            label="Contactar"
+                            variant="outlined"
+                            size="medium"
+                            clickable
+                            sx={{
+                                borderColor: alpha(theme.palette.primary.main, 0.3),
+                                '&:hover': {
+                                    borderColor: theme.palette.primary.main,
+                                    backgroundColor: alpha(theme.palette.primary.main, 0.05)
+                                }
+                            }}
+                        />
+                    </Stack>
+
+                    {/* Stats */}
+                    <Stack direction="row" spacing={3}>
+                        {!isOwnProfile && (
+                            <Box>
+                                <Typography
+                                    variant="h5"
+                                    component="span"
+                                    sx={{ fontWeight: 700, color: theme.palette.primary.main }}
+                                >
+                                    {followersCount}
+                                </Typography>
+                                <Typography
+                                    variant="body2"
+                                    component="span"
+                                    sx={{ ml: 0.5, color: theme.palette.text.secondary }}
+                                >
+                                    seguidores
+                                </Typography>
+                            </Box>
+                        )}
+                    </Stack>
+                </Box>
+
+                {/* Action Buttons - Mobile */}
+                {isMobile && (
+                    <Box sx={{ mt: 3 }}>
+                        {isOwnProfile ? (
+                            <Button
+                                component={Link}
+                                href="/profile/edit"
+                                variant="contained"
+                                startIcon={<EditIcon />}
+                                fullWidth
+                                size="large"
+                            >
+                                Editar Perfil
+                            </Button>
+                        ) : (
+                            <Button
+                                variant={isFollowing ? 'outlined' : 'contained'}
+                                startIcon={followLoading ? (
+                                    <CircularProgress size={16} color="inherit" />
+                                ) : (
+                                    isFollowing ? <UnfollowIcon /> : <FollowIcon />
+                                )}
+                                onClick={onFollowToggle}
+                                disabled={followLoading}
+                                fullWidth
+                                size="large"
+                            >
+                                {followLoading ? 'Procesando...' : (isFollowing ? 'Siguiendo' : 'Seguir')}
+                            </Button>
+                        )}
+                    </Box>
+                )}
+            </Box>
+        </Box>
+    );
+}
+
+UserProfileHeader.propTypes = {
+    user: PropTypes.shape({
+        id: PropTypes.number.isRequired,
+        name: PropTypes.string.isRequired,
+        avatar: PropTypes.string,
+        profession: PropTypes.string,
+        bio: PropTypes.string,
+        location: PropTypes.string,
+        website: PropTypes.string,
+        is_verified: PropTypes.bool,
+        verified_at: PropTypes.string,
+    }).isRequired,
+    isOwnProfile: PropTypes.bool,
+    isFollowing: PropTypes.bool,
+    followersCount: PropTypes.number,
+    onFollowToggle: PropTypes.func,
+    followLoading: PropTypes.bool,
+};

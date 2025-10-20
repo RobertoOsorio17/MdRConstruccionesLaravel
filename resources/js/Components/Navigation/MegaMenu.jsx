@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef } from 'react';
 import {
     Box,
     Paper,
@@ -7,7 +7,8 @@ import {
     alpha,
     Fade,
     Popper,
-    ClickAwayListener
+    ClickAwayListener,
+    ButtonBase
 } from '@mui/material';
 import {
     Build as BuildIcon,
@@ -157,7 +158,30 @@ const services = [
     }
 ];
 
-export default function MegaMenu({ anchorEl, open, onClose, onNavigate }) {
+export default function MegaMenu({ anchorEl, open, onClose, onNavigate, id = 'services-megamenu' }) {
+    const closeTimeoutRef = useRef(null);
+
+    const handleMouseEnter = () => {
+        if (closeTimeoutRef.current) {
+            clearTimeout(closeTimeoutRef.current);
+            closeTimeoutRef.current = null;
+        }
+    };
+
+    const handleMouseLeave = () => {
+        // Small delay to avoid accidental closes when moving the cursor
+        closeTimeoutRef.current = setTimeout(() => {
+            onClose();
+        }, 120);
+    };
+
+    const handleKeyDown = (e) => {
+        if (e.key === 'Escape') {
+            e.stopPropagation();
+            onClose();
+        }
+    };
+
     return (
         <Popper
             open={open}
@@ -185,6 +209,8 @@ export default function MegaMenu({ anchorEl, open, onClose, onNavigate }) {
             {({ TransitionProps }) => (
                 <Fade {...TransitionProps} timeout={300}>
                     <Paper
+                        id={id}
+                        role="menu"
                         elevation={0}
                         sx={{
                             mt: 1,
@@ -214,7 +240,7 @@ export default function MegaMenu({ anchorEl, open, onClose, onNavigate }) {
                         }}
                     >
                         <ClickAwayListener onClickAway={onClose}>
-                            <Box sx={{ p: 3 }}>
+                            <Box sx={{ p: 3 }} onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave} onKeyDown={handleKeyDown}>
                                 {/* Servicios Destacados */}
                                 <Box sx={{ mb: 3 }}>
                                     <Typography
@@ -256,10 +282,13 @@ export default function MegaMenu({ anchorEl, open, onClose, onNavigate }) {
                                                 whileTap={{ scale: 0.98 }}
                                             >
                                                 <Box
+                                                    component={ButtonBase}
                                                     onClick={() => {
                                                         onClose();
                                                         onNavigate(service.href);
                                                     }}
+                                                    role="menuitem"
+                                                    aria-label={service.title}
                                                     sx={{
                                                         p: 2.5,
                                                         borderRadius: 3,
@@ -273,6 +302,8 @@ export default function MegaMenu({ anchorEl, open, onClose, onNavigate }) {
                                                         transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                                                         position: 'relative',
                                                         overflow: 'hidden',
+                                                        textAlign: 'left',
+                                                        width: '100%',
                                                         '&::before': {
                                                             content: '""',
                                                             position: 'absolute',
@@ -367,6 +398,7 @@ export default function MegaMenu({ anchorEl, open, onClose, onNavigate }) {
                                         {services.filter(s => !s.featured).map((service, index) => (
                                             <Grid item xs={6} sm={4} md={3} key={service.id}>
                                                 <Box
+                                                    component={ButtonBase}
                                                     onClick={() => {
                                                         onClose();
                                                         onNavigate(service.href);
@@ -385,6 +417,8 @@ export default function MegaMenu({ anchorEl, open, onClose, onNavigate }) {
                                                             ? '1px solid rgba(255, 255, 255, 0.03)'
                                                             : '1px solid rgba(0, 0, 0, 0.03)',
                                                         transition: 'all 0.2s ease',
+                                                        textAlign: 'left',
+                                                        width: '100%',
                                                         '&:hover': {
                                                             background: (theme) => theme.palette.mode === 'dark'
                                                                 ? 'rgba(255, 255, 255, 0.05)'
@@ -396,6 +430,8 @@ export default function MegaMenu({ anchorEl, open, onClose, onNavigate }) {
                                                             }
                                                         }
                                                     }}
+                                                    role="menuitem"
+                                                    aria-label={service.title}
                                                 >
                                                     <Box
                                                         className="service-icon-small"
@@ -463,6 +499,8 @@ export default function MegaMenu({ anchorEl, open, onClose, onNavigate }) {
                                             onClose();
                                             onNavigate('/servicios');
                                         }}
+                                        role="menuitem"
+                                        aria-label="Ver todos los servicios"
                                     >
                                         Ver todos los servicios
                                         <Box component="span" sx={{ fontSize: '1.2em' }}>→</Box>

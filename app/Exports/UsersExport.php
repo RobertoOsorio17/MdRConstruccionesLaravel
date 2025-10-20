@@ -48,9 +48,9 @@ class UsersExport implements FromQuery, WithHeadings, WithMapping, WithStyles, S
         // Apply status filter
         if (isset($this->filters['status'])) {
             if ($this->filters['status'] === 'active') {
-                $query->where('is_active', true);
+                $query->where('status', 'active');
             } elseif ($this->filters['status'] === 'inactive') {
-                $query->where('is_active', false);
+                $query->whereIn('status', ['suspended', 'banned']);
             } elseif ($this->filters['status'] === 'verified') {
                 $query->whereNotNull('email_verified_at');
             } elseif ($this->filters['status'] === 'unverified') {
@@ -89,7 +89,7 @@ class UsersExport implements FromQuery, WithHeadings, WithMapping, WithStyles, S
             $user->name,
             $user->email,
             ucfirst($user->role),
-            $user->is_active ? 'Activo' : 'Inactivo',
+            ucfirst($user->status),
             $user->email_verified_at ? 'Sí' : 'No',
             $user->two_factor_secret ? 'Sí' : 'No',
             $user->last_login_at ? $user->last_login_at->format('Y-m-d H:i:s') : 'Nunca',

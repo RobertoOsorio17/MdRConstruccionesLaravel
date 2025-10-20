@@ -433,13 +433,14 @@ class AdvancedMetricsService
     public function calculateCategoryEntropy(string $sessionId = null): float
     {
         $query = MLInteractionLog::join('posts', 'ml_interaction_logs.post_id', '=', 'posts.id')
-            ->select('posts.category_id', DB::raw('COUNT(*) as count'));
+            ->join('category_post', 'posts.id', '=', 'category_post.post_id')
+            ->select('category_post.category_id', DB::raw('COUNT(DISTINCT ml_interaction_logs.id) as count'));
 
         if ($sessionId) {
             $query->where('ml_interaction_logs.session_id', $sessionId);
         }
 
-        $distribution = $query->groupBy('posts.category_id')
+        $distribution = $query->groupBy('category_post.category_id')
             ->pluck('count', 'category_id')
             ->toArray();
 

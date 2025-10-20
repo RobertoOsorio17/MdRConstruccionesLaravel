@@ -1,7 +1,7 @@
-import React, { useRef } from 'react';
-import { Box, Container, Typography, Avatar, Rating, Stack, IconButton, useTheme, useMediaQuery } from '@mui/material';
+import React, { useRef, useState, useEffect } from 'react';
+import { Box, Container, Typography, Avatar, Rating, Stack, IconButton, useTheme, useMediaQuery, Tooltip } from '@mui/material';
 import { motion } from 'framer-motion';
-import { ChevronLeft, ChevronRight, FormatQuote } from '@mui/icons-material';
+import { ChevronLeft, ChevronRight, FormatQuote, Pause, PlayArrow } from '@mui/icons-material';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Navigation, Pagination, Autoplay } from 'swiper/modules';
 import 'swiper/css';
@@ -31,8 +31,8 @@ import GlassCard from '../Shared/GlassCard';
  * @param {number} autoplayDelay - Delay del autoplay en ms (default: 5000)
  * @param {string} service - Slug del servicio para tracking
  */
-const TestimonialsCarousel = ({ 
-    testimonials = [], 
+const TestimonialsCarousel = ({
+    testimonials = [],
     autoplay = true,
     autoplayDelay = 5000,
     service = ''
@@ -40,11 +40,23 @@ const TestimonialsCarousel = ({
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
     const swiperRef = useRef(null);
+    const [isPlaying, setIsPlaying] = useState(autoplay);
+
+    // Detectar preferencia de movimiento reducido
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     const { ref, isVisible } = useIntersectionReveal({
         threshold: 0.2,
         onIntersect: () => trackSectionView('testimonials', service)
     });
+
+    // Pausar autoplay si el usuario prefiere movimiento reducido
+    useEffect(() => {
+        if (prefersReducedMotion && swiperRef.current?.swiper?.autoplay) {
+            swiperRef.current.swiper.autoplay.stop();
+            setIsPlaying(false);
+        }
+    }, [prefersReducedMotion]);
 
     // Handlers
     const handleSlideChange = (swiper) => {
@@ -52,6 +64,22 @@ const TestimonialsCarousel = ({
         if (currentTestimonial) {
             trackTestimonialView(currentTestimonial.id, service);
         }
+    };
+
+    const toggleAutoplay = () => {
+        if (swiperRef.current?.swiper?.autoplay) {
+            if (isPlaying) {
+                swiperRef.current.swiper.autoplay.stop();
+            } else {
+                swiperRef.current.swiper.autoplay.start();
+            }
+            setIsPlaying(!isPlaying);
+        }
+    };
+
+    // Helper para describir rating
+    const getRatingLabel = (value) => {
+        return `${value} ${value === 1 ? 'estrella' : 'estrellas'} de 5`;
     };
 
     if (!testimonials || testimonials.length === 0) {
@@ -102,6 +130,36 @@ const TestimonialsCarousel = ({
 
                 {/* Carousel */}
                 <Box sx={{ position: 'relative' }}>
+                    {/* Play/Pause Button */}
+                    {autoplay && !prefersReducedMotion && (
+                        <Tooltip title={isPlaying ? 'Pausar testimonios' : 'Reanudar testimonios'}>
+                            <IconButton
+                                onClick={toggleAutoplay}
+                                aria-label={isPlaying ? 'Pausar carrusel de testimonios' : 'Reanudar carrusel de testimonios'}
+                                sx={{
+                                    position: 'absolute',
+                                    top: -60,
+                                    right: 0,
+                                    zIndex: 20,
+                                    background: designSystem.colors.primary[500],
+                                    color: designSystem.colors.text.inverse,
+                                    boxShadow: designSystem.shadows.colored.primary,
+                                    '&:hover': {
+                                        background: designSystem.colors.primary[600],
+                                        transform: 'scale(1.1)'
+                                    },
+                                    '&:focus-visible': {
+                                        outline: `2px solid ${designSystem.colors.primary[600]}`,
+                                        outlineOffset: '2px'
+                                    },
+                                    transition: designSystem.transitions.allFast
+                                }}
+                            >
+                                {isPlaying ? <Pause /> : <PlayArrow />}
+                            </IconButton>
+                        </Tooltip>
+                    )}
+
                     <Swiper
                         ref={swiperRef}
                         modules={[Navigation, Pagination, Autoplay]}
@@ -121,7 +179,7 @@ const TestimonialsCarousel = ({
                             clickable: true,
                             dynamicBullets: true
                         }}
-                        autoplay={autoplay ? {
+                        autoplay={!prefersReducedMotion && autoplay ? {
                             delay: autoplayDelay,
                             disableOnInteraction: false,
                             pauseOnMouseEnter: true
@@ -152,6 +210,7 @@ const TestimonialsCarousel = ({
                                     >
                                         {/* Quote Icon */}
                                         <FormatQuote
+                                            aria-hidden="true"
                                             sx={{
                                                 position: 'absolute',
                                                 top: designSystem.spacing[2],
@@ -168,6 +227,7 @@ const TestimonialsCarousel = ({
                                             value={testimonial.rating || 5}
                                             readOnly
                                             precision={0.5}
+                                            getLabelText={getRatingLabel}
                                             sx={{
                                                 mb: designSystem.spacing[2],
                                                 '& .MuiRating-iconFilled': {
@@ -261,6 +321,7 @@ const TestimonialsCarousel = ({
                         <>
                             <IconButton
                                 onClick={() => swiperRef.current?.swiper?.slidePrev()}
+                                aria-label="Ver testimonio anterior"
                                 sx={{
                                     position: 'absolute',
                                     left: -60,
@@ -274,6 +335,10 @@ const TestimonialsCarousel = ({
                                         background: designSystem.colors.primary[600],
                                         transform: 'translateY(-50%) scale(1.1)'
                                     },
+                                    '&:focus-visible': {
+                                        outline: `2px solid ${designSystem.colors.primary[600]}`,
+                                        outlineOffset: '2px'
+                                    },
                                     transition: designSystem.transitions.allFast
                                 }}
                             >
@@ -281,6 +346,7 @@ const TestimonialsCarousel = ({
                             </IconButton>
                             <IconButton
                                 onClick={() => swiperRef.current?.swiper?.slideNext()}
+                                aria-label="Ver siguiente testimonio"
                                 sx={{
                                     position: 'absolute',
                                     right: -60,
@@ -293,6 +359,10 @@ const TestimonialsCarousel = ({
                                     '&:hover': {
                                         background: designSystem.colors.primary[600],
                                         transform: 'translateY(-50%) scale(1.1)'
+                                    },
+                                    '&:focus-visible': {
+                                        outline: `2px solid ${designSystem.colors.primary[600]}`,
+                                        outlineOffset: '2px'
                                     },
                                     transition: designSystem.transitions.allFast
                                 }}

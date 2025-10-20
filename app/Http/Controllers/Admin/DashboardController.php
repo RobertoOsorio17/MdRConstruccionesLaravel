@@ -230,7 +230,7 @@ class DashboardController extends Controller
                     'title' => $service->title,
                     'views' => $service->views_count,
                     'favorites' => $service->favorites_count,
-                    'is_featured' => $service->is_featured,
+                    'featured' => $service->featured,
                     'created_at' => $service->created_at->format('d/m/Y'),
                 ];
             });

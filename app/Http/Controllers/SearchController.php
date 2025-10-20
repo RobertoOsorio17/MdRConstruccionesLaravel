@@ -123,11 +123,13 @@ class SearchController extends Controller
                   ->orWhere('seo_title', 'LIKE', "%{$query}%")
                   ->orWhere('seo_description', 'LIKE', "%{$query}%");
             })
-            ->with(['author:id,name', 'categories:id,name,slug']);
+            ->with(['user:id,name', 'categories:id,name,slug']);
 
         // Filter by category
         if ($categoryId) {
-            $postsQuery->where('category_id', $categoryId);
+            $postsQuery->whereHas('categories', function ($q) use ($categoryId) {
+                $q->where('categories.id', $categoryId);
+            });
         }
 
         // Apply sorting
@@ -156,7 +158,7 @@ class SearchController extends Controller
                 'slug' => $post->slug,
                 'excerpt' => $post->excerpt,
                 'cover_image' => $post->cover_image,
-                'category' => $post->category,
+                'categories' => $post->categories,
                 'author' => $post->user->name ?? 'Unknown',
                 'published_at' => $post->published_at?->format('d/m/Y'),
                 'views_count' => $post->views_count,

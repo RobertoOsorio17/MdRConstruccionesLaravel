@@ -72,7 +72,7 @@ const ProjectShow = ({ project, relatedProjects }) => {
         if (navigator.share) {
             navigator.share({
                 title: project.title,
-                text: project.description,
+                text: project.summary || project.title,
                 url: window.location.href,
             });
         }

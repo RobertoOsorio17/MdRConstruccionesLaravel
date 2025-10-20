@@ -258,22 +258,26 @@ function ContactFormContent({ contactInfo, services, seo, flash }) {
 
     // Premium Glassmorphism style - Simplified and Uniform
     const glassStyle = {
-        background: alpha('#ffffff', 0.75),
+        background: theme.palette.mode === 'dark'
+            ? 'linear-gradient(145deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.04) 100%)'
+            : alpha('#ffffff', 0.75),
         backdropFilter: 'blur(30px)',
         borderRadius: '16px',
-        border: `1px solid ${alpha('#ffffff', 0.3)}`,
-        boxShadow: `
-            0 8px 32px 0 ${alpha('#000000', 0.1)},
-            inset 0 1px 0 0 ${alpha('#ffffff', 0.8)}
-        `,
+        border: theme.palette.mode === 'dark'
+            ? '1px solid rgba(255,255,255,0.12)'
+            : `1px solid ${alpha('#ffffff', 0.3)}`,
+        boxShadow: theme.palette.mode === 'dark'
+            ? '0 12px 40px rgba(0,0,0,0.45)'
+            : `0 8px 32px 0 ${alpha('#000000', 0.1)}, inset 0 1px 0 0 ${alpha('#ffffff', 0.8)}`,
         transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
         '&:hover': {
-            boxShadow: `
-                0 8px 32px 0 ${alpha('#000000', 0.1)},
-                inset 0 1px 0 0 ${alpha('#ffffff', 0.8)}
-            `,
+            boxShadow: theme.palette.mode === 'dark'
+                ? '0 16px 48px rgba(0,0,0,0.55)'
+                : `0 8px 32px 0 ${alpha('#000000', 0.1)}, inset 0 1px 0 0 ${alpha('#ffffff', 0.8)}`,
             transform: 'translateY(-2px)',
-            border: `1px solid ${alpha('#ffffff', 0.4)}`,
+            border: theme.palette.mode === 'dark'
+                ? '1px solid rgba(255,255,255,0.18)'
+                : `1px solid ${alpha('#ffffff', 0.4)}`,
         },
     };
 
@@ -503,7 +507,9 @@ function ContactFormContent({ contactInfo, services, seo, flash }) {
                         left: 0,
                         right: 0,
                         bottom: 0,
-                        background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.4)} 0%, ${alpha(theme.palette.primary.dark, 0.2)} 100%)`,
+                        background: theme.palette.mode === 'dark'
+                            ? `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.25)} 0%, ${alpha(theme.palette.secondary.dark, 0.2)} 100%)`
+                            : `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.4)} 0%, ${alpha(theme.palette.primary.dark, 0.2)} 100%)`,
                     },
                 }}
             >
@@ -537,7 +543,9 @@ function ContactFormContent({ contactInfo, services, seo, flash }) {
                                 fontSize: { xs: '2.5rem', md: '3.5rem' },
                                 fontWeight: 800,
                                 mb: 2,
-                                background: `linear-gradient(135deg, #ffffff 0%, ${alpha('#ffffff', 0.8)} 100%)`,
+                                background: theme.palette.mode === 'dark'
+                                    ? 'linear-gradient(135deg, #e5e7eb 0%, #cbd5e1 100%)'
+                                    : `linear-gradient(135deg, #ffffff 0%, ${alpha('#ffffff', 0.8)} 100%)`,
                                 WebkitBackgroundClip: 'text',
                                 WebkitTextFillColor: 'transparent',
                                 backgroundClip: 'text',
@@ -1131,7 +1139,7 @@ function ContactFormContent({ contactInfo, services, seo, flash }) {
             </Container>
 
             {/* Google Maps */}
-            <Box sx={{ bgcolor: alpha(theme.palette.grey[100], 0.5), py: { xs: 6, md: 8 } }}>
+            <Box sx={{ bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.grey[900], 0.4) : alpha(theme.palette.grey[100], 0.5), py: { xs: 6, md: 8 } }}>
                 <Container maxWidth="lg">
                     <motion.div
                         initial={reduceMotion ? undefined : { opacity: 0, y: 30 }}
@@ -1150,7 +1158,7 @@ function ContactFormContent({ contactInfo, services, seo, flash }) {
                                 flexDirection: 'column',
                                 alignItems: 'center',
                                 justifyContent: 'center',
-                                bgcolor: alpha(theme.palette.grey[200], 0.3),
+                                bgcolor: theme.palette.mode === 'dark' ? alpha('#0b1220', 0.5) : alpha(theme.palette.grey[200], 0.3),
                             }}
                         >
                             <Box sx={{ position: 'relative', width: '100%', height: '100%' }}>

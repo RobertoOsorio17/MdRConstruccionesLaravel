@@ -10,7 +10,19 @@
       "Read(//tmp/chrome-devtools-mcp-fLrpQC/**)",
       "mcp__chrome-devtools__evaluate_script",
       "mcp__chrome-devtools__list_console_messages",
-      "mcp__chrome-devtools__wait_for"
+      "mcp__chrome-devtools__wait_for",
+      "Bash(php artisan route:list)",
+      "Bash(php artisan tail --lines=50)",
+      "Bash(php artisan config:clear)",
+      "Bash(php artisan cache:clear)",
+      "Bash(php artisan view:clear)",
+      "Bash(cp resources/js/Components/User/UserProfileHeader.jsx resources/js/Components/User/UserProfileHeader.jsx.backup)",
+      "Bash(npm run build)",
+      "Bash(if [ -f \"CommentsTab.jsx.backup\" ])",
+      "Bash(then cp CommentsTab.jsx.backup CommentsTab.jsx)",
+      "Bash(else echo \"No hay backup\")",
+      "Bash(fi)",
+      "Bash(php artisan route:list --path=comments)"
     ],
     "deny": [],
     "ask": []

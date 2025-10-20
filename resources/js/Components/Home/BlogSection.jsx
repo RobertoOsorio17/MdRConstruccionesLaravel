@@ -32,9 +32,13 @@ const BlogCard = ({ post, index, prefersReducedMotion }) => {
         href={`/blog/${post.slug}`}
         sx={{
           height: '100%',
+          minHeight: { xs: 'auto', sm: 480, md: 500 }, // ✅ Fixed minimum height for consistency
+          maxHeight: { xs: 'auto', sm: 500, md: 520 }, // ✅ Fixed maximum height to prevent overflow
           borderRadius: 4,
           overflow: 'hidden',
           textDecoration: 'none',
+          display: 'flex', // ✅ Flex layout for consistent structure
+          flexDirection: 'column', // ✅ Column layout
           transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
           '&:hover': {
             boxShadow: '0 20px 40px rgba(0, 0, 0, 0.15)',
@@ -51,7 +55,12 @@ const BlogCard = ({ post, index, prefersReducedMotion }) => {
         }}
       >
         {/* Imagen del post */}
-        <Box sx={{ position: 'relative', height: 220, overflow: 'hidden' }}>
+        <Box sx={{
+          position: 'relative',
+          height: 220, // ✅ Fixed height for image
+          flexShrink: 0, // ✅ Prevent image from shrinking
+          overflow: 'hidden'
+        }}>
           <CardMedia
             component="img"
             image={post.image}
@@ -114,17 +123,24 @@ const BlogCard = ({ post, index, prefersReducedMotion }) => {
         </Box>
 
         {/* Contenido */}
-        <CardContent sx={{ p: 3, flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
-          <Stack spacing={2} sx={{ flexGrow: 1 }}>
+        <CardContent sx={{
+          p: 3,
+          flexGrow: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          minHeight: 0 // ✅ Allow flex children to shrink properly
+        }}>
+          <Stack spacing={2} sx={{ height: '100%' }}>
             {/* Fecha de publicación */}
-            <Typography 
-              variant="caption" 
+            <Typography
+              variant="caption"
               color="text.secondary"
-              sx={{ 
+              sx={{
                 fontSize: '0.8rem',
                 fontWeight: 500,
                 textTransform: 'uppercase',
-                letterSpacing: 0.5
+                letterSpacing: 0.5,
+                flexShrink: 0 // ✅ Prevent date from shrinking
               }}
             >
               {new Date(post.publishedAt).toLocaleDateString('es-ES', {
@@ -135,8 +151,8 @@ const BlogCard = ({ post, index, prefersReducedMotion }) => {
             </Typography>
 
             {/* Título */}
-            <Typography 
-              variant="h6" 
+            <Typography
+              variant="h6"
               component="h3"
               className="blog-title"
               sx={{
@@ -149,33 +165,41 @@ const BlogCard = ({ post, index, prefersReducedMotion }) => {
                 WebkitBoxOrient: 'vertical',
                 overflow: 'hidden',
                 transition: 'color 0.3s ease',
+                height: '2.6rem', // ✅ Fixed height for 2 lines (1.3 line-height * 2)
+                flexShrink: 0 // ✅ Prevent title from shrinking
               }}
             >
               {post.title}
             </Typography>
 
             {/* Excerpt */}
-            <Typography 
-              variant="body2" 
+            <Typography
+              variant="body2"
               color="text.secondary"
-              sx={{ 
+              sx={{
                 lineHeight: 1.6,
-                flexGrow: 1,
                 display: '-webkit-box',
                 WebkitLineClamp: 3,
                 WebkitBoxOrient: 'vertical',
-                overflow: 'hidden'
+                overflow: 'hidden',
+                height: '4.8rem', // ✅ Fixed height for 3 lines (1.6 line-height * 3)
+                flexShrink: 0 // ✅ Prevent excerpt from shrinking
               }}
             >
               {post.excerpt}
             </Typography>
 
             {/* Footer del post */}
-            <Stack 
-              direction="row" 
-              justifyContent="space-between" 
+            <Stack
+              direction="row"
+              justifyContent="space-between"
               alignItems="center"
-              sx={{ mt: 2, pt: 2, borderTop: '1px solid rgba(0, 0, 0, 0.08)' }}
+              sx={{
+                mt: 'auto', // ✅ Push footer to bottom
+                pt: 2,
+                borderTop: '1px solid rgba(0, 0, 0, 0.08)',
+                flexShrink: 0 // ✅ Prevent footer from shrinking
+              }}
             >
               {/* Autor */}
               <Stack direction="row" alignItems="center" spacing={1}>
@@ -229,8 +253,9 @@ const BlogCard = ({ post, index, prefersReducedMotion }) => {
 
 const BlogSection = ({ blogPosts, prefersReducedMotion = false }) => {
   const theme = useTheme();
+  const isDark = theme.palette.mode === 'dark';
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-  
+
   // Mostrar solo los posts destacados, máximo 3
   const featuredPosts = blogPosts?.filter(post => post.featured)?.slice(0, 3) || [];
 
@@ -241,7 +266,7 @@ const BlogSection = ({ blogPosts, prefersReducedMotion = false }) => {
       component="section"
       sx={{
         py: { xs: 8, md: 12, xl: 16 },
-        bgcolor: 'white',
+        bgcolor: isDark ? 'rgba(10, 15, 30, 0.95)' : 'white',
         position: 'relative',
       }}
     >

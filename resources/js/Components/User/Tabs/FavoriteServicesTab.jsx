@@ -1,6 +1,5 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import {
-    Grid,
     Card,
     CardContent,
     CardActions,
@@ -10,7 +9,8 @@ import {
     Chip,
     Box,
     TextField,
-    InputAdornment
+    InputAdornment,
+    Grid
 } from '@mui/material';
 import {
     FavoriteOutlined,
@@ -21,21 +21,22 @@ import {
     BuildOutlined
 } from '@mui/icons-material';
 import { motion, AnimatePresence } from 'framer-motion';
+import designSystem from '@/theme/designSystem';
 
 const THEME = {
-    primary: '#2563eb',
-    secondary: '#64748b',
-    accent: '#f59e0b',
-    success: '#10b981',
-    warning: '#f59e0b',
-    error: '#ef4444',
-    background: 'rgba(255, 255, 255, 0.05)',
-    surface: 'rgba(255, 255, 255, 0.1)',
-    glass: 'rgba(255, 255, 255, 0.15)',
+    primary: designSystem.colors.primary[600],
+    secondary: designSystem.colors.secondary[500],
+    accent: designSystem.colors.accent.amber[500],
+    success: designSystem.colors.success[600],
+    warning: designSystem.colors.warning[500],
+    error: designSystem.colors.error[500],
+    background: designSystem.colors.surface.secondary,
+    surface: designSystem.colors.surface.primary,
+    glass: designSystem.colors.glass.white,
     text: {
-        primary: '#1e293b',
-        secondary: '#64748b',
-        light: '#94a3b8'
+        primary: designSystem.colors.text.primary,
+        secondary: designSystem.colors.text.secondary,
+        light: designSystem.colors.text.muted
     }
 };
 
@@ -76,17 +77,17 @@ const FavoriteServicesTab = ({ services = [], currentUser, onRemoveFavorite, onC
                             </InputAdornment>
                         ),
                         sx: {
-                            backgroundColor: THEME.glass,
-                            backdropFilter: 'blur(10px)',
-                            borderRadius: 2,
+                            ...designSystem.glassmorphism.light,
+                            borderRadius: 3,
                             '& .MuiOutlinedInput-notchedOutline': {
-                                border: '1px solid rgba(255, 255, 255, 0.2)',
+                                border: '1px solid rgba(255,255,255,0.18)'
                             },
                             '&:hover .MuiOutlinedInput-notchedOutline': {
-                                border: '1px solid rgba(255, 255, 255, 0.3)',
+                                borderColor: 'rgba(255,255,255,0.35)'
                             },
                             '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                                border: `2px solid ${THEME.primary}`,
+                                borderColor: THEME.primary,
+                                borderWidth: 2
                             }
                         }
                     }}
@@ -97,7 +98,7 @@ const FavoriteServicesTab = ({ services = [], currentUser, onRemoveFavorite, onC
             <Grid container spacing={3}>
                 <AnimatePresence>
                     {filteredServices.map((service) => (
-                        <Grid item xs={12} sm={6} md={4} key={service.id}>
+                        <Grid size={{ xs: 12, sm: 6, md: 4 }} key={service.id}>
                             <motion.div
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
@@ -110,17 +111,15 @@ const FavoriteServicesTab = ({ services = [], currentUser, onRemoveFavorite, onC
                                         height: '100%',
                                         display: 'flex',
                                         flexDirection: 'column',
-                                        backgroundColor: THEME.glass,
-                                        backdropFilter: 'blur(10px)',
-                                        border: '1px solid rgba(255, 255, 255, 0.2)',
+                                        ...designSystem.glassmorphism.light,
                                         borderRadius: 3,
                                         overflow: 'hidden',
                                         transition: 'all 0.3s ease',
                                         position: 'relative',
                                         '&:hover': {
-                                            backgroundColor: THEME.surface,
-                                            border: '1px solid rgba(255, 255, 255, 0.3)',
-                                            boxShadow: '0 20px 40px rgba(0, 0, 0, 0.1)',
+                                            boxShadow: designSystem.shadows.colored.primaryHover,
+                                            borderColor: THEME.primary,
+                                            transform: 'translateY(-6px)'
                                         }
                                     }}
                                 >
@@ -218,14 +217,14 @@ const FavoriteServicesTab = ({ services = [], currentUser, onRemoveFavorite, onC
                                                 overflow: 'hidden'
                                             }}
                                         >
-                                            {service.description || 'Descripción del servicio no disponible.'}
+                                            {service.description || 'Descripci\u00f3n del servicio no disponible.'}
                                         </Typography>
 
                                         {/* Service Features */}
                                         {service.features && service.features.length > 0 && (
                                             <Box sx={{ mb: 2 }}>
                                                 <Typography variant="caption" color={THEME.text.light} gutterBottom>
-                                                    Características:
+                                                    Caracter\u00edsticas:
                                                 </Typography>
                                                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.5 }}>
                                                     {service.features.slice(0, 3).map((feature, index) => (
@@ -251,7 +250,7 @@ const FavoriteServicesTab = ({ services = [], currentUser, onRemoveFavorite, onC
                                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
                                                 <StarOutlined sx={{ fontSize: 16, color: THEME.accent }} />
                                                 <Typography variant="caption" color={THEME.text.secondary}>
-                                                    {service.rating}/5 ({service.reviews_count || 0} reseñas)
+                                                    {service.rating}/5 ({service.reviews_count || 0} rese\u00f1as)
                                                 </Typography>
                                             </Box>
                                         )}
@@ -318,10 +317,9 @@ const FavoriteServicesTab = ({ services = [], currentUser, onRemoveFavorite, onC
                     sx={{
                         textAlign: 'center',
                         py: 8,
-                        backgroundColor: THEME.glass,
-                        backdropFilter: 'blur(10px)',
-                        borderRadius: 3,
-                        border: '1px solid rgba(255, 255, 255, 0.2)'
+                        ...designSystem.glassmorphism.light,
+                        borderRadius: 4,
+                        border: '1px solid rgba(255,255,255,0.25)'
                     }}
                 >
                     <FavoriteOutlined sx={{ fontSize: 48, color: THEME.text.light, mb: 2 }} />
@@ -329,7 +327,7 @@ const FavoriteServicesTab = ({ services = [], currentUser, onRemoveFavorite, onC
                         {searchTerm ? 'No se encontraron servicios' : 'No tienes servicios favoritos'}
                     </Typography>
                     <Typography variant="body2" color={THEME.text.light}>
-                        {searchTerm ? 'Intenta con otros términos de búsqueda' : 'Los servicios que marques como favoritos aparecerán aquí'}
+                        {searchTerm ? 'Intenta con otros t\u00e9rminos de b\u00fasqueda' : 'Los servicios que marques como favoritos aparecer\u00e1n aqu\u00ed'}
                     </Typography>
                 </Box>
             )}
@@ -338,3 +336,8 @@ const FavoriteServicesTab = ({ services = [], currentUser, onRemoveFavorite, onC
 };
 
 export default FavoriteServicesTab;
+
+
+
+
+

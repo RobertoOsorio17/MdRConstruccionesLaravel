@@ -375,7 +375,7 @@ const ProjectsIndex = ({ projects, filters }) => {
                                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                                                     <EuroIcon fontSize="small" color="action" />
                                                     <Typography variant="body2">
-                                                        {project.budget ? `${project.budget.toLocaleString()}€` : 'No especificado'}
+                                                        {project.budget_estimate ? `${project.budget_estimate.toLocaleString()}€` : 'No especificado'}
                                                     </Typography>
                                                 </Box>
                                             </TableCell>

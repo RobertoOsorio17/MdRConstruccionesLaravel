@@ -168,10 +168,16 @@ const GlobalSearch = ({ open, onClose }) => {
             maxWidth="md"
             fullWidth
             PaperProps={{
-                sx: {
+                sx: (theme) => ({
                     ...glassStyle,
                     maxHeight: '80vh',
-                }
+                    zIndex: theme.zIndex.modal,
+                })
+            }}
+            BackdropProps={{
+                sx: (theme) => ({
+                    zIndex: theme.zIndex.modal - 1,
+                })
             }}
         >
             <DialogContent sx={{ p: 0 }}>
@@ -335,4 +341,3 @@ const GlobalSearch = ({ open, onClose }) => {
 };
 
 export default GlobalSearch;
-

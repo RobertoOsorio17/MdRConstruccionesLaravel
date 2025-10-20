@@ -52,31 +52,47 @@ import {
     Close as CloseIcon
 } from '@mui/icons-material';
 import NotificationCenter from '@/Components/Admin/NotificationCenter';
+import BreadcrumbsWithFilters from '@/Components/Admin/BreadcrumbsWithFilters';
 
 const drawerWidth = 280;
+const drawerWidthCollapsed = 72;
 
-// Glassmorphism styles
+// Solid surface styles for better contrast in data-heavy interfaces
 const glassmorphismStyles = {
-    background: 'rgba(255, 255, 255, 0.1)',
-    backdropFilter: 'blur(20px)',
-    border: '1px solid rgba(255, 255, 255, 0.2)',
-    borderRadius: '16px',
-    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)',
+    background: 'rgba(255, 255, 255, 0.05)',
+    backdropFilter: 'blur(8px)',
+    border: '1px solid rgba(255, 255, 255, 0.1)',
+    borderRadius: '12px',
+    boxShadow: '0 4px 16px rgba(0, 0, 0, 0.08)',
 };
 
-const sidebarGlassmorphism = {
-    background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05))',
-    backdropFilter: 'blur(20px)',
-    borderRight: '1px solid rgba(255, 255, 255, 0.1)',
-    boxShadow: '4px 0 24px rgba(0, 0, 0, 0.1)',
-};
+// Sidebar with solid surface for better readability
+const getSidebarStyles = (theme) => ({
+    background: theme.palette.mode === 'dark'
+        ? 'linear-gradient(180deg, #1e293b 0%, #0f172a 100%)'
+        : 'linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)',
+    backdropFilter: 'blur(8px)',
+    borderRight: theme.palette.mode === 'dark'
+        ? '1px solid rgba(255, 255, 255, 0.08)'
+        : '1px solid rgba(0, 0, 0, 0.08)',
+    boxShadow: theme.palette.mode === 'dark'
+        ? '2px 0 12px rgba(0, 0, 0, 0.3)'
+        : '2px 0 12px rgba(0, 0, 0, 0.05)',
+});
 
-const headerGlassmorphism = {
-    background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.1))',
-    backdropFilter: 'blur(20px)',
-    borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
-    boxShadow: '0 4px 24px rgba(0, 0, 0, 0.1)',
-};
+// Header with solid surface
+const getHeaderStyles = (theme) => ({
+    background: theme.palette.mode === 'dark'
+        ? 'rgba(30, 41, 59, 0.95)'
+        : 'rgba(255, 255, 255, 0.95)',
+    backdropFilter: 'blur(8px)',
+    borderBottom: theme.palette.mode === 'dark'
+        ? '1px solid rgba(255, 255, 255, 0.08)'
+        : '1px solid rgba(0, 0, 0, 0.08)',
+    boxShadow: theme.palette.mode === 'dark'
+        ? '0 2px 12px rgba(0, 0, 0, 0.3)'
+        : '0 2px 12px rgba(0, 0, 0, 0.05)',
+});
 
 // Animation variants
 const sidebarVariants = {
@@ -111,14 +127,35 @@ const menuItemVariants = {
     }
 };
 
-const AdminLayoutNew = ({ children, title = 'Admin Panel' }) => {
+const AdminLayoutNew = ({
+    children,
+    title = 'Admin Panel',
+    breadcrumbs = [],
+    quickFilters = [],
+    onFilterChange,
+    showFilters = true
+}) => {
     const theme = useTheme();
     const { auth, flash } = usePage().props;
     const [mobileOpen, setMobileOpen] = useState(false);
+
+    // Load drawer collapsed state from localStorage
+    const [drawerCollapsed, setDrawerCollapsed] = useState(() => {
+        const saved = localStorage.getItem('admin-drawer-collapsed');
+        return saved ? JSON.parse(saved) : false;
+    });
+
     const [userMenuAnchor, setUserMenuAnchor] = useState(null);
-    const [expandedMenus, setExpandedMenus] = useState({});
+
+    // Load expanded menus state from localStorage
+    const [expandedMenus, setExpandedMenus] = useState(() => {
+        const saved = localStorage.getItem('admin-expanded-menus');
+        return saved ? JSON.parse(saved) : {};
+    });
+
     const [flashMessage, setFlashMessage] = useState(null);
     const isMobile = useMediaQuery(theme.breakpoints.down('lg'));
+    const isMedium = useMediaQuery(theme.breakpoints.between('md', 'lg'));
 
     // Handle flash messages
     useEffect(() => {
@@ -131,6 +168,14 @@ const AdminLayoutNew = ({ children, title = 'Admin Panel' }) => {
         setMobileOpen(!mobileOpen);
     };
 
+    const handleDrawerCollapse = () => {
+        setDrawerCollapsed(prev => {
+            const newValue = !prev;
+            localStorage.setItem('admin-drawer-collapsed', JSON.stringify(newValue));
+            return newValue;
+        });
+    };
+
     const handleUserMenuOpen = (event) => {
         setUserMenuAnchor(event.currentTarget);
     };
@@ -140,15 +185,32 @@ const AdminLayoutNew = ({ children, title = 'Admin Panel' }) => {
     };
 
     const handleMenuExpand = (menuKey) => {
-        setExpandedMenus(prev => ({
-            ...prev,
-            [menuKey]: !prev[menuKey]
-        }));
+        setExpandedMenus(prev => {
+            const newState = {
+                ...prev,
+                [menuKey]: !prev[menuKey]
+            };
+            localStorage.setItem('admin-expanded-menus', JSON.stringify(newState));
+            return newState;
+        });
     };
 
     const handleLogout = () => {
         router.post('/logout');
     };
+
+    // Auto-collapse drawer on medium screens (only if not manually set)
+    useEffect(() => {
+        const manuallySet = localStorage.getItem('admin-drawer-collapsed');
+
+        if (!manuallySet) {
+            if (isMedium && !isMobile) {
+                setDrawerCollapsed(true);
+            } else if (!isMedium && !isMobile) {
+                setDrawerCollapsed(false);
+            }
+        }
+    }, [isMedium, isMobile]);
 
     // Navigation menu items
     const menuItems = [
@@ -257,52 +319,87 @@ const AdminLayoutNew = ({ children, title = 'Admin Panel' }) => {
     const renderMenuItem = (item, depth = 0) => {
         const isExpanded = expandedMenus[item.key];
         const hasChildren = item.children && item.children.length > 0;
+        const isCollapsed = drawerCollapsed && !isMobile;
 
         return (
             <React.Fragment key={item.key}>
-                <motion.div
-                    variants={menuItemVariants}
-                    whileHover="hover"
-                    whileTap="tap"
+                <Tooltip
+                    title={isCollapsed ? item.label : ''}
+                    placement="right"
+                    arrow
                 >
-                    <ListItem disablePadding sx={{ pl: depth * 2 }}>
-                        <ListItemButton
-                            component={hasChildren ? 'div' : Link}
-                            href={!hasChildren ? item.href : undefined}
-                            onClick={hasChildren ? () => handleMenuExpand(item.key) : undefined}
-                            sx={{
-                                borderRadius: 2,
-                                mx: 1,
-                                mb: 0.5,
-                                backgroundColor: item.active ? 'rgba(255, 255, 255, 0.15)' : 'transparent',
-                                '&:hover': {
-                                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                                },
-                                transition: 'all 0.2s ease-in-out'
-                            }}
-                        >
-                            <ListItemIcon sx={{ color: 'white', minWidth: 40 }}>
-                                {item.icon}
-                            </ListItemIcon>
-                            <ListItemText 
-                                primary={item.label}
-                                sx={{ 
-                                    color: 'white',
-                                    '& .MuiTypography-root': {
-                                        fontWeight: item.active ? 600 : 400
-                                    }
+                    <motion.div
+                        variants={menuItemVariants}
+                        whileHover="hover"
+                        whileTap="tap"
+                    >
+                        <ListItem disablePadding sx={{ pl: depth * 2 }}>
+                            <ListItemButton
+                                component={hasChildren ? 'div' : Link}
+                                href={!hasChildren ? item.href : undefined}
+                                onClick={hasChildren ? () => handleMenuExpand(item.key) : undefined}
+                                sx={{
+                                    borderRadius: 2,
+                                    mx: 1,
+                                    mb: 0.5,
+                                    justifyContent: isCollapsed ? 'center' : 'flex-start',
+                                    backgroundColor: item.active ? 'rgba(255, 255, 255, 0.15)' : 'transparent',
+                                    '&:hover': {
+                                        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                                    },
+                                    transition: 'all 0.2s ease-in-out'
                                 }}
-                            />
-                            {hasChildren && (
-                                <IconButton size="small" sx={{ color: 'white' }}>
-                                    {isExpanded ? <ExpandLess /> : <ExpandMore />}
-                                </IconButton>
-                            )}
-                        </ListItemButton>
-                    </ListItem>
-                </motion.div>
-                
-                {hasChildren && (
+                            >
+                                <ListItemIcon sx={{
+                                    color: 'white',
+                                    minWidth: isCollapsed ? 'auto' : 40,
+                                    justifyContent: 'center'
+                                }}>
+                                    {item.icon}
+                                </ListItemIcon>
+                                {!isCollapsed && (
+                                    <>
+                                        <ListItemText
+                                            primary={item.label}
+                                            sx={{
+                                                color: 'white',
+                                                '& .MuiTypography-root': {
+                                                    fontWeight: item.active ? 600 : 400
+                                                }
+                                            }}
+                                        />
+                                        {hasChildren && (
+                                            <Box
+                                                component={motion.div}
+                                                animate={{
+                                                    rotate: isExpanded ? 180 : 0,
+                                                    scale: isExpanded ? 1.1 : 1
+                                                }}
+                                                transition={{
+                                                    duration: 0.3,
+                                                    ease: "easeInOut"
+                                                }}
+                                                sx={{
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    color: 'white',
+                                                    opacity: 0.8,
+                                                    '&:hover': {
+                                                        opacity: 1
+                                                    }
+                                                }}
+                                            >
+                                                <ExpandMore />
+                                            </Box>
+                                        )}
+                                    </>
+                                )}
+                            </ListItemButton>
+                        </ListItem>
+                    </motion.div>
+                </Tooltip>
+
+                {hasChildren && !isCollapsed && (
                     <Collapse in={isExpanded} timeout="auto" unmountOnExit>
                         <List component="div" disablePadding>
                             {item.children.map(child => renderMenuItem(child, depth + 1))}
@@ -321,13 +418,64 @@ const AdminLayoutNew = ({ children, title = 'Admin Panel' }) => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5 }}
             >
-                <Box sx={{ p: 3, textAlign: 'center', borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}>
-                    <Typography variant="h5" sx={{ color: 'white', fontWeight: 700, mb: 1 }}>
-                        MDR Admin
-                    </Typography>
-                    <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>
-                        Panel de Administración
-                    </Typography>
+                <Box sx={{
+                    p: drawerCollapsed && !isMobile ? 2 : 3,
+                    textAlign: 'center',
+                    borderBottom: theme.palette.mode === 'dark'
+                        ? '1px solid rgba(255, 255, 255, 0.1)'
+                        : '1px solid rgba(0, 0, 0, 0.1)',
+                    position: 'relative'
+                }}>
+                    {drawerCollapsed && !isMobile ? (
+                        <Typography variant="h5" sx={{
+                            color: theme.palette.mode === 'dark' ? 'white' : 'primary.main',
+                            fontWeight: 700
+                        }}>
+                            M
+                        </Typography>
+                    ) : (
+                        <>
+                            <Typography variant="h5" sx={{
+                                color: theme.palette.mode === 'dark' ? 'white' : 'primary.main',
+                                fontWeight: 700,
+                                mb: 1
+                            }}>
+                                MDR Admin
+                            </Typography>
+                            <Typography variant="body2" sx={{
+                                color: theme.palette.mode === 'dark'
+                                    ? 'rgba(255, 255, 255, 0.7)'
+                                    : 'rgba(0, 0, 0, 0.6)'
+                            }}>
+                                Panel de Administración
+                            </Typography>
+                        </>
+                    )}
+
+                    {/* Collapse/Expand button - only on desktop */}
+                    {!isMobile && (
+                        <IconButton
+                            onClick={handleDrawerCollapse}
+                            size="small"
+                            sx={{
+                                position: 'absolute',
+                                right: 8,
+                                top: '50%',
+                                transform: 'translateY(-50%)',
+                                color: theme.palette.mode === 'dark' ? 'white' : 'primary.main',
+                                bgcolor: theme.palette.mode === 'dark'
+                                    ? 'rgba(255, 255, 255, 0.1)'
+                                    : 'rgba(0, 0, 0, 0.05)',
+                                '&:hover': {
+                                    bgcolor: theme.palette.mode === 'dark'
+                                        ? 'rgba(255, 255, 255, 0.2)'
+                                        : 'rgba(0, 0, 0, 0.1)'
+                                }
+                            }}
+                        >
+                            {drawerCollapsed ? <ExpandMore sx={{ transform: 'rotate(-90deg)' }} /> : <ExpandMore sx={{ transform: 'rotate(90deg)' }} />}
+                        </IconButton>
+                    )}
                 </Box>
             </motion.div>
 
@@ -344,24 +492,48 @@ const AdminLayoutNew = ({ children, title = 'Admin Panel' }) => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: 0.2 }}
             >
-                <Box sx={{ p: 2, borderTop: '1px solid rgba(255, 255, 255, 0.1)' }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                        <Avatar sx={{ bgcolor: 'primary.main' }}>
-                            {auth.user.name.charAt(0).toUpperCase()}
-                        </Avatar>
-                        <Box sx={{ flex: 1 }}>
-                            <Typography variant="body2" sx={{ color: 'white', fontWeight: 600 }}>
-                                {auth.user.name}
-                            </Typography>
-                            <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>
-                                {auth.user.role}
-                            </Typography>
+                <Box sx={{
+                    p: 2,
+                    borderTop: theme.palette.mode === 'dark'
+                        ? '1px solid rgba(255, 255, 255, 0.1)'
+                        : '1px solid rgba(0, 0, 0, 0.1)'
+                }}>
+                    {drawerCollapsed && !isMobile ? (
+                        <Tooltip title={`${auth.user.name} (${auth.user.role})`} placement="right" arrow>
+                            <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+                                <Avatar sx={{ bgcolor: 'primary.main' }}>
+                                    {auth.user.name.charAt(0).toUpperCase()}
+                                </Avatar>
+                            </Box>
+                        </Tooltip>
+                    ) : (
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                            <Avatar sx={{ bgcolor: 'primary.main' }}>
+                                {auth.user.name.charAt(0).toUpperCase()}
+                            </Avatar>
+                            <Box sx={{ flex: 1 }}>
+                                <Typography variant="body2" sx={{
+                                    color: theme.palette.mode === 'dark' ? 'white' : 'text.primary',
+                                    fontWeight: 600
+                                }}>
+                                    {auth.user.name}
+                                </Typography>
+                                <Typography variant="caption" sx={{
+                                    color: theme.palette.mode === 'dark'
+                                        ? 'rgba(255, 255, 255, 0.7)'
+                                        : 'rgba(0, 0, 0, 0.6)'
+                                }}>
+                                    {auth.user.role}
+                                </Typography>
+                            </Box>
                         </Box>
-                    </Box>
+                    )}
                 </Box>
             </motion.div>
         </Box>
     );
+
+    const currentDrawerWidth = drawerCollapsed && !isMobile ? drawerWidthCollapsed : drawerWidth;
 
     return (
         <Box sx={{ display: 'flex', minHeight: '100vh' }}>
@@ -372,10 +544,11 @@ const AdminLayoutNew = ({ children, title = 'Admin Panel' }) => {
             <AppBar
                 position="fixed"
                 sx={{
-                    width: { lg: `calc(100% - ${drawerWidth}px)` },
-                    ml: { lg: `${drawerWidth}px` },
-                    ...headerGlassmorphism,
+                    width: { lg: `calc(100% - ${currentDrawerWidth}px)` },
+                    ml: { lg: `${currentDrawerWidth}px` },
+                    ...getHeaderStyles(theme),
                     zIndex: theme.zIndex.drawer + 1,
+                    transition: 'all 0.3s ease-in-out'
                 }}
                 elevation={0}
             >
@@ -414,7 +587,11 @@ const AdminLayoutNew = ({ children, title = 'Admin Panel' }) => {
             {/* Sidebar */}
             <Box
                 component="nav"
-                sx={{ width: { lg: drawerWidth }, flexShrink: { lg: 0 } }}
+                sx={{
+                    width: { lg: currentDrawerWidth },
+                    flexShrink: { lg: 0 },
+                    transition: 'width 0.3s ease-in-out'
+                }}
             >
                 {/* Mobile drawer */}
                 <Drawer
@@ -427,8 +604,7 @@ const AdminLayoutNew = ({ children, title = 'Admin Panel' }) => {
                         '& .MuiDrawer-paper': {
                             boxSizing: 'border-box',
                             width: drawerWidth,
-                            ...sidebarGlassmorphism,
-                            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                            ...getSidebarStyles(theme),
                         },
                     }}
                 >
@@ -447,9 +623,10 @@ const AdminLayoutNew = ({ children, title = 'Admin Panel' }) => {
                         display: { xs: 'none', lg: 'block' },
                         '& .MuiDrawer-paper': {
                             boxSizing: 'border-box',
-                            width: drawerWidth,
-                            ...sidebarGlassmorphism,
-                            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                            width: currentDrawerWidth,
+                            ...getSidebarStyles(theme),
+                            transition: 'width 0.3s ease-in-out',
+                            overflowX: 'hidden'
                         },
                     }}
                     open
@@ -463,10 +640,11 @@ const AdminLayoutNew = ({ children, title = 'Admin Panel' }) => {
                 component="main"
                 sx={{
                     flexGrow: 1,
-                    width: { lg: `calc(100% - ${drawerWidth}px)` },
+                    width: { lg: `calc(100% - ${currentDrawerWidth}px)` },
                     minHeight: '100vh',
                     background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)',
                     position: 'relative',
+                    transition: 'width 0.3s ease-in-out',
                     '&::before': {
                         content: '""',
                         position: 'absolute',
@@ -480,6 +658,34 @@ const AdminLayoutNew = ({ children, title = 'Admin Panel' }) => {
                 }}
             >
                 <Toolbar />
+
+                {/* Breadcrumbs with Quick Filters */}
+                {(breadcrumbs.length > 0 || showFilters) && (
+                    <Box
+                        sx={{
+                            px: 3,
+                            pt: 2,
+                            pb: 1,
+                            bgcolor: theme.palette.mode === 'dark'
+                                ? 'rgba(30, 41, 59, 0.5)'
+                                : 'rgba(255, 255, 255, 0.5)',
+                            backdropFilter: 'blur(8px)',
+                            borderBottom: theme.palette.mode === 'dark'
+                                ? '1px solid rgba(255, 255, 255, 0.05)'
+                                : '1px solid rgba(0, 0, 0, 0.05)',
+                            position: 'relative',
+                            zIndex: 1
+                        }}
+                    >
+                        <BreadcrumbsWithFilters
+                            items={breadcrumbs}
+                            quickFilters={quickFilters}
+                            onFilterChange={onFilterChange}
+                            showFilters={showFilters}
+                        />
+                    </Box>
+                )}
+
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -513,7 +719,11 @@ const AdminLayoutNew = ({ children, title = 'Admin Panel' }) => {
                     <HomeIcon sx={{ mr: 2 }} />
                     Ver Sitio Web
                 </MenuItem>
-                <Divider />
+                <Divider sx={{
+                    borderColor: theme.palette.mode === 'dark'
+                        ? 'rgba(255, 255, 255, 0.1)'
+                        : 'rgba(0, 0, 0, 0.1)'
+                }} />
                 <MenuItem onClick={handleLogout}>
                     <LogoutIcon sx={{ mr: 2 }} />
                     Cerrar Sesión

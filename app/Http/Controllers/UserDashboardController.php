@@ -49,7 +49,7 @@ class UserDashboardController extends Controller
         
         try {
             // Determine whether the current user has administrative privileges.
-            $isAdmin = $user->role === 'admin' || $user->is_admin || false;
+            $isAdmin = $user->role === 'admin';
             
             if ($isAdmin) {
                 // System statistics shown to administrators.
@@ -162,7 +162,7 @@ class UserDashboardController extends Controller
             ->latest();
 
         if ($search) {
-            $commentsQuery->where('content', 'like', "%{$search}%");
+            $commentsQuery->where('body', 'like', "%{$search}%");
         }
 
         $comments = $commentsQuery->paginate($perPage);
@@ -400,6 +400,8 @@ class UserDashboardController extends Controller
 
     /**
      * Delete a comment
+     *
+     * Uses soft delete to preserve conversation structure.
      */
     public function deleteComment(Comment $comment)
     {
@@ -411,6 +413,7 @@ class UserDashboardController extends Controller
             ], 403);
         }
 
+        // Use soft delete to preserve conversation structure
         $comment->delete();
 
         return response()->json([

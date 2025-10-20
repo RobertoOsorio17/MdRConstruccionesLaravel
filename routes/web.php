@@ -19,6 +19,15 @@ use App\Http\Controllers\MLController;
 // Public Routes
 Route::get('/', [HomeController::class, 'index'])->name('home');
 
+// Legal Pages
+Route::get('/terminos', function () {
+    return Inertia::render('Legal/TermsOfService');
+})->name('terms');
+
+Route::get('/privacidad', function () {
+    return Inertia::render('Legal/PrivacyPolicy');
+})->name('privacy');
+
 // Services Routes
 Route::get('/servicios', [ServiceController::class, 'index'])->name('services.index');
 Route::get('/servicios/{service:slug}', [ServiceController::class, 'show'])->name('services.show');

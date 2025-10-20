@@ -436,11 +436,13 @@ class PostController extends Controller
             'categories:id,name,slug,color',
             'tags:id,name,slug,color',
             'comments' => function ($query) {
-                $query->approved()
+                // Include soft-deleted comments to preserve conversation structure
+                $query->withTrashed()
+                      ->approved()
                       ->topLevel()
                       ->with('user:id,name,avatar,is_verified')
                       ->with(['replies' => function ($q) {
-                          $q->approved()->with('user:id,name,avatar,is_verified');
+                          $q->withTrashed()->approved()->with('user:id,name,avatar,is_verified');
                       }])
                       ->orderBy('created_at', 'desc');
             }
@@ -448,6 +450,47 @@ class PostController extends Controller
         
         // Load interaction counts
         $post->loadCount(['likes', 'bookmarks', 'approvedComments']);
+
+        // Get current user for interaction checks
+        $currentUser = Auth::user();
+
+        // ✅ FIX: Format comments to include is_deleted flag and sanitized content
+        $formattedComments = $post->comments->map(function ($comment) use ($currentUser) {
+            $isDeleted = $comment->trashed();
+            return [
+                'id' => $comment->id,
+                'body' => $isDeleted ? '[Comentario eliminado]' : $comment->body,
+                'author_name' => $comment->user ? $comment->user->name : ($comment->author_name ?? 'Usuario invitado'),
+                'created_at' => $comment->created_at->format('d/m/Y H:i'),
+                'status' => $comment->status,
+                'user' => $isDeleted ? null : $comment->user,
+                'is_guest' => $comment->isGuest(),
+                'is_deleted' => $isDeleted,
+                'user_id' => $comment->user_id,
+                'likes_count' => $comment->likeCount(),
+                'dislikes_count' => $comment->dislikeCount(),
+                'user_has_liked' => $currentUser ? $comment->isLikedBy($currentUser) : false,
+                'user_has_disliked' => $currentUser ? $comment->isDislikedBy($currentUser) : false,
+                'replies' => $comment->replies->map(function ($reply) use ($currentUser) {
+                    $isReplyDeleted = $reply->trashed();
+                    return [
+                        'id' => $reply->id,
+                        'body' => $isReplyDeleted ? '[Comentario eliminado]' : $reply->body,
+                        'author_name' => $reply->user ? $reply->user->name : ($reply->author_name ?? 'Usuario invitado'),
+                        'created_at' => $reply->created_at->format('d/m/Y H:i'),
+                        'status' => $reply->status,
+                        'user' => $isReplyDeleted ? null : $reply->user,
+                        'is_guest' => $reply->isGuest(),
+                        'is_deleted' => $isReplyDeleted,
+                        'user_id' => $reply->user_id,
+                        'likes_count' => $reply->likeCount(),
+                        'dislikes_count' => $reply->dislikeCount(),
+                        'user_has_liked' => $currentUser ? $reply->isLikedBy($currentUser) : false,
+                        'user_has_disliked' => $currentUser ? $reply->isDislikedBy($currentUser) : false,
+                    ];
+                })
+            ];
+        });
 
         // Get suggested posts using the new intelligent algorithm
         $suggestedPosts = $post->getSuggestedPosts(8) // Increase count to provide more options for guests
@@ -483,7 +526,7 @@ class PostController extends Controller
                 'author' => $post->author,
                 'categories' => $post->categories,
                 'tags' => $post->tags,
-                'comments' => $post->comments,
+                'comments' => $formattedComments,
                 'likes_count' => $post->likes_count ?? 0,
                 'bookmarks_count' => $post->bookmarks_count ?? 0,
                 'comments_count' => $post->approved_comments_count ?? 0,

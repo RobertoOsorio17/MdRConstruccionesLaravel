@@ -1,55 +1,32 @@
+/**
+ * UserProfile - Página de perfil de usuario rediseñada
+ * 
+ * @refactored Octubre 2025 - Sistema unificado, diseño mejorado
+ */
+
 import React, { useState } from 'react';
 import { Head, router } from '@inertiajs/react';
 import axios from 'axios';
 import {
     Box,
-    Container,
-    Typography,
-    Avatar,
-    Button,
-    Grid,
-    Card,
-    CardContent,
-    Chip,
-    Stack,
-    CircularProgress,
+    Paper,
     Snackbar,
     Alert
 } from '@mui/material';
-import {
-    LocationOn as LocationIcon,
-    Language as WebsiteIcon,
-    Email as EmailIcon,
-    PersonAdd as FollowIcon,
-    PersonRemove as UnfollowIcon,
-    Edit as EditIcon
-} from '@mui/icons-material';
+import { useTheme } from '@mui/material/styles';
 import { motion, AnimatePresence } from 'framer-motion';
 import MainLayout from '@/Layouts/MainLayout';
-import VerificationBadge from '@/Components/User/VerificationBadge';
+
+import UserProfileHeader from '@/Components/User/UserProfileHeader';
 import EnhancedTabNavigation from '@/Components/User/EnhancedTabNavigation';
 import PostsTab from '@/Components/User/Tabs/PostsTab';
 import LikedPostsTab from '@/Components/User/Tabs/LikedPostsTab';
 import SavedPostsTab from '@/Components/User/Tabs/SavedPostsTab';
 import CommentsTab from '@/Components/User/Tabs/CommentsTab';
-import FavoriteServicesTab from '@/Components/User/Tabs/FavoriteServicesTab';
 
-const THEME = {
-    primary: '#2563eb',
-    secondary: '#64748b',
-    accent: '#f59e0b',
-    success: '#10b981',
-    warning: '#f59e0b',
-    error: '#ef4444',
-    background: 'rgba(255, 255, 255, 0.05)',
-    surface: 'rgba(255, 255, 255, 0.1)',
-    glass: 'rgba(255, 255, 255, 0.15)',
-    text: {
-        primary: '#1e293b',
-        secondary: '#64748b',
-        light: '#94a3b8'
-    }
-};
+import designSystem from '@/theme/designSystem';
+
+// Removed - Using designSystem colors
 
 const UserProfile = ({
     profileUser,
@@ -60,9 +37,10 @@ const UserProfile = ({
     stats,
     isFollowing,
     isOwnProfile,
-    favoriteServices = [],
     auth
 }) => {
+    const theme = useTheme();
+    const isDark = theme.palette.mode === 'dark';
     const [activeTab, setActiveTab] = useState('posts');
     const [following, setFollowing] = useState(isFollowing);
     const [followLoading, setFollowLoading] = useState(false);
@@ -132,7 +110,7 @@ const UserProfile = ({
             const response = await axios.post(`/posts/${postId}/like`);
             if (response.data.success) {
                 // Refresh the page data to update like counts
-                router.reload({ only: ['user'] });
+                router.reload({ only: ['userPosts', 'likedPosts', 'savedPosts', 'stats'] });
             }
         } catch (error) {
             console.error('Error liking post:', error);
@@ -149,7 +127,7 @@ const UserProfile = ({
             const response = await axios.post(`/posts/${postId}/bookmark`);
             if (response.data.success) {
                 // Refresh the page data to update bookmark status
-                router.reload({ only: ['user'] });
+                router.reload({ only: ['userPosts', 'likedPosts', 'savedPosts', 'stats'] });
             }
         } catch (error) {
             console.error('Error bookmarking post:', error);
@@ -185,7 +163,7 @@ const UserProfile = ({
         try {
             const response = await axios.post(`/comments/${commentId}/like`);
             if (response.data.success) {
-                router.reload({ only: ['user'] });
+                router.reload({ only: ['userComments', 'stats'] });
             }
         } catch (error) {
             console.error('Error liking comment:', error);
@@ -201,7 +179,7 @@ const UserProfile = ({
         try {
             const response = await axios.post(`/comments/${commentId}/dislike`);
             if (response.data.success) {
-                router.reload({ only: ['user'] });
+                router.reload({ only: ['userComments', 'stats'] });
             }
         } catch (error) {
             console.error('Error disliking comment:', error);
@@ -213,29 +191,30 @@ const UserProfile = ({
         }
     };
 
-    const handleRemoveFavoriteService = async (serviceId) => {
+    const handleRemoveFavorite = async (serviceId) => {
         try {
-            const response = await axios.delete(`/api/services/${serviceId}/favorite`);
+            const response = await axios.post(`/services/${serviceId}/favorite`);
             if (response.data.success) {
-                router.reload({ only: ['user'] });
+                router.reload({ only: ['profileUser', 'stats'] });
                 setNotification({
                     open: true,
-                    message: 'Servicio eliminado de favoritos',
+                    message: 'Servicio eliminado de favoritos.',
                     severity: 'success'
                 });
             }
         } catch (error) {
-            console.error('Error removing favorite service:', error);
+            console.error('Error removing favorite:', error);
             setNotification({
                 open: true,
-                message: 'Error al eliminar de favoritos.',
+                message: 'Error al eliminar de favoritos. Inténtalo de nuevo.',
                 severity: 'error'
             });
         }
     };
 
     const handleContactService = (service) => {
-        console.log('Contact service:', service);
+        // Redirigir a la página del servicio con anchor a la sección de contacto
+        router.visit(`/servicios/${service.slug}#contact`);
     };
 
     // Render tab content
@@ -282,15 +261,7 @@ const UserProfile = ({
                         isOwnProfile={isOwnProfile}
                     />
                 );
-            case 'services':
-                return (
-                    <FavoriteServicesTab
-                        services={favoriteServices}
-                        currentUser={auth.user}
-                        onRemoveFavorite={handleRemoveFavoriteService}
-                        onContactService={handleContactService}
-                    />
-                );
+
             default:
                 return null;
         }
@@ -300,10 +271,13 @@ const UserProfile = ({
         <MainLayout>
             <Head title={`${profileUser.name} - Perfil`} />
 
+            {/* Background Layer */}
             <Box
                 sx={{
                     minHeight: '100vh',
-                    background: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 50%, #f0fdf4 100%)',
+                    background: isDark
+                        ? `linear-gradient(135deg, ${designSystem.colors.secondary[900]} 0%, ${designSystem.colors.secondary[800]} 50%, ${designSystem.colors.secondary[900]} 100%)`
+                        : `linear-gradient(135deg, ${designSystem.colors.primary[50]} 0%, ${designSystem.colors.surface.secondary} 50%, ${designSystem.colors.success[50]} 100%)`,
                     position: 'relative',
                     '&::before': {
                         content: '""',
@@ -312,184 +286,65 @@ const UserProfile = ({
                         left: 0,
                         right: 0,
                         bottom: 0,
-                        background: `radial-gradient(circle at 20% 80%, ${THEME.primary}20 0%, transparent 50%),
-                                   radial-gradient(circle at 80% 20%, ${THEME.success}20 0%, transparent 50%),
-                                   radial-gradient(circle at 40% 40%, ${THEME.accent}15 0%, transparent 50%)`,
+                        background: isDark
+                            ? `radial-gradient(circle at 20% 80%, ${designSystem.colors.info[700]}33 0%, transparent 50%),
+                               radial-gradient(circle at 80% 20%, ${designSystem.colors.success[700]}33 0%, transparent 50%)`
+                            : `radial-gradient(circle at 20% 80%, ${designSystem.colors.primary[200]}40 0%, transparent 50%),
+                               radial-gradient(circle at 80% 20%, ${designSystem.colors.success[200]}40 0%, transparent 50%)`,
                         pointerEvents: 'none'
                     }
                 }}
             >
-                <Container
-                    maxWidth="xl"
-                    sx={{
-                        py: 4,
-                        position: 'relative',
-                        zIndex: 1,
-                        px: { xs: 2, sm: 3, md: 4 }
-                    }}
-                >
-                    {/* Profile Header */}
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.6 }}
-                    >
-                        <Card
-                            sx={{
-                                mb: 4,
-                                backgroundColor: THEME.glass,
-                                backdropFilter: 'blur(10px)',
-                                border: '1px solid rgba(255, 255, 255, 0.2)',
-                                borderRadius: 4,
-                                overflow: 'hidden'
-                            }}
+                {/* Profile Header - Full Width with better stats display */}
+                <Box sx={{ width: '100%', px: { xs: 0, md: 3 }, pt: 3 }}>
+                    <UserProfileHeader
+                        user={profileUser}
+                        stats={stats}
+                        isOwnProfile={isOwnProfile}
+                        isFollowing={following}
+                        followersCount={followersCount}
+                        onFollowToggle={handleFollowToggle}
+                        followLoading={followLoading}
+                    />
+                </Box>
+
+                {/* Enhanced Tab Navigation - Centered with max width */}
+                <Box sx={{ width: '100%', px: { xs: 0, md: 4 }, mt: 3 }}>
+                    <Box sx={{ maxWidth: '1600px', mx: 'auto' }}>
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.6, delay: 0.2 }}
                         >
-                            <CardContent sx={{ p: 4 }}>
-                                <Grid container spacing={3} alignItems="center">
-                                    <Grid item xs={12} md={3} sx={{ textAlign: { xs: 'center', md: 'left' } }}>
-                                        <Avatar
-                                            src={profileUser.avatar}
-                                            sx={{
-                                                width: 120,
-                                                height: 120,
-                                                mx: { xs: 'auto', md: 0 },
-                                                mb: 2,
-                                                border: '4px solid rgba(255, 255, 255, 0.3)',
-                                                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)'
-                                            }}
-                                        >
-                                            {profileUser.name?.charAt(0)}
-                                        </Avatar>
-                                    </Grid>
+                            <Paper elevation={0} sx={{
+                                ...(theme.palette.mode === 'dark' ? designSystem.glassmorphism.dark : designSystem.glassmorphism.medium),
+                                borderRadius: { xs: 0, md: 4 },
+                                backdropFilter: 'saturate(160%) blur(20px)',
+                                background: theme.palette.mode === 'dark'
+                                    ? 'linear-gradient(135deg, rgba(17,24,39,0.55) 0%, rgba(2,6,23,0.4) 100%)'
+                                    : 'linear-gradient(135deg, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0.08) 100%)',
+                                border: theme.palette.mode === 'dark' ? '1px solid rgba(255,255,255,0.12)' : '1px solid rgba(255,255,255,0.28)',
+                                boxShadow: designSystem.shadows.glass,
+                                px: { xs: 0, md: 2 },
+                                py: { xs: 0.5, md: 1 },
+                                position: 'sticky',
+                                top: { xs: 'calc(env(safe-area-inset-top, 0px) + 8px)', md: 16 },
+                                zIndex: (theme) => theme.zIndex.appBar - 5
+                            }}>
+                                <EnhancedTabNavigation
+                                    activeTab={activeTab}
+                                    onTabChange={handleTabChange}
+                                    stats={stats}
+                                    isOwnProfile={isOwnProfile}
+                                />
+                            </Paper>
+                        </motion.div>
+                    </Box>
+                </Box>
 
-                                    <Grid item xs={12} md={6}>
-                                        <Box sx={{ textAlign: { xs: 'center', md: 'left' } }}>
-                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, justifyContent: { xs: 'center', md: 'flex-start' }, mb: 1 }}>
-                                                <Typography variant="h4" fontWeight={700} color={THEME.text.primary}>
-                                                    {profileUser.name}
-                                                </Typography>
-                                                <VerificationBadge
-                                                    user={profileUser}
-                                                    variant="premium"
-                                                    size="medium"
-                                                    showText={true}
-                                                />
-                                            </Box>
-
-                                            {profileUser.profession && (
-                                                <Typography variant="h6" color={THEME.text.secondary} gutterBottom>
-                                                    {profileUser.profession}
-                                                </Typography>
-                                            )}
-
-                                            {profileUser.bio && (
-                                                <Typography variant="body1" color={THEME.text.secondary} sx={{ mb: 2 }}>
-                                                    {profileUser.bio}
-                                                </Typography>
-                                            )}
-
-                                            <Stack direction="row" spacing={2} flexWrap="wrap" justifyContent={{ xs: 'center', md: 'flex-start' }}>
-                                                {profileUser.location && (
-                                                    <Chip
-                                                        icon={<LocationIcon />}
-                                                        label={profileUser.location}
-                                                        variant="outlined"
-                                                        size="small"
-                                                    />
-                                                )}
-                                                {profileUser.website && (
-                                                    <Chip
-                                                        icon={<WebsiteIcon />}
-                                                        label="Sitio web"
-                                                        variant="outlined"
-                                                        size="small"
-                                                        component="a"
-                                                        href={profileUser.website}
-                                                        target="_blank"
-                                                        clickable
-                                                    />
-                                                )}
-                                                <Chip
-                                                    icon={<EmailIcon />}
-                                                    label="Contactar"
-                                                    variant="outlined"
-                                                    size="small"
-                                                    clickable
-                                                />
-                                            </Stack>
-                                        </Box>
-                                    </Grid>
-
-                                    <Grid item xs={12} md={3} sx={{ textAlign: { xs: 'center', md: 'right' } }}>
-                                        {isOwnProfile ? (
-                                            <Button
-                                                variant="contained"
-                                                startIcon={<EditIcon />}
-                                                href="/profile/edit"
-                                                sx={{
-                                                    backgroundColor: THEME.primary,
-                                                    color: 'white',
-                                                    '&:hover': {
-                                                        backgroundColor: THEME.secondary
-                                                    }
-                                                }}
-                                            >
-                                                Editar Perfil
-                                            </Button>
-                                        ) : (
-                                            <Box sx={{ textAlign: 'center' }}>
-                                                <Button
-                                                    variant={following ? "outlined" : "contained"}
-                                                    startIcon={followLoading ? <CircularProgress size={16} color="inherit" /> : (following ? <UnfollowIcon /> : <FollowIcon />)}
-                                                    onClick={handleFollowToggle}
-                                                    disabled={followLoading}
-                                                    sx={{
-                                                        backgroundColor: following ? 'transparent' : THEME.primary,
-                                                        color: following ? THEME.primary : 'white',
-                                                        borderColor: THEME.primary,
-                                                        mb: 1,
-                                                        '&:hover': {
-                                                            backgroundColor: following ? THEME.primary : THEME.secondary,
-                                                            color: 'white'
-                                                        },
-                                                        '&:disabled': {
-                                                            opacity: 0.7
-                                                        }
-                                                    }}
-                                                >
-                                                    {followLoading ? 'Procesando...' : (following ? 'Dejar de seguir' : 'Seguir')}
-                                                </Button>
-                                                <Typography variant="caption" display="block" color={THEME.text.secondary}>
-                                                    {followersCount} seguidores
-                                                </Typography>
-                                            </Box>
-                                        )}
-                                    </Grid>
-                                </Grid>
-                            </CardContent>
-                        </Card>
-                    </motion.div>
-
-                    {/* Enhanced Tab Navigation */}
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.6, delay: 0.2 }}
-                    >
-                        <EnhancedTabNavigation
-                            activeTab={activeTab}
-                            onTabChange={handleTabChange}
-                            stats={stats}
-                            isOwnProfile={isOwnProfile}
-                        />
-                    </motion.div>
-
-                    {/* Tab Content */}
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.6, delay: 0.4 }}
-                    >
+                {/* Tab Content - Full width with responsive grid */}
+                <Box sx={{ width: '100%', px: { xs: 2, md: 4 }, py: 4, pb: 8 }}>
+                    <Box sx={{ maxWidth: '1600px', mx: 'auto' }}>
                         <AnimatePresence mode="wait">
                             <motion.div
                                 key={activeTab}
@@ -501,8 +356,8 @@ const UserProfile = ({
                                 {renderTabContent()}
                             </motion.div>
                         </AnimatePresence>
-                    </motion.div>
-                </Container>
+                    </Box>
+                </Box>
             </Box>
 
             {/* Notification Snackbar */}

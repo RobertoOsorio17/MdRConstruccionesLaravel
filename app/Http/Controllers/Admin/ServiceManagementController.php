@@ -144,7 +144,7 @@ class ServiceManagementController extends Controller
             'title' => 'required|string|max:255',
             'excerpt' => 'required|string|max:500', // ✅ Correct column name
             'body' => 'required|string', // ✅ Correct column name
-            'category_id' => 'required|exists:categories,id',
+            'category_id' => 'nullable|exists:categories,id',
             'price' => 'nullable|numeric|min:0',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             'is_active' => 'boolean',
@@ -184,27 +184,27 @@ class ServiceManagementController extends Controller
             'monthly_favorites' => $service->favorites()->where('created_at', '>=', now()->subDays(30))->count(),
         ];
 
+        // Load favorites count
+        $service->loadCount('favorites');
+
         return Inertia::render('Admin/Services/Show', [
             'service' => [
                 'id' => $service->id,
                 'title' => $service->title,
                 'slug' => $service->slug,
-                'short_description' => $service->short_description,
-                'description' => $service->description,
+                'excerpt' => $service->excerpt,
+                'body' => $service->body,
                 'price' => $service->price,
-                'price_type' => $service->price_type,
-                'duration' => $service->duration,
                 'is_active' => $service->is_active,
-                'is_featured' => $service->is_featured,
+                'featured' => $service->featured,
                 'image' => $service->image ? Storage::url($service->image) : null,
-                'features' => $service->features ? json_decode($service->features, true) : [],
                 'category' => $service->category ? [
                     'id' => $service->category->id,
                     'name' => $service->category->name,
                     'slug' => $service->category->slug,
                 ] : null,
                 'views_count' => $service->views_count ?? 0,
-                'favorites_count' => $service->favorites()->count(),
+                'favorites_count' => $service->favorites_count ?? 0,
                 'created_at' => $service->created_at,
                 'updated_at' => $service->updated_at,
             ],
@@ -229,10 +229,8 @@ class ServiceManagementController extends Controller
                 'description' => $service->description,
                 'category_id' => $service->category_id,
                 'price' => $service->price,
-                'price_type' => $service->price_type,
-                'duration' => $service->duration,
                 'is_active' => $service->is_active,
-                'is_featured' => $service->is_featured,
+                'featured' => $service->featured,
                 'image_url' => $service->image ? Storage::url($service->image) : null,
             ],
             'categories' => $categories,
@@ -247,13 +245,19 @@ class ServiceManagementController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'title' => 'required|string|max:255',
-            'excerpt' => 'required|string|max:500', // ✅ Correct column name
-            'body' => 'required|string', // ✅ Correct column name
-            'category_id' => 'required|exists:categories,id',
+            'excerpt' => 'required|string|max:500',
+            'body' => 'required|string',
+            'category_id' => 'nullable|exists:categories,id',
             'price' => 'nullable|numeric|min:0',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             'is_active' => 'boolean',
-            'featured' => 'boolean', // ✅ Correct column name
+            'featured' => 'boolean',
+            'icon' => 'nullable|string|max:255',
+            'video_url' => 'nullable|url',
+            'featured_image' => 'nullable|string',
+            'faq' => 'nullable|array',
+            'metrics' => 'nullable|array',
+            'benefits' => 'nullable|array',
         ]);
 
         if ($validator->fails()) {
@@ -404,7 +408,7 @@ class ServiceManagementController extends Controller
                 ->limit(10)
                 ->get(),
             'views' => Service::where('updated_at', '>=', $startDate)
-                ->selectRaw('title, views_count as total_views, is_featured')
+                ->selectRaw('title, views_count as total_views, featured')
                 ->orderBy('views_count', 'desc')
                 ->limit(10)
                 ->get(),

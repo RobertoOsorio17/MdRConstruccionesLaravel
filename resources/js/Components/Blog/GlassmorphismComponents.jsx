@@ -38,8 +38,8 @@ const GLASS_THEME = {
   blur: {
     sm: 'blur(8px)',
     md: 'blur(12px)',
-    lg: 'blur(16px)',
-    xl: 'blur(20px)',
+    lg: 'blur(12px)',
+    xl: 'blur(12px)',
   },
   
   // Border styles for glass effect
@@ -142,6 +142,7 @@ export const GlassPopularPostCard = ({ post, index = 0 }) => {
                 <img
                   src={post.cover_image}
                   alt={post.title}
+                  loading="lazy"
                   style={{
                     width: '100%',
                     height: '100%',

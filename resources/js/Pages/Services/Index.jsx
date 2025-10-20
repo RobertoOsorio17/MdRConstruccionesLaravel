@@ -12,7 +12,9 @@ import {
     Card,
     CardContent,
     Avatar,
-    Divider
+    Divider,
+    IconButton,
+    Tooltip
 } from '@mui/material';
 import {
     Build as BuildIcon,
@@ -28,7 +30,9 @@ import {
     Verified as VerifiedIcon,
     Speed as SpeedIcon,
     EmojiEvents as TrophyIcon,
-    Groups as GroupsIcon
+    Groups as GroupsIcon,
+    Clear as ClearIcon,
+    FilterList as FilterIcon
 } from '@mui/icons-material';
 import { Head, Link } from '@inertiajs/react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -37,6 +41,7 @@ import GlassmorphismHero from '@/Components/Services/GlassmorphismHero';
 import GlassmorphismServiceCard from '@/Components/Services/GlassmorphismServiceCard';
 import { useAppTheme } from '@/theme/ThemeProvider';
 import SkeletonGrid from '@/Components/UI/SkeletonGrid';
+import { usePersistentFilters } from '@/hooks/usePersistentFilters';
 
 const getServiceIcon = (iconName) => {
     const icons = {
@@ -50,29 +55,47 @@ const getServiceIcon = (iconName) => {
     return icons[iconName] || <BuildIcon />;
 };
 
-export default function ServicesIndex({ services = [], featuredServices = [], stats = {} }) {
+export default function ServicesIndex({ services = [], featuredServices = [], stats = {}, filters: urlFilters = {} }) {
     const { designSystem } = useAppTheme();
-    const [searchTerm, setSearchTerm] = useState('');
-    const [filterType, setFilterType] = useState('all');
     const [isLoading, setIsLoading] = useState(false);
+
+    // Usar hook de filtros persistentes
+    const {
+        filters,
+        setFilter,
+        clearFilters,
+        hasActiveFilters,
+        getActiveFiltersCount
+    } = usePersistentFilters({
+        storageKey: 'services-filters',
+        initialFilters: {
+            search: '',
+            type: 'all'
+        },
+        urlFilters,
+        routeName: 'services.index',
+        useLocalStorage: true,
+        useUrlParams: true,
+        debounceMs: 500
+    });
 
     // Enhanced filtering with search and category logic
     const filteredServices = useMemo(() => {
         return services.filter(service => {
-            const matchesSearch = !searchTerm ||
-                service.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                service.excerpt.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            const matchesSearch = !filters.search ||
+                service.title.toLowerCase().includes(filters.search.toLowerCase()) ||
+                service.excerpt.toLowerCase().includes(filters.search.toLowerCase()) ||
                 (service.features && service.features.some(feature =>
-                    feature.toLowerCase().includes(searchTerm.toLowerCase())
+                    feature.toLowerCase().includes(filters.search.toLowerCase())
                 ));
 
-            const matchesFilter = filterType === 'all' ||
-                                (filterType === 'featured' && service.featured) ||
-                                (filterType === 'popular' && service.views_count > 100);
+            const matchesFilter = filters.type === 'all' ||
+                                (filters.type === 'featured' && service.featured) ||
+                                (filters.type === 'popular' && service.views_count > 100);
 
             return matchesSearch && matchesFilter;
         });
-    }, [services, searchTerm, filterType]);
+    }, [services, filters.search, filters.type]);
 
     // Add service icons to services data
     const servicesWithIcons = useMemo(() => {
@@ -88,11 +111,15 @@ export default function ServicesIndex({ services = [], featuredServices = [], st
     }, [filteredServices]);
 
     const handleSearchChange = (newSearchTerm) => {
-        setSearchTerm(newSearchTerm);
+        setFilter('search', newSearchTerm);
     };
 
     const handleFilterChange = (newFilter) => {
-        setFilterType(newFilter);
+        setFilter('type', newFilter);
+    };
+
+    const handleClearFilters = () => {
+        clearFilters();
     };
 
     const handleFavoriteToggle = (serviceId, isFavorited) => {
@@ -119,8 +146,8 @@ export default function ServicesIndex({ services = [], featuredServices = [], st
             <GlassmorphismHero
                 onSearchChange={handleSearchChange}
                 onFilterChange={handleFilterChange}
-                searchTerm={searchTerm}
-                filterType={filterType}
+                searchTerm={filters.search}
+                filterType={filters.type}
                 stats={{
                     total_services: services.length,
                     completed_projects: '150+',
@@ -311,8 +338,8 @@ export default function ServicesIndex({ services = [], featuredServices = [], st
                                 backgroundClip: 'text'
                             }}
                         >
-                            {filterType === 'all' ? 'Todos los Servicios' :
-                             filterType === 'featured' ? 'Servicios Destacados' :
+                            {filters.type === 'all' ? 'Todos los Servicios' :
+                             filters.type === 'featured' ? 'Servicios Destacados' :
                              'Servicios Populares'}
                         </Typography>
                         <Typography
@@ -333,58 +360,84 @@ export default function ServicesIndex({ services = [], featuredServices = [], st
                             justifyContent="center"
                             flexWrap="wrap"
                             sx={{ gap: { xs: 1, sm: 2 } }}
+                            alignItems="center"
                         >
                             <Chip
                                 label="Todos"
-                                variant={filterType === 'all' ? 'filled' : 'outlined'}
+                                variant={filters.type === 'all' ? 'filled' : 'outlined'}
                                 onClick={() => handleFilterChange('all')}
                                 sx={{
-                                    bgcolor: filterType === 'all' ? designSystem.colors.primary[500] : 'transparent',
-                                    color: filterType === 'all' ? 'white' : (theme) => theme.palette.mode === 'dark' ? '#94a3b8' : designSystem.colors.text.secondary,
+                                    bgcolor: filters.type === 'all' ? designSystem.colors.primary[500] : 'transparent',
+                                    color: filters.type === 'all' ? 'white' : (theme) => theme.palette.mode === 'dark' ? '#94a3b8' : designSystem.colors.text.secondary,
                                     borderColor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.23)',
                                     px: 3,
                                     py: 2.5,
                                     fontSize: '1rem',
                                     fontWeight: 600,
                                     '&:hover': {
-                                        bgcolor: filterType === 'all' ? designSystem.colors.primary[600] : (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : designSystem.colors.primary[50]
+                                        bgcolor: filters.type === 'all' ? designSystem.colors.primary[600] : (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : designSystem.colors.primary[50]
                                     }
                                 }}
                             />
                             <Chip
                                 label="Destacados"
-                                variant={filterType === 'featured' ? 'filled' : 'outlined'}
+                                variant={filters.type === 'featured' ? 'filled' : 'outlined'}
                                 onClick={() => handleFilterChange('featured')}
                                 sx={{
-                                    bgcolor: filterType === 'featured' ? designSystem.colors.primary[500] : 'transparent',
-                                    color: filterType === 'featured' ? 'white' : (theme) => theme.palette.mode === 'dark' ? '#94a3b8' : designSystem.colors.text.secondary,
+                                    bgcolor: filters.type === 'featured' ? designSystem.colors.primary[500] : 'transparent',
+                                    color: filters.type === 'featured' ? 'white' : (theme) => theme.palette.mode === 'dark' ? '#94a3b8' : designSystem.colors.text.secondary,
                                     borderColor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.23)',
                                     px: 3,
                                     py: 2.5,
                                     fontSize: '1rem',
                                     fontWeight: 600,
                                     '&:hover': {
-                                        bgcolor: filterType === 'featured' ? designSystem.colors.primary[600] : (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : designSystem.colors.primary[50]
+                                        bgcolor: filters.type === 'featured' ? designSystem.colors.primary[600] : (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : designSystem.colors.primary[50]
                                     }
                                 }}
                             />
                             <Chip
                                 label="Populares"
-                                variant={filterType === 'popular' ? 'filled' : 'outlined'}
+                                variant={filters.type === 'popular' ? 'filled' : 'outlined'}
                                 onClick={() => handleFilterChange('popular')}
                                 sx={{
-                                    bgcolor: filterType === 'popular' ? designSystem.colors.primary[500] : 'transparent',
-                                    color: filterType === 'popular' ? 'white' : (theme) => theme.palette.mode === 'dark' ? '#94a3b8' : designSystem.colors.text.secondary,
+                                    bgcolor: filters.type === 'popular' ? designSystem.colors.primary[500] : 'transparent',
+                                    color: filters.type === 'popular' ? 'white' : (theme) => theme.palette.mode === 'dark' ? '#94a3b8' : designSystem.colors.text.secondary,
                                     borderColor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.23)',
                                     px: 3,
                                     py: 2.5,
                                     fontSize: '1rem',
                                     fontWeight: 600,
                                     '&:hover': {
-                                        bgcolor: filterType === 'popular' ? designSystem.colors.primary[600] : (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : designSystem.colors.primary[50]
+                                        bgcolor: filters.type === 'popular' ? designSystem.colors.primary[600] : (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : designSystem.colors.primary[50]
                                     }
                                 }}
                             />
+
+                            {/* Clear Filters Button */}
+                            {hasActiveFilters() && (
+                                <Tooltip title="Limpiar filtros">
+                                    <Chip
+                                        label={`Limpiar (${getActiveFiltersCount()})`}
+                                        icon={<ClearIcon />}
+                                        onClick={handleClearFilters}
+                                        color="error"
+                                        variant="outlined"
+                                        sx={{
+                                            px: 2,
+                                            py: 2.5,
+                                            fontSize: '0.9rem',
+                                            fontWeight: 600,
+                                            borderWidth: 2,
+                                            '&:hover': {
+                                                borderWidth: 2,
+                                                bgcolor: 'error.light',
+                                                color: 'white'
+                                            }
+                                        }}
+                                    />
+                                </Tooltip>
+                            )}
                         </Stack>
                     </Box>
                 </motion.div>
@@ -400,30 +453,37 @@ export default function ServicesIndex({ services = [], featuredServices = [], st
                             height={400}
                         />
                     ) : servicesWithIcons.length > 0 ? (
-                        <Box
-                            sx={{
-                                display: 'grid',
-                                gridTemplateColumns: {
-                                    xs: '1fr',
-                                    sm: 'repeat(2, 1fr)',
-                                    md: 'repeat(3, 1fr)'
-                                },
-                                gap: { xs: 3, sm: 3, md: 4 },
-                                mt: { xs: 2, md: 3 }
-                            }}
+                        <AnimatedSection
+                            staggerChildren={true}
+                            staggerDelay={0.08}
+                            staggerDelayMultiplier={0.04}
+                            maxStaggerDelay={0.4}
                         >
-                            {servicesWithIcons.map((service, index) => (
-                                <Box key={service.id}>
-                                    <GlassmorphismServiceCard
-                                        service={service}
-                                        index={index}
-                                        featured={service.featured}
-                                        onFavoriteToggle={handleFavoriteToggle}
-                                        onShare={handleShare}
-                                    />
-                                </Box>
-                            ))}
-                        </Box>
+                            <Box
+                                sx={{
+                                    display: 'grid',
+                                    gridTemplateColumns: {
+                                        xs: '1fr',
+                                        sm: 'repeat(2, 1fr)',
+                                        md: 'repeat(3, 1fr)'
+                                    },
+                                    gap: { xs: 3, sm: 3, md: 4 },
+                                    mt: { xs: 2, md: 3 }
+                                }}
+                            >
+                                {servicesWithIcons.map((service, index) => (
+                                    <Box key={service.id}>
+                                        <GlassmorphismServiceCard
+                                            service={service}
+                                            index={index}
+                                            featured={service.featured}
+                                            onFavoriteToggle={handleFavoriteToggle}
+                                            onShare={handleShare}
+                                        />
+                                    </Box>
+                                ))}
+                            </Box>
+                        </AnimatedSection>
                     ) : (
                         <motion.div
                             initial={{ opacity: 0, y: 20 }}

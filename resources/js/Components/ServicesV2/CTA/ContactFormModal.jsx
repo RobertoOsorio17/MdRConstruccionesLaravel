@@ -125,6 +125,8 @@ const ContactFormModal = ({
                 onClose={handleClose}
                 maxWidth="md"
                 fullWidth
+                aria-labelledby="contact-form-modal-title"
+                aria-describedby="contact-form-modal-description"
                 PaperProps={{
                     sx: {
                         background: 'rgba(255, 255, 255, 0.95)',
@@ -144,6 +146,7 @@ const ContactFormModal = ({
                 }}
             >
                 <DialogTitle
+                    id="contact-form-modal-title"
                     sx={{
                         display: 'flex',
                         justifyContent: 'space-between',
@@ -157,12 +160,26 @@ const ContactFormModal = ({
                             Solicitar Asesoría Personalizada
                         </Typography>
                         {service?.title && (
-                            <Typography variant="caption" sx={{ color: designSystem.colors.text.secondary }}>
+                            <Typography
+                                variant="caption"
+                                id="contact-form-modal-description"
+                                sx={{ color: designSystem.colors.text.secondary }}
+                            >
                                 Servicio: {service.title}
                             </Typography>
                         )}
                     </Box>
-                    <IconButton onClick={handleClose} disabled={processing}>
+                    <IconButton
+                        onClick={handleClose}
+                        disabled={processing}
+                        aria-label="Cerrar formulario de contacto"
+                        sx={{
+                            '&:focus-visible': {
+                                outline: `2px solid ${designSystem.colors.primary[600]}`,
+                                outlineOffset: '2px'
+                            }
+                        }}
+                    >
                         <Close />
                     </IconButton>
                 </DialogTitle>
@@ -181,10 +198,15 @@ const ContactFormModal = ({
                                 helperText={errors.name}
                                 required
                                 disabled={processing}
+                                autoComplete="name"
+                                inputProps={{
+                                    'aria-label': 'Nombre completo',
+                                    'aria-required': 'true'
+                                }}
                                 InputProps={{
                                     startAdornment: (
                                         <InputAdornment position="start">
-                                            <Person color={errors.name ? 'error' : 'action'} />
+                                            <Person color={errors.name ? 'error' : 'action'} aria-hidden="true" />
                                         </InputAdornment>
                                     ),
                                 }}
@@ -202,10 +224,15 @@ const ContactFormModal = ({
                                 helperText={errors.email}
                                 required
                                 disabled={processing}
+                                autoComplete="email"
+                                inputProps={{
+                                    'aria-label': 'Dirección de correo electrónico',
+                                    'aria-required': 'true'
+                                }}
                                 InputProps={{
                                     startAdornment: (
                                         <InputAdornment position="start">
-                                            <Email color={errors.email ? 'error' : 'action'} />
+                                            <Email color={errors.email ? 'error' : 'action'} aria-hidden="true" />
                                         </InputAdornment>
                                     ),
                                 }}
@@ -223,10 +250,15 @@ const ContactFormModal = ({
                                 helperText={errors.phone}
                                 required
                                 disabled={processing}
+                                autoComplete="tel"
+                                inputProps={{
+                                    'aria-label': 'Número de teléfono',
+                                    'aria-required': 'true'
+                                }}
                                 InputProps={{
                                     startAdornment: (
                                         <InputAdornment position="start">
-                                            <Phone color={errors.phone ? 'error' : 'action'} />
+                                            <Phone color={errors.phone ? 'error' : 'action'} aria-hidden="true" />
                                         </InputAdornment>
                                     ),
                                 }}
@@ -245,11 +277,17 @@ const ContactFormModal = ({
                                 helperText={errors.message || `${(data.message || '').length}/1000`}
                                 required
                                 disabled={processing}
-                                inputProps={{ maxLength: 1000 }}
+                                autoComplete="off"
+                                inputProps={{
+                                    maxLength: 1000,
+                                    'aria-label': 'Mensaje o consulta',
+                                    'aria-required': 'true',
+                                    'aria-describedby': 'message-helper-text'
+                                }}
                                 InputProps={{
                                     startAdornment: (
                                         <InputAdornment position="start" sx={{ alignSelf: 'flex-start', mt: 2 }}>
-                                            <Message color={errors.message ? 'error' : 'action'} />
+                                            <Message color={errors.message ? 'error' : 'action'} aria-hidden="true" />
                                         </InputAdornment>
                                     ),
                                 }}
@@ -263,6 +301,10 @@ const ContactFormModal = ({
                                         onChange={(e) => setData('privacy_accepted', e.target.checked)}
                                         required
                                         disabled={processing}
+                                        inputProps={{
+                                            'aria-label': 'Acepto la política de privacidad',
+                                            'aria-required': 'true'
+                                        }}
                                     />
                                 }
                                 label={
@@ -275,7 +317,7 @@ const ContactFormModal = ({
                                 }
                             />
                             {errors.privacy_accepted && (
-                                <Typography variant="caption" color="error">
+                                <Typography variant="caption" color="error" role="alert">
                                     {errors.privacy_accepted}
                                 </Typography>
                             )}
@@ -287,6 +329,7 @@ const ContactFormModal = ({
                                 size="large"
                                 fullWidth
                                 disabled={processing}
+                                aria-label={processing ? 'Enviando formulario' : 'Enviar consulta'}
                                 sx={{
                                     py: 1.5,
                                     fontWeight: 700,
@@ -296,6 +339,10 @@ const ContactFormModal = ({
                                         background: `linear-gradient(135deg, ${designSystem.colors.primary[600]}, ${designSystem.colors.primary[800]})`,
                                         transform: 'translateY(-2px)',
                                         boxShadow: designSystem.shadows.xl
+                                    },
+                                    '&:focus-visible': {
+                                        outline: `3px solid ${designSystem.colors.primary[300]}`,
+                                        outlineOffset: '2px'
                                     },
                                     transition: designSystem.transitions.allNormal
                                 }}

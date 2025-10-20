@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Container, Typography, Stack } from '@mui/material';
+import { Box, Container, Typography, Stack, useTheme } from '@mui/material';
 import { styled, keyframes } from '@mui/material/styles';
 
 // Animación de carrusel infinito
@@ -76,6 +76,8 @@ const BrandLogo = styled(Box, {
 }));
 
 const BrandsSection = ({ prefersReducedMotion = false }) => {
+  const theme = useTheme();
+  const isDark = theme.palette.mode === 'dark';
   const [isPaused, setIsPaused] = useState(false);
 
   // Marcas premium del sector construcción con colores corporativos
@@ -156,7 +158,7 @@ const BrandsSection = ({ prefersReducedMotion = false }) => {
       component="section"
       sx={{
         py: { xs: 8, md: 12, xl: 16 },
-        bgcolor: 'grey.50',
+        bgcolor: isDark ? 'rgba(15, 23, 42, 0.95)' : 'grey.50',
         overflow: 'hidden',
         position: 'relative',
       }}

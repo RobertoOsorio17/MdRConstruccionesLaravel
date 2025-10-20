@@ -144,7 +144,7 @@ export default function Devices({ auth, devices, stats }) {
 
                     {/* Stats Cards */}
                     <Grid container spacing={3} sx={{ mb: 4 }}>
-                        <Grid item xs={12} sm={4}>
+                        <Grid size={{ xs: 12, sm: 4 }}>
                             <Paper
                                 elevation={0}
                                 sx={{
@@ -177,7 +177,7 @@ export default function Devices({ auth, devices, stats }) {
                             </Paper>
                         </Grid>
 
-                        <Grid item xs={12} sm={4}>
+                        <Grid size={{ xs: 12, sm: 4 }}>
                             <Paper
                                 elevation={0}
                                 sx={{
@@ -210,7 +210,7 @@ export default function Devices({ auth, devices, stats }) {
                             </Paper>
                         </Grid>
 
-                        <Grid item xs={12} sm={4}>
+                        <Grid size={{ xs: 12, sm: 4 }}>
                             <Paper
                                 elevation={0}
                                 sx={{
@@ -267,7 +267,7 @@ export default function Devices({ auth, devices, stats }) {
                     {/* Devices List */}
                     <Grid container spacing={3}>
                         {devices.length === 0 ? (
-                            <Grid item xs={12}>
+                            <Grid size={{ xs: 12 }}>
                                 <Paper
                                     elevation={0}
                                     sx={{
@@ -289,7 +289,7 @@ export default function Devices({ auth, devices, stats }) {
                             </Grid>
                         ) : (
                             devices.map((device) => (
-                                <Grid item xs={12} key={device.id}>
+                                <Grid size={{ xs: 12 }} key={device.id}>
                                     <Card
                                         elevation={0}
                                         sx={{
@@ -306,7 +306,7 @@ export default function Devices({ auth, devices, stats }) {
                                         <CardContent>
                                             <Grid container spacing={2} alignItems="center">
                                                 {/* Device Icon */}
-                                                <Grid item>
+                                                <Grid size="auto">
                                                     <Box
                                                         sx={{
                                                             p: 2,
@@ -320,7 +320,7 @@ export default function Devices({ auth, devices, stats }) {
                                                 </Grid>
 
                                                 {/* Device Info */}
-                                                <Grid item xs>
+                                                <Grid size="grow">
                                                     <Stack spacing={1}>
                                                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                                             <Typography variant="h6" sx={{ fontWeight: 600 }}>

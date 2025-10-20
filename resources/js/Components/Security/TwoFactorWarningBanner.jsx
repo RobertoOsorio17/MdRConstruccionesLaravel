@@ -45,7 +45,7 @@ export default function TwoFactorWarningBanner({ flash = {}, security = {} }) {
                     sx={{
                         position: 'sticky',
                         top: 0,
-                        zIndex: 1200,
+                        zIndex: (theme) => theme.zIndex.appBar - 1,
                         width: '100%',
                     }}
                 >
@@ -104,4 +104,3 @@ export default function TwoFactorWarningBanner({ flash = {}, security = {} }) {
         </>
     );
 }
-

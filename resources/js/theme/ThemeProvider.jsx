@@ -56,6 +56,7 @@ const globalStyles = (mode) => ({
     scrollBehavior: 'smooth',
     WebkitFontSmoothing: 'antialiased',
     MozOsxFontSmoothing: 'grayscale',
+    colorScheme: mode,
   },
 
   'body': {
@@ -67,6 +68,7 @@ const globalStyles = (mode) => ({
     color: mode === 'light' ? designSystem.colors.text.primary : designSystem.colors.text.inverse,
     backgroundColor: mode === 'light' ? designSystem.colors.surface.primary : designSystem.colors.surface.dark.primary,
     transition: designSystem.transitions.presets.allNormal,
+    colorScheme: mode,
   },
 
   // Selection

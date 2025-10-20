@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 
 /**
  * Powers public comment submission and moderation logic, balancing usability with anti-abuse safeguards.
@@ -20,6 +21,7 @@ use Illuminate\Validation\ValidationException;
  */
 class CommentController extends Controller
 {
+    use AuthorizesRequests;
     /**
      * Store a new comment for a blog post.
      *
@@ -199,41 +201,13 @@ class CommentController extends Controller
                 abort(422, 'The parent comment does not belong to this post.');
             }
 
-            // ✅ FIXED: Validate maximum nesting depth with safety limit to prevent infinite loops
-            $depth = 1;
-            $maxIterations = 10; // Safety limit to prevent infinite loops
-            $iterations = 0;
-            $currentParent = $parentComment;
-
-            while ($currentParent->parent_id !== null && $iterations < $maxIterations) {
-                $iterations++;
-                $depth++;
-
-                if ($depth >= 3) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'Maximum comment nesting depth reached. You cannot reply to this comment.',
-                        'error' => 'MAX_DEPTH_EXCEEDED'
-                    ], 422);
-                }
-
-                $currentParent = Comment::find($currentParent->parent_id);
-                if (!$currentParent) {
-                    break; // Safety check - parent was deleted
-                }
-            }
-
-            // If we hit max iterations, log warning and reject
-            if ($iterations >= $maxIterations) {
-                \Log::warning('Comment depth validation hit max iterations', [
-                    'parent_comment_id' => $validated['parent_id'],
-                    'iterations' => $iterations,
-                    'post_id' => $post->id
-                ]);
+            // ✅ YouTube-style: Only allow replies to main comments (level 0)
+            // If the parent comment has a parent_id, it means it's already a reply
+            if ($parentComment->parent_id !== null) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Error validating comment depth. Please try replying to a different comment.',
-                    'error' => 'DEPTH_VALIDATION_ERROR'
+                    'message' => 'Solo puedes responder a comentarios principales. Para mencionar a alguien, usa @usuario en tu respuesta.',
+                    'error' => 'REPLY_TO_REPLY_NOT_ALLOWED'
                 ], 422);
             }
         }
@@ -408,6 +382,9 @@ class CommentController extends Controller
     /**
      * Get comments for a specific post (public API).
      *
+     * Includes soft-deleted comments to preserve conversation structure.
+     * Deleted comments will be marked with is_deleted flag for frontend display.
+     *
      * @param Request $request The current HTTP request instance.
      * @param Post $post The post whose comments are being retrieved.
      * @return \Illuminate\Http\JsonResponse JSON response containing formatted comments.
@@ -419,7 +396,9 @@ class CommentController extends Controller
         // Build the main query based on user type.
         if (!Auth::check()) {
             // For guests, show approved comments plus their own pending comments (by IP).
-            $comments = Comment::where('post_id', $post->id)
+            // Include soft-deleted comments to preserve conversation structure
+            $comments = Comment::withTrashed()
+                ->where('post_id', $post->id)
                 ->topLevel()
                 ->where(function ($query) use ($userIp) {
                     $query->where('status', 'approved')
@@ -430,50 +409,67 @@ class CommentController extends Controller
                           });
                 })
                 ->with(['user:id,name,is_verified', 'replies' => function ($query) use ($userIp) {
-                    // For replies, also include the guest's pending replies.
-                    $query->where(function ($q) use ($userIp) {
-                        $q->where('status', 'approved')
-                          ->orWhere(function ($subQ) use ($userIp) {
-                              $subQ->where('status', 'pending')
-                                   ->where('ip_address', $userIp)
-                                   ->whereNull('user_id');
-                          });
-                    })->with('user:id,name,is_verified')->orderBy('created_at', 'asc');
+                    // For replies, also include the guest's pending replies and soft-deleted
+                    $query->withTrashed()
+                        ->where(function ($q) use ($userIp) {
+                            $q->where('status', 'approved')
+                              ->orWhere(function ($subQ) use ($userIp) {
+                                  $subQ->where('status', 'pending')
+                                       ->where('ip_address', $userIp)
+                                       ->whereNull('user_id');
+                              });
+                        })->with('user:id,name,is_verified')->orderBy('created_at', 'asc');
                 }])
                 ->orderBy('created_at', 'desc')
                 ->get();
         } else {
             // For authenticated users, only show approved comments.
-            $comments = Comment::where('post_id', $post->id)
+            // Include soft-deleted comments to preserve conversation structure
+            $comments = Comment::withTrashed()
+                ->where('post_id', $post->id)
                 ->approved()
                 ->topLevel()
                 ->with(['user:id,name,is_verified', 'replies' => function ($query) {
-                    $query->approved()->with('user:id,name,is_verified')->orderBy('created_at', 'asc');
+                    $query->withTrashed()->approved()->with('user:id,name,is_verified')->orderBy('created_at', 'asc');
                 }])
                 ->orderBy('created_at', 'desc')
                 ->get();
         }
 
-        $formattedComments = $comments->map(function ($comment) use ($userIp) {
+        $currentUser = Auth::user();
+
+        $formattedComments = $comments->map(function ($comment) use ($userIp, $currentUser) {
+            $isDeleted = $comment->trashed();
             return [
                 'id' => $comment->id,
-                'body' => $comment->body,
-                'author_name' => $comment->user ? $comment->user->name : $comment->author_name,
+                'body' => $isDeleted ? '[Comentario eliminado]' : $comment->body,
+                'author_name' => $comment->user ? $comment->user->name : ($comment->author_name ?? 'Usuario invitado'),
                 'created_at' => $comment->created_at->format('d/m/Y H:i'),
                 'status' => $comment->status,
-                'user' => $comment->user,
+                'user' => $isDeleted ? null : $comment->user,
                 'is_guest' => $comment->isGuest(),
                 'is_own_pending' => !Auth::check() && $comment->status === 'pending' && $comment->ip_address === $userIp,
-                'replies' => $comment->replies->map(function ($reply) use ($userIp) {
+                'is_deleted' => $isDeleted,
+                'likes_count' => $comment->likeCount(),
+                'dislikes_count' => $comment->dislikeCount(),
+                'user_has_liked' => $currentUser ? $comment->isLikedBy($currentUser) : false,
+                'user_has_disliked' => $currentUser ? $comment->isDislikedBy($currentUser) : false,
+                'replies' => $comment->replies->map(function ($reply) use ($userIp, $currentUser) {
+                    $isReplyDeleted = $reply->trashed();
                     return [
                         'id' => $reply->id,
-                        'body' => $reply->body,
-                        'author_name' => $reply->user ? $reply->user->name : $reply->author_name,
+                        'body' => $isReplyDeleted ? '[Comentario eliminado]' : $reply->body,
+                        'author_name' => $reply->user ? $reply->user->name : ($reply->author_name ?? 'Usuario invitado'),
                         'created_at' => $reply->created_at->format('d/m/Y H:i'),
                         'status' => $reply->status,
-                        'user' => $reply->user,
+                        'user' => $isReplyDeleted ? null : $reply->user,
                         'is_guest' => $reply->isGuest(),
                         'is_own_pending' => !Auth::check() && $reply->status === 'pending' && $reply->ip_address === $userIp,
+                        'is_deleted' => $isReplyDeleted,
+                        'likes_count' => $reply->likeCount(),
+                        'dislikes_count' => $reply->dislikeCount(),
+                        'user_has_liked' => $currentUser ? $reply->isLikedBy($currentUser) : false,
+                        'user_has_disliked' => $currentUser ? $reply->isDislikedBy($currentUser) : false,
                     ];
                 })
             ];
@@ -677,26 +673,47 @@ class CommentController extends Controller
     }
 
     /**
-     * Delete a comment (admin only).
+     * Delete a comment.
+     *
+     * Uses soft delete to preserve conversation structure when comments have replies.
+     * Soft-deleted comments will display as "[Comentario eliminado]" in the UI.
      *
      * @param Comment $comment The comment instance targeted for deletion.
      * @return \Illuminate\Http\JsonResponse JSON response summarizing the deletion.
      */
-    public function destroy(Comment $comment)
+    public function destroy($commentId)
     {
+        // Retrieve comment including soft-deleted ones to provide graceful responses
+        $comment = Comment::withTrashed()->find($commentId);
+
+        if (!$comment) {
+            return response()->json([
+                'success' => false,
+                'message' => 'El comentario no existe o ya fue eliminado.'
+            ], 404);
+        }
+
         // ✅ Use policy for authorization
         $this->authorize('delete', $comment);
+
+        if ($comment->trashed()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'El comentario ya se encontraba eliminado.'
+            ]);
+        }
 
         try {
             // Store comment info for response.
             $commentAuthor = $comment->user ? $comment->user->name : $comment->author_name;
 
-            // Delete the comment (this will also delete replies due to cascade).
+            // Always use soft delete to preserve conversation structure
+            // This allows replies to remain visible even when parent is deleted
             $comment->delete();
 
             return response()->json([
                 'success' => true,
-                'message' => "Comment from {$commentAuthor} deleted successfully."
+                'message' => "Comentario de {$commentAuthor} eliminado exitosamente."
             ]);
 
         } catch (\Exception $e) {

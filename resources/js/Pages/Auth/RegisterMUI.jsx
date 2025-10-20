@@ -16,7 +16,13 @@ import {
     useTheme,
     alpha,
     FormHelperText,
-    LinearProgress
+    LinearProgress,
+    Grid,
+    Stack,
+    List,
+    ListItem,
+    ListItemIcon,
+    ListItemText
 } from '@mui/material';
 import {
     Visibility,
@@ -29,9 +35,11 @@ import {
     Facebook as FacebookIcon,
     GitHub as GitHubIcon,
     Construction as ConstructionIcon,
-    Check as CheckIcon
+    Check as CheckIcon,
+    Security as SecurityIcon
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
+import MainLayout from '@/Layouts/MainLayout';
 
 const RegisterMUI = () => {
     const theme = useTheme();
@@ -88,19 +96,81 @@ const RegisterMUI = () => {
     };
 
     return (
-        <>
+        <MainLayout>
             <Head title="Registro - MDR Construcciones" />
             
             <Box
+                component="section"
                 sx={{
-                    minHeight: '100vh',
+                    minHeight: { xs: '70vh', md: '75vh' },
                     background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`,
                     display: 'flex',
                     alignItems: 'center',
-                    py: 4
+                    py: { xs: 6, md: 8 }
                 }}
             >
-                <Container maxWidth="sm">
+                <Container maxWidth="lg">
+                    <Grid container spacing={4} alignItems="stretch">
+                        {/* Panel lateral con beneficios */}
+                        <Grid item xs={12} md={6}>
+                            <motion.div
+                                initial={{ opacity: 0, x: -20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ duration: 0.5 }}
+                            >
+                                <Paper
+                                    elevation={10}
+                                    sx={{
+                                        p: { xs: 3, md: 4 },
+                                        borderRadius: 4,
+                                        background: alpha(theme.palette.background.paper, 0.9),
+                                        backdropFilter: 'blur(18px)',
+                                        border: `1px solid ${alpha(theme.palette.common.white, 0.12)}`,
+                                        height: '100%'
+                                    }}
+                                >
+                                    <Stack spacing={2.5}>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                                            <Box sx={{ p: 1.25, borderRadius: 2, bgcolor: alpha(theme.palette.primary.main, 0.15) }}>
+                                                <ConstructionIcon sx={{ color: 'primary.main' }} />
+                                            </Box>
+                                            <Typography variant="h5" fontWeight={800}>
+                                                Crea tu cuenta
+                                            </Typography>
+                                        </Box>
+                                        <Typography variant="body1" color="text.secondary">
+                                            Únete a MDR Construcciones para gestionar proyectos, guardar favoritos y recibir novedades.
+                                        </Typography>
+                                        <Divider />
+                                        <List>
+                                            <ListItem disableGutters>
+                                                <ListItemIcon sx={{ minWidth: 36 }}>
+                                                    <CheckIcon color="success" />
+                                                </ListItemIcon>
+                                                <ListItemText primaryTypographyProps={{ fontWeight: 600 }}
+                                                    primary="Registro sencillo" secondary="Solo nombre y credenciales necesarios" />
+                                            </ListItem>
+                                            <ListItem disableGutters>
+                                                <ListItemIcon sx={{ minWidth: 36 }}>
+                                                    <SecurityIcon color="primary" />
+                                                </ListItemIcon>
+                                                <ListItemText primaryTypographyProps={{ fontWeight: 600 }}
+                                                    primary="Seguridad avanzada" secondary="Requisitos de contraseña y verificación de email" />
+                                            </ListItem>
+                                            <ListItem disableGutters>
+                                                <ListItemIcon sx={{ minWidth: 36 }}>
+                                                    <GoogleIcon color="action" />
+                                                </ListItemIcon>
+                                                <ListItemText primaryTypographyProps={{ fontWeight: 600 }}
+                                                    primary="Regístrate con OAuth" secondary="Google, Facebook o GitHub" />
+                                            </ListItem>
+                                        </List>
+                                    </Stack>
+                                </Paper>
+                            </motion.div>
+                        </Grid>
+                        {/* Columna del formulario */}
+                        <Grid item xs={12} md={6}>
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -523,9 +593,11 @@ const RegisterMUI = () => {
                             </Box>
                         </Paper>
                     </motion.div>
+                        </Grid>
+                    </Grid>
                 </Container>
             </Box>
-        </>
+        </MainLayout>
     );
 };
 

@@ -46,7 +46,7 @@ const GLASS_THEME = {
     blur: {
         sm: 'blur(8px)',
         md: 'blur(12px)',
-        lg: 'blur(16px)'
+        lg: 'blur(12px)'
     },
     border: {
         glass: '1px solid rgba(255, 255, 255, 0.3)',
@@ -175,8 +175,8 @@ const GlassmorphismServiceCard = ({
                             ? 'linear-gradient(145deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.9) 100%)'
                             : 'linear-gradient(145deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.9) 100%)')
                         : (featured ? GLASS_THEME.glass.accent : GLASS_THEME.glass.primary),
-                    backdropFilter: 'blur(20px)',
-                    WebkitBackdropFilter: 'blur(20px)',
+                    backdropFilter: 'blur(12px)',
+                    WebkitBackdropFilter: 'blur(12px)',
                     border: theme.palette.mode === 'dark'
                         ? (featured ? '1px solid rgba(59, 130, 246, 0.3)' : '1px solid rgba(255, 255, 255, 0.1)')
                         : (featured ? GLASS_THEME.border.accent : GLASS_THEME.border.glass),
@@ -191,41 +191,90 @@ const GlassmorphismServiceCard = ({
                         right: 0,
                         bottom: 0,
                         background: featured
-                            ? 'linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(147, 197, 253, 0.05) 100%)'
+                            ? (theme.palette.mode === 'dark'
+                                ? 'linear-gradient(135deg, rgba(59,130,246,0.16) 0%, rgba(99,102,241,0.10) 100%)'
+                                : 'linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(147, 197, 253, 0.05) 100%)')
                             : (theme.palette.mode === 'dark'
-                                ? 'linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%)'
+                                ? 'linear-gradient(135deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0.03) 100%)'
                                 : 'linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%)'),
                         pointerEvents: 'none',
                         opacity: isHovered ? 1 : 0,
                         transition: 'opacity 0.3s ease'
                     },
                     '&:hover': {
-                        transform: 'translateY(-8px) scale(1.02)',
-                        boxShadow: featured ? GLASS_THEME.shadow.accent : GLASS_THEME.shadow.hover
+                        transform: 'translateY(-12px) scale(1.03)',
+                        boxShadow: featured
+                            ? '0 20px 60px rgba(59, 130, 246, 0.3), 0 0 0 1px rgba(59, 130, 246, 0.2)'
+                            : '0 20px 60px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(255, 255, 255, 0.1)',
+                        '&::before': {
+                            opacity: 1
+                        },
+                        '& .card-icon': {
+                            transform: 'scale(1.15) rotate(5deg)'
+                        },
+                        '& .card-cta': {
+                            transform: 'translateX(4px)'
+                        }
                     }
                 }}
             >
-                {/* Featured Badge */}
-                <AnimatePresence>
-                    {featured && (
+                {/* Badges Container */}
+                <Box
+                    sx={{
+                        position: 'absolute',
+                        top: 16,
+                        left: 16,
+                        zIndex: 2,
+                        display: 'flex',
+                        gap: 1,
+                        flexWrap: 'wrap',
+                        maxWidth: 'calc(100% - 120px)' // Espacio para action buttons
+                    }}
+                >
+                    {/* Featured Badge */}
+                    <AnimatePresence>
+                        {featured && (
+                            <motion.div
+                                initial={{ opacity: 0, scale: 0 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                exit={{ opacity: 0, scale: 0 }}
+                                transition={{ delay: 0.3 }}
+                            >
+                                <Chip
+                                    icon={<StarIcon sx={{ fontSize: 14, color: 'white !important' }} />}
+                                    label="Destacado"
+                                    size="small"
+                                    sx={{
+                                        background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
+                                        color: 'white',
+                                        fontWeight: 600,
+                                        fontSize: '0.75rem',
+                                        boxShadow: '0 4px 12px rgba(59, 130, 246, 0.4)',
+                                        '& .MuiChip-label': {
+                                            px: 1.5
+                                        }
+                                    }}
+                                />
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+
+                    {/* Popular Badge */}
+                    {service.reviews_count > 10 && (
                         <motion.div
                             initial={{ opacity: 0, scale: 0 }}
                             animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0 }}
-                            transition={{ delay: 0.3 }}
+                            transition={{ delay: 0.4 }}
                         >
                             <Chip
-                                label="Destacado"
+                                label="Popular"
                                 size="small"
                                 sx={{
-                                    position: 'absolute',
-                                    top: 16,
-                                    left: 16,
-                                    zIndex: 2,
-                                    background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
+                                    background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
                                     color: 'white',
                                     fontWeight: 600,
                                     fontSize: '0.75rem',
+                                    boxShadow: '0 4px 12px rgba(16, 185, 129, 0.4)',
                                     '& .MuiChip-label': {
                                         px: 1.5
                                     }
@@ -233,7 +282,31 @@ const GlassmorphismServiceCard = ({
                             />
                         </motion.div>
                     )}
-                </AnimatePresence>
+
+                    {/* New Badge */}
+                    {service.is_new && (
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            transition={{ delay: 0.5 }}
+                        >
+                            <Chip
+                                label="Nuevo"
+                                size="small"
+                                sx={{
+                                    background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                                    color: 'white',
+                                    fontWeight: 600,
+                                    fontSize: '0.75rem',
+                                    boxShadow: '0 4px 12px rgba(245, 158, 11, 0.4)',
+                                    '& .MuiChip-label': {
+                                        px: 1.5
+                                    }
+                                }}
+                            />
+                        </motion.div>
+                    )}
+                </Box>
 
                 {/* Action Buttons */}
                 <Box
@@ -292,6 +365,7 @@ const GlassmorphismServiceCard = ({
                         {/* Service Icon */}
                         <motion.div variants={itemVariants}>
                             <Box
+                                className="card-icon"
                                 sx={{
                                     display: 'flex',
                                     alignItems: 'center',
@@ -302,8 +376,7 @@ const GlassmorphismServiceCard = ({
                                     background: `linear-gradient(135deg, ${THEME.primary[500]} 0%, ${THEME.primary[600]} 100%)`,
                                     mb: 3,
                                     boxShadow: `0 8px 24px ${THEME.primary[500]}30`,
-                                    transform: isHovered ? 'scale(1.1) rotate(5deg)' : 'scale(1)',
-                                    transition: 'transform 0.3s ease'
+                                    transition: 'transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)'
                                 }}
                             >
                                 {service.icon && (
@@ -414,14 +487,8 @@ const GlassmorphismServiceCard = ({
                             <Button
                                 fullWidth
                                 variant="contained"
-                                endIcon={
-                                    <motion.div
-                                        animate={{ x: isHovered ? 4 : 0 }}
-                                        transition={{ duration: 0.2 }}
-                                    >
-                                        <ArrowForwardIcon />
-                                    </motion.div>
-                                }
+                                className="card-cta"
+                                endIcon={<ArrowForwardIcon />}
                                 sx={{
                                     background: `linear-gradient(135deg, ${THEME.primary[500]} 0%, ${THEME.primary[600]} 100%)`,
                                     borderRadius: 2,
@@ -429,6 +496,7 @@ const GlassmorphismServiceCard = ({
                                     fontWeight: 600,
                                     textTransform: 'none',
                                     boxShadow: `0 4px 16px ${THEME.primary[500]}30`,
+                                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                                     '&:hover': {
                                         background: `linear-gradient(135deg, ${THEME.primary[600]} 0%, ${THEME.primary[700]} 100%)`,
                                         boxShadow: `0 8px 24px ${THEME.primary[500]}40`,

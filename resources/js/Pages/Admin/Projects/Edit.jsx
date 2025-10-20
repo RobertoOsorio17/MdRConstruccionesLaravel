@@ -33,25 +33,21 @@ const EditProject = ({ project }) => {
         title: project.title || '',
         slug: project.slug || '',
         summary: project.summary || '',
-        description: project.description || '',
-        client: project.client || '',
+        body: project.body || '',
         location: project.location || '',
         budget_estimate: project.budget_estimate || '',
         start_date: project.start_date || '',
         end_date: project.end_date || '',
-        status: project.status || 'planning',
+        status: project.status || 'draft',
         featured: project.featured || false,
-        is_active: project.is_active ?? true,
     });
 
     const [showSuccess, setShowSuccess] = useState(false);
 
     const statusOptions = [
-        { value: 'planning', label: 'Planificación' },
-        { value: 'in_progress', label: 'En Progreso' },
+        { value: 'draft', label: 'Borrador' },
+        { value: 'published', label: 'Publicado' },
         { value: 'completed', label: 'Completado' },
-        { value: 'on_hold', label: 'En Espera' },
-        { value: 'cancelled', label: 'Cancelado' },
     ];
 
     const handleSubmit = (e) => {
@@ -209,10 +205,10 @@ const EditProject = ({ project }) => {
                                 <TextField
                                     fullWidth
                                     label="Descripción Completa"
-                                    value={data.description}
-                                    onChange={(e) => setData('description', e.target.value)}
-                                    error={!!errors.description}
-                                    helperText={errors.description}
+                                    value={data.body}
+                                    onChange={(e) => setData('body', e.target.value)}
+                                    error={!!errors.body}
+                                    helperText={errors.body}
                                     multiline
                                     rows={6}
                                 />

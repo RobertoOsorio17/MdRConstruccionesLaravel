@@ -71,8 +71,7 @@ class UserFollowController extends Controller
     {
         $followers = $user->followers()
             ->select('users.id', 'users.name', 'users.avatar')
-            ->withPivot('followed_at')
-            ->orderBy('pivot_followed_at', 'desc')
+            ->orderBy('user_follows.created_at', 'desc')
             ->paginate(20);
             
         return response()->json($followers);
@@ -85,8 +84,7 @@ class UserFollowController extends Controller
     {
         $following = $user->following()
             ->select('users.id', 'users.name', 'users.avatar')
-            ->withPivot('followed_at')
-            ->orderBy('pivot_followed_at', 'desc')
+            ->orderBy('user_follows.created_at', 'desc')
             ->paginate(20);
             
         return response()->json($following);

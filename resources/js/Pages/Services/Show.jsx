@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Head } from '@inertiajs/react';
-import { Box, ThemeProvider, createTheme, Snackbar, Alert } from '@mui/material';
+import { Box, Snackbar, Alert } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
 import MainLayout from '@/Layouts/MainLayout';
 import designSystem from '@/theme/designSystem';
 import { trackEvent } from '@/Utils/trackEvent';
@@ -31,41 +32,20 @@ import ContactFormModal from '@/Components/ServicesV2/CTA/ContactFormModal';
  * - seo: Metadatos SEO
  * - auth: Usuario autenticado (opcional)
  */
+/**
+ * ShowV2 - Landing de Servicios con tema global
+ * 
+ * NOTA: Este componente ahora usa el tema global de MUI aplicado en app.jsx
+ * No necesita crear su propio ThemeProvider.
+ * 
+ * @refactored Octubre 2025 - Fase 2 de unificación de diseño
+ */
 export default function ShowV2({ service, testimonials = [], relatedServices = [], seo = {}, auth = {} }) {
+    const theme = useTheme();
+    const isDark = theme.palette.mode === 'dark';
     const [contactModalOpen, setContactModalOpen] = useState(false);
     const [isFavorite, setIsFavorite] = useState(false);
     const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
-
-    // Crear tema MUI con design system
-    const theme = createTheme({
-        palette: {
-            primary: {
-                main: designSystem.colors.primary[600] || '#1976d2',
-                light: designSystem.colors.primary[400] || '#42a5f5',
-                dark: designSystem.colors.primary[800] || '#1565c0'
-            },
-            secondary: {
-                main: designSystem.colors.secondary[600] || '#9c27b0',
-                light: designSystem.colors.secondary[400] || '#ba68c8',
-                dark: designSystem.colors.secondary[800] || '#7b1fa2'
-            },
-            success: {
-                main: designSystem.colors.accent?.emerald?.[600] || '#10b981'
-            },
-            warning: {
-                main: designSystem.colors.accent?.amber?.[600] || '#f59e0b'
-            },
-            error: {
-                main: designSystem.colors.error?.[600] || '#ef4444'
-            }
-        },
-        typography: {
-            fontFamily: '"Inter", "Roboto", "Helvetica", "Arial", sans-serif'
-        },
-        shape: {
-            borderRadius: parseInt(designSystem.borders?.radius?.md || '8')
-        }
-    });
 
     // Handlers
     const handleOpenContactModal = (source = 'unknown') => {
@@ -81,7 +61,7 @@ export default function ShowV2({ service, testimonials = [], relatedServices = [
         setContactModalOpen(false);
     };
 
-    const handleShare = () => {
+    const handleShare = async () => {
         const shareMethod = navigator.share ? 'native' : 'clipboard';
 
         trackEvent('service_share', {
@@ -90,19 +70,48 @@ export default function ShowV2({ service, testimonials = [], relatedServices = [
             method: shareMethod
         });
 
-        if (navigator.share) {
-            navigator.share({
-                title: service.title,
-                text: service.excerpt,
-                url: window.location.href
-            });
-        } else {
-            // Fallback: copiar URL al clipboard
-            navigator.clipboard.writeText(window.location.href);
+        try {
+            if (navigator.share) {
+                await navigator.share({
+                    title: service.title,
+                    text: service.excerpt,
+                    url: window.location.href
+                });
+                setSnackbar({
+                    open: true,
+                    message: 'Compartido exitosamente',
+                    severity: 'success'
+                });
+            } else if (navigator.clipboard?.writeText) {
+                // Fallback: copiar URL al clipboard
+                await navigator.clipboard.writeText(window.location.href);
+                setSnackbar({
+                    open: true,
+                    message: 'URL copiada al portapapeles',
+                    severity: 'success'
+                });
+            } else {
+                // Fallback para navegadores antiguos: crear input temporal
+                const input = document.createElement('input');
+                input.value = window.location.href;
+                document.body.appendChild(input);
+                input.select();
+                document.execCommand('copy');
+                document.body.removeChild(input);
+                setSnackbar({
+                    open: true,
+                    message: 'URL copiada',
+                    severity: 'success'
+                });
+            }
+        } catch (error) {
+            console.error('Error al compartir:', error);
             setSnackbar({
                 open: true,
-                message: 'URL copiada al portapapeles',
-                severity: 'success'
+                message: error.name === 'AbortError'
+                    ? 'Compartir cancelado'
+                    : 'No se pudo compartir. Intenta de nuevo.',
+                severity: error.name === 'AbortError' ? 'info' : 'error'
             });
         }
     };
@@ -131,26 +140,31 @@ export default function ShowV2({ service, testimonials = [], relatedServices = [
     const ctaConfig = {
         primary: {
             text: service.cta_primary_text || 'Solicitar Asesoría Gratuita',
+            label: 'Solicitar Asesoría Gratuita',
             action: handleOpenContactModal
         },
         secondary: {
-            text: service.cta_secondary_text || 'Descargar Catálogo',
+            text: service.cta_secondary_text || 'Solicitar Información',
+            label: 'Solicitar Información',
             action: () => {
-                // TODO: Implementar descarga de catálogo
-                console.log('Descargar catálogo');
+                setSnackbar({
+                    open: true,
+                    message: 'Por favor contáctenos para más información',
+                    severity: 'info'
+                });
             }
         }
     };
 
     // Badges para el hero
     const heroBadges = [
-        { icon: '⭐', value: `${service.average_rating || 5}/5`, text: 'Rating' },
-        { icon: '💬', value: `${service.reviews_count || 0}`, text: 'Reviews' },
-        { icon: '✅', value: '10', text: 'Años Garantía' }
+        { icon: '⭐', value: `${service.average_rating || 5}/5`, text: 'Valoración' },
+        { icon: '💬', value: `${service.reviews_count || 0}`, text: 'Opiniones' },
+        { icon: '✅', value: '10', text: 'Años de Garantía' }
     ];
 
-    // Caso de estudio (si existe en el servicio o usar ejemplo)
-    const caseStudyData = service.case_study || {
+    // Caso de estudio (ejemplo genérico)
+    const caseStudyData = {
         category: 'Proyecto Destacado',
         title: `Proyecto Exitoso de ${service.title}`,
         client: 'Cliente Satisfecho',
@@ -159,7 +173,7 @@ export default function ShowV2({ service, testimonials = [], relatedServices = [
         results: `Entregamos el proyecto a tiempo, superando las expectativas del cliente y logrando un ahorro del 15% respecto al presupuesto inicial.`,
         gallery: service.gallery?.slice(0, 3) || [],
         kpis: [
-            { icon: '⏱️', value: 8, label: 'Meses', suffix: ' meses' },
+            { icon: '⏱️', value: 8, label: 'Duración', suffix: ' meses' },
             { icon: '💰', value: 15, label: 'Ahorro', suffix: '%' },
             { icon: '⭐', value: 100, label: 'Satisfacción', suffix: '%' }
         ],
@@ -192,38 +206,42 @@ export default function ShowV2({ service, testimonials = [], relatedServices = [
     };
 
     return (
-        <ThemeProvider theme={theme}>
-            <MainLayout>
-                <Head>
-                    <title>{seo.title || `${service.title} - MDR Construcciones`}</title>
-                    <meta name="description" content={seo.description || service.excerpt} />
+        <MainLayout>
+            <Head>
+                <title>{seo.title || `${service.title} - MDR Construcciones`}</title>
+                <meta name="description" content={seo.description || service.excerpt} />
 
-                    {/* Schema.org JSON-LD */}
-                    <script type="application/ld+json">
-                        {JSON.stringify(schemaMarkup)}
-                    </script>
+                {/* Schema.org JSON-LD */}
+                <script type="application/ld+json">
+                    {JSON.stringify(schemaMarkup)}
+                </script>
 
-                    {/* Open Graph */}
-                    <meta property="og:title" content={service.title} />
-                    <meta property="og:description" content={service.excerpt} />
-                    <meta property="og:image" content={service.featured_image} />
-                    <meta property="og:type" content="website" />
+                {/* Open Graph */}
+                <meta property="og:title" content={service.title} />
+                <meta property="og:description" content={service.excerpt} />
+                <meta property="og:image" content={service.featured_image} />
+                <meta property="og:type" content="website" />
 
-                    {/* Twitter Card */}
-                    <meta name="twitter:card" content="summary_large_image" />
-                    <meta name="twitter:title" content={service.title} />
-                    <meta name="twitter:description" content={service.excerpt} />
-                    <meta name="twitter:image" content={service.featured_image} />
-                </Head>
+                {/* Twitter Card */}
+                <meta name="twitter:card" content="summary_large_image" />
+                <meta name="twitter:title" content={service.title} />
+                <meta name="twitter:description" content={service.excerpt} />
+                <meta name="twitter:image" content={service.featured_image} />
+            </Head>
 
                 <Box
                     id="main-content"
                     sx={{
                         minHeight: '100vh',
-                        background: `linear-gradient(180deg,
-                            ${designSystem.colors.surface.primary} 0%,
-                            ${designSystem.colors.primary[50]} 50%,
-                            ${designSystem.colors.surface.primary} 100%)`,
+                        background: isDark
+                            ? `linear-gradient(180deg,
+                                ${designSystem.colors.secondary[900]} 0%,
+                                ${designSystem.colors.secondary[800]} 50%,
+                                ${designSystem.colors.secondary[900]} 100%)`
+                            : `linear-gradient(180deg,
+                                ${designSystem.colors.surface.primary} 0%,
+                                ${designSystem.colors.primary[50]} 50%,
+                                ${designSystem.colors.surface.primary} 100%)`,
                         position: 'relative',
                         overflow: 'hidden',
                         '&::before': {
@@ -233,11 +251,14 @@ export default function ShowV2({ service, testimonials = [], relatedServices = [
                             left: 0,
                             right: 0,
                             height: '100%',
-                            background: `radial-gradient(circle at 20% 50%, ${designSystem.colors.primary[100]}40 0%, transparent 50%),
-                                        radial-gradient(circle at 80% 80%, ${designSystem.colors.secondary[100]}30 0%, transparent 50%)`,
+                            background: isDark
+                                ? `radial-gradient(circle at 20% 50%, ${designSystem.colors.primary[700]}22 0%, transparent 50%),
+                                   radial-gradient(circle at 80% 80%, ${designSystem.colors.accent.purple[600]}18 0%, transparent 50%)`
+                                : `radial-gradient(circle at 20% 50%, ${designSystem.colors.primary[100]}40 0%, transparent 50%),
+                                   radial-gradient(circle at 80% 80%, ${designSystem.colors.secondary[100]}30 0%, transparent 50%)`,
                             pointerEvents: 'none',
                             zIndex: 0,
-                            opacity: 0.5
+                            opacity: isDark ? 0.35 : 0.5
                         }
                     }}
                 >
@@ -382,8 +403,6 @@ export default function ShowV2({ service, testimonials = [], relatedServices = [
                         </Alert>
                     </Snackbar>
                 </Box>
-            </MainLayout>
-        </ThemeProvider>
+        </MainLayout>
     );
 }
-

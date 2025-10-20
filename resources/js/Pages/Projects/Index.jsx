@@ -17,9 +17,11 @@ import {
     Breadcrumbs,
     Link,
     Fade,
-    Zoom,
     useTheme,
-    alpha
+    alpha,
+    IconButton,
+    Tooltip,
+    Stack
 } from '@mui/material';
 import {
     Search as SearchIcon,
@@ -27,23 +29,46 @@ import {
     Schedule as ScheduleIcon,
     Euro as EuroIcon,
     KeyboardArrowRight as ArrowIcon,
-    Home as HomeIcon
+    Home as HomeIcon,
+    Person as PersonIcon,
+    Clear as ClearIcon,
+    FilterList as FilterIcon
 } from '@mui/icons-material';
+import { usePersistentFilters } from '@/hooks/usePersistentFilters';
 import { motion } from 'framer-motion';
 import AnimatedSection from '@/Components/AnimatedSection';
 
-const ProjectsIndex = ({ projects, categories }) => {
+const ProjectsIndex = ({ projects, categories, filters: urlFilters = {} }) => {
     const theme = useTheme();
-    const [searchTerm, setSearchTerm] = useState('');
-    const [selectedCategory, setSelectedCategory] = useState('');
     const [hoveredCard, setHoveredCard] = useState(null);
+
+    // Usar hook de filtros persistentes
+    const {
+        filters,
+        setFilter,
+        clearFilters,
+        hasActiveFilters,
+        getActiveFiltersCount
+    } = usePersistentFilters({
+        storageKey: 'projects-filters',
+        initialFilters: {
+            search: '',
+            location: ''
+        },
+        urlFilters,
+        routeName: 'projects.index',
+        useLocalStorage: true,
+        useUrlParams: true,
+        debounceMs: 500
+    });
 
     // Filtrar proyectos
     const filteredProjects = projects.filter(project => {
-        const matchesSearch = project.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                            project.summary.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                            project.location.toLowerCase().includes(searchTerm.toLowerCase());
-        const matchesCategory = selectedCategory === '' || project.location.includes(selectedCategory);
+        const matchesSearch = !filters.search ||
+                            project.title.toLowerCase().includes(filters.search.toLowerCase()) ||
+                            project.summary.toLowerCase().includes(filters.search.toLowerCase()) ||
+                            project.location.toLowerCase().includes(filters.search.toLowerCase());
+        const matchesCategory = !filters.location || project.location.includes(filters.location);
         return matchesSearch && matchesCategory;
     });
 
@@ -150,12 +175,12 @@ const ProjectsIndex = ({ projects, categories }) => {
                         }}
                     >
                         <Grid container spacing={3} alignItems="center">
-                            <Grid item xs={12} md={6}>
+                            <Grid item xs={12} md={5}>
                                 <TextField
                                     fullWidth
                                     placeholder="Buscar proyectos..."
-                                    value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    value={filters.search}
+                                    onChange={(e) => setFilter('search', e.target.value)}
                                     InputProps={{
                                         startAdornment: <SearchIcon sx={{ mr: 1, color: 'text.secondary' }} />
                                     }}
@@ -167,13 +192,13 @@ const ProjectsIndex = ({ projects, categories }) => {
                                     }}
                                 />
                             </Grid>
-                            <Grid item xs={12} md={6}>
+                            <Grid item xs={12} md={5}>
                                 <TextField
                                     select
                                     fullWidth
                                     label="Ubicación"
-                                    value={selectedCategory}
-                                    onChange={(e) => setSelectedCategory(e.target.value)}
+                                    value={filters.location}
+                                    onChange={(e) => setFilter('location', e.target.value)}
                                     sx={{
                                         '& .MuiOutlinedInput-root': {
                                             borderRadius: 2,
@@ -189,7 +214,45 @@ const ProjectsIndex = ({ projects, categories }) => {
                                     ))}
                                 </TextField>
                             </Grid>
+                            <Grid item xs={12} md={2}>
+                                {hasActiveFilters() && (
+                                    <Tooltip title="Limpiar filtros">
+                                        <Button
+                                            fullWidth
+                                            variant="outlined"
+                                            color="error"
+                                            startIcon={<ClearIcon />}
+                                            onClick={clearFilters}
+                                            sx={{
+                                                height: '56px',
+                                                borderRadius: 2,
+                                                borderWidth: 2,
+                                                fontWeight: 600,
+                                                '&:hover': {
+                                                    borderWidth: 2,
+                                                    bgcolor: 'error.light',
+                                                    color: 'white'
+                                                }
+                                            }}
+                                        >
+                                            Limpiar
+                                        </Button>
+                                    </Tooltip>
+                                )}
+                            </Grid>
                         </Grid>
+
+                        {/* Active Filters Indicator */}
+                        {hasActiveFilters() && (
+                            <Box sx={{ mt: 2 }}>
+                                <Stack direction="row" spacing={1} alignItems="center">
+                                    <FilterIcon sx={{ fontSize: '1rem', color: 'text.secondary' }} />
+                                    <Typography variant="body2" color="text.secondary">
+                                        {getActiveFiltersCount()} filtro{getActiveFiltersCount() > 1 ? 's' : ''} activo{getActiveFiltersCount() > 1 ? 's' : ''}
+                                    </Typography>
+                                </Stack>
+                            </Box>
+                        )}
                     </Box>
                 </AnimatedSection>
 
@@ -240,12 +303,16 @@ const ProjectsIndex = ({ projects, categories }) => {
                 </AnimatedSection>
 
                 {/* Grid de Proyectos */}
-                <AnimatedSection>
+                <AnimatedSection
+                    staggerChildren={true}
+                    staggerDelay={0.08}
+                    staggerDelayMultiplier={0.04}
+                    maxStaggerDelay={0.4}
+                >
                     <Grid container spacing={4}>
                         {filteredProjects.map((project, index) => (
                             <Grid item xs={12} md={6} lg={4} key={project.id}>
-                                <Zoom in={true} timeout={300 + index * 100}>
-                                    <Card
+                                <Card
                                         component={motion.div}
                                         whileHover={{ y: -8, scale: 1.02 }}
                                         onHoverStart={() => setHoveredCard(project.id)}
@@ -278,36 +345,119 @@ const ProjectsIndex = ({ projects, categories }) => {
                                             />
                                         )}
                                         
-                                        <Box sx={{ position: 'relative', overflow: 'hidden' }}>
+                                        <Box sx={{ position: 'relative', overflow: 'hidden', height: 240 }}>
                                             <CardMedia
                                                 component="img"
                                                 height="240"
                                                 image={project.gallery ? JSON.parse(project.gallery)[0] : 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800'}
                                                 alt={project.title}
                                                 sx={{
+                                                    width: '100%',
+                                                    height: '100%',
+                                                    objectFit: 'cover',
                                                     transition: 'transform 0.3s ease',
                                                     transform: hoveredCard === project.id ? 'scale(1.1)' : 'scale(1)'
                                                 }}
                                             />
+
+                                            {/* Category Badge */}
+                                            <Chip
+                                                label={project.category || 'Proyecto'}
+                                                size="small"
+                                                sx={{
+                                                    position: 'absolute',
+                                                    top: 12,
+                                                    left: 12,
+                                                    backgroundColor: alpha(theme.palette.primary.main, 0.9),
+                                                    color: 'white',
+                                                    fontWeight: 600,
+                                                    fontSize: '0.75rem',
+                                                    backdropFilter: 'blur(10px)'
+                                                }}
+                                            />
+
+                                            {/* Status Badge */}
+                                            {project.status && (
+                                                <Chip
+                                                    label={project.status}
+                                                    size="small"
+                                                    sx={{
+                                                        position: 'absolute',
+                                                        top: 12,
+                                                        right: 12,
+                                                        backgroundColor: project.status === 'Completado'
+                                                            ? alpha(theme.palette.success.main, 0.9)
+                                                            : project.status === 'En progreso'
+                                                            ? alpha(theme.palette.warning.main, 0.9)
+                                                            : alpha(theme.palette.info.main, 0.9),
+                                                        color: 'white',
+                                                        fontWeight: 600,
+                                                        fontSize: '0.75rem',
+                                                        backdropFilter: 'blur(10px)'
+                                                    }}
+                                                />
+                                            )}
+
+                                            {/* Hover Overlay with Additional Info */}
                                             <Box
                                                 sx={{
                                                     position: 'absolute',
-                                                    bottom: 0,
+                                                    top: 0,
                                                     left: 0,
                                                     right: 0,
-                                                    background: 'linear-gradient(transparent, rgba(0,0,0,0.7))',
+                                                    bottom: 0,
+                                                    background: 'linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.5) 50%, rgba(0,0,0,0.2) 100%)',
+                                                    opacity: hoveredCard === project.id ? 1 : 0,
+                                                    transition: 'opacity 0.3s ease',
+                                                    display: 'flex',
+                                                    flexDirection: 'column',
+                                                    justifyContent: 'flex-end',
                                                     p: 2
                                                 }}
                                             >
-                                                <Chip
-                                                    label={project.location}
-                                                    variant="filled"
-                                                    sx={{
-                                                        backgroundColor: alpha(theme.palette.primary.main, 0.9),
-                                                        color: 'white',
-                                                        fontWeight: 'bold'
-                                                    }}
-                                                />
+                                                <Stack spacing={1}>
+                                                    {/* Location */}
+                                                    <Stack direction="row" alignItems="center" spacing={0.5}>
+                                                        <LocationIcon sx={{ fontSize: 16, color: 'white' }} />
+                                                        <Typography variant="caption" sx={{ color: 'white', fontSize: '0.85rem' }}>
+                                                            {project.location}
+                                                        </Typography>
+                                                    </Stack>
+
+                                                    {/* Client */}
+                                                    {project.client && (
+                                                        <Stack direction="row" alignItems="center" spacing={0.5}>
+                                                            <PersonIcon sx={{ fontSize: 16, color: 'white' }} />
+                                                            <Typography variant="caption" sx={{ color: 'white', fontSize: '0.85rem' }}>
+                                                                {project.client}
+                                                            </Typography>
+                                                        </Stack>
+                                                    )}
+
+                                                    {/* Tags */}
+                                                    {project.tags && project.tags.length > 0 && (
+                                                        <Stack direction="row" spacing={0.5} flexWrap="wrap">
+                                                            {project.tags.slice(0, 3).map((tag, idx) => (
+                                                                <Chip
+                                                                    key={idx}
+                                                                    label={tag}
+                                                                    size="small"
+                                                                    sx={{
+                                                                        bgcolor: 'rgba(255, 255, 255, 0.2)',
+                                                                        color: 'white',
+                                                                        backdropFilter: 'blur(10px)',
+                                                                        border: '1px solid rgba(255, 255, 255, 0.3)',
+                                                                        fontSize: '0.65rem',
+                                                                        height: 20,
+                                                                        '& .MuiChip-label': {
+                                                                            px: 1
+                                                                        }
+                                                                    }}
+                                                                />
+                                                            ))}
+                                                        </Stack>
+                                                    )}
+                                                </Stack>
                                             </Box>
                                         </Box>
 
@@ -385,7 +535,6 @@ const ProjectsIndex = ({ projects, categories }) => {
                                             </Button>
                                         </CardActions>
                                     </Card>
-                                </Zoom>
                             </Grid>
                         ))}
                     </Grid>

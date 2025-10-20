@@ -37,6 +37,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import designSystem from '@/theme/designSystem';
 import { useDeviceBreakpoints, useScrollDirection } from '@/Hooks/useDeviceBreakpoints';
 import { trackCTAClick } from '@/Utils/trackEvent';
+import { contactConfig, getServiceWhatsAppUrl } from '@/config/contact';
 
 const StickyCTA = ({
     ctaConfig = {},
@@ -62,8 +63,9 @@ const StickyCTA = ({
         setIsVisible(scrollY > threshold);
     }, [scrollY]);
 
-    // Ocultar en mobile cuando se hace scroll down (para no obstruir contenido)
-    const shouldHide = actualPosition === 'bottom' && scrollDirection === 'down' && scrollY > 500;
+    // Ocultar en mobile cuando se hace scroll down (si no está en modo de accesibilidad)
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const shouldHide = !prefersReducedMotion && actualPosition === 'bottom' && scrollDirection === 'down' && scrollY > 500;
 
     const handleScrollTop = () => {
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -71,17 +73,13 @@ const StickyCTA = ({
     };
 
     const handleWhatsAppClick = () => {
-        const message = encodeURIComponent(
-            `Hola, estoy interesado en el servicio: ${service?.title || 'Construcción'}`
-        );
-        const whatsappNumber = ctaConfig.whatsapp?.number || '34123456789';
-        window.open(`https://wa.me/${whatsappNumber}?text=${message}`, '_blank');
+        const whatsappUrl = getServiceWhatsAppUrl(service?.title || 'Construcción');
+        window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
         trackCTAClick('whatsapp', 'WhatsApp Directo', service?.slug);
     };
 
     const handlePhoneClick = () => {
-        const phoneNumber = ctaConfig.phone?.number || '+34123456789';
-        window.location.href = `tel:${phoneNumber}`;
+        window.location.href = contactConfig.phone.link;
         trackCTAClick('phone', 'Llamar Ahora', service?.slug);
     };
 
@@ -113,11 +111,18 @@ const StickyCTA = ({
                         <Stack
                             spacing={designSystem.spacing[2]}
                             sx={{
-                                ...designSystem.glassmorphism.medium,
                                 borderRadius: designSystem.borders.radius.xl,
                                 p: designSystem.spacing[3],
                                 boxShadow: designSystem.shadows.glass,
-                                minWidth: 200
+                                minWidth: 200,
+                                background: theme.palette.mode === 'dark'
+                                    ? 'linear-gradient(145deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.9) 100%)'
+                                    : 'linear-gradient(145deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.9) 100%)',
+                                backdropFilter: 'blur(20px)',
+                                WebkitBackdropFilter: 'blur(20px)',
+                                border: theme.palette.mode === 'dark'
+                                    ? '1px solid rgba(255, 255, 255, 0.1)'
+                                    : '1px solid rgba(255, 255, 255, 0.3)'
                             }}
                         >
                             {/* CTA Principal */}
@@ -186,11 +191,16 @@ const StickyCTA = ({
                                 <Zoom in={scrollY > 500}>
                                     <IconButton
                                         onClick={handleScrollTop}
+                                        aria-label="Volver arriba"
                                         sx={{
-                                            bgcolor: designSystem.colors.surface.primary,
-                                            border: `1px solid ${designSystem.colors.border.main}`,
+                                            bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.06)' : designSystem.colors.surface.primary,
+                                            border: theme.palette.mode === 'dark' ? '1px solid rgba(255,255,255,0.12)' : `1px solid ${designSystem.colors.border.main}`,
                                             '&:hover': {
-                                                bgcolor: designSystem.colors.surface.secondary
+                                                bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.12)' : designSystem.colors.surface.secondary
+                                            },
+                                            '&:focus-visible': {
+                                                outline: `2px solid ${designSystem.colors.primary[600]}`,
+                                                outlineOffset: '2px'
                                             }
                                         }}
                                     >
@@ -215,9 +225,13 @@ const StickyCTA = ({
                     left: 0,
                     right: 0,
                     zIndex: designSystem.zIndex.fab,
-                    ...designSystem.glassmorphism.strong,
-                    borderTop: `1px solid ${designSystem.colors.border.light}`,
-                    boxShadow: `0 -4px 20px rgba(0,0,0,0.1)`,
+                    background: theme.palette.mode === 'dark'
+                        ? 'linear-gradient(145deg, rgba(15,23,42,0.9) 0%, rgba(2,6,23,0.85) 100%)'
+                        : designSystem.glassmorphism.strong.background,
+                    backdropFilter: 'blur(20px)',
+                    WebkitBackdropFilter: 'blur(20px)',
+                    borderTop: theme.palette.mode === 'dark' ? '1px solid rgba(255,255,255,0.08)' : `1px solid ${designSystem.colors.border.light}`,
+                    boxShadow: theme.palette.mode === 'dark' ? '0 -4px 24px rgba(0,0,0,0.4)' : `0 -4px 20px rgba(0,0,0,0.1)`,
                     p: designSystem.spacing[2]
                 }}
             >
@@ -232,8 +246,9 @@ const StickyCTA = ({
                         fullWidth
                         startIcon={<RequestQuote />}
                         onClick={handleWizardClick}
+                        aria-label={`Solicitar ${service?.title || 'asesoría'}`}
                         sx={{
-                            background: `linear-gradient(135deg, ${designSystem.colors.primary[600]} 0%, ${designSystem.colors.accent.purple} 100%)`,
+                            background: `linear-gradient(135deg, ${designSystem.colors.primary[600]} 0%, ${designSystem.colors.accent.purple[500] || designSystem.colors.accent.purple} 100%)`,
                             color: designSystem.colors.text.inverse,
                             fontWeight: 700,
                             py: designSystem.spacing[2],
@@ -241,13 +256,14 @@ const StickyCTA = ({
                             transition: designSystem.transitions.presets.allNormal
                         }}
                     >
-                        Solicitar
+                        {ctaConfig.primary?.text || 'Solicitar'}
                     </Button>
 
                     {/* WhatsApp */}
-                    <Tooltip title="WhatsApp">
+                    <Tooltip title={`WhatsApp: ${contactConfig.whatsapp.display}`}>
                         <IconButton
                             onClick={handleWhatsAppClick}
+                            aria-label="Contactar por WhatsApp"
                             sx={{
                                 bgcolor: '#25D366',
                                 color: 'white',
@@ -255,6 +271,10 @@ const StickyCTA = ({
                                 height: 48,
                                 '&:hover': {
                                     bgcolor: '#20BA5A'
+                                },
+                                '&:focus-visible': {
+                                    outline: '2px solid #20BA5A',
+                                    outlineOffset: '2px'
                                 }
                             }}
                         >
@@ -263,9 +283,10 @@ const StickyCTA = ({
                     </Tooltip>
 
                     {/* Teléfono */}
-                    <Tooltip title="Llamar">
+                    <Tooltip title={`Llamar: ${contactConfig.phone.display}`}>
                         <IconButton
                             onClick={handlePhoneClick}
+                            aria-label={`Llamar al ${contactConfig.phone.display}`}
                             sx={{
                                 bgcolor: designSystem.colors.primary[600],
                                 color: 'white',
@@ -273,6 +294,10 @@ const StickyCTA = ({
                                 height: 48,
                                 '&:hover': {
                                     bgcolor: designSystem.colors.primary[700]
+                                },
+                                '&:focus-visible': {
+                                    outline: `2px solid ${designSystem.colors.primary[700]}`,
+                                    outlineOffset: '2px'
                                 }
                             }}
                         >
@@ -308,4 +333,3 @@ const StickyCTA = ({
 };
 
 export default StickyCTA;
-

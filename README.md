@@ -2,16 +2,18 @@
 
 <div align="center">
 
-![Laravel](https://img.shields.io/badge/Laravel-11.x-FF2D20?style=for-the-badge&logo=laravel&logoColor=white)
-![React](https://img.shields.io/badge/React-18.x-61DAFB?style=for-the-badge&logo=react&logoColor=black)
-![PHP](https://img.shields.io/badge/PHP-8.3-777BB4?style=for-the-badge&logo=php&logoColor=white)
+![Laravel](https://img.shields.io/badge/Laravel-12.0-FF2D20?style=for-the-badge&logo=laravel&logoColor=white)
+![React](https://img.shields.io/badge/React-18.2-61DAFB?style=for-the-badge&logo=react&logoColor=black)
+![PHP](https://img.shields.io/badge/PHP-8.2+-777BB4?style=for-the-badge&logo=php&logoColor=white)
 ![MySQL](https://img.shields.io/badge/MySQL-8.0-4479A1?style=for-the-badge&logo=mysql&logoColor=white)
-![Material-UI](https://img.shields.io/badge/Material--UI-5.x-007FFF?style=for-the-badge&logo=mui&logoColor=white)
+![Material-UI](https://img.shields.io/badge/Material--UI-7.x-007FFF?style=for-the-badge&logo=mui&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?style=for-the-badge&logo=docker&logoColor=white)
 
-**Plataforma web moderna y completa para empresa de construcción con gestión de proyectos, blog, servicios y panel administrativo**
+**Plataforma web moderna y completa para empresa de construcción con gestión de proyectos, blog, servicios, panel administrativo, sistema ML de recomendaciones y PWA**
 
 [Características](#-características-principales) •
 [Instalación](#-instalación) •
+[Docker](#-instalación-con-docker) •
 [Documentación](#-estructura-del-proyecto) •
 [Contribuir](#-contribución)
 
@@ -47,9 +49,14 @@
 - 🔐 **Panel de Administración**: Dashboard completo para gestión de contenido, usuarios, proyectos y servicios
 - 📊 **Analytics**: Estadísticas detalladas de visitas, interacciones y rendimiento
 - 🔔 **Sistema de Notificaciones**: Notificaciones en tiempo real y por email
+- 🤖 **Sistema ML**: Recomendaciones personalizadas basadas en Machine Learning
+- 💾 **Sistema de Caché**: Caché inteligente con Redis/File para optimización de rendimiento
+- 📱 **PWA**: Progressive Web App con soporte offline y instalación en dispositivos
+- 🐳 **Docker**: Entorno de desarrollo completamente dockerizado
+- 📦 **Backups Automáticos**: Sistema de respaldo automático con Spatie Laravel Backup
 - 📱 **Responsive Design**: Optimizado para dispositivos móviles, tablets y desktop
 
-La plataforma está construida con **Laravel 11** en el backend y **React 18** con **Inertia.js** en el frontend, proporcionando una experiencia de usuario fluida tipo SPA (Single Page Application) con las ventajas del renderizado del lado del servidor.
+La plataforma está construida con **Laravel 12** en el backend y **React 18** con **Inertia.js** en el frontend, proporcionando una experiencia de usuario fluida tipo SPA (Single Page Application) con las ventajas del renderizado del lado del servidor.
 
 ---
 
@@ -176,10 +183,10 @@ La plataforma está construida con **Laravel 11** en el backend y **React 18** c
 
 ### 🎨 Diseño y UX
 
-- ✅ **Material-UI v5** para componentes
+- ✅ **Material-UI v7** para componentes
 - ✅ **Diseño Responsive** (mobile-first)
 - ✅ **Tema Personalizable** (light/dark mode)
-- ✅ **Animaciones Suaves**
+- ✅ **Animaciones Suaves** con Framer Motion
 - ✅ **Loading States** y Skeleton Screens
 - ✅ **Error Boundaries** para manejo de errores
 - ✅ **Optimización de Rendimiento**
@@ -187,6 +194,73 @@ La plataforma está construida con **Laravel 11** en el backend y **React 18** c
   - Code splitting
   - Optimización de imágenes
   - Caché de assets
+
+### 🤖 Sistema de Machine Learning
+
+- ✅ **Recomendaciones Personalizadas**
+  - Content-based filtering (TF-IDF)
+  - Collaborative filtering
+  - Hybrid recommendations
+  - Matrix factorization
+- ✅ **Análisis de Contenido**
+  - Vectorización de posts
+  - Análisis de similitud
+  - Clustering de usuarios
+  - Detección de anomalías
+- ✅ **Métricas de Evaluación**
+  - Precision, Recall, F1-Score
+  - Diversity y Coverage
+  - Reportes automáticos
+- ✅ **Comandos Artisan**
+  - `php artisan ml:train` - Entrenar modelos
+  - `php artisan ml:metrics` - Generar reportes
+
+### 💾 Sistema de Caché Inteligente
+
+- ✅ **Múltiples Drivers**
+  - Redis (producción - recomendado)
+  - File (desarrollo)
+  - Database (fallback)
+- ✅ **Caché de Búsquedas**
+  - TTL: 5 minutos para resultados
+  - TTL: 20 minutos para búsquedas populares
+  - Reducción del 80% en tiempo de respuesta
+- ✅ **Caché de Contenido**
+  - Posts, usuarios, analytics
+  - Invalidación automática
+  - Cache tags (Redis)
+- ✅ **Analytics de Caché**
+  - Hit rate monitoring
+  - Performance tracking
+
+### 📱 Progressive Web App (PWA)
+
+- ✅ **Instalación en Dispositivos**
+  - Prompt de instalación personalizado
+  - Soporte para iOS, Android, Desktop
+- ✅ **Funcionamiento Offline**
+  - Service Worker con estrategias de caché
+  - Network First para HTML/API
+  - Cache First para assets estáticos
+- ✅ **Manifest Completo**
+  - Iconos adaptables
+  - Splash screens
+  - Shortcuts
+
+### 📦 Sistema de Backups
+
+- ✅ **Backups Automáticos** con Spatie Laravel Backup
+  - Backup completo (archivos + base de datos)
+  - Backup solo base de datos
+  - Backup solo archivos
+- ✅ **Programación Automática**
+  - Backups diarios configurables
+  - Retención de 30 días
+  - Limpieza automática de backups antiguos
+- ✅ **Monitoreo de Salud**
+  - Verificación de integridad
+  - Alertas por email
+  - Panel de administración
 
 ---
 
@@ -196,37 +270,50 @@ La plataforma está construida con **Laravel 11** en el backend y **React 18** c
 
 | Tecnología | Versión | Descripción |
 |------------|---------|-------------|
-| **Laravel** | 11.28.1 | Framework PHP principal |
-| **PHP** | 8.3.14 | Lenguaje de programación |
+| **Laravel** | ^12.0 | Framework PHP principal |
+| **PHP** | ^8.2 | Lenguaje de programación |
 | **MySQL** | 8.0+ | Base de datos relacional |
-| **Laravel Fortify** | ^1.24 | Autenticación (login, 2FA, password reset) |
+| **Laravel Fortify** | ^1.31 | Autenticación (login, 2FA, password reset) |
 | **Laravel Sanctum** | ^4.0 | API token authentication |
-| **Laravel Socialite** | ^5.16 | OAuth social login |
-| **pragmarx/google2fa-laravel** | ^2.2 | Two-factor authentication |
+| **Laravel Socialite** | ^5.23 | OAuth social login |
+| **pragmarx/google2fa-laravel** | ^2.3 | Two-factor authentication |
 | **jenssegers/agent** | ^2.6 | Device detection y user agent parsing |
-| **intervention/image** | ^3.0 | Procesamiento de imágenes |
+| **intervention/image** | ^3.11 | Procesamiento de imágenes |
+| **spatie/laravel-backup** | ^9.3 | Sistema de backups automáticos |
+| **barryvdh/laravel-dompdf** | ^3.1 | Generación de PDFs |
+| **maatwebsite/excel** | ^3.1 | Exportación a Excel |
+| **mews/purifier** | ^3.4 | Sanitización de HTML |
+| **predis/predis** | ^3.2 | Cliente Redis para PHP |
+| **tightenco/ziggy** | ^2.0 | Rutas de Laravel en JavaScript |
 
 ### Frontend
 
 | Tecnología | Versión | Descripción |
 |------------|---------|-------------|
-| **React** | 18.3.1 | Librería UI |
+| **React** | ^18.2.0 | Librería UI |
 | **Inertia.js** | ^2.0 | Adaptador SPA para Laravel |
-| **Material-UI (MUI)** | 5.16.7 | Framework de componentes UI |
-| **Vite** | 7.1.5 | Build tool y dev server |
-| **Axios** | ^1.7.9 | Cliente HTTP |
+| **Material-UI (MUI)** | ^7.3.2 | Framework de componentes UI |
+| **Vite** | ^7.0.4 | Build tool y dev server |
+| **Axios** | ^1.11.0 | Cliente HTTP |
 | **date-fns** | ^4.1.0 | Manipulación de fechas |
-| **DOMPurify** | ^3.2.2 | Sanitización de HTML |
-| **TinyMCE** | ^7.5.1 | Editor WYSIWYG |
-| **Recharts** | ^2.15.0 | Gráficos y visualizaciones |
+| **DOMPurify** | ^3.2.7 | Sanitización de HTML |
+| **TinyMCE** | ^8.1.2 | Editor WYSIWYG |
+| **Recharts** | ^3.2.1 | Gráficos y visualizaciones |
+| **Framer Motion** | ^12.23.12 | Animaciones |
+| **React Google Maps** | ^2.20.7 | Integración con Google Maps |
+| **Swiper** | ^12.0.2 | Carruseles y sliders |
+| **Formik** | ^2.4.6 | Gestión de formularios |
+| **Yup** | ^1.7.1 | Validación de esquemas |
 
 ### Herramientas de Desarrollo
 
-- **Composer** - Gestor de dependencias PHP
-- **NPM/Yarn** - Gestor de dependencias JavaScript
-- **Laravel Pint** - Code style fixer
-- **PHPUnit** - Testing framework
-- **Laravel Telescope** - Debugging tool (dev)
+- **Composer** ^2.0 - Gestor de dependencias PHP
+- **NPM** - Gestor de dependencias JavaScript
+- **Laravel Pint** ^1.24 - Code style fixer
+- **PHPUnit** ^11.5.3 - Testing framework
+- **Laravel Breeze** ^2.3 - Scaffolding de autenticación
+- **Laravel Pail** ^1.2.2 - Log viewer en tiempo real
+- **Docker** - Contenedorización (MySQL 8.0, PHP 8.3-fpm, Node 20, phpMyAdmin)
 
 ---
 
@@ -234,17 +321,25 @@ La plataforma está construida con **Laravel 11** en el backend y **React 18** c
 
 Antes de instalar el proyecto, asegúrate de tener instalado:
 
-- **PHP** >= 8.3
+### Opción 1: Instalación Local
+
+- **PHP** >= 8.2
 - **Composer** >= 2.0
 - **Node.js** >= 18.x
-- **NPM** >= 9.x (o Yarn >= 1.22)
+- **NPM** >= 9.x
 - **MySQL** >= 8.0 (o MariaDB >= 10.3)
 - **Git** >= 2.0
+- **Redis** (opcional, recomendado para producción)
 
-### Extensiones PHP Requeridas
+### Opción 2: Instalación con Docker (Recomendado)
+
+- **Docker** >= 20.x
+- **Docker Compose** >= 2.x
+
+### Extensiones PHP Requeridas (Solo instalación local)
 
 ```bash
-php -m | grep -E 'pdo|mbstring|openssl|tokenizer|xml|ctype|json|bcmath|fileinfo|gd'
+php -m | grep -E 'pdo|mbstring|openssl|tokenizer|xml|ctype|json|bcmath|fileinfo|gd|intl|zip'
 ```
 
 Extensiones necesarias:
@@ -258,33 +353,35 @@ Extensiones necesarias:
 - BCMath PHP Extension
 - Fileinfo PHP Extension
 - GD PHP Extension
+- Intl PHP Extension
+- Zip PHP Extension
 
 ---
 
 ## 🚀 Instalación
 
-### 1. Clonar el Repositorio
+### Método 1: Instalación Local
+
+#### 1. Clonar el Repositorio
 
 ```bash
 git clone https://github.com/tu-usuario/mdrconstrucciones.git
 cd mdrconstrucciones
 ```
 
-### 2. Instalar Dependencias PHP
+#### 2. Instalar Dependencias PHP
 
 ```bash
 composer install
 ```
 
-### 3. Instalar Dependencias JavaScript
+#### 3. Instalar Dependencias JavaScript
 
 ```bash
 npm install
-# o si usas Yarn
-yarn install
 ```
 
-### 4. Configurar Variables de Entorno
+#### 4. Configurar Variables de Entorno
 
 ```bash
 # Copiar el archivo de ejemplo
@@ -303,6 +400,7 @@ APP_KEY=base64:...
 APP_DEBUG=true
 APP_URL=http://localhost:8000
 
+# Base de datos
 DB_CONNECTION=mysql
 DB_HOST=127.0.0.1
 DB_PORT=3306
@@ -310,18 +408,52 @@ DB_DATABASE=mdrconstrucciones
 DB_USERNAME=root
 DB_PASSWORD=
 
-# Configuración de Email (opcional)
-MAIL_MAILER=smtp
-MAIL_HOST=smtp.mailtrap.io
-MAIL_PORT=2525
-MAIL_USERNAME=null
-MAIL_PASSWORD=null
-MAIL_ENCRYPTION=null
+# Caché (file para desarrollo, redis para producción)
+CACHE_STORE=file
+# CACHE_STORE=redis  # Descomentar para usar Redis
+
+# Queue
+QUEUE_CONNECTION=database
+
+# Session
+SESSION_DRIVER=database
+
+# Redis (opcional, para producción)
+REDIS_HOST=127.0.0.1
+REDIS_PASSWORD=null
+REDIS_PORT=6379
+
+# Email (opcional)
+MAIL_MAILER=log
 MAIL_FROM_ADDRESS="noreply@mdrconstrucciones.com"
 MAIL_FROM_NAME="${APP_NAME}"
+
+# OAuth Social Login (opcional)
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+
+FACEBOOK_CLIENT_ID=
+FACEBOOK_CLIENT_SECRET=
+
+GITHUB_CLIENT_ID=
+GITHUB_CLIENT_SECRET=
+
+# Google reCAPTCHA v3 (opcional)
+RECAPTCHA_SITE_KEY=
+RECAPTCHA_SECRET_KEY=
+
+# Google Maps API (opcional)
+GOOGLE_MAPS_API_KEY=
+
+# TinyMCE API Key (opcional)
+TINYMCE_API_KEY=
+
+# ML System
+ML_ENABLE_CACHING=true
+ML_ENABLE_PRECOMPUTATION=false
 ```
 
-### 5. Crear Base de Datos
+#### 5. Crear Base de Datos
 
 ```bash
 # Conectar a MySQL
@@ -332,7 +464,7 @@ CREATE DATABASE mdrconstrucciones CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_
 EXIT;
 ```
 
-### 6. Ejecutar Migraciones y Seeders
+#### 6. Ejecutar Migraciones y Seeders
 
 ```bash
 # Ejecutar migraciones
@@ -345,13 +477,13 @@ php artisan db:seed
 php artisan migrate:fresh --seed
 ```
 
-### 7. Crear Enlace Simbólico para Storage
+#### 7. Crear Enlace Simbólico para Storage
 
 ```bash
 php artisan storage:link
 ```
 
-### 8. Compilar Assets
+#### 8. Compilar Assets
 
 ```bash
 # Desarrollo (con hot reload)
@@ -361,19 +493,112 @@ npm run dev
 npm run build
 ```
 
-### 9. Iniciar Servidor de Desarrollo
+#### 9. Iniciar Servidor de Desarrollo
 
+**Opción A: Comando único (recomendado)**
+```bash
+composer dev
+# Inicia: servidor Laravel, queue worker, logs en tiempo real y Vite
+```
+
+**Opción B: Comandos separados**
 ```bash
 # Terminal 1: Servidor Laravel
 php artisan serve
 
-# Terminal 2: Vite dev server (si usas npm run dev)
+# Terminal 2: Vite dev server
 npm run dev
+
+# Terminal 3 (opcional): Queue worker
+php artisan queue:work
 ```
 
 La aplicación estará disponible en: **http://localhost:8000**
 
-### 10. Credenciales de Acceso por Defecto
+---
+
+### Método 2: Instalación con Docker (Recomendado)
+
+#### 1. Clonar el Repositorio
+
+```bash
+git clone https://github.com/tu-usuario/mdrconstrucciones.git
+cd mdrconstrucciones
+```
+
+#### 2. Configurar Variables de Entorno
+
+```bash
+cp .env.example .env
+```
+
+Edita `.env` para usar la configuración de Docker:
+
+```env
+APP_NAME="MDR Construcciones"
+APP_ENV=local
+APP_DEBUG=true
+APP_URL=http://localhost:8000
+
+# Base de datos Docker
+DB_CONNECTION=mysql
+DB_HOST=db
+DB_PORT=3306
+DB_DATABASE=mdrconstrucciones
+DB_USERNAME=mdr
+DB_PASSWORD=mdr
+
+# Caché
+CACHE_STORE=file
+
+# Queue
+QUEUE_CONNECTION=database
+
+# Session
+SESSION_DRIVER=database
+```
+
+#### 3. Iniciar Contenedores Docker
+
+```bash
+# Construir e iniciar todos los servicios
+docker-compose up -d
+
+# Ver logs
+docker-compose logs -f
+```
+
+Servicios disponibles:
+- **App (Laravel)**: http://localhost:8000
+- **Vite Dev Server**: http://localhost:5173
+- **phpMyAdmin**: http://localhost:8080
+- **MySQL**: localhost:3306
+
+#### 4. Ejecutar Migraciones dentro del contenedor
+
+```bash
+# Acceder al contenedor de la aplicación
+docker-compose exec app bash
+
+# Dentro del contenedor:
+php artisan migrate:fresh --seed
+php artisan storage:link
+exit
+```
+
+#### 5. Detener y Limpiar
+
+```bash
+# Detener contenedores
+docker-compose down
+
+# Detener y eliminar volúmenes (¡cuidado! elimina la base de datos)
+docker-compose down -v
+```
+
+---
+
+### Credenciales de Acceso por Defecto
 
 Después de ejecutar los seeders, puedes acceder con:
 
@@ -454,7 +679,7 @@ MAIL_FROM_NAME="MDR Construcciones"
 
 **Nota**: Para Gmail, necesitas crear una [App Password](https://support.google.com/accounts/answer/185833).
 
-### Configuración de Queue (Opcional)
+### Configuración de Queue
 
 Para procesar trabajos en segundo plano (emails, notificaciones):
 
@@ -468,6 +693,132 @@ Luego ejecuta el worker:
 php artisan queue:work
 ```
 
+### Configuración de Redis (Producción)
+
+Para mejor rendimiento en producción, configura Redis:
+
+**1. Instalar Redis (Ubuntu/Debian):**
+```bash
+sudo apt update
+sudo apt install redis-server
+sudo systemctl enable redis-server
+sudo systemctl start redis-server
+```
+
+**2. Configurar en `.env`:**
+```env
+CACHE_STORE=redis
+REDIS_HOST=127.0.0.1
+REDIS_PASSWORD=null
+REDIS_PORT=6379
+```
+
+**3. Verificar conexión:**
+```bash
+php artisan tinker
+>>> Redis::ping()
+# Debe retornar: "PONG"
+```
+
+**Beneficios de Redis:**
+- ⚡ 10x más rápido que file cache
+- 🔄 Persistencia opcional
+- 📊 Monitoreo en tiempo real
+- 🚀 Escalabilidad horizontal
+
+Ver `GUIA_INSTALACION_REDIS.md` para más detalles.
+
+### Configuración del Sistema ML
+
+El sistema de Machine Learning requiere entrenamiento inicial:
+
+```bash
+# Entrenar modelos (posts + perfiles de usuario)
+php artisan ml:train
+
+# Ver métricas del sistema
+php artisan ml:metrics
+
+# Programar entrenamiento automático (agregar a crontab)
+* * * * * cd /ruta/proyecto && php artisan schedule:run >> /dev/null 2>&1
+```
+
+**Configuración en `.env`:**
+```env
+ML_ENABLE_CACHING=true
+ML_ENABLE_PRECOMPUTATION=false
+ML_CANDIDATE_POSTS_LIMIT=100
+ML_DEFAULT_RECOMMENDATION_LIMIT=10
+ML_CACHE_TIMEOUT=3600
+```
+
+### Configuración de Backups Automáticos
+
+El sistema usa Spatie Laravel Backup para backups automáticos:
+
+**1. Configurar en `config/backup.php`:**
+- Directorios a incluir/excluir
+- Discos de almacenamiento
+- Retención de backups
+
+**2. Ejecutar backup manual:**
+```bash
+# Backup completo
+php artisan backup:run
+
+# Solo base de datos
+php artisan backup:run --only-db
+
+# Solo archivos
+php artisan backup:run --only-files
+```
+
+**3. Programar backups automáticos:**
+Agregar a `app/Console/Kernel.php`:
+```php
+$schedule->command('backup:clean')->daily()->at('01:00');
+$schedule->command('backup:run')->daily()->at('02:00');
+```
+
+**4. Monitorear backups:**
+```bash
+php artisan backup:list
+php artisan backup:monitor
+```
+
+### Configuración de PWA
+
+La aplicación incluye soporte PWA (Progressive Web App):
+
+**1. Generar iconos PWA:**
+- Crear logo de 512x512px
+- Usar https://www.pwabuilder.com/imageGenerator
+- Guardar iconos en `public/images/icons/`
+
+**2. Actualizar `public/manifest.json`:**
+```json
+{
+  "name": "MDR Construcciones",
+  "short_name": "MDR",
+  "icons": [
+    {
+      "src": "/images/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/images/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
+```
+
+**3. El Service Worker se registra automáticamente en producción**
+
+**Nota:** Para desarrollo, el PWA está deshabilitado por defecto. Ver `FIX_PANTALLA_BLANCA.md` para más información.
+
 ---
 
 ## 📁 Estructura del Proyecto
@@ -477,32 +828,58 @@ mdrconstrucciones/
 ├── app/
 │   ├── Actions/              # Acciones reutilizables (Fortify)
 │   ├── Console/              # Comandos Artisan personalizados
+│   │   └── Commands/
+│   │       ├── MLTrainCommand.php
+│   │       └── MLMetricsCommand.php
 │   ├── Http/
 │   │   ├── Controllers/      # Controladores de la aplicación
 │   │   │   ├── Admin/        # Controladores del panel admin
+│   │   │   │   ├── BackupController.php
+│   │   │   │   ├── DashboardController.php
+│   │   │   │   └── ...
 │   │   │   ├── Auth/         # Controladores de autenticación
-│   │   │   ├── Blog/         # Controladores del blog
+│   │   │   │   ├── SocialAuthController.php
+│   │   │   │   ├── TwoFactorController.php
+│   │   │   │   └── ...
+│   │   │   ├── MLController.php
+│   │   │   ├── SearchController.php
 │   │   │   └── ...
 │   │   ├── Middleware/       # Middleware personalizado
 │   │   └── Requests/         # Form requests para validación
 │   ├── Models/               # Modelos Eloquent
+│   │   ├── MLUserProfile.php
+│   │   ├── SearchAnalytics.php
+│   │   └── ...
 │   ├── Notifications/        # Notificaciones personalizadas
 │   ├── Policies/             # Políticas de autorización
 │   ├── Providers/            # Service providers
 │   └── Services/             # Servicios de negocio
-│       └── DeviceTrackingService.php
+│       ├── CacheService.php
+│       ├── ContentAnalysisServiceV2.php
+│       ├── DeviceTrackingService.php
+│       ├── MLRecommendationService.php
+│       └── SearchService.php
 ├── bootstrap/                # Archivos de arranque
 ├── config/                   # Archivos de configuración
+│   ├── backup.php            # Configuración de backups
+│   ├── cache.php             # Configuración de caché
 │   ├── fortify.php           # Configuración de autenticación
+│   ├── ml.php                # Configuración del sistema ML
 │   ├── services.php          # Configuración de OAuth
 │   └── ...
 ├── database/
 │   ├── factories/            # Factories para testing
 │   ├── migrations/           # Migraciones de base de datos
 │   └── seeders/              # Seeders de datos iniciales
+├── docs/                     # Documentación del proyecto
+│   ├── DEPLOYMENT_GUIDE.md
+│   ├── ML_SYSTEM.md
+│   └── ...
 ├── public/                   # Archivos públicos
 │   ├── build/                # Assets compilados (Vite)
 │   ├── images/               # Imágenes públicas
+│   ├── manifest.json         # PWA manifest
+│   ├── service-worker.js     # Service Worker para PWA
 │   └── storage/              # Enlace simbólico a storage
 ├── resources/
 │   ├── css/                  # Estilos CSS
@@ -512,7 +889,13 @@ mdrconstrucciones/
 │   │   ├── Components/       # Componentes React reutilizables
 │   │   │   ├── Admin/        # Componentes del admin
 │   │   │   ├── Blog/         # Componentes del blog
+│   │   │   ├── ML/           # Componentes ML
+│   │   │   ├── PWA/          # Componentes PWA
 │   │   │   ├── Profile/      # Componentes de perfil
+│   │   │   └── ...
+│   │   ├── Hooks/            # Custom React Hooks
+│   │   │   ├── useMLRecommendations.js
+│   │   │   ├── useSearch.js
 │   │   │   └── ...
 │   │   ├── Layouts/          # Layouts principales
 │   │   │   ├── AdminLayout.jsx
@@ -524,7 +907,17 @@ mdrconstrucciones/
 │   │   │   ├── Auth/         # Páginas de autenticación
 │   │   │   ├── Blog/         # Páginas del blog
 │   │   │   ├── Profile/      # Páginas de perfil
+│   │   │   ├── Search/       # Páginas de búsqueda
 │   │   │   └── ...
+│   │   ├── Services/         # Servicios frontend
+│   │   │   └── MLService.js
+│   │   ├── Utils/            # Utilidades
+│   │   │   ├── CacheManager.js
+│   │   │   ├── registerServiceWorker.js
+│   │   │   └── ...
+│   │   ├── theme/            # Configuración de tema
+│   │   │   ├── designSystem.js
+│   │   │   └── muiTheme.js
 │   │   └── app.jsx           # Punto de entrada React
 │   └── views/                # Vistas Blade (mínimas)
 ├── routes/
@@ -535,16 +928,22 @@ mdrconstrucciones/
 │   └── web.php               # Rutas web principales
 ├── storage/                  # Almacenamiento de archivos
 │   ├── app/                  # Archivos de la aplicación
+│   │   └── backups/          # Backups automáticos
 │   ├── framework/            # Archivos del framework
+│   │   └── cache/            # Caché de archivos
 │   └── logs/                 # Logs de la aplicación
 ├── tests/                    # Tests automatizados
 │   ├── Feature/              # Tests de funcionalidad
 │   └── Unit/                 # Tests unitarios
 ├── .env.example              # Ejemplo de variables de entorno
 ├── composer.json             # Dependencias PHP
+├── docker-compose.yml        # Configuración Docker
+├── Dockerfile                # Dockerfile para PHP
 ├── package.json              # Dependencias JavaScript
 ├── phpunit.xml               # Configuración de PHPUnit
 ├── vite.config.js            # Configuración de Vite
+├── deploy-staging.sh         # Script de despliegue (Linux/Mac)
+├── deploy-staging.bat        # Script de despliegue (Windows)
 └── README.md                 # Este archivo
 ```
 
@@ -582,6 +981,9 @@ php artisan queue:work                 # Procesar trabajos
 php artisan queue:listen               # Procesar trabajos (auto-reload)
 php artisan queue:restart              # Reiniciar workers
 
+# Storage
+php artisan storage:link               # Crear enlace simbólico
+
 # Crear archivos
 php artisan make:controller NombreController
 php artisan make:model Nombre -m       # Con migración
@@ -591,6 +993,47 @@ php artisan make:request NombreRequest
 php artisan make:policy NombrePolicy
 ```
 
+---
+
+## Notas de Diseño (UI) recientes
+
+- Se unificaron las páginas de autenticación para mantener coherencia visual con el resto del sitio:
+  - `resources/js/Pages/Auth/LoginMUI.jsx` y `resources/js/Pages/Auth/RegisterMUI.jsx` ahora se renderizan dentro de `MainLayout` (header, navegación y footer consistentes).
+  - Se ajustaron alturas y paddings para convivir correctamente con el AppBar sticky del layout.
+  - No hubo cambios en rutas o controladores; siguen apuntando a estas vistas MUI.
+
+### Comandos del Sistema ML
+
+```bash
+# Entrenar modelos
+php artisan ml:train                   # Entrenar todo (posts + perfiles)
+php artisan ml:train --posts           # Solo analizar posts
+php artisan ml:train --profiles        # Solo actualizar perfiles
+php artisan ml:train --clear-cache     # Limpiar caché después de entrenar
+
+# Métricas y reportes
+php artisan ml:metrics                 # Reporte básico (K=10, 7 días)
+php artisan ml:metrics --k=20 --days=30 # Reporte personalizado
+php artisan ml:metrics --export        # Exportar a JSON
+
+# Limpiar caché ML
+php artisan cache:clear --tags=ml
+```
+
+### Comandos de Backups
+
+```bash
+# Ejecutar backup
+php artisan backup:run                 # Backup completo
+php artisan backup:run --only-db       # Solo base de datos
+php artisan backup:run --only-files    # Solo archivos
+
+# Gestión de backups
+php artisan backup:list                # Listar backups
+php artisan backup:clean               # Limpiar backups antiguos
+php artisan backup:monitor             # Verificar salud de backups
+```
+
 ### Comandos de NPM
 
 ```bash
@@ -598,9 +1041,29 @@ php artisan make:policy NombrePolicy
 npm run dev                # Iniciar Vite dev server
 npm run build              # Compilar para producción
 
-# Linting y formato
-npm run lint               # Verificar código
-npm run format             # Formatear código
+# Composer
+composer dev               # Iniciar todo (servidor, queue, logs, vite)
+composer test              # Ejecutar tests
+```
+
+### Comandos de Docker
+
+```bash
+# Gestión de contenedores
+docker-compose up -d       # Iniciar servicios en background
+docker-compose down        # Detener servicios
+docker-compose ps          # Ver estado de servicios
+docker-compose logs -f     # Ver logs en tiempo real
+
+# Ejecutar comandos en contenedores
+docker-compose exec app php artisan migrate
+docker-compose exec app php artisan db:seed
+docker-compose exec app composer install
+docker-compose exec node npm install
+
+# Acceder a contenedores
+docker-compose exec app bash    # Acceder al contenedor de Laravel
+docker-compose exec db mysql -u mdr -p  # Acceder a MySQL
 ```
 
 ### Comandos de Testing
@@ -615,6 +1078,9 @@ php artisan test tests/Feature/AuthTest.php
 
 # Con cobertura
 php artisan test --coverage
+
+# Tests en paralelo
+php artisan test --parallel
 ```
 
 ---
@@ -671,10 +1137,31 @@ DB_DATABASE=tu-base-datos
 DB_USERNAME=tu-usuario
 DB_PASSWORD=tu-contraseña-segura
 
+# Configurar Redis para producción
+CACHE_STORE=redis
+REDIS_HOST=127.0.0.1
+REDIS_PASSWORD=tu-contraseña-redis
+REDIS_PORT=6379
+
+# Queue
+QUEUE_CONNECTION=redis
+
+# Session
+SESSION_DRIVER=redis
+
 # Configurar email de producción
 MAIL_MAILER=smtp
 MAIL_HOST=smtp.tuservidor.com
-# ... resto de configuración
+MAIL_PORT=587
+MAIL_USERNAME=tu-email
+MAIL_PASSWORD=tu-contraseña
+MAIL_ENCRYPTION=tls
+MAIL_FROM_ADDRESS="noreply@tudominio.com"
+MAIL_FROM_NAME="${APP_NAME}"
+
+# ML System
+ML_ENABLE_CACHING=true
+ML_ENABLE_PRECOMPUTATION=true
 ```
 
 2. **Optimizar Aplicación**
@@ -691,6 +1178,12 @@ php artisan config:cache
 php artisan route:cache
 php artisan view:cache
 php artisan optimize
+
+# Entrenar modelos ML
+php artisan ml:train
+
+# Crear enlace simbólico
+php artisan storage:link
 ```
 
 3. **Configurar Permisos**
@@ -708,32 +1201,394 @@ Agregar al crontab:
 * * * * * cd /ruta/a/tu/proyecto && php artisan schedule:run >> /dev/null 2>&1
 ```
 
-5. **Configurar Queue Worker**
+Tareas programadas incluyen:
+- Backups automáticos diarios
+- Entrenamiento de modelos ML
+- Limpieza de caché antiguo
+- Limpieza de logs
 
-Usar Supervisor para mantener el worker activo:
+5. **Configurar Queue Worker con Supervisor**
+
+Crear archivo `/etc/supervisor/conf.d/mdrconstrucciones-worker.conf`:
 
 ```ini
 [program:mdrconstrucciones-worker]
 process_name=%(program_name)s_%(process_num)02d
-command=php /ruta/a/tu/proyecto/artisan queue:work --sleep=3 --tries=3
+command=php /ruta/a/tu/proyecto/artisan queue:work redis --sleep=3 --tries=3 --max-time=3600
 autostart=true
 autorestart=true
+stopasgroup=true
+killasgroup=true
 user=www-data
 numprocs=2
 redirect_stderr=true
 stdout_logfile=/ruta/a/tu/proyecto/storage/logs/worker.log
+stopwaitsecs=3600
 ```
+
+Luego:
+```bash
+sudo supervisorctl reread
+sudo supervisorctl update
+sudo supervisorctl start mdrconstrucciones-worker:*
+```
+
+6. **Configurar Nginx (Recomendado)**
+
+Crear archivo `/etc/nginx/sites-available/mdrconstrucciones`:
+
+```nginx
+server {
+    listen 80;
+    listen [::]:80;
+    server_name tudominio.com www.tudominio.com;
+    root /ruta/a/tu/proyecto/public;
+
+    add_header X-Frame-Options "SAMEORIGIN";
+    add_header X-Content-Type-Options "nosniff";
+
+    index index.php;
+
+    charset utf-8;
+
+    location / {
+        try_files $uri $uri/ /index.php?$query_string;
+    }
+
+    location = /favicon.ico { access_log off; log_not_found off; }
+    location = /robots.txt  { access_log off; log_not_found off; }
+
+    error_page 404 /index.php;
+
+    location ~ \.php$ {
+        fastcgi_pass unix:/var/run/php/php8.2-fpm.sock;
+        fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
+        include fastcgi_params;
+    }
+
+    location ~ /\.(?!well-known).* {
+        deny all;
+    }
+}
+```
+
+Habilitar sitio:
+```bash
+sudo ln -s /etc/nginx/sites-available/mdrconstrucciones /etc/nginx/sites-enabled/
+sudo nginx -t
+sudo systemctl reload nginx
+```
+
+7. **Configurar SSL con Let's Encrypt**
+
+```bash
+sudo apt install certbot python3-certbot-nginx
+sudo certbot --nginx -d tudominio.com -d www.tudominio.com
+```
+
+### Despliegue con Docker en Producción
+
+1. **Crear `docker-compose.prod.yml`:**
+
+```yaml
+version: "3.9"
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - APP_ENV=production
+      - APP_DEBUG=false
+    volumes:
+      - ./storage:/var/www/html/storage
+      - ./bootstrap/cache:/var/www/html/bootstrap/cache
+    restart: unless-stopped
+
+  db:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+      MYSQL_DATABASE: ${DB_DATABASE}
+    volumes:
+      - dbdata:/var/lib/mysql
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf
+      - ./public:/var/www/html/public
+    depends_on:
+      - app
+    restart: unless-stopped
+
+volumes:
+  dbdata:
+```
+
+2. **Desplegar:**
+
+```bash
+docker-compose -f docker-compose.prod.yml up -d
+```
+
+### Scripts de Despliegue
+
+El proyecto incluye scripts de despliegue:
+
+**Linux/Mac:**
+```bash
+./deploy-staging.sh
+```
+
+**Windows:**
+```bash
+deploy-staging.bat
+```
+
+Estos scripts automatizan:
+- Pull de cambios desde Git
+- Instalación de dependencias
+- Migraciones de base de datos
+- Compilación de assets
+- Limpieza y optimización de caché
+- Reinicio de servicios
 
 ### Consideraciones de Seguridad
 
-- ✅ Usar HTTPS en producción
+- ✅ Usar HTTPS en producción (SSL/TLS)
 - ✅ Configurar CORS correctamente
 - ✅ Habilitar rate limiting
-- ✅ Configurar backups automáticos
+- ✅ Configurar backups automáticos diarios
 - ✅ Monitorear logs de errores
 - ✅ Mantener dependencias actualizadas
+- ✅ Usar contraseñas seguras para Redis y base de datos
+- ✅ Configurar firewall (UFW)
+- ✅ Deshabilitar funciones PHP peligrosas
+- ✅ Configurar fail2ban para protección contra ataques
+- ✅ Habilitar autenticación de dos factores para administradores
+- ✅ Revisar permisos de archivos y directorios
+
+### Monitoreo y Mantenimiento
+
+**Logs importantes:**
+```bash
+# Laravel logs
+tail -f storage/logs/laravel.log
+
+# Nginx logs
+tail -f /var/log/nginx/error.log
+tail -f /var/log/nginx/access.log
+
+# Queue worker logs
+tail -f storage/logs/worker.log
+
+# Supervisor logs
+sudo tail -f /var/log/supervisor/supervisord.log
+```
+
+**Comandos de mantenimiento:**
+```bash
+# Limpiar logs antiguos
+php artisan log:clear
+
+# Verificar salud de backups
+php artisan backup:monitor
+
+# Ver métricas ML
+php artisan ml:metrics
+
+# Limpiar caché
+php artisan cache:clear
+php artisan view:clear
+php artisan config:clear
+```
 
 ---
+
+## � Solución de Problemas Comunes
+
+### Pantalla Blanca / Error 500
+
+**Causa:** Problemas con caché, permisos o PWA.
+
+**Solución:**
+```bash
+# Limpiar todo el caché
+php artisan cache:clear
+php artisan config:clear
+php artisan route:clear
+php artisan view:clear
+
+# Verificar permisos
+chmod -R 775 storage bootstrap/cache
+
+# Recompilar assets
+npm run build
+```
+
+Ver `FIX_PANTALLA_BLANCA.md` para más detalles.
+
+### Error de Conexión a Base de Datos
+
+**Causa:** Configuración incorrecta en `.env` o servicio MySQL no iniciado.
+
+**Solución:**
+```bash
+# Verificar que MySQL esté corriendo
+sudo systemctl status mysql
+
+# Verificar credenciales en .env
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=mdrconstrucciones
+DB_USERNAME=root
+DB_PASSWORD=tu_password
+
+# Probar conexión
+php artisan tinker
+>>> DB::connection()->getPdo();
+```
+
+### Error con Redis
+
+**Causa:** Redis no instalado o no configurado correctamente.
+
+**Solución:**
+```bash
+# Cambiar a file cache temporalmente
+CACHE_STORE=file
+
+# O instalar Redis
+sudo apt install redis-server
+sudo systemctl start redis-server
+
+# Verificar conexión
+redis-cli ping
+# Debe retornar: PONG
+```
+
+### Errores de Permisos en Storage
+
+**Causa:** Permisos incorrectos en directorios.
+
+**Solución:**
+```bash
+sudo chown -R www-data:www-data storage bootstrap/cache
+sudo chmod -R 775 storage bootstrap/cache
+```
+
+### Vite no Compila / Hot Reload no Funciona
+
+**Causa:** Puerto ocupado o configuración incorrecta.
+
+**Solución:**
+```bash
+# Limpiar node_modules y reinstalar
+rm -rf node_modules package-lock.json
+npm install
+
+# Verificar que el puerto 5173 esté libre
+lsof -i :5173
+
+# Iniciar Vite
+npm run dev
+```
+
+### Docker: Contenedores no Inician
+
+**Causa:** Puertos ocupados o configuración incorrecta.
+
+**Solución:**
+```bash
+# Ver logs de error
+docker-compose logs
+
+# Verificar puertos disponibles
+netstat -tulpn | grep -E '3306|8000|5173|8080'
+
+# Reconstruir contenedores
+docker-compose down
+docker-compose up --build -d
+```
+
+### Sistema ML no Genera Recomendaciones
+
+**Causa:** Modelos no entrenados o caché corrupto.
+
+**Solución:**
+```bash
+# Entrenar modelos
+php artisan ml:train --clear-cache
+
+# Verificar métricas
+php artisan ml:metrics
+
+# Limpiar caché ML
+php artisan cache:clear --tags=ml
+```
+
+### Queue Worker no Procesa Trabajos
+
+**Causa:** Worker no iniciado o configuración incorrecta.
+
+**Solución:**
+```bash
+# Verificar configuración
+QUEUE_CONNECTION=database
+
+# Iniciar worker
+php artisan queue:work
+
+# Ver trabajos fallidos
+php artisan queue:failed
+
+# Reintentar trabajos fallidos
+php artisan queue:retry all
+```
+
+---
+
+## �📚 Documentación Adicional
+
+El proyecto incluye documentación detallada en el directorio `docs/`:
+
+### Documentación Técnica
+
+- **`docs/ML_SYSTEM.md`** - Sistema de Machine Learning completo
+  - Arquitectura del sistema
+  - Algoritmos implementados
+  - Comandos y API
+  - Métricas de evaluación
+
+- **`docs/DEPLOYMENT_GUIDE.md`** - Guía de despliegue en producción
+  - Configuración de servidores
+  - Nginx, SSL, Supervisor
+  - Optimizaciones
+
+- **`DOCUMENTACION_CACHE_BUSQUEDAS.md`** - Sistema de caché de búsquedas
+  - Tipos de caché implementados
+  - Flujo de búsqueda con caché
+  - Optimizaciones de performance
+
+- **`GUIA_INSTALACION_REDIS.md`** - Instalación y configuración de Redis
+  - Instalación en Linux
+  - Configuración para producción
+  - Testing y troubleshooting
+### Guías de Solución de Problemas
+
+- **`FIX_PANTALLA_BLANCA.md`** - Solución a pantalla blanca
+- **`DOCKER_CONNECTION_FIX_SUMMARY.md`** - Solución a problemas de Docker
 
 ## 🤝 Contribución
 
@@ -751,6 +1606,7 @@ stdout_logfile=/ruta/a/tu/proyecto/storage/logs/worker.log
 - Usar ESLint para código JavaScript/React
 - Escribir tests para nuevas funcionalidades
 - Documentar cambios importantes
+- Usar commits descriptivos siguiendo Conventional Commits
 
 ---
 
@@ -764,7 +1620,7 @@ Este proyecto es privado y propietario. Todos los derechos reservados © 2025 MD
 
 ### Desarrollado por
 
-**MDR Construcciones - Equipo de Desarrollo**
+**Roberto Osorio Vidal** para **MDR Construcciones**
 
 ### Tecnologías y Librerías
 
@@ -775,19 +1631,62 @@ Agradecimientos especiales a los creadores y mantenedores de:
 - [Inertia.js](https://inertiajs.com/) - Jonathan Reinink
 - [Material-UI](https://mui.com/) - MUI Team
 - [Vite](https://vitejs.dev/) - Evan You y el equipo de Vite
+- [Spatie Laravel Backup](https://spatie.be/docs/laravel-backup) - Spatie
+- [TinyMCE](https://www.tiny.cloud/) - Tiny Technologies Inc.
 
 ### Contacto
 
 - **Website**: [https://mdrconstrucciones.com](https://mdrconstrucciones.com)
 - **Email**: info@mdrconstrucciones.com
-- **Teléfono**: +34 123 456 789
+
+---
+
+## 🔗 Enlaces Útiles
+
+- **Documentación de Laravel**: https://laravel.com/docs
+- **Documentación de React**: https://react.dev
+- **Documentación de Inertia.js**: https://inertiajs.com
+- **Documentación de Material-UI**: https://mui.com
+- **Documentación de Docker**: https://docs.docker.com
+- **Documentación de Redis**: https://redis.io/docs
+
+---
+
+## 📝 Notas de Versión
+
+### Versión Actual: 2.0.0
+
+**Características principales:**
+- ✅ Sistema completo de autenticación con 2FA y OAuth
+- ✅ Blog con editor WYSIWYG y sistema de comentarios
+- ✅ Sistema ML de recomendaciones personalizadas
+- ✅ Caché inteligente con soporte Redis
+- ✅ PWA con soporte offline
+- ✅ Backups automáticos
+- ✅ Panel de administración completo
+- ✅ Entorno Docker completamente configurado
+- ✅ Sistema de búsqueda avanzada con caché
+- ✅ Analytics y métricas detalladas
+
+**Tecnologías:**
+- Laravel 12.0
+- React 18.2
+- Material-UI 7.3
+- PHP 8.2+
+- MySQL 8.0
+- Redis (opcional)
+- Docker
 
 ---
 
 <div align="center">
 
-**Hecho con ❤️ por Toberto Osorio Vidal para Mdr Construcciones**
+**Hecho con ❤️ por Roberto Osorio Vidal para MDR Construcciones**
 
 ⭐ Si te gusta este proyecto, considera darle una estrella en GitHub
+
+---
+
+© 2025 MDR Construcciones. Todos los derechos reservados.
 
 </div>

@@ -225,8 +225,8 @@ const ServiceAnalytics = ({ initialData }) => {
                                                         </TableCell>
                                                         <TableCell align="center">
                                                             <Chip
-                                                                label={service.is_featured ? 'Destacado' : 'Normal'}
-                                                                color={service.is_featured ? 'warning' : 'default'}
+                                                                label={service.featured ? 'Destacado' : 'Normal'}
+                                                                color={service.featured ? 'warning' : 'default'}
                                                                 size="small"
                                                             />
                                                         </TableCell>

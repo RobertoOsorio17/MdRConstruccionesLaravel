@@ -92,7 +92,7 @@ const CommentInteractions = ({ comment, onInteractionChange }) => {
         }
 
         try {
-            const response = await axios.post(route('comments.like', comment.id));
+            const response = await axios.post(`/comments/${comment.id}/like`);
             
             if (response.data.success) {
                 setLikeCount(response.data.likeCount);
@@ -125,7 +125,7 @@ const CommentInteractions = ({ comment, onInteractionChange }) => {
         }
 
         try {
-            const response = await axios.post(route('comments.dislike', comment.id));
+            const response = await axios.post(`/comments/${comment.id}/dislike`);
             
             if (response.data.success) {
                 setLikeCount(response.data.likeCount);
@@ -177,7 +177,7 @@ const CommentInteractions = ({ comment, onInteractionChange }) => {
                 description: selectedReportType === 'other' ? customReason : reportOptions.find(opt => opt.value === selectedReportType)?.description
             };
 
-            const response = await axios.post(route('comments.report', comment.id), reportData);
+            const response = await axios.post(`/comments/${comment.id}/report`, reportData);
             
             if (response.data.success) {
                 setNotification({

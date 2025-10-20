@@ -34,7 +34,7 @@ class CommentsExport implements FromQuery, WithHeadings, WithMapping, WithStyles
         if (!empty($this->filters['search'])) {
             $search = $this->filters['search'];
             $query->where(function ($q) use ($search) {
-                $q->where('content', 'like', "%{$search}%")
+                $q->where('body', 'like', "%{$search}%")
                     ->orWhereHas('user', function ($q) use ($search) {
                         $q->where('name', 'like', "%{$search}%");
                     });
@@ -76,9 +76,9 @@ class CommentsExport implements FromQuery, WithHeadings, WithMapping, WithStyles
     {
         return [
             $comment->id,
-            $comment->user ? $comment->user->name : 'Anónimo',
+            $comment->user ? $comment->user->name : ($comment->author_name ?? 'Anónimo'),
             $comment->post ? $comment->post->title : 'N/A',
-            strip_tags(substr($comment->content, 0, 200)) . '...',
+            strip_tags(substr($comment->body, 0, 200)) . '...',
             ucfirst($comment->status),
             $comment->created_at->format('Y-m-d H:i:s'),
         ];

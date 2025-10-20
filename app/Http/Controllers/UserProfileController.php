@@ -35,26 +35,27 @@ class UserProfileController extends Controller
         }
 
         // Load the user's favorite services.
+        $user->loadCount('favoriteServices');
         $user->load(['favoriteServices' => function($query) {
             $query->latest('user_service_favorites.created_at')->limit(12);
         }]);
 
         // 1. Load the user's own posts with engagement metadata.
         $userPosts = $user->posts()
+            ->published()
             ->with([
                 'author:id,name,avatar,bio,profession,is_verified',
                 'categories:id,name,slug,color',
                 'tags:id,name,slug,color'
             ])
             ->withCount(['likes', 'bookmarks', 'approvedComments'])
-            ->orderBy('created_at', 'desc')
+            ->orderBy('published_at', 'desc')
             ->get();
 
-        // 2. Load posts liked by the user that belong to other authors.
+        // 2. Load posts liked by the user (including own posts).
         $likedPosts = \App\Models\Post::whereHas('likes', function($query) use ($user) {
             $query->where('user_id', $user->id);
         })
-        ->where('user_id', '!=', $user->id) // Exclude the user's own posts.
         ->published()
         ->with([
             'author:id,name,avatar,bio,profession,is_verified',
@@ -183,13 +184,12 @@ class UserProfileController extends Controller
             ->orderBy('published_at', 'desc')
             ->get();
 
-        // 2. Load posts liked by the user that belong to other authors.
+        // 2. Load posts liked by the user (including own posts).
         $likedPosts = collect();
         if ($currentUser) {
             $likedPosts = \App\Models\Post::whereHas('likes', function($query) use ($user) {
                 $query->where('user_id', $user->id);
             })
-            ->where('user_id', '!=', $user->id) // Exclude the user's own posts.
             ->published()
             ->with([
                 'author:id,name,avatar,bio,profession,is_verified',

@@ -35,7 +35,7 @@ class ProjectsExport implements FromQuery, WithHeadings, WithMapping, WithStyles
             $search = $this->filters['search'];
             $query->where(function ($q) use ($search) {
                 $q->where('title', 'like', "%{$search}%")
-                    ->orWhere('description', 'like', "%{$search}%")
+                    ->orWhere('body', 'like', "%{$search}%")
                     ->orWhere('location', 'like', "%{$search}%");
             });
         }
@@ -47,7 +47,7 @@ class ProjectsExport implements FromQuery, WithHeadings, WithMapping, WithStyles
 
         // Apply featured filter
         if (isset($this->filters['featured'])) {
-            $query->where('is_featured', $this->filters['featured']);
+            $query->where('featured', $this->filters['featured']);
         }
 
         return $query->orderBy('created_at', 'desc');
@@ -61,13 +61,12 @@ class ProjectsExport implements FromQuery, WithHeadings, WithMapping, WithStyles
         return [
             'ID',
             'Título',
-            'Cliente',
             'Ubicación',
             'Estado',
             'Destacado',
             'Fecha de Inicio',
             'Fecha de Fin',
-            'Presupuesto',
+            'Presupuesto Estimado',
             'Fecha de Creación',
         ];
     }
@@ -80,13 +79,12 @@ class ProjectsExport implements FromQuery, WithHeadings, WithMapping, WithStyles
         return [
             $project->id,
             $project->title,
-            $project->client ?? 'N/A',
             $project->location ?? 'N/A',
             ucfirst($project->status),
-            $project->is_featured ? 'Sí' : 'No',
+            $project->featured ? 'Sí' : 'No',
             $project->start_date ? $project->start_date->format('Y-m-d') : 'N/A',
             $project->end_date ? $project->end_date->format('Y-m-d') : 'N/A',
-            $project->budget ? '€' . number_format($project->budget, 2) : 'N/A',
+            $project->budget_estimate ? '€' . number_format($project->budget_estimate, 2) : 'N/A',
             $project->created_at->format('Y-m-d H:i:s'),
         ];
     }

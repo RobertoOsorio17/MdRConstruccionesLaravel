@@ -55,7 +55,10 @@ const ServiceShow = ({ service, analytics = null }) => {
 
     const toggleFeatured = () => {
         router.patch(route('admin.services.update', service.id), {
-            is_featured: !service.is_featured
+            title: service.title,
+            excerpt: service.excerpt,
+            body: service.body,
+            featured: !service.featured
         }, {
             preserveScroll: true,
         });
@@ -167,18 +170,18 @@ const ServiceShow = ({ service, analytics = null }) => {
                                             />
                                             <Chip
                                                 icon={<StarIcon />}
-                                                label={service.is_featured ? 'Destacado' : 'Normal'}
-                                                color={service.is_featured ? 'warning' : 'default'}
-                                                variant={service.is_featured ? 'filled' : 'outlined'}
+                                                label={service.featured ? 'Destacado' : 'Normal'}
+                                                color={service.featured ? 'warning' : 'default'}
+                                                variant={service.featured ? 'filled' : 'outlined'}
                                                 onClick={toggleFeatured}
                                                 sx={{ cursor: 'pointer' }}
                                             />
                                         </Box>
                                     </Box>
 
-                                    {service.short_description && (
+                                    {service.excerpt && (
                                         <Typography variant="h6" color="text.secondary" sx={{ mb: 2, fontStyle: 'italic' }}>
-                                            {service.short_description}
+                                            {service.excerpt}
                                         </Typography>
                                     )}
 

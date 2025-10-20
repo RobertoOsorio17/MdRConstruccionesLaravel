@@ -1,15 +1,17 @@
 import React, { useState } from 'react';
-import { 
-  Box, Container, Typography, Grid, Card, CardMedia, Chip, Button,
-  Stack, IconButton, Dialog, DialogContent, useTheme, useMediaQuery
+import {
+  Box, Container, Typography, Card, CardMedia, Chip, Button,
+  Stack, IconButton, Dialog, DialogContent, useTheme, useMediaQuery, Grid
 } from '@mui/material';
-import { 
+
+import {
   ArrowForward as ArrowForwardIcon,
   Close as CloseIcon,
   ZoomIn as ZoomInIcon,
   LocationOn as LocationIcon,
   CalendarToday as CalendarIcon,
-  Category as CategoryIcon
+  Category as CategoryIcon,
+  Person as PersonIcon
 } from '@mui/icons-material';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from '@inertiajs/react';
@@ -95,6 +97,7 @@ const ProjectCard = ({ project, index, onImageClick, prefersReducedMotion }) => 
             component="img"
             image={projectGallery[currentImageIndex]}
             alt={`${project.title} - Imagen ${currentImageIndex + 1}`}
+            loading="lazy"
             className="project-image"
             onClick={() => onImageClick(project)}
             sx={{
@@ -255,7 +258,7 @@ const ProjectCard = ({ project, index, onImageClick, prefersReducedMotion }) => 
               </Typography>
 
               {/* Metadatos del proyecto */}
-              <Stack direction="row" spacing={2} flexWrap="wrap">
+              <Stack direction="row" spacing={2} flexWrap="wrap" alignItems="center">
                 {project.location && (
                   <Stack direction="row" alignItems="center" spacing={0.5}>
                     <LocationIcon sx={{ fontSize: '1rem', opacity: 0.9 }} />
@@ -265,21 +268,54 @@ const ProjectCard = ({ project, index, onImageClick, prefersReducedMotion }) => 
                   </Stack>
                 )}
 
-                {project.year && (
+                {project.completion_date && (
                   <Stack direction="row" alignItems="center" spacing={0.5}>
                     <CalendarIcon sx={{ fontSize: '1rem', opacity: 0.9 }} />
                     <Typography variant="caption" sx={{ fontSize: '0.85rem' }}>
-                      {project.year}
+                      {new Date(project.completion_date).getFullYear()}
+                    </Typography>
+                  </Stack>
+                )}
+
+                {project.client && (
+                  <Stack direction="row" alignItems="center" spacing={0.5}>
+                    <PersonIcon sx={{ fontSize: '1rem', opacity: 0.9 }} />
+                    <Typography variant="caption" sx={{ fontSize: '0.85rem' }}>
+                      {project.client}
                     </Typography>
                   </Stack>
                 )}
               </Stack>
 
+              {/* Tags/Categories */}
+              {project.tags && project.tags.length > 0 && (
+                <Stack direction="row" spacing={1} flexWrap="wrap">
+                  {project.tags.slice(0, 3).map((tag, idx) => (
+                    <Chip
+                      key={idx}
+                      label={tag}
+                      size="small"
+                      sx={{
+                        bgcolor: 'rgba(255, 255, 255, 0.2)',
+                        color: 'white',
+                        backdropFilter: 'blur(10px)',
+                        border: '1px solid rgba(255, 255, 255, 0.3)',
+                        fontSize: '0.7rem',
+                        height: 24,
+                        '& .MuiChip-label': {
+                          px: 1.5
+                        }
+                      }}
+                    />
+                  ))}
+                </Stack>
+              )}
+
               {/* Descripción breve */}
-              {project.description && (
-                <Typography 
-                  variant="body2" 
-                  sx={{ 
+              {project.summary && (
+                <Typography
+                  variant="body2"
+                  sx={{
                     opacity: 0.9,
                     lineHeight: 1.4,
                     display: '-webkit-box',
@@ -288,7 +324,7 @@ const ProjectCard = ({ project, index, onImageClick, prefersReducedMotion }) => 
                     overflow: 'hidden'
                   }}
                 >
-                  {project.description}
+                  {project.summary}
                 </Typography>
               )}
 
@@ -394,15 +430,10 @@ const ImageModal = ({ open, project, onClose }) => {
                   📍 {project.location}
                 </Typography>
               )}
-              {project.year && (
-                <Typography variant="body2" sx={{ opacity: 0.9 }}>
-                  📅 {project.year}
-                </Typography>
-              )}
             </Stack>
-            {project.description && (
+            {project.summary && (
               <Typography variant="body1" sx={{ opacity: 0.9 }}>
-                {project.description}
+                {project.summary}
               </Typography>
             )}
           </Box>
@@ -438,7 +469,9 @@ const FeaturedProjectsSection = ({ projects, prefersReducedMotion = false }) => 
       component="section"
       sx={{
         py: { xs: 8, md: 12, xl: 16 },
-        bgcolor: 'white',
+        bgcolor: (theme) => theme.palette.mode === 'dark'
+          ? 'rgba(10, 15, 30, 0.95)'
+          : 'white',
       }}
     >
       <Container

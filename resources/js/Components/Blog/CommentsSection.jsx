@@ -38,7 +38,13 @@ import {
     Delete as DeleteIcon,
     HourglassTop as PendingIcon,
     Edit as EditIcon,
-    History as HistoryIcon
+    History as HistoryIcon,
+    ExpandMore as ExpandMoreIcon,
+    ExpandLess as ExpandLessIcon,
+    ThumbUp as ThumbUpIcon,
+    ThumbUpOutlined as ThumbUpOutlinedIcon,
+    ThumbDown as ThumbDownIcon,
+    ThumbDownOutlined as ThumbDownOutlinedIcon
 } from '@mui/icons-material';
 import { motion, AnimatePresence } from 'framer-motion';
 import { router, usePage } from '@inertiajs/react';
@@ -149,7 +155,62 @@ const LoginPrompt = ({ onClose }) => {
     );
 };
 
-const CommentItem = ({ comment, onReply, onDelete, onEdit, level = 0 }) => {
+// Helper function to render comment body with clickable @mentions
+const renderCommentBody = (body, allComments) => {
+    // Extract all users from comments to create a username -> user_id map
+    const usernameMap = {};
+    const extractUsers = (commentsList) => {
+        commentsList.forEach(comment => {
+            if (comment.author?.username && comment.user?.id) {
+                usernameMap[comment.author.username.toLowerCase()] = comment.user.id;
+            }
+            if (comment.replies && comment.replies.length > 0) {
+                extractUsers(comment.replies);
+            }
+        });
+    };
+    extractUsers(allComments);
+
+    // Split text by @mentions
+    const mentionRegex = /@(\w+)/g;
+    const parts = [];
+    let lastIndex = 0;
+    let match;
+
+    while ((match = mentionRegex.exec(body)) !== null) {
+        // Add text before mention
+        if (match.index > lastIndex) {
+            parts.push({
+                type: 'text',
+                content: body.substring(lastIndex, match.index)
+            });
+        }
+
+        // Add mention
+        const username = match[1];
+        const userId = usernameMap[username.toLowerCase()];
+        parts.push({
+            type: 'mention',
+            content: `@${username}`,
+            username: username,
+            userId: userId
+        });
+
+        lastIndex = match.index + match[0].length;
+    }
+
+    // Add remaining text
+    if (lastIndex < body.length) {
+        parts.push({
+            type: 'text',
+            content: body.substring(lastIndex)
+        });
+    }
+
+    return parts;
+};
+
+const CommentItem = ({ comment, onReply, onDelete, onEdit, onMention, level = 0, parentCommentId = null, allComments = [] }) => {
     const theme = useTheme();
     const { auth } = usePage().props;
     const [showReplyForm, setShowReplyForm] = useState(false);
@@ -157,8 +218,26 @@ const CommentItem = ({ comment, onReply, onDelete, onEdit, level = 0 }) => {
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [historyModalOpen, setHistoryModalOpen] = useState(false);
     const [currentComment, setCurrentComment] = useState(comment);
+    const [showAllReplies, setShowAllReplies] = useState(false);
+
+    // Like/Dislike state
+    const [likesCount, setLikesCount] = useState(comment.likes_count || 0);
+    const [dislikesCount, setDislikesCount] = useState(comment.dislikes_count || 0);
+    const [userHasLiked, setUserHasLiked] = useState(comment.user_has_liked || false);
+    const [userHasDisliked, setUserHasDisliked] = useState(comment.user_has_disliked || false);
+    const [isLikeLoading, setIsLikeLoading] = useState(false);
+    const [showAuthModal, setShowAuthModal] = useState(false);
+
+    React.useEffect(() => {
+        setCurrentComment(comment);
+        setLikesCount(comment.likes_count || 0);
+        setDislikesCount(comment.dislikes_count || 0);
+        setUserHasLiked(comment.user_has_liked || false);
+        setUserHasDisliked(comment.user_has_disliked || false);
+    }, [comment]);
 
     const handleReply = () => {
+        // Siempre mostrar el formulario de respuesta debajo del comentario
         setShowReplyForm(true);
     };
 
@@ -198,11 +277,72 @@ const CommentItem = ({ comment, onReply, onDelete, onEdit, level = 0 }) => {
         setHistoryModalOpen(true);
     };
 
+    const handleLike = async () => {
+        if (!auth?.user) {
+            // Show auth modal if not authenticated
+            setShowAuthModal(true);
+            return;
+        }
+
+        if (isLikeLoading) return;
+
+        setIsLikeLoading(true);
+        try {
+            const response = await axios.post(`/comments/${comment.id}/like`);
+            if (response.data.success) {
+                setLikesCount(response.data.likeCount);
+                setDislikesCount(response.data.dislikeCount);
+                setUserHasLiked(response.data.liked);
+                setUserHasDisliked(false);
+            }
+        } catch (error) {
+            console.error('Error liking comment:', error);
+            if (error.response?.status === 403) {
+                alert('No puedes dar like a este comentario. Puede que esté eliminado o no tengas permisos.');
+            }
+        } finally {
+            setIsLikeLoading(false);
+        }
+    };
+
+    const handleDislike = async () => {
+        if (!auth?.user) {
+            // Show auth modal if not authenticated
+            setShowAuthModal(true);
+            return;
+        }
+
+        if (isLikeLoading) return;
+
+        setIsLikeLoading(true);
+        try {
+            const response = await axios.post(`/comments/${comment.id}/dislike`);
+            if (response.data.success) {
+                setLikesCount(response.data.likeCount);
+                setDislikesCount(response.data.dislikeCount);
+                setUserHasLiked(false);
+                setUserHasDisliked(response.data.disliked);
+            }
+        } catch (error) {
+            console.error('Error disliking comment:', error);
+            if (error.response?.status === 403) {
+                alert('No puedes dar dislike a este comentario. Puede que esté eliminado o no tengas permisos.');
+            }
+        } finally {
+            setIsLikeLoading(false);
+        }
+    };
+
     // Verificar si el usuario es administrador
     const isAdmin = auth?.user?.role === 'admin';
 
     // Verificar si el usuario puede editar este comentario
-    const canEdit = auth?.user && auth.user.id === currentComment.user_id;
+    // ✅ FIX: Soportar tanto user_id como user.id (backend puede devolver cualquiera)
+    const commentUserId = currentComment.user_id || currentComment.user?.id;
+    const canEdit = auth?.user && auth.user.id === commentUserId;
+
+    // Verificar si es el propio comentario del usuario (no puede dar like/dislike a sus propios comentarios)
+    const isOwnComment = auth?.user && commentUserId && auth.user.id === commentUserId;
 
     return (
         <Box
@@ -211,279 +351,535 @@ const CommentItem = ({ comment, onReply, onDelete, onEdit, level = 0 }) => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             sx={{
-                ml: level * 4,
-                mb: 3,
-                maxWidth: level > 0 ? 'calc(100% - 32px)' : '100%',
-                scrollMarginTop: '100px' // Add scroll margin for better anchor positioning
+                position: 'relative',
+                // Reddit-style: No left margin, use padding for nested comments
+                pl: level > 0 ? 3 : 0,
+                mb: level === 0 ? 3 : 2,
+                scrollMarginTop: '100px',
+                // Reddit-style vertical line for nested comments
+                '&::before': level > 0 ? {
+                    content: '""',
+                    position: 'absolute',
+                    left: '12px',
+                    top: 0,
+                    bottom: 0,
+                    width: '2px',
+                    background: theme.palette.mode === 'dark'
+                        ? 'rgba(255, 255, 255, 0.1)'
+                        : 'rgba(0, 0, 0, 0.1)',
+                    transition: 'background 0.2s ease'
+                } : {},
+                // Highlight line on hover
+                '&:hover::before': level > 0 ? {
+                    background: theme.palette.mode === 'dark'
+                        ? alpha(theme.palette.primary.main, 0.3)
+                        : alpha(theme.palette.primary.main, 0.2)
+                } : {}
             }}
         >
             <Paper
                 elevation={0}
                 sx={{
-                    p: 3,
+                    p: 2,
                     border: comment.is_own_pending
                         ? `1px dashed ${theme.palette.warning.main}`
-                        : theme.palette.mode === 'dark'
-                            ? `1px solid rgba(255, 255, 255, 0.1)`
-                            : `1px solid rgba(255, 255, 255, 0.3)`,
-                    borderRadius: 3,
+                        : 'none',
+                    borderRadius: 2,
                     background: comment.is_own_pending
-                        ? `linear-gradient(145deg, ${alpha(theme.palette.warning.light, 0.3)}, ${alpha(theme.palette.warning.light, 0.2)})`
-                        : theme.palette.mode === 'dark'
-                            ? level > 0
-                                ? 'linear-gradient(145deg, rgba(40, 40, 40, 0.7) 0%, rgba(25, 25, 25, 0.5) 100%)'
-                                : 'linear-gradient(145deg, rgba(45, 45, 45, 0.8) 0%, rgba(30, 30, 30, 0.6) 100%)'
-                            : level > 0
-                                ? 'linear-gradient(145deg, rgba(255, 255, 255, 0.7) 0%, rgba(255, 255, 255, 0.5) 100%)'
-                                : 'linear-gradient(145deg, rgba(255, 255, 255, 0.8) 0%, rgba(255, 255, 255, 0.6) 100%)',
-                    backdropFilter: 'blur(12px)',
-                    WebkitBackdropFilter: 'blur(12px)',
-                    boxShadow: theme.palette.mode === 'dark'
-                        ? '0 4px 16px rgba(0, 0, 0, 0.4)'
-                        : '0 4px 16px rgba(0, 0, 0, 0.06)',
+                        ? alpha(theme.palette.warning.light, 0.1)
+                        : 'transparent',
                     position: 'relative',
-                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                    '&::before': {
-                        content: '""',
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        width: '3px',
-                        height: '100%',
-                        background: level > 0
-                            ? 'linear-gradient(180deg, rgba(99, 102, 241, 0.6), rgba(147, 197, 253, 0.6))'
-                            : 'linear-gradient(180deg, rgba(59, 130, 246, 0.8), rgba(99, 102, 241, 0.8))',
-                        borderRadius: '3px 0 0 3px',
-                        opacity: 0,
-                        transition: 'opacity 0.3s ease'
-                    },
+                    transition: 'all 0.2s ease',
                     '&:hover': {
-                        boxShadow: theme.palette.mode === 'dark'
-                            ? '0 8px 24px rgba(59, 130, 246, 0.25)'
-                            : '0 8px 24px rgba(59, 130, 246, 0.12)',
-                        transform: 'translateY(-2px)',
-                        '&::before': {
-                            opacity: 1
-                        }
+                        background: theme.palette.mode === 'dark'
+                            ? alpha(theme.palette.primary.main, 0.05)
+                            : alpha(theme.palette.primary.main, 0.03)
                     },
                     '&:target': {
-                        background: `linear-gradient(145deg, ${alpha(theme.palette.primary.main, 0.15)}, ${alpha(theme.palette.primary.main, 0.1)})`,
-                        border: `2px solid ${theme.palette.primary.main}`,
-                        animation: 'highlight 2s ease-in-out',
-                        '&::before': {
-                            opacity: 1
-                        }
+                        background: alpha(theme.palette.primary.main, 0.1),
+                        border: `1px solid ${theme.palette.primary.main}`,
+                        animation: 'highlight 2s ease-in-out'
                     }
                 }}
             >
-                {/* Header del comentario */}
-                <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', mb: 2 }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                        <Avatar 
-                            sx={{ 
-                                width: 40, 
-                                height: 40,
-                                bgcolor: comment.user ? 'primary.main' : 'grey.400',
-                                fontSize: '1rem'
-                            }}
-                        >
-                            {comment.user ? (
-                                comment.author_name.charAt(0).toUpperCase()
-                            ) : (
-                                <PersonIcon />
-                            )}
-                        </Avatar>
-                        <Box>
+                {/* Header del comentario - Reddit style */}
+                <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5, mb: 1 }}>
+                    <Avatar
+                        sx={{
+                            width: 28,
+                            height: 28,
+                            bgcolor: comment.user ? 'primary.main' : 'grey.400',
+                            fontSize: '0.75rem',
+                            flexShrink: 0
+                        }}
+                    >
+                        {comment.user ? (
+                            comment.author_name.charAt(0).toUpperCase()
+                        ) : (
+                            <PersonIcon fontSize="small" />
+                        )}
+                    </Avatar>
+                    <Box sx={{ flex: 1, minWidth: 0 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', mb: 0.5 }}>
                             <Typography
                                 component={comment.user?.id ? Link : 'span'}
                                 href={comment.user?.id ? `/user/${comment.user.id}` : undefined}
-                                variant="subtitle2"
-                                fontWeight="bold"
+                                variant="body2"
+                                fontWeight="600"
                                 sx={{
                                     color: comment.user ? 'primary.main' : 'text.primary',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: 1,
                                     textDecoration: 'none',
                                     cursor: comment.user?.id ? 'pointer' : 'default',
+                                    fontSize: '0.875rem',
                                     '&:hover': comment.user?.id ? {
                                         textDecoration: 'underline'
                                     } : {}
                                 }}
                             >
                                 {comment.author_name}
-                                {comment.user?.is_verified && (
-                                    <VerifiedIcon
-                                        sx={{
-                                            color: '#1976d2',
-                                            fontSize: '1rem'
-                                        }}
-                                    />
-                                )}
-                                {comment.is_guest && (
-                                    <Typography
-                                        component="span"
-                                        variant="caption"
-                                        sx={{
-                                            px: 1,
-                                            py: 0.25,
-                                            bgcolor: 'grey.100',
-                                            borderRadius: 1,
-                                            fontSize: '0.7rem'
-                                        }}
-                                    >
-                                        Invitado
-                                    </Typography>
-                                )}
-                                {comment.is_own_pending && (
-                                    <Chip
-                                        icon={<PendingIcon sx={{ fontSize: '0.9rem !important' }} />}
-                                        label="Pendiente de moderaci�n"
-                                        size="small"
-                                        color="warning"
-                                        variant="outlined"
-                                        sx={{
-                                            fontSize: '0.7rem',
-                                            height: 22
-                                        }}
-                                    />
-                                )}
                             </Typography>
-                            <Typography variant="caption" color="text.secondary">
-                                {comment.created_at}
+
+                            {comment.user?.is_verified && (
+                                <VerifiedIcon
+                                    sx={{
+                                        color: '#1976d2',
+                                        fontSize: '0.875rem'
+                                    }}
+                                />
+                            )}
+
+                            {comment.is_guest && (
+                                <Chip
+                                    label="Invitado"
+                                    size="small"
+                                    sx={{
+                                        height: 16,
+                                        fontSize: '0.625rem',
+                                        bgcolor: alpha(theme.palette.grey[500], 0.15),
+                                        color: 'text.secondary'
+                                    }}
+                                />
+                            )}
+
+                            {comment.is_own_pending && (
+                                <Chip
+                                    icon={<PendingIcon sx={{ fontSize: '0.65rem !important' }} />}
+                                    label="Pendiente"
+                                    size="small"
+                                    color="warning"
+                                    sx={{
+                                        height: 16,
+                                        fontSize: '0.625rem'
+                                    }}
+                                />
+                            )}
+
+                            <Typography
+                                component="span"
+                                variant="caption"
+                                color="text.secondary"
+                                sx={{ fontSize: '0.7rem' }}
+                            >
+                                • {comment.created_at}
                             </Typography>
                         </Box>
-                    </Box>
-                    
-                    <Box sx={{ display: 'flex', gap: 1 }}>
-                        {level < 2 && (
-                            <IconButton
-                                onClick={handleReply}
-                                size="small"
+
+                        {/* Contenido del comentario o formulario de edición */}
+                        {showEditForm ? (
+                            <Box sx={{ mt: 1 }}>
+                                <CommentEditForm
+                                    comment={currentComment}
+                                    onCancel={() => setShowEditForm(false)}
+                                    onSuccess={handleEditSuccess}
+                                />
+                            </Box>
+                        ) : comment.is_deleted ? (
+                            <Box
                                 sx={{
-                                    color: 'text.secondary',
-                                    '&:hover': { color: 'primary.main' }
+                                    mt: 1,
+                                    p: 1.5,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 1,
+                                    borderRadius: 1,
+                                    backgroundColor: alpha(theme.palette.grey[500], 0.08),
+                                    border: `1px dashed ${alpha(theme.palette.grey[500], 0.3)}`
                                 }}
                             >
-                                <ReplyIcon fontSize="small" />
-                            </IconButton>
-                        )}
-                        {canEdit && !showEditForm && (
-                            <IconButton
-                                onClick={handleEditClick}
-                                size="small"
-                                sx={{
-                                    color: 'text.secondary',
-                                    '&:hover': { color: 'info.main' }
-                                }}
-                            >
-                                <EditIcon fontSize="small" />
-                            </IconButton>
-                        )}
-                        {isAdmin && (
-                            <IconButton
-                                onClick={handleDeleteClick}
-                                size="small"
-                                sx={{
-                                    color: 'text.secondary',
-                                    '&:hover': { color: 'error.main' }
-                                }}
-                            >
-                                <DeleteIcon fontSize="small" />
-                            </IconButton>
+                                <DeleteIcon sx={{ color: theme.palette.grey[500], fontSize: '1rem' }} />
+                                <Typography
+                                    variant="body2"
+                                    sx={{
+                                        color: theme.palette.grey[600],
+                                        fontStyle: 'italic',
+                                        fontSize: '0.875rem'
+                                    }}
+                                >
+                                    {`${comment.author_name} dejó un comentario que ha sido eliminado.`}
+                                </Typography>
+                            </Box>
+                        ) : (
+                            <>
+                                <Typography
+                                    variant="body2"
+                                    component="div"
+                                    sx={{
+                                        lineHeight: 1.5,
+                                        whiteSpace: 'pre-wrap',
+                                        wordWrap: 'break-word',
+                                        fontSize: '0.875rem'
+                                    }}
+                                >
+                                    {renderCommentBody(currentComment.body, allComments).map((part, index) => {
+                                        if (part.type === 'mention' && part.userId) {
+                                            return (
+                                                <Link
+                                                    key={index}
+                                                    href={`/user/${part.userId}`}
+                                                    style={{
+                                                        color: theme.palette.primary.main,
+                                                        fontWeight: 600,
+                                                        textDecoration: 'underline',
+                                                        textDecorationColor: alpha(theme.palette.primary.main, 0.4),
+                                                        textDecorationThickness: '1px',
+                                                        textUnderlineOffset: '2px',
+                                                        cursor: 'pointer',
+                                                        transition: 'all 0.2s ease',
+                                                        padding: '0 2px',
+                                                        borderRadius: '2px'
+                                                    }}
+                                                    onMouseEnter={(e) => {
+                                                        e.target.style.textDecorationColor = theme.palette.primary.main;
+                                                        e.target.style.backgroundColor = alpha(theme.palette.primary.main, 0.08);
+                                                    }}
+                                                    onMouseLeave={(e) => {
+                                                        e.target.style.textDecorationColor = alpha(theme.palette.primary.main, 0.4);
+                                                        e.target.style.backgroundColor = 'transparent';
+                                                    }}
+                                                >
+                                                    {part.content}
+                                                </Link>
+                                            );
+                                        } else if (part.type === 'mention') {
+                                            // Mention without user ID (user not found)
+                                            return (
+                                                <span
+                                                    key={index}
+                                                    style={{
+                                                        color: theme.palette.text.secondary,
+                                                        fontWeight: 500
+                                                    }}
+                                                >
+                                                    {part.content}
+                                                </span>
+                                            );
+                                        } else {
+                                            return <span key={index}>{part.content}</span>;
+                                        }
+                                    })}
+                                </Typography>
+
+                                {/* Edit Indicator */}
+                                {currentComment.edited_at && (
+                                    <CommentEditIndicator
+                                        comment={currentComment}
+                                        onViewHistory={canEdit || isAdmin ? handleViewHistory : null}
+                                    />
+                                )}
+
+                                {/* Reddit-style action buttons */}
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1 }}>
+                                    {/* Like/Dislike buttons - Mostrar siempre excepto en comentarios eliminados */}
+                                    {!currentComment.is_deleted && (
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                            <IconButton
+                                                onClick={handleLike}
+                                                size="small"
+                                                disabled={isLikeLoading}
+                                                sx={{
+                                                    color: userHasLiked ? 'primary.main' : 'text.secondary',
+                                                    padding: '4px',
+                                                    '&:hover': {
+                                                        color: 'primary.main',
+                                                        backgroundColor: alpha(theme.palette.primary.main, 0.08)
+                                                    }
+                                                }}
+                                            >
+                                                {userHasLiked ? (
+                                                    <ThumbUpIcon sx={{ fontSize: '0.875rem' }} />
+                                                ) : (
+                                                    <ThumbUpOutlinedIcon sx={{ fontSize: '0.875rem' }} />
+                                                )}
+                                            </IconButton>
+                                            <Typography
+                                                variant="caption"
+                                                sx={{
+                                                    fontSize: '0.75rem',
+                                                    fontWeight: 600,
+                                                    color: userHasLiked ? 'primary.main' : 'text.secondary',
+                                                    minWidth: '16px',
+                                                    textAlign: 'center'
+                                                }}
+                                            >
+                                                {likesCount > 0 ? likesCount : ''}
+                                            </Typography>
+
+                                            <IconButton
+                                                onClick={handleDislike}
+                                                size="small"
+                                                disabled={isLikeLoading}
+                                                sx={{
+                                                    color: userHasDisliked ? 'error.main' : 'text.secondary',
+                                                    padding: '4px',
+                                                    ml: 0.5,
+                                                    '&:hover': {
+                                                        color: 'error.main',
+                                                        backgroundColor: alpha(theme.palette.error.main, 0.08)
+                                                    }
+                                                }}
+                                            >
+                                                {userHasDisliked ? (
+                                                    <ThumbDownIcon sx={{ fontSize: '0.875rem' }} />
+                                                ) : (
+                                                    <ThumbDownOutlinedIcon sx={{ fontSize: '0.875rem' }} />
+                                                )}
+                                            </IconButton>
+                                            <Typography
+                                                variant="caption"
+                                                sx={{
+                                                    fontSize: '0.75rem',
+                                                    fontWeight: 600,
+                                                    color: userHasDisliked ? 'error.main' : 'text.secondary',
+                                                    minWidth: '16px',
+                                                    textAlign: 'center'
+                                                }}
+                                            >
+                                                {dislikesCount > 0 ? dislikesCount : ''}
+                                            </Typography>
+                                        </Box>
+                                    )}
+
+                                    <Button
+                                        onClick={handleReply}
+                                        size="small"
+                                        startIcon={<ReplyIcon sx={{ fontSize: '0.875rem' }} />}
+                                        sx={{
+                                            textTransform: 'none',
+                                            fontSize: '0.75rem',
+                                            fontWeight: 600,
+                                            color: 'text.secondary',
+                                            minWidth: 'auto',
+                                            px: 1,
+                                            py: 0.25,
+                                            '&:hover': {
+                                                color: 'primary.main',
+                                                backgroundColor: alpha(theme.palette.primary.main, 0.08)
+                                            }
+                                        }}
+                                    >
+                                        Responder
+                                    </Button>
+
+                                    {canEdit && !showEditForm && (
+                                        <Button
+                                            onClick={handleEditClick}
+                                            size="small"
+                                            startIcon={<EditIcon sx={{ fontSize: '0.875rem' }} />}
+                                            sx={{
+                                                textTransform: 'none',
+                                                fontSize: '0.75rem',
+                                                fontWeight: 600,
+                                                color: 'text.secondary',
+                                                minWidth: 'auto',
+                                                px: 1,
+                                                py: 0.25,
+                                                '&:hover': {
+                                                    color: 'info.main',
+                                                    backgroundColor: alpha(theme.palette.info.main, 0.08)
+                                                }
+                                            }}
+                                        >
+                                            Editar
+                                        </Button>
+                                    )}
+
+                                    {(canEdit || isAdmin) && (
+                                        <Button
+                                            onClick={handleDeleteClick}
+                                            size="small"
+                                            startIcon={<DeleteIcon sx={{ fontSize: '0.875rem' }} />}
+                                            sx={{
+                                                textTransform: 'none',
+                                                fontSize: '0.75rem',
+                                                fontWeight: 600,
+                                                color: 'text.secondary',
+                                                minWidth: 'auto',
+                                                px: 1,
+                                                py: 0.25,
+                                                '&:hover': {
+                                                    color: 'error.main',
+                                                    backgroundColor: alpha(theme.palette.error.main, 0.08)
+                                                }
+                                            }}
+                                        >
+                                            Eliminar
+                                        </Button>
+                                    )}
+                                </Box>
+                            </>
                         )}
                     </Box>
                 </Box>
 
-                {/* Contenido del comentario o formulario de edición */}
-                {showEditForm ? (
-                    <Box sx={{ mt: 2 }}>
-                        <CommentEditForm
-                            comment={currentComment}
-                            onCancel={() => setShowEditForm(false)}
-                            onSuccess={handleEditSuccess}
-                        />
-                    </Box>
-                ) : (
-                    <>
-                        <Typography
-                            variant="body1"
-                            sx={{
-                                lineHeight: 1.6,
-                                whiteSpace: 'pre-wrap',
-                                wordWrap: 'break-word'
-                            }}
-                        >
-                            {currentComment.body}
-                        </Typography>
-
-                        {/* Edit Indicator */}
-                        {currentComment.edited_at && (
-                            <CommentEditIndicator
-                                comment={currentComment}
-                                onViewHistory={canEdit || isAdmin ? handleViewHistory : null}
-                            />
-                        )}
-                    </>
-                )}
-
                 {comment.is_own_pending && (
                     <Box
                         sx={{
-                            mt: 2,
-                            p: 2,
+                            mt: 1.5,
+                            p: 1.5,
                             display: 'flex',
                             alignItems: 'center',
-                            gap: 1.5,
-                            borderRadius: 2,
-                            backgroundColor: alpha(theme.palette.warning.main, 0.12)
+                            gap: 1,
+                            borderRadius: 1,
+                            backgroundColor: alpha(theme.palette.warning.main, 0.1)
                         }}
                     >
-                        <PendingIcon sx={{ color: theme.palette.warning.dark }} />
-                        <Typography variant="body2" color="warning.dark">
+                        <PendingIcon sx={{ color: theme.palette.warning.dark, fontSize: '1rem' }} />
+                        <Typography variant="caption" color="warning.dark">
                             Tu comentario está a la espera de moderación. Solo tú puedes verlo hasta que sea aprobado.
                         </Typography>
                     </Box>
                 )}
-
-                {/* Interacciones con el comentario */}
-                <CommentInteractions 
-                    comment={comment}
-                    onInteractionChange={(data) => {
-                        // Actualizar el estado del comentario si es necesario
-                        console.log('Interacción actualizada:', data);
-                    }}
-                />
-
-                {/* Formulario de respuesta */}
-                <Collapse in={showReplyForm}>
-                    <Box sx={{ mt: 3, pt: 3, borderTop: `1px solid ${alpha(theme.palette.divider, 0.1)}` }}>
-                        <CommentForm
-                            parentId={comment.id}
-                            onSubmit={handleReplySubmit}
-                            onCancel={() => setShowReplyForm(false)}
-                            placeholder={`Responder a ${comment.author_name}...`}
-                            buttonText="Responder"
-                        />
-                    </Box>
-                </Collapse>
             </Paper>
 
             {/* Respuestas anidadas */}
             {comment.replies && comment.replies.length > 0 && (
                 <Box sx={{ mt: 2 }}>
-                    {comment.replies.map((reply) => (
-                        <CommentItem
-                            key={reply.id}
-                            comment={reply}
-                            onReply={onReply}
-                            onDelete={onDelete}
-                            onEdit={onEdit}
-                            level={level + 1}
-                        />
-                    ))}
+                    {/* Botón para mostrar/ocultar respuestas - Estilo YouTube */}
+                    <Box sx={{ mb: showAllReplies ? 2 : 0 }}>
+                        <Button
+                            component={motion.button}
+                            onClick={() => setShowAllReplies(!showAllReplies)}
+                            startIcon={
+                                <motion.div
+                                    animate={{ rotate: showAllReplies ? 180 : 0 }}
+                                    transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
+                                    style={{ display: 'flex', alignItems: 'center' }}
+                                >
+                                    <ExpandMoreIcon />
+                                </motion.div>
+                            }
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                            sx={{
+                                textTransform: 'none',
+                                fontWeight: 600,
+                                fontSize: '0.875rem',
+                                color: theme.palette.primary.main,
+                                px: 1.5,
+                                py: 0.75,
+                                minWidth: 'auto',
+                                borderRadius: '20px',
+                                transition: 'all 0.2s ease',
+                                '&:hover': {
+                                    background: alpha(theme.palette.primary.main, 0.08),
+                                }
+                            }}
+                        >
+                            <motion.span
+                                key={showAllReplies ? 'hide' : 'show'}
+                                initial={{ opacity: 0, y: -10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: 10 }}
+                                transition={{ duration: 0.2 }}
+                            >
+                                {showAllReplies ? (
+                                    `Ocultar respuestas`
+                                ) : (
+                                    `${comment.replies.length} ${comment.replies.length === 1 ? 'respuesta' : 'respuestas'}`
+                                )}
+                            </motion.span>
+                        </Button>
+                    </Box>
+
+                    {/* Mostrar todas las respuestas cuando showAllReplies es true */}
+                    <AnimatePresence mode="wait">
+                        {showAllReplies && (
+                            <motion.div
+                                initial={{ opacity: 0, height: 0 }}
+                                animate={{
+                                    opacity: 1,
+                                    height: 'auto',
+                                    transition: {
+                                        height: {
+                                            duration: 0.4,
+                                            ease: [0.4, 0, 0.2, 1]
+                                        },
+                                        opacity: {
+                                            duration: 0.3,
+                                            delay: 0.1
+                                        }
+                                    }
+                                }}
+                                exit={{
+                                    opacity: 0,
+                                    height: 0,
+                                    transition: {
+                                        height: {
+                                            duration: 0.3,
+                                            ease: [0.4, 0, 0.2, 1],
+                                            delay: 0.1
+                                        },
+                                        opacity: {
+                                            duration: 0.2
+                                        }
+                                    }
+                                }}
+                                style={{ overflow: 'hidden' }}
+                            >
+                                {comment.replies.map((reply, index) => (
+                                    <motion.div
+                                        key={reply.id}
+                                        initial={{ opacity: 0, x: -20 }}
+                                        animate={{
+                                            opacity: 1,
+                                            x: 0,
+                                            transition: {
+                                                duration: 0.3,
+                                                delay: index * 0.05,
+                                                ease: [0.4, 0, 0.2, 1]
+                                            }
+                                        }}
+                                    >
+                                        <CommentItem
+                                            comment={reply}
+                                            onReply={onReply}
+                                            onDelete={onDelete}
+                                            onEdit={onEdit}
+                                            onMention={onMention}
+                                            level={level + 1}
+                                            parentCommentId={level === 0 ? comment.id : parentCommentId}
+                                            allComments={allComments}
+                                        />
+                                    </motion.div>
+                                ))}
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
                 </Box>
             )}
+
+            {/* Formulario de respuesta - Después de todas las respuestas */}
+            <Collapse in={showReplyForm}>
+                <Box sx={{ mt: 2, pl: level > 0 ? 0 : 3 }}>
+                    <CommentForm
+                        parentId={level === 0 ? comment.id : parentCommentId}
+                        onSubmit={handleReplySubmit}
+                        onCancel={() => setShowReplyForm(false)}
+                        placeholder={`Responder a ${comment.author_name}...`}
+                        buttonText="Responder"
+                    />
+                </Box>
+            </Collapse>
 
             {/* Edit History Modal */}
             <CommentEditHistoryModal
@@ -528,21 +924,122 @@ const CommentItem = ({ comment, onReply, onDelete, onEdit, level = 0 }) => {
                     </Button>
                 </DialogActions>
             </Dialog>
+
+            {/* Modal de autenticación para likes/dislikes */}
+            <Dialog
+                open={showAuthModal}
+                onClose={() => setShowAuthModal(false)}
+                maxWidth="sm"
+                fullWidth
+                PaperProps={{
+                    sx: {
+                        borderRadius: 3,
+                        background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.05)} 0%, ${alpha(theme.palette.secondary.main, 0.05)} 100%)`
+                    }
+                }}
+            >
+                <DialogContent sx={{ p: 4, textAlign: 'center' }}>
+                    <IconButton
+                        onClick={() => setShowAuthModal(false)}
+                        sx={{
+                            position: 'absolute',
+                            right: 8,
+                            top: 8,
+                            color: 'text.secondary'
+                        }}
+                    >
+                        <CloseIcon />
+                    </IconButton>
+
+                    <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
+                        <Avatar
+                            sx={{
+                                width: 60,
+                                height: 60,
+                                background: `linear-gradient(45deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`
+                            }}
+                        >
+                            <ThumbUpIcon sx={{ fontSize: 30 }} />
+                        </Avatar>
+                    </Box>
+
+                    <Typography
+                        variant="h5"
+                        fontWeight="bold"
+                        sx={{
+                            mb: 2,
+                            background: `linear-gradient(45deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+                            backgroundClip: 'text',
+                            WebkitBackgroundClip: 'text',
+                            WebkitTextFillColor: 'transparent'
+                        }}
+                    >
+                        ¡Únete para interactuar!
+                    </Typography>
+
+                    <Typography variant="body1" color="text.secondary" sx={{ mb: 3, maxWidth: 400, mx: 'auto' }}>
+                        Crea una cuenta gratuita para dar like, dislike y participar en la comunidad.
+                    </Typography>
+
+                    <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', flexWrap: 'wrap' }}>
+                        <Button
+                            variant="contained"
+                            startIcon={<RegisterIcon />}
+                            component={Link}
+                            href={route('register')}
+                            sx={{
+                                background: `linear-gradient(45deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+                                px: 3,
+                                py: 1,
+                                borderRadius: 3,
+                                '&:hover': {
+                                    transform: 'translateY(-2px)',
+                                    boxShadow: theme.shadows[8]
+                                }
+                            }}
+                        >
+                            Crear cuenta gratis
+                        </Button>
+
+                        <Button
+                            variant="outlined"
+                            startIcon={<LoginIcon />}
+                            component={Link}
+                            href={route('login')}
+                            sx={{
+                                borderColor: theme.palette.primary.main,
+                                color: theme.palette.primary.main,
+                                px: 3,
+                                py: 1,
+                                borderRadius: 3,
+                                '&:hover': {
+                                    backgroundColor: alpha(theme.palette.primary.main, 0.1),
+                                    borderColor: theme.palette.primary.dark
+                                }
+                            }}
+                        >
+                            Ya tengo cuenta
+                        </Button>
+                    </Box>
+                </DialogContent>
+            </Dialog>
         </Box>
     );
 };
 
-const CommentForm = ({ 
-    parentId = null, 
-    onSubmit, 
-    onCancel = null, 
+const CommentForm = ({
+    parentId = null,
+    onSubmit,
+    onCancel = null,
     placeholder = "Escribe tu comentario...",
-    buttonText = "Enviar comentario"
+    buttonText = "Enviar comentario",
+    initialMention = '',
+    availableUsers = []
 }) => {
     const theme = useTheme();
     const auth = useAuth();
     const [formData, setFormData] = useState({
-        body: '',
+        body: initialMention,
         author_name: auth.user?.name || '',
         author_email: auth.user?.email || '',
         parent_id: parentId
@@ -550,16 +1047,102 @@ const CommentForm = ({
     const [loading, setLoading] = useState(false);
     const [errors, setErrors] = useState({});
     const [showLoginPrompt, setShowLoginPrompt] = useState(false);
+    const [mentionSuggestions, setMentionSuggestions] = useState([]);
+    const [showSuggestions, setShowSuggestions] = useState(false);
+    const [mentionQuery, setMentionQuery] = useState('');
+    const [cursorPosition, setCursorPosition] = useState(0);
+    const textFieldRef = useRef(null);
+
+    // Update body when initialMention changes
+    useEffect(() => {
+        if (initialMention) {
+            setFormData(prev => ({
+                ...prev,
+                body: initialMention + ' '
+            }));
+            // Focus the text field
+            setTimeout(() => {
+                if (textFieldRef.current) {
+                    const input = textFieldRef.current.querySelector('textarea');
+                    if (input) {
+                        input.focus();
+                        input.setSelectionRange(initialMention.length + 1, initialMention.length + 1);
+                    }
+                }
+            }, 100);
+        }
+    }, [initialMention]);
 
     const handleChange = (field) => (event) => {
+        const value = event.target.value;
         setFormData(prev => ({
             ...prev,
-            [field]: event.target.value
+            [field]: value
         }));
+
         // Clear error when user starts typing
         if (errors[field]) {
             setErrors(prev => ({ ...prev, [field]: null }));
         }
+
+        // Handle @ mentions
+        if (field === 'body') {
+            const cursorPos = event.target.selectionStart;
+            setCursorPosition(cursorPos);
+
+            // Find @ symbol before cursor
+            const textBeforeCursor = value.substring(0, cursorPos);
+            const lastAtIndex = textBeforeCursor.lastIndexOf('@');
+
+            if (lastAtIndex !== -1) {
+                const textAfterAt = textBeforeCursor.substring(lastAtIndex + 1);
+
+                // Check if there's a space after @
+                if (!textAfterAt.includes(' ') && textAfterAt.length >= 0) {
+                    setMentionQuery(textAfterAt);
+
+                    // Filter users
+                    const filtered = availableUsers.filter(user =>
+                        user.toLowerCase().includes(textAfterAt.toLowerCase())
+                    );
+
+                    setMentionSuggestions(filtered);
+                    setShowSuggestions(filtered.length > 0);
+                } else {
+                    setShowSuggestions(false);
+                }
+            } else {
+                setShowSuggestions(false);
+            }
+        }
+    };
+
+    const handleMentionSelect = (username) => {
+        const textBeforeCursor = formData.body.substring(0, cursorPosition);
+        const lastAtIndex = textBeforeCursor.lastIndexOf('@');
+        const textAfterCursor = formData.body.substring(cursorPosition);
+
+        const newBody = formData.body.substring(0, lastAtIndex) + `@${username} ` + textAfterCursor;
+
+        setFormData(prev => ({
+            ...prev,
+            body: newBody
+        }));
+
+        setShowSuggestions(false);
+        setMentionQuery('');
+
+        // Focus back on textarea
+        setTimeout(() => {
+            if (textFieldRef.current) {
+                const input = textFieldRef.current.querySelector('textarea');
+                if (input) {
+                    input.focus();
+                    const newCursorPos = lastAtIndex + username.length + 2;
+                    input.setSelectionRange(newCursorPos, newCursorPos);
+                }
+            }
+        }, 0);
     };
 
     const handleSubmit = async (event) => {
@@ -569,7 +1152,7 @@ const CommentForm = ({
 
         try {
             const response = await onSubmit(formData);
-            
+
             // Reset form
             setFormData({
                 body: '',
@@ -577,9 +1160,9 @@ const CommentForm = ({
                 author_email: auth.user?.email || '',
                 parent_id: parentId
             });
-            
+
             if (onCancel) onCancel();
-            
+
         } catch (error) {
             if (error.response?.data?.errors) {
                 setErrors(error.response.data.errors);
@@ -756,23 +1339,100 @@ const CommentForm = ({
                     </Stack>
                 </AuthGuard>
 
-                {/* Campo de comentario */}
-                <TextField
-                    label={placeholder}
-                    multiline
-                    rows={auth.isAuthenticated ? 3 : 4}
-                    value={formData.body}
-                    onChange={handleChange('body')}
-                    error={!!errors.body}
-                    helperText={errors.body?.[0] || `${formData.body.length}/2000 caracteres`}
-                    fullWidth
-                    sx={{ 
-                        mb: 3,
-                        '& .MuiOutlinedInput-root': {
-                            borderRadius: 2
-                        }
-                    }}
-                />
+                {/* Campo de comentario con autocompletado de menciones */}
+                <Box sx={{ position: 'relative', mb: 3 }}>
+                    <TextField
+                        ref={textFieldRef}
+                        label={placeholder}
+                        multiline
+                        rows={auth.isAuthenticated ? 3 : 4}
+                        value={formData.body}
+                        onChange={handleChange('body')}
+                        error={!!errors.body}
+                        helperText={errors.body?.[0] || `${formData.body.length}/2000 caracteres. Usa @ para mencionar usuarios`}
+                        fullWidth
+                        sx={{
+                            '& .MuiOutlinedInput-root': {
+                                borderRadius: 2
+                            }
+                        }}
+                    />
+
+                    {/* Dropdown de sugerencias de menciones */}
+                    <AnimatePresence>
+                        {showSuggestions && mentionSuggestions.length > 0 && (
+                            <motion.div
+                                initial={{ opacity: 0, y: -10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -10 }}
+                                transition={{ duration: 0.2 }}
+                            >
+                                <Paper
+                                    elevation={8}
+                                    sx={{
+                                        position: 'absolute',
+                                        bottom: '100%',
+                                        left: 0,
+                                        right: 0,
+                                        mb: 1,
+                                        maxHeight: 200,
+                                        overflowY: 'auto',
+                                        zIndex: 1000,
+                                        borderRadius: 2,
+                                        border: `1px solid ${alpha(theme.palette.primary.main, 0.3)}`,
+                                        background: theme.palette.mode === 'dark'
+                                            ? 'rgba(30, 30, 30, 0.95)'
+                                            : 'rgba(255, 255, 255, 0.95)',
+                                        backdropFilter: 'blur(10px)'
+                                    }}
+                                >
+                                    <Box sx={{ p: 1 }}>
+                                        <Typography
+                                            variant="caption"
+                                            sx={{
+                                                px: 2,
+                                                py: 1,
+                                                display: 'block',
+                                                color: 'text.secondary',
+                                                fontWeight: 600
+                                            }}
+                                        >
+                                            Mencionar usuario:
+                                        </Typography>
+                                        {mentionSuggestions.map((username, index) => (
+                                            <Box
+                                                key={index}
+                                                onClick={() => handleMentionSelect(username)}
+                                                sx={{
+                                                    px: 2,
+                                                    py: 1.5,
+                                                    cursor: 'pointer',
+                                                    borderRadius: 1,
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: 1,
+                                                    transition: 'all 0.2s',
+                                                    '&:hover': {
+                                                        backgroundColor: alpha(theme.palette.primary.main, 0.1),
+                                                        transform: 'translateX(4px)'
+                                                    }
+                                                }}
+                                            >
+                                                <PersonIcon sx={{ fontSize: 18, color: 'primary.main' }} />
+                                                <Typography
+                                                    variant="body2"
+                                                    sx={{ fontWeight: 600 }}
+                                                >
+                                                    @{username}
+                                                </Typography>
+                                            </Box>
+                                        ))}
+                                    </Box>
+                                </Paper>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+                </Box>
 
                 {/* Botones */}
                 <Box sx={{ display: 'flex', gap: 2, justifyContent: 'space-between', alignItems: 'center' }}>
@@ -892,6 +1552,30 @@ const CommentsSection = ({ postId, postSlug, comments: initialComments = [] }) =
     const [alert, setAlert] = useState(null);
     const commentsRef = useRef(null);
     const [showLoginPrompt, setShowLoginPrompt] = useState(false);
+    const [mentionUsername, setMentionUsername] = useState('');
+    const [replyToCommentId, setReplyToCommentId] = useState(null);
+    const commentFormRef = useRef(null);
+
+    // Extract unique usernames from all comments for mention suggestions
+    const availableUsers = React.useMemo(() => {
+        const users = new Set();
+        const extractUsers = (commentsList) => {
+            commentsList.forEach(comment => {
+                if (comment.author?.username) {
+                    users.add(comment.author.username);
+                } else if (comment.author_name) {
+                    // For guest comments, create a username from their name
+                    const username = comment.author_name.replace(/\s+/g, '');
+                    users.add(username);
+                }
+                if (comment.replies && comment.replies.length > 0) {
+                    extractUsers(comment.replies);
+                }
+            });
+        };
+        extractUsers(comments);
+        return Array.from(users);
+    }, [comments]);
 
     const pendingComments = React.useMemo(
         () => comments.filter((comment) => comment.is_own_pending),
@@ -961,16 +1645,33 @@ const CommentsSection = ({ postId, postSlug, comments: initialComments = [] }) =
 
     const submitComment = async (commentData) => {
         try {
-            const response = await axios.post(`/blog/${postSlug}/comments`, commentData);
+            // Si hay un replyToCommentId, agregarlo al commentData
+            const dataToSend = replyToCommentId
+                ? { ...commentData, parent_id: replyToCommentId }
+                : commentData;
+
+            const response = await axios.post(`/blog/${postSlug}/comments`, dataToSend);
 
             showAlert(response.data.message, 'success');
 
             if (response.data?.comment) {
-                setComments((prev) => [response.data.comment, ...prev]);
+                // ✅ FIX: Normalizar comentario para asegurar que tenga user_id
+                const normalizedComment = {
+                    ...response.data.comment,
+                    // Si el backend devuelve user.id pero no user_id, agregarlo
+                    user_id: response.data.comment.user_id || response.data.comment.user?.id || auth?.user?.id
+                };
+
+                setComments((prev) => [normalizedComment, ...prev]);
                 setCommentsCount((prev) => prev + 1);
             }
 
-            // Recargar comentarios para mostrar la actualizaci�n y mantener el orden
+            // Limpiar el estado de respuesta
+            setReplyToCommentId(null);
+            setMentionUsername('');
+
+            // Recargar comentarios para mantener sincronía con el servidor
+            // (esto sobrescribirá el comentario normalizado con la versión del servidor)
             await loadComments();
 
             return response.data;
@@ -995,7 +1696,12 @@ const CommentsSection = ({ postId, postSlug, comments: initialComments = [] }) =
 
     const handleDeleteComment = async (commentId) => {
         try {
-            const response = await axios.delete(`/comments/${commentId}`);
+            // ✅ FIX: Use correct route based on user role
+            // Admins use /comments/{id} route, regular users use /my/comments/{id}
+            const isAdmin = auth?.user?.role === 'admin';
+            const deleteUrl = isAdmin ? `/comments/${commentId}` : `/my/comments/${commentId}`;
+
+            const response = await axios.delete(deleteUrl);
 
             if (response.data.success) {
                 showAlert(response.data.message, 'success');
@@ -1006,8 +1712,20 @@ const CommentsSection = ({ postId, postSlug, comments: initialComments = [] }) =
             }
         } catch (error) {
             console.error('Error deleting comment:', error);
-            showAlert('Error al eliminar comentario', 'error');
+            const message = error?.response?.data?.message || 'Error al eliminar comentario';
+            showAlert(message, 'error');
         }
+    };
+
+    const handleMention = (username, parentCommentId = null) => {
+        setMentionUsername(`@${username}`);
+        setReplyToCommentId(parentCommentId);
+        // Scroll to comment form
+        setTimeout(() => {
+            if (commentFormRef.current) {
+                commentFormRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }, 100);
     };
 
     // Auto-mostrar LoginPrompt para invitados después de un tiempo
@@ -1171,12 +1889,12 @@ const CommentsSection = ({ postId, postSlug, comments: initialComments = [] }) =
             </AuthGuard>
 
             {/* Sección de formulario */}
-            <Box sx={{ mb: 6 }}>
-                <Typography 
-                    variant="h6" 
-                    gutterBottom 
+            <Box ref={commentFormRef} sx={{ mb: 6 }}>
+                <Typography
+                    variant="h6"
+                    gutterBottom
                     fontWeight="700"
-                    sx={{ 
+                    sx={{
                         display: 'flex',
                         alignItems: 'center',
                         gap: 1,
@@ -1189,7 +1907,7 @@ const CommentsSection = ({ postId, postSlug, comments: initialComments = [] }) =
                     />
                     <AuthSwitch
                         authenticated={
-                            <Chip 
+                            <Chip
                                 icon={<PremiumIcon />}
                                 label="Instantáneo"
                                 size="small"
@@ -1198,7 +1916,7 @@ const CommentsSection = ({ postId, postSlug, comments: initialComments = [] }) =
                             />
                         }
                         guest={
-                            <Chip 
+                            <Chip
                                 label="Moderado"
                                 size="small"
                                 color="warning"
@@ -1207,7 +1925,11 @@ const CommentsSection = ({ postId, postSlug, comments: initialComments = [] }) =
                         }
                     />
                 </Typography>
-                <CommentForm onSubmit={submitComment} />
+                <CommentForm
+                    onSubmit={submitComment}
+                    initialMention={mentionUsername}
+                    availableUsers={availableUsers}
+                />
             </Box>
 
             <Divider sx={{ my: 4 }} />
@@ -1243,6 +1965,8 @@ const CommentsSection = ({ postId, postSlug, comments: initialComments = [] }) =
                                 comment={comment}
                                 onReply={handleReply}
                                 onDelete={handleDeleteComment}
+                                onMention={handleMention}
+                                allComments={comments}
                             />
                         ))}
                     </AnimatePresence>

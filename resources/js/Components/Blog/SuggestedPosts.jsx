@@ -118,6 +118,7 @@ const SuggestedPosts = ({
                         component="img"
                         image={post.cover_image || '/images/blog/default.jpg'}
                         alt={post.title}
+                        loading="lazy"
                         className="post-image"
                         sx={{
                             height: layout === 'list' ? 140 : 200,

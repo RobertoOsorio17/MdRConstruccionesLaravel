@@ -31,7 +31,7 @@ class AuthenticatedSessionController extends Controller
             'timestamp' => now()->toISOString()
         ]);
 
-        return Inertia::render('Auth/LoginMUI', [
+        return Inertia::render('Auth/LoginNew', [
             'canResetPassword' => Route::has('password.request'),
             'status' => session('status'),
         ]);

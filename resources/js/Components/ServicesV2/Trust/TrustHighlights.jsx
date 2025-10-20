@@ -46,21 +46,21 @@ const TrustHighlights = ({
         triggerOnce: true
     });
 
-    // Métricas por defecto
+    // Métricas por defecto con formateo correcto
     const defaultMetrics = [
         {
             label: 'Proyectos Completados',
             value: 500,
             suffix: '+',
             icon: <EmojiEvents />,
-            color: designSystem.colors.accent.amber
+            color: designSystem.colors.accent.amber[500]
         },
         {
             label: 'Clientes Satisfechos',
             value: 98,
             suffix: '%',
             icon: <Star />,
-            color: designSystem.colors.accent.emerald
+            color: designSystem.colors.accent.emerald[500]
         },
         {
             label: 'Años de Experiencia',
@@ -72,9 +72,11 @@ const TrustHighlights = ({
         {
             label: 'Metros Cuadrados',
             value: 125000,
-            suffix: ' m²',
+            suffix: '',
+            format: 'number', // Formateará con separadores de miles
+            unit: 'm²',
             icon: <Groups />,
-            color: designSystem.colors.accent.purple
+            color: designSystem.colors.accent.purple[500]
         }
     ];
 
@@ -146,23 +148,39 @@ const TrustHighlights = ({
                                                 fontSize: 32,
                                                 mb: designSystem.spacing[2]
                                             }}
+                                            aria-hidden="true"
                                         >
                                             {metric.icon}
                                         </Box>
 
-                                        {/* Counter */}
-                                        <AnimatedCounter
-                                            value={metric.value}
-                                            suffix={metric.suffix || ''}
-                                            variant="h3"
-                                            fontWeight={800}
-                                            sx={{
-                                                background: `linear-gradient(135deg, ${designSystem.colors.primary[600]} 0%, ${designSystem.colors.accent.purple} 100%)`,
-                                                WebkitBackgroundClip: 'text',
-                                                WebkitTextFillColor: 'transparent',
-                                                backgroundClip: 'text'
-                                            }}
-                                        />
+                                        {/* Counter con aria-label */}
+                                        <Box aria-label={`${metric.label}: ${metric.format === 'number' ? new Intl.NumberFormat('es-ES').format(metric.value) : metric.value}${metric.suffix || ''}${metric.unit ? ' ' + metric.unit : ''}`}>
+                                            <AnimatedCounter
+                                                value={metric.value}
+                                                suffix={metric.suffix || ''}
+                                                format={metric.format}
+                                                variant="h3"
+                                                fontWeight={800}
+                                                sx={{
+                                                    background: `linear-gradient(135deg, ${designSystem.colors.primary[600]} 0%, ${designSystem.colors.accent.purple[500]} 100%)`,
+                                                    WebkitBackgroundClip: 'text',
+                                                    WebkitTextFillColor: 'transparent',
+                                                    backgroundClip: 'text'
+                                                }}
+                                            />
+                                            {metric.unit && (
+                                                <Typography
+                                                    component="span"
+                                                    variant="h5"
+                                                    sx={{
+                                                        ml: 0.5,
+                                                        color: designSystem.colors.text.secondary
+                                                    }}
+                                                >
+                                                    {metric.unit}
+                                                </Typography>
+                                            )}
+                                        </Box>
 
                                         {/* Label */}
                                         <Typography
@@ -199,24 +217,54 @@ const TrustHighlights = ({
                                     transition={{ duration: 0.2 }}
                                 >
                                     <Tooltip title={client.name} arrow>
-                                        <Box
-                                            component="img"
-                                            src={client.logo}
-                                            alt={client.name}
-                                            sx={{
-                                                width: '100%',
-                                                height: 60,
-                                                objectFit: 'contain',
-                                                filter: 'grayscale(100%)',
-                                                opacity: 0.6,
-                                                transition: designSystem.transitions.presets.allNormal,
-                                                cursor: 'pointer',
-                                                '&:hover': {
-                                                    filter: 'grayscale(0%)',
-                                                    opacity: 1
-                                                }
-                                            }}
-                                        />
+                                        {client.url ? (
+                                            <Box
+                                                component="a"
+                                                href={client.url}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                sx={{ display: 'block', textDecoration: 'none' }}
+                                            >
+                                                <Box
+                                                    component="img"
+                                                    src={client.logo}
+                                                    alt={`Logo de ${client.name}`}
+                                                    loading="lazy"
+                                                    sx={{
+                                                        width: '100%',
+                                                        height: 60,
+                                                        objectFit: 'contain',
+                                                        filter: 'grayscale(100%)',
+                                                        opacity: 0.6,
+                                                        transition: designSystem.transitions.presets.allNormal,
+                                                        cursor: 'pointer',
+                                                        '&:hover': {
+                                                            filter: 'grayscale(0%)',
+                                                            opacity: 1
+                                                        }
+                                                    }}
+                                                />
+                                            </Box>
+                                        ) : (
+                                            <Box
+                                                component="img"
+                                                src={client.logo}
+                                                alt={`Logo de ${client.name}`}
+                                                loading="lazy"
+                                                sx={{
+                                                    width: '100%',
+                                                    height: 60,
+                                                    objectFit: 'contain',
+                                                    filter: 'grayscale(100%)',
+                                                    opacity: 0.6,
+                                                    transition: designSystem.transitions.presets.allNormal,
+                                                    '&:hover': {
+                                                        filter: 'grayscale(0%)',
+                                                        opacity: 1
+                                                    }
+                                                }}
+                                            />
+                                        )}
                                     </Tooltip>
                                 </motion.div>
                             </Grid>

@@ -20,7 +20,10 @@ import {
     useTheme,
     alpha,
     Tooltip,
-    CircularProgress
+    CircularProgress,
+    Menu,
+    MenuItem,
+    ListItemIcon
 } from '@mui/material';
 import {
     TrendingUp as TrendingUpIcon,
@@ -36,9 +39,15 @@ import {
     ArrowUpward as ArrowUpwardIcon,
     ArrowDownward as ArrowDownwardIcon,
     MoreVert as MoreVertIcon,
-    Refresh as RefreshIcon
+    Refresh as RefreshIcon,
+    AspectRatio as AspectRatioIcon,
+    ViewColumn as ViewColumnIcon,
+    ViewModule as ViewModuleIcon,
+    ViewQuilt as ViewQuiltIcon,
+    RestartAlt as RestartAltIcon
 } from '@mui/icons-material';
 import AdminLayoutNew from '@/Layouts/AdminLayoutNew';
+import useWidgetResize from '@/hooks/useWidgetResize';
 
 // Glassmorphism card styles
 const glassmorphismCard = {
@@ -77,26 +86,90 @@ const itemVariants = {
     }
 };
 
-const StatCard = ({ title, value, change, changeType, icon, color, subtitle }) => {
+const StatCard = ({ title, value, change, changeType, icon, color, subtitle, widgetId, onResize }) => {
     const theme = useTheme();
-    
+    const [anchorEl, setAnchorEl] = useState(null);
+    const open = Boolean(anchorEl);
+
+    const handleMenuOpen = (event) => {
+        event.stopPropagation();
+        setAnchorEl(event.currentTarget);
+    };
+
+    const handleMenuClose = () => {
+        setAnchorEl(null);
+    };
+
+    const handleResize = (size) => {
+        if (onResize && widgetId) {
+            onResize(widgetId, size);
+        }
+        handleMenuClose();
+    };
+
     return (
         <motion.div variants={itemVariants}>
             <Card sx={glassmorphismCard}>
                 <CardContent sx={{ p: 3 }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-                        <Box sx={{ 
-                            p: 1.5, 
-                            borderRadius: '12px', 
+                        <Box sx={{
+                            p: 1.5,
+                            borderRadius: '12px',
                             background: `linear-gradient(135deg, ${color}20, ${color}10)`,
                             border: `1px solid ${color}30`
                         }}>
                             {React.cloneElement(icon, { sx: { color: color, fontSize: 28 } })}
                         </Box>
-                        <IconButton size="small" sx={{ color: 'rgba(0,0,0,0.5)' }}>
-                            <MoreVertIcon />
-                        </IconButton>
+                        <Tooltip title="Opciones de widget">
+                            <IconButton
+                                size="small"
+                                sx={{ color: 'rgba(0,0,0,0.5)' }}
+                                onClick={handleMenuOpen}
+                            >
+                                <MoreVertIcon />
+                            </IconButton>
+                        </Tooltip>
                     </Box>
+
+                    <Menu
+                        anchorEl={anchorEl}
+                        open={open}
+                        onClose={handleMenuClose}
+                        transformOrigin={{ horizontal: 'right', vertical: 'top' }}
+                        anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
+                    >
+                        <MenuItem onClick={() => handleResize({ xs: 12, sm: 12, md: 12, lg: 12, xl: 12 })}>
+                            <ListItemIcon>
+                                <ViewQuiltIcon fontSize="small" />
+                            </ListItemIcon>
+                            Ancho completo
+                        </MenuItem>
+                        <MenuItem onClick={() => handleResize({ xs: 12, sm: 6, md: 6, lg: 6, xl: 6 })}>
+                            <ListItemIcon>
+                                <ViewColumnIcon fontSize="small" />
+                            </ListItemIcon>
+                            Medio ancho
+                        </MenuItem>
+                        <MenuItem onClick={() => handleResize({ xs: 12, sm: 6, md: 4, lg: 4, xl: 4 })}>
+                            <ListItemIcon>
+                                <ViewModuleIcon fontSize="small" />
+                            </ListItemIcon>
+                            Un tercio
+                        </MenuItem>
+                        <MenuItem onClick={() => handleResize({ xs: 12, sm: 6, md: 4, lg: 3, xl: 3 })}>
+                            <ListItemIcon>
+                                <AspectRatioIcon fontSize="small" />
+                            </ListItemIcon>
+                            Un cuarto
+                        </MenuItem>
+                        <Divider />
+                        <MenuItem onClick={() => handleResize('reset')}>
+                            <ListItemIcon>
+                                <RestartAltIcon fontSize="small" />
+                            </ListItemIcon>
+                            Restablecer tamaño
+                        </MenuItem>
+                    </Menu>
                     
                     <Typography variant="h4" sx={{ fontWeight: 700, color: '#2D3748', mb: 1 }}>
                         {value.toLocaleString()}
@@ -237,14 +310,14 @@ const ActivityItem = ({ user, action, time, severity }) => {
     );
 };
 
-const DashboardNew = ({ 
-    stats = {}, 
-    recentPosts = [], 
-    recentComments = [], 
-    popularPosts = [], 
-    monthlyStats = [], 
-    categoryStats = [], 
-    recentActivity = [], 
+const DashboardNew = ({
+    stats = {},
+    recentPosts = [],
+    recentComments = [],
+    popularPosts = [],
+    monthlyStats = [],
+    categoryStats = [],
+    recentActivity = [],
     quickActions = [],
     notifications = [],
     auditLogs = [],
@@ -253,10 +326,34 @@ const DashboardNew = ({
     const theme = useTheme();
     const [loading, setLoading] = useState(false);
 
+    // Widget resize hook with default sizes
+    const defaultWidgetSizes = {
+        'stat-projects': { xs: 12, sm: 6, md: 3, lg: 3, xl: 3 },
+        'stat-services': { xs: 12, sm: 6, md: 3, lg: 3, xl: 3 },
+        'stat-posts': { xs: 12, sm: 6, md: 3, lg: 3, xl: 3 },
+        'stat-comments': { xs: 12, sm: 6, md: 3, lg: 3, xl: 3 },
+        'recent-activity': { xs: 12, sm: 12, md: 6, lg: 6, xl: 6 },
+        'quick-actions': { xs: 12, sm: 12, md: 6, lg: 6, xl: 6 },
+        'performance': { xs: 12, sm: 12, md: 12, lg: 12, xl: 12 },
+    };
+
+    const { getWidgetSize, setWidgetSize, resetWidgetSize, resetAllSizes } = useWidgetResize(
+        'dashboard-widget-sizes',
+        defaultWidgetSizes
+    );
+
     const handleRefresh = () => {
         setLoading(true);
         // Simulate refresh
         setTimeout(() => setLoading(false), 1000);
+    };
+
+    const handleWidgetResize = (widgetId, size) => {
+        if (size === 'reset') {
+            resetWidgetSize(widgetId);
+        } else {
+            setWidgetSize(widgetId, size);
+        }
     };
 
     // Calculate percentage changes (mock data for demo)
@@ -273,7 +370,7 @@ const DashboardNew = ({
                 animate="visible"
             >
                 {/* Header */}
-                <Box sx={{ display: 'flex', justifyContent: 'between', alignItems: 'center', mb: 4 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
                     <Box>
                         <Typography variant="h4" sx={{ fontWeight: 700, color: '#2D3748', mb: 1 }}>
                             Dashboard
@@ -282,63 +379,54 @@ const DashboardNew = ({
                             Bienvenido al panel de administración
                         </Typography>
                     </Box>
-                    <Button
-                        variant="contained"
-                        startIcon={loading ? <CircularProgress size={16} /> : <RefreshIcon />}
-                        onClick={handleRefresh}
-                        disabled={loading}
-                        sx={{
-                            borderRadius: '12px',
-                            textTransform: 'none',
-                            fontWeight: 600,
-                            px: 3,
-                            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                            '&:hover': {
-                                background: 'linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%)',
-                            }
-                        }}
-                    >
-                        Actualizar
-                    </Button>
+                    <Box sx={{ display: 'flex', gap: 2 }}>
+                        <Tooltip title="Restablecer tamaños de widgets">
+                            <Button
+                                variant="outlined"
+                                startIcon={<RestartAltIcon />}
+                                onClick={resetAllSizes}
+                                sx={{
+                                    borderRadius: '12px',
+                                    textTransform: 'none',
+                                    fontWeight: 600,
+                                    px: 3,
+                                    borderColor: '#CBD5E0',
+                                    color: '#4A5568',
+                                    '&:hover': {
+                                        borderColor: '#A0AEC0',
+                                        bgcolor: 'rgba(0,0,0,0.02)'
+                                    }
+                                }}
+                            >
+                                Restablecer Layout
+                            </Button>
+                        </Tooltip>
+                        <Button
+                            variant="contained"
+                            startIcon={loading ? <CircularProgress size={16} /> : <RefreshIcon />}
+                            onClick={handleRefresh}
+                            disabled={loading}
+                            sx={{
+                                borderRadius: '12px',
+                                textTransform: 'none',
+                                fontWeight: 600,
+                                px: 3,
+                                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                                '&:hover': {
+                                    background: 'linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%)',
+                                }
+                            }}
+                        >
+                            Actualizar
+                        </Button>
+                    </Box>
                 </Box>
 
                 {/* Stats Cards */}
                 <Grid container spacing={3} sx={{ mb: 4 }}>
-                    <Grid item xs={12} sm={6} md={3}>
+                    <Grid item {...getWidgetSize('stat-projects')}>
                         <StatCard
-                            title="Total Usuarios"
-                            value={stats.users?.total || 0}
-                            change={12}
-                            changeType="increase"
-                            icon={<PeopleIcon />}
-                            color="#4299E1"
-                            subtitle={`${stats.users?.active || 0} activos`}
-                        />
-                    </Grid>
-                    <Grid item xs={12} sm={6} md={3}>
-                        <StatCard
-                            title="Posts Publicados"
-                            value={stats.posts?.published || 0}
-                            change={8}
-                            changeType="increase"
-                            icon={<ArticleIcon />}
-                            color="#48BB78"
-                            subtitle={`${stats.posts?.draft || 0} borradores`}
-                        />
-                    </Grid>
-                    <Grid item xs={12} sm={6} md={3}>
-                        <StatCard
-                            title="Servicios Activos"
-                            value={stats.services?.active || 0}
-                            change={5}
-                            changeType="increase"
-                            icon={<BuildIcon />}
-                            color="#ED8936"
-                            subtitle={`${stats.services?.favorites || 0} favoritos`}
-                        />
-                    </Grid>
-                    <Grid item xs={12} sm={6} md={3}>
-                        <StatCard
+                            widgetId="stat-projects"
                             title="Proyectos"
                             value={stats.projects?.total || 0}
                             change={-2}
@@ -346,6 +434,46 @@ const DashboardNew = ({
                             icon={<WorkIcon />}
                             color="#9F7AEA"
                             subtitle={`${stats.projects?.completed || 0} completados`}
+                            onResize={handleWidgetResize}
+                        />
+                    </Grid>
+                    <Grid item {...getWidgetSize('stat-services')}>
+                        <StatCard
+                            widgetId="stat-services"
+                            title="Servicios Activos"
+                            value={stats.services?.active || 0}
+                            change={5}
+                            changeType="increase"
+                            icon={<BuildIcon />}
+                            color="#ED8936"
+                            subtitle={`${stats.services?.favorites || 0} favoritos`}
+                            onResize={handleWidgetResize}
+                        />
+                    </Grid>
+                    <Grid item {...getWidgetSize('stat-posts')}>
+                        <StatCard
+                            widgetId="stat-posts"
+                            title="Posts Publicados"
+                            value={stats.posts?.published || 0}
+                            change={8}
+                            changeType="increase"
+                            icon={<ArticleIcon />}
+                            color="#48BB78"
+                            subtitle={`${stats.posts?.draft || 0} borradores`}
+                            onResize={handleWidgetResize}
+                        />
+                    </Grid>
+                    <Grid item {...getWidgetSize('stat-comments')}>
+                        <StatCard
+                            widgetId="stat-comments"
+                            title="Comentarios"
+                            value={stats.comments?.total || 0}
+                            change={12}
+                            changeType="increase"
+                            icon={<CommentIcon />}
+                            color="#4299E1"
+                            subtitle={`${stats.comments?.pending || 0} pendientes`}
+                            onResize={handleWidgetResize}
                         />
                     </Grid>
                 </Grid>

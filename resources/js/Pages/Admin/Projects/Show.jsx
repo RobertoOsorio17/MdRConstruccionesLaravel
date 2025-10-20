@@ -250,10 +250,10 @@ const ProjectShow = ({ project, timeline = [] }) => {
                                     <Divider sx={{ my: 2 }} />
 
                                     <Typography variant="body1" sx={{ lineHeight: 1.8, whiteSpace: 'pre-wrap' }}>
-                                        {project.description}
+                                        {project.body}
                                     </Typography>
 
-                                    {project.technologies && project.technologies.length > 0 && (
+                                    {project.technologies && Array.isArray(project.technologies) && project.technologies.length > 0 && (
                                         <>
                                             <Divider sx={{ my: 3 }} />
                                             <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
@@ -275,7 +275,7 @@ const ProjectShow = ({ project, timeline = [] }) => {
                             </Card>
 
                             {/* Timeline */}
-                            {timeline && timeline.length > 0 && (
+                            {timeline && Array.isArray(timeline) && timeline.length > 0 && (
                                 <Card
                                     sx={{
                                         background: `linear-gradient(135deg, ${alpha(theme.palette.background.paper, 0.8)}, ${alpha(theme.palette.background.paper, 0.9)})`,

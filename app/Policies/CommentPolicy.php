@@ -151,8 +151,8 @@ class CommentPolicy
      */
     public function like(User $user, Comment $comment): bool
     {
-        // Users cannot like their own comments
-        if ($user->id === $comment->user_id) {
+        // Cannot like deleted comments
+        if ($comment->trashed()) {
             return false;
         }
 

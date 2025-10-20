@@ -30,11 +30,9 @@ class ServiceController extends Controller
                         'icon' => $service->icon ?? 'Construction',
                         'icon_name' => $service->icon ?? 'Construction',
                         'featured' => $service->featured ?? false,
-                        'faq_count' => $service->faq_count ?? 0,
+                        'faq_count' => is_array($service->faq) ? count($service->faq) : 0,
                         'views_count' => $service->views_count ?? 0,
-                        'price_range' => $service->price_range ?? null,
-                        'duration' => $service->duration ?? null,
-                        'features' => $service->features ?? []
+                        'price' => $service->price ?? null,
                     ];
                 });
         } catch (\Exception $e) {
@@ -96,7 +94,7 @@ class ServiceController extends Controller
                     'rating' => $review->rating,
                     'comment' => $review->comment,
                     'author_name' => $review->user->name ?? 'Cliente Anónimo',
-                    'author_role' => $review->metadata['role'] ?? 'Cliente',
+                    'author_role' => 'Cliente',
                     'author_avatar' => $review->user->avatar ?? null,
                     'created_at' => $review->created_at->format('Y-m-d'),
                 ];

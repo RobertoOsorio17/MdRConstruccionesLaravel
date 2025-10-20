@@ -49,7 +49,7 @@ const PostCard = ({ post, onRemove }) => {
 
     const handleRemove = async () => {
         try {
-            await axios.post(`/posts/${post.id}/like`); // Toggle like to remove
+            await axios.post(`/posts/${post.slug}/like`); // ✅ FIX: Use slug instead of id
             onRemove(post.id);
             setRemoveDialogOpen(false);
         } catch (error) {

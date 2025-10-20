@@ -127,6 +127,16 @@ class ProjectManagementController extends Controller
     }
 
     /**
+     * Show the form for creating a new project.
+     */
+    public function create()
+    {
+        return Inertia::render('Admin/Projects/Create', [
+            'statuses' => ['draft', 'published', 'completed'],
+        ]);
+    }
+
+    /**
      * Store a newly created project.
      */
     public function store(Request $request)
@@ -152,6 +162,29 @@ class ProjectManagementController extends Controller
         $project = Project::create($validated);
 
         return redirect()->back()->with('success', 'Project created successfully.');
+    }
+
+    /**
+     * Show the form for editing the specified project.
+     */
+    public function edit(Project $project)
+    {
+        return Inertia::render('Admin/Projects/Edit', [
+            'project' => [
+                'id' => $project->id,
+                'title' => $project->title,
+                'summary' => $project->summary,
+                'body' => $project->body,
+                'location' => $project->location,
+                'budget_estimate' => $project->budget_estimate,
+                'start_date' => $project->start_date,
+                'end_date' => $project->end_date,
+                'status' => $project->status,
+                'featured' => $project->featured,
+                'gallery' => $project->gallery ?? [],
+            ],
+            'statuses' => ['draft', 'published', 'completed'],
+        ]);
     }
 
     /**

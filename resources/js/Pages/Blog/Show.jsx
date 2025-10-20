@@ -1,4 +1,4 @@
-import { Head } from '@inertiajs/react';
+import { Head, usePage } from '@inertiajs/react';
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import DOMPurify from 'dompurify';
@@ -27,6 +27,7 @@ import {
     Paper,
     List,
     ListItem,
+    ListItemButton,
     ListItemText,
     ListItemIcon,
     Fab
@@ -73,7 +74,7 @@ import MLInsights from '@/Components/ML/MLInsights';
 
 const BlogShow = ({ post, suggestedPosts, seo }) => {
     const theme = useTheme();
-    const auth = useAuth();
+    const { auth } = usePage().props; // ✅ FIX: Usar auth de Inertia en lugar de useAuth()
     const { startTracking, endTracking, getRecommendations } = usePostTracking();
     const [showScrollTop, setShowScrollTop] = useState(false);
     const [showShareMenu, setShowShareMenu] = useState(false);
@@ -114,9 +115,9 @@ const BlogShow = ({ post, suggestedPosts, seo }) => {
     // Cargar estado inicial de interacciones del usuario
     useEffect(() => {
         const loadUserInteractions = async () => {
-            if (auth.isAuthenticated) {
+            if (auth.user) {
                 try {
-                    const response = await axios.get(`/posts/${post.id}/interaction-status`);
+                    const response = await axios.get(`/posts/${post.slug}/interaction-status`);
                     if (response.data) {
                         setIsLiked(response.data.isLiked);
                         setIsBookmarked(response.data.isBookmarked);
@@ -132,11 +133,11 @@ const BlogShow = ({ post, suggestedPosts, seo }) => {
         };
 
         loadUserInteractions();
-    }, [auth.isAuthenticated, post.id]);
+    }, [auth.user, post.slug]);
 
     // Iniciar seguimiento del post para invitados
     useEffect(() => {
-        if (!auth.isAuthenticated) {
+        if (!auth.user) {
             console.log('🟦 useEffect: Iniciando tracking para post', post.id);
 
             // Iniciar seguimiento del nuevo post
@@ -162,12 +163,12 @@ const BlogShow = ({ post, suggestedPosts, seo }) => {
                 });
             };
         }
-    }, [auth.isAuthenticated, post.id, post.title, post.slug]); // Quitamos startTracking y endTracking de las dependencias
+    }, [auth.user, post.id, post.title, post.slug]); // Quitamos startTracking y endTracking de las dependencias
 
     // Cargar recomendaciones personalizadas para invitados
     useEffect(() => {
         const loadPersonalizedSuggestions = async () => {
-            if (!auth.isAuthenticated) {
+            if (!auth.user) {
                 setLoadingPersonalized(true);
                 try {
                     // Obtener recomendaciones del hook
@@ -192,12 +193,12 @@ const BlogShow = ({ post, suggestedPosts, seo }) => {
         };
 
         loadPersonalizedSuggestions();
-    }, [auth.isAuthenticated, post.id, suggestedPosts]); // Quitamos getRecommendations de las dependencias
+    }, [auth.user, post.id, suggestedPosts]); // Quitamos getRecommendations de las dependencias
 
     // Finalizar tracking al salir de la página
     useEffect(() => {
         const handleBeforeUnload = () => {
-            if (!auth.isAuthenticated) {
+            if (!auth.user) {
                 endTracking(post.id, {
                     title: post.title,
                     slug: post.slug,
@@ -213,7 +214,7 @@ const BlogShow = ({ post, suggestedPosts, seo }) => {
 
         return () => {
             window.removeEventListener('beforeunload', handleBeforeUnload);
-            if (!auth.isAuthenticated) {
+            if (!auth.user) {
                 endTracking(post.id, {
                     title: post.title,
                     slug: post.slug,
@@ -224,7 +225,7 @@ const BlogShow = ({ post, suggestedPosts, seo }) => {
                 });
             }
         };
-    }, [auth.isAuthenticated, post.id]); // Quitamos endTracking de las dependencias
+    }, [auth.user, post.id]); // Quitamos endTracking de las dependencias
 
     // Handle scroll events y reading progress
     useEffect(() => {
@@ -336,13 +337,13 @@ const BlogShow = ({ post, suggestedPosts, seo }) => {
 
     // Funciones para usuarios autenticados
     const handleLike = async () => {
-        if (!auth.isAuthenticated) {
+        if (!auth.user) {
             setShowLoginModal(true);
             return;
         }
 
         try {
-            const response = await axios.post(`/posts/${post.id}/like`);
+            const response = await axios.post(`/posts/${post.slug}/like`);
 
             if (response.data.success) {
                 setIsLiked(response.data.isLiked);
@@ -363,13 +364,13 @@ const BlogShow = ({ post, suggestedPosts, seo }) => {
     };
 
     const handleBookmark = async () => {
-        if (!auth.isAuthenticated) {
+        if (!auth.user) {
             setShowLoginModal(true);
             return;
         }
 
         try {
-            const response = await axios.post(`/posts/${post.id}/bookmark`);
+            const response = await axios.post(`/posts/${post.slug}/bookmark`);
 
             if (response.data.success) {
                 setIsBookmarked(response.data.isBookmarked);
@@ -389,7 +390,7 @@ const BlogShow = ({ post, suggestedPosts, seo }) => {
     };
 
     const handleFollowAuthor = async () => {
-        if (!auth.isAuthenticated) {
+        if (!auth.user) {
             setShowLoginModal(true);
             return;
         }
@@ -897,52 +898,53 @@ const BlogShow = ({ post, suggestedPosts, seo }) => {
                                                 animate={{ opacity: 1, x: 0 }}
                                                 transition={{ delay: index * 0.05, duration: 0.3 }}
                                             >
-                                                <ListItem
-                                                    button
-                                                    onClick={() => scrollToSection(item.id)}
-                                                    sx={{
-                                                        pl: (item.level - 1) * 2,
-                                                        borderRadius: 2,
-                                                        mb: 0.5,
-                                                        position: 'relative',
-                                                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                                                        background: activeSection === item.id
-                                                            ? 'linear-gradient(90deg, rgba(59, 130, 246, 0.12) 0%, rgba(59, 130, 246, 0.06) 100%)'
-                                                            : 'transparent',
-                                                        '&::before': {
-                                                            content: '""',
-                                                            position: 'absolute',
-                                                            left: 0,
-                                                            top: '50%',
-                                                            transform: 'translateY(-50%)',
-                                                            width: '3px',
-                                                            height: activeSection === item.id ? '70%' : '0%',
-                                                            background: 'linear-gradient(180deg, rgba(59, 130, 246, 1), rgba(99, 102, 241, 1))',
-                                                            borderRadius: '0 2px 2px 0',
-                                                            transition: 'height 0.3s ease',
-                                                            boxShadow: activeSection === item.id ? '0 0 8px rgba(59, 130, 246, 0.5)' : 'none'
-                                                        },
-                                                        '&:hover': {
-                                                            background: 'linear-gradient(90deg, rgba(59, 130, 246, 0.08) 0%, rgba(59, 130, 246, 0.04) 100%)',
-                                                            transform: 'translateX(4px)',
+                                                <ListItem disablePadding>
+                                                    <ListItemButton
+                                                        onClick={() => scrollToSection(item.id)}
+                                                        sx={{
+                                                            pl: (item.level - 1) * 2,
+                                                            borderRadius: 2,
+                                                            mb: 0.5,
+                                                            position: 'relative',
+                                                            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                                                            background: activeSection === item.id
+                                                                ? 'linear-gradient(90deg, rgba(59, 130, 246, 0.12) 0%, rgba(59, 130, 246, 0.06) 100%)'
+                                                                : 'transparent',
                                                             '&::before': {
-                                                                height: '50%'
+                                                                content: '""',
+                                                                position: 'absolute',
+                                                                left: 0,
+                                                                top: '50%',
+                                                                transform: 'translateY(-50%)',
+                                                                width: '3px',
+                                                                height: activeSection === item.id ? '70%' : '0%',
+                                                                background: 'linear-gradient(180deg, rgba(59, 130, 246, 1), rgba(99, 102, 241, 1))',
+                                                                borderRadius: '0 2px 2px 0',
+                                                                transition: 'height 0.3s ease',
+                                                                boxShadow: activeSection === item.id ? '0 0 8px rgba(59, 130, 246, 0.5)' : 'none'
+                                                            },
+                                                            '&:hover': {
+                                                                background: 'linear-gradient(90deg, rgba(59, 130, 246, 0.08) 0%, rgba(59, 130, 246, 0.04) 100%)',
+                                                                transform: 'translateX(4px)',
+                                                                '&::before': {
+                                                                    height: '50%'
+                                                                }
                                                             }
-                                                        }
-                                                    }}
-                                                >
-                                                    <ListItemText
-                                                        primary={item.text}
-                                                        primaryTypographyProps={{
-                                                            fontSize: '0.9rem',
-                                                            fontWeight: activeSection === item.id ? 650 : 450,
-                                                            color: activeSection === item.id
-                                                                ? theme.palette.primary.main
-                                                                : theme.palette.text.secondary,
-                                                            transition: 'all 0.3s ease',
-                                                            letterSpacing: activeSection === item.id ? '0.01em' : '0'
                                                         }}
-                                                    />
+                                                    >
+                                                        <ListItemText
+                                                            primary={item.text}
+                                                            primaryTypographyProps={{
+                                                                fontSize: '0.9rem',
+                                                                fontWeight: activeSection === item.id ? 650 : 450,
+                                                                color: activeSection === item.id
+                                                                    ? theme.palette.primary.main
+                                                                    : theme.palette.text.secondary,
+                                                                transition: 'all 0.3s ease',
+                                                                letterSpacing: activeSection === item.id ? '0.01em' : '0'
+                                                            }}
+                                                        />
+                                                    </ListItemButton>
                                                 </ListItem>
                                             </motion.div>
                                         ))}
@@ -1016,11 +1018,11 @@ const BlogShow = ({ post, suggestedPosts, seo }) => {
                                             }}
                                         >
                                             <ArticleIcon />
-                                            {!auth.isAuthenticated && personalizedSuggestions.length > 0
+                                            {!auth.user && personalizedSuggestions.length > 0
                                                 ? 'Recomendado para ti'
                                                 : 'Artículos relacionados'
                                             }
-                                            {!auth.isAuthenticated && (
+                                            {!auth.user && (
                                                 <Tooltip title="Basado en tu historial de navegación">
                                                     <TrendingUpIcon sx={{ fontSize: 16, opacity: 0.7 }} />
                                                 </Tooltip>
@@ -1043,7 +1045,7 @@ const BlogShow = ({ post, suggestedPosts, seo }) => {
                                                         suggestedPost.views_count > 100 ||
                                                         suggestedPost.likes_count > 10;
 
-                                                    const isPersonalized = !auth.isAuthenticated && personalizedSuggestions.length > 0;
+                                                    const isPersonalized = !auth.user && personalizedSuggestions.length > 0;
                                                     const isRead = suggestedPost.isRead || suggestedPost.is_read;
                                                     const hasReadPenalty = suggestedPost.readPenalty < 1 || suggestedPost.read_penalty < 1;
 

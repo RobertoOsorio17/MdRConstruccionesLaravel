@@ -143,6 +143,7 @@ class MLRecommendationService
         $candidateLimit = config('ml.candidate_posts_limit', 100);
 
         $query = Post::with(['categories', 'tags', 'author', 'mlVector'])
+            ->withCount(['likes', 'comments'])
             ->where('status', 'published')
             ->where('published_at', '<=', now());
 
@@ -691,11 +692,11 @@ class MLRecommendationService
     private function calculateLengthScore(Post $post, MLUserProfile $userProfile): float
     {
         $contentLength = strlen(strip_tags($post->content ?? ''));
-        $preferredLength = $userProfile->content_type_preferences['preferred_length'] ?? 2000;
-        
+        $preferredLength = (int) ($userProfile->content_type_preferences['preferred_length'] ?? 2000);
+
         $lengthDiff = abs($contentLength - $preferredLength);
         $maxDiff = 5000; // Maximum tolerated difference.
-        
+
         return max(0, 1 - ($lengthDiff / $maxDiff));
     }
 

@@ -134,7 +134,7 @@
                 <td>{{ $post->id }}</td>
                 <td>{{ Str::limit($post->title, 40) }}</td>
                 <td>{{ $post->user ? $post->user->name : 'N/A' }}</td>
-                <td>{{ $post->category ? $post->category->name : 'N/A' }}</td>
+                <td>{{ $post->categories->pluck('name')->join(', ') ?: 'N/A' }}</td>
                 <td>
                     <span class="badge badge-{{ $post->status }}">
                         {{ ucfirst($post->status) }}

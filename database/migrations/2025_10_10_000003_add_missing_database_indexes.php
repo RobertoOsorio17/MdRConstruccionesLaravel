@@ -67,12 +67,14 @@ return new class extends Migration
             }
         });
 
-        Schema::table('notifications', function (Blueprint $table) {
-            // ✅ Composite index for unread notifications
-            if (!Schema::hasIndex('notifications', 'idx_notifications_user_unread')) {
-                $table->index(['user_id', 'read_at', 'created_at'], 'idx_notifications_user_unread');
-            }
-        });
+        if (Schema::hasTable('notifications')) {
+            Schema::table('notifications', function (Blueprint $table) {
+                // ✅ Composite index for unread notifications
+                if (!Schema::hasIndex('notifications', 'idx_notifications_user_unread')) {
+                    $table->index(['user_id', 'read_at', 'created_at'], 'idx_notifications_user_unread');
+                }
+            });
+        }
 
         Schema::table('user_devices', function (Blueprint $table) {
             // ✅ Index for device_id lookup (column exists as device_id, not device_fingerprint)

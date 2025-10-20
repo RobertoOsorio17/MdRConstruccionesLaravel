@@ -22,6 +22,7 @@ class Review extends Model
         'reviewable_id',
         'rating',
         'comment',
+        'status',
         'photos',
         'ip_address',
         'user_agent',
@@ -30,7 +31,6 @@ class Review extends Model
     // ✅ Protected fields that should NOT be mass-assignable
     protected $guarded = [
         'id',
-        'status',
         'approved_at',
         'approved_by',
         'created_at',

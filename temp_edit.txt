@@ -1,0 +1,50 @@
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                            {/* Like Button */}
+                                            <IconButton
+                                                size="small"
+                                                onClick={() => handleLikeComment(comment)}
+                                                sx={{
+                                                    color: comment.user_liked ? THEME.success : theme.palette.text.secondary,
+                                                    bgcolor: comment.user_liked ? 'rgba(46, 125, 50, 0.1)' : 'transparent',
+                                                    '&:hover': {
+                                                        bgcolor: comment.user_liked ? 'rgba(46, 125, 50, 0.2)' : HOVER_BG,
+                                                        transform: 'scale(1.1)',
+                                                    },
+                                                    transition: 'all 0.2s'
+                                                }}
+                                            >
+                                                {comment.user_liked ? <ThumbUpAlt fontSize="small" /> : <ThumbUpOutlined fontSize="small" />}
+                                            </IconButton>
+                                            <Typography variant="body2" color={theme.palette.text.secondary} fontWeight={500}>
+                                                {comment.likes_count || 0}
+                                            </Typography>
+
+                                            {/* Dislike Button */}
+                                            <IconButton
+                                                size="small"
+                                                onClick={() => handleDislikeComment(comment)}
+                                                sx={{
+                                                    color: comment.user_disliked ? THEME.error : theme.palette.text.secondary,
+                                                    bgcolor: comment.user_disliked ? 'rgba(211, 47, 47, 0.1)' : 'transparent',
+                                                    '&:hover': {
+                                                        bgcolor: comment.user_disliked ? 'rgba(211, 47, 47, 0.2)' : HOVER_BG,
+                                                        transform: 'scale(1.1)',
+                                                    },
+                                                    transition: 'all 0.2s',
+                                                    ml: 1
+                                                }}
+                                            >
+                                                {comment.user_disliked ? <ThumbDownAlt fontSize="small" /> : <ThumbDownOutlined fontSize="small" />}
+                                            </IconButton>
+                                            <Typography variant="body2" color={theme.palette.text.secondary} fontWeight={500}>
+                                                {comment.dislikes_count || 0}
+                                            </Typography>
+
+                                            {/* Replies Count */}
+                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, ml: 2 }}>
+                                                <CommentOutlined sx={{ fontSize: 18, color: theme.palette.text.secondary }} />
+                                                <Typography variant="body2" color={theme.palette.text.secondary} fontWeight={500}>
+                                                    {comment.replies_count || 0}
+                                                </Typography>
+                                            </Box>
+                                        </Box>

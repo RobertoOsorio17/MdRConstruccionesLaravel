@@ -258,7 +258,12 @@ Route::middleware(['auth', 'auth.enhanced', 'role:admin,editor', 'admin.timeout'
         ->name('comments.bulk-delete');
     Route::post('comments/bulk-spam', [App\Http\Controllers\Admin\CommentController::class, 'bulkMarkAsSpam'])
         ->name('comments.bulk-spam');
-    
+
+    // Comment restore (with rate limiting to prevent abuse)
+    Route::post('comments/{id}/restore', [App\Http\Controllers\Admin\CommentController::class, 'restore'])
+        ->middleware('throttle:admin-restore')
+        ->name('comments.restore');
+
     // Comment Management (new routes for likes/dislikes and reports)
     Route::get('comment-management', [App\Http\Controllers\Admin\CommentManagementController::class, 'index'])
         ->name('comment-management.index');
@@ -282,6 +287,12 @@ Route::middleware(['auth', 'auth.enhanced', 'role:admin,editor', 'admin.timeout'
         ->name('comment-management.spam');
     Route::get('comment-management/pending', [App\Http\Controllers\Admin\CommentManagementController::class, 'getPendingComments'])
         ->name('comment-management.pending');
+
+    // Comment restore in management controller (with rate limiting)
+    Route::post('comment-management/{id}/restore', [App\Http\Controllers\Admin\CommentManagementController::class, 'restore'])
+        ->middleware('throttle:admin-restore')
+        ->name('comment-management.restore');
+
     Route::get('comment-management/export', [App\Http\Controllers\Admin\CommentManagementController::class, 'export'])
         ->name('comment-management.export');
 

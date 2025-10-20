@@ -1,8 +1,9 @@
-import React from 'react';
-import { 
-  Box, Container, Typography, Grid, Card, CardContent, CardMedia,
-  Button, Stack, Chip, IconButton, useTheme, useMediaQuery 
+﻿import React from 'react';
+import {
+  Box, Container, Typography, Card, CardContent, CardMedia,
+  Button, Stack, Chip, IconButton, useTheme, useMediaQuery, Grid
 } from '@mui/material';
+
 import { 
   ArrowForward as ArrowForwardIcon,
   Build as BuildIcon,
@@ -13,16 +14,17 @@ import {
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 import { Link } from '@inertiajs/react';
+import { useReducedMotion } from '@/hooks/useReducedMotion';
 
 const ServiceCard = ({ service, index, prefersReducedMotion }) => {
   const theme = useTheme();
   
-  // Iconos por categoría
+  // Iconos por categorÃ­a
   const getServiceIcon = (category) => {
     const iconMap = {
       'reformas': <BuildIcon sx={{ fontSize: '3rem' }} />,
       'cocinas': <KitchenIcon sx={{ fontSize: '3rem' }} />,
-      'baños': <BathtubIcon sx={{ fontSize: '3rem' }} />,
+      'baÃ±os': <BathtubIcon sx={{ fontSize: '3rem' }} />,
       'construccion': <HomeIcon sx={{ fontSize: '3rem' }} />
     };
     return iconMap[category?.toLowerCase()] || <BuildIcon sx={{ fontSize: '3rem' }} />;
@@ -113,13 +115,13 @@ const ServiceCard = ({ service, index, prefersReducedMotion }) => {
               }}
             >
               <Typography variant="h6" fontWeight={700} sx={{ mb: 2 }}>
-                ¿Por qué elegirnos?
+                Â¿Por quÃ© elegirnos?
               </Typography>
               {service.benefits?.slice(0, 3).map((benefit, idx) => (
                 <Stack key={idx} direction="row" alignItems="center" spacing={1}>
                   <CheckIcon sx={{ fontSize: '1.2rem', color: 'white' }} />
                   <Typography variant="body2" sx={{ fontSize: '0.9rem' }}>
-                    {benefit}
+                    {typeof benefit === 'string' ? benefit : benefit?.title || benefit?.description || ''}
                   </Typography>
                 </Stack>
               ))}
@@ -153,7 +155,7 @@ const ServiceCard = ({ service, index, prefersReducedMotion }) => {
             </Box>
           </Box>
 
-          {/* Chip de categoría */}
+          {/* Chip de categorÃ­a */}
           <Chip
             label={service.category}
             color="warning"
@@ -172,7 +174,7 @@ const ServiceCard = ({ service, index, prefersReducedMotion }) => {
         {/* Contenido */}
         <CardContent sx={{ p: 3, flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
           <Stack spacing={2} sx={{ flexGrow: 1 }}>
-            {/* Título */}
+            {/* TÃ­tulo */}
             <Typography 
               variant="h5" 
               component="h3"
@@ -186,7 +188,7 @@ const ServiceCard = ({ service, index, prefersReducedMotion }) => {
               {service.title}
             </Typography>
 
-            {/* Descripción */}
+            {/* DescripciÃ³n */}
             <Typography 
               variant="body1" 
               color="text.secondary"
@@ -223,7 +225,7 @@ const ServiceCard = ({ service, index, prefersReducedMotion }) => {
               </Box>
             )}
 
-            {/* Botón de acción */}
+            {/* BotÃ³n de acciÃ³n */}
             <Button
               component={Link}
               href={`/servicios/${service.slug}`}
@@ -244,7 +246,7 @@ const ServiceCard = ({ service, index, prefersReducedMotion }) => {
                 }
               }}
             >
-              Saber Más
+              Saber más
             </Button>
           </Stack>
         </CardContent>
@@ -257,7 +259,7 @@ const FeaturedServicesSection = ({ services, prefersReducedMotion = false }) => 
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   
-  // Filtrar servicios destacados, máximo 4
+  // Filtrar servicios destacados, mÃ¡ximo 4
   const featuredServices = services?.filter(service => service.featured)?.slice(0, 4) || [];
 
   if (featuredServices.length === 0) return null;
@@ -267,7 +269,9 @@ const FeaturedServicesSection = ({ services, prefersReducedMotion = false }) => 
       component="section"
       sx={{
         py: { xs: 8, md: 12, xl: 16 },
-        bgcolor: 'grey.50',
+        bgcolor: (theme) => theme.palette.mode === 'dark'
+          ? 'rgba(15, 23, 42, 0.95)'
+          : 'grey.50',
       }}
     >
       <Container
@@ -277,7 +281,7 @@ const FeaturedServicesSection = ({ services, prefersReducedMotion = false }) => 
           px: { xs: 2, sm: 3, md: 4, xl: 6 }
         }}
       >
-        {/* Título de sección */}
+        {/* TÃ­tulo de secciÃ³n */}
         <Box textAlign="center" sx={{ mb: { xs: 6, md: 8 } }}>
           <motion.div
             initial={prefersReducedMotion ? {} : { opacity: 0, y: 30 }}
@@ -308,7 +312,7 @@ const FeaturedServicesSection = ({ services, prefersReducedMotion = false }) => 
                 mx: 'auto'
               }}
             >
-              ¿Qué hacemos exactamente? Descubre nuestras especialidades y cómo podemos transformar tu espacio
+              Â¿QuÃ© hacemos exactamente? Descubre nuestras especialidades y cÃ³mo podemos transformar tu espacio
             </Typography>
           </motion.div>
         </Box>
@@ -316,7 +320,7 @@ const FeaturedServicesSection = ({ services, prefersReducedMotion = false }) => 
         {/* Grid de servicios */}
         <Grid container spacing={{ xs: 3, md: 4 }}>
           {featuredServices.map((service, index) => (
-            <Grid item xs={12} sm={6} lg={3} key={service.id || index}>
+            <Grid size={{ xs: 12, sm: 6, lg: 3 }} key={service.id || index}>
               <ServiceCard 
                 service={service} 
                 index={index}
@@ -326,7 +330,7 @@ const FeaturedServicesSection = ({ services, prefersReducedMotion = false }) => 
           ))}
         </Grid>
 
-        {/* Botón para ver todos los servicios */}
+        {/* BotÃ³n para ver todos los servicios */}
         <Box textAlign="center" sx={{ mt: { xs: 6, md: 8 } }}>
           <motion.div
             initial={prefersReducedMotion ? {} : { opacity: 0, y: 20 }}
@@ -369,3 +373,4 @@ const FeaturedServicesSection = ({ services, prefersReducedMotion = false }) => 
 };
 
 export default FeaturedServicesSection;
+

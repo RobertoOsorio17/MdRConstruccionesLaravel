@@ -519,7 +519,7 @@ const ServiceManagement = ({ services, categories, stats, filters, flash }) => {
                                                             {service.title}
                                                         </Typography>
                                                         <Typography variant="caption" sx={{ color: '#718096' }}>
-                                                            {service.short_description?.substring(0, 50)}...
+                                                            {service.excerpt?.substring(0, 50)}...
                                                         </Typography>
                                                     </Box>
                                                 </Box>
@@ -537,7 +537,7 @@ const ServiceManagement = ({ services, categories, stats, filters, flash }) => {
                                             </TableCell>
                                             <TableCell>
                                                 <Typography variant="body2" sx={{ color: '#4A5568', fontWeight: 500 }}>
-                                                    {formatPrice(service.price, service.price_type)}
+                                                    {service.price ? `€${service.price}` : 'Consultar'}
                                                 </Typography>
                                             </TableCell>
                                             <TableCell>
@@ -556,15 +556,15 @@ const ServiceManagement = ({ services, categories, stats, filters, flash }) => {
                                             </TableCell>
                                             <TableCell>
                                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                    {service.is_featured && <FeaturedIcon sx={{ fontSize: 16, color: '#ED8936' }} />}
+                                                    {service.featured && <FeaturedIcon sx={{ fontSize: 16, color: '#ED8936' }} />}
                                                     <Chip
-                                                        label={service.is_featured ? 'Sí' : 'No'}
+                                                        label={service.featured ? 'Sí' : 'No'}
                                                         size="small"
                                                         sx={{
-                                                            backgroundColor: service.is_featured
+                                                            backgroundColor: service.featured
                                                                 ? alpha('#ED8936', 0.1)
                                                                 : alpha('#718096', 0.1),
-                                                            color: service.is_featured ? '#ED8936' : '#718096',
+                                                            color: service.featured ? '#ED8936' : '#718096',
                                                             fontWeight: 500,
                                                         }}
                                                     />

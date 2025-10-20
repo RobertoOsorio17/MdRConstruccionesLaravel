@@ -42,13 +42,13 @@ class CommentNotification extends Notification implements ShouldQueue
     public function toMail(object $notifiable): MailMessage
     {
         $post = $this->comment->post;
-        $commenter = $this->comment->user;
+        $commenterName = $this->comment->user?->name ?? $this->comment->author_name ?? 'Un usuario';
 
         return (new MailMessage)
             ->subject('Nuevo comentario en tu post')
             ->greeting('¡Hola ' . $notifiable->name . '!')
-            ->line($commenter->name . ' ha comentado en tu post "' . $post->title . '"')
-            ->line('Comentario: ' . \Illuminate\Support\Str::limit($this->comment->content, 100))
+            ->line($commenterName . ' ha comentado en tu post "' . $post->title . '"')
+            ->line('Comentario: ' . \Illuminate\Support\Str::limit($this->comment->body, 100))
             ->action('Ver Comentario', url('/posts/' . $post->slug . '#comment-' . $this->comment->id))
             ->line('Gracias por usar nuestra plataforma.');
     }
@@ -60,9 +60,11 @@ class CommentNotification extends Notification implements ShouldQueue
      */
     public function toArray(object $notifiable): array
     {
+        $commenterName = $this->comment->user?->name ?? $this->comment->author_name ?? 'Un usuario';
+
         return [
             'title' => 'Nuevo comentario',
-            'message' => $this->comment->user->name . ' comentó en tu post',
+            'message' => $commenterName . ' comentó en tu post',
             'comment_id' => $this->comment->id,
             'post_id' => $this->comment->post_id,
             'action_url' => url('/posts/' . $this->comment->post->slug . '#comment-' . $this->comment->id),

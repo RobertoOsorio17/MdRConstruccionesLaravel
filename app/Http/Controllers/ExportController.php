@@ -48,7 +48,7 @@ class ExportController extends Controller
         // ✅ Validate input
         $validated = $request->validate([
             'format' => 'required|in:xlsx,csv',
-            'status' => 'nullable|in:draft,published,archived',
+            'status' => 'nullable|in:draft,published,scheduled',
             'category_id' => 'nullable|exists:categories,id',
             'user_id' => 'nullable|exists:users,id',
             'date_from' => 'nullable|date',
@@ -123,14 +123,14 @@ class ExportController extends Controller
 
         // ✅ Validate input
         $validated = $request->validate([
-            'status' => 'nullable|in:draft,published,archived',
+            'status' => 'nullable|in:draft,published,scheduled',
             'category_id' => 'nullable|exists:categories,id',
             'user_id' => 'nullable|exists:users,id',
             'date_from' => 'nullable|date',
             'date_to' => 'nullable|date|after_or_equal:date_from',
         ]);
 
-        $query = Post::with(['user', 'category']);
+        $query = Post::with(['user', 'categories'])->withCount('comments');
 
         // Apply filters
         if ($request->filled('status')) {
@@ -138,7 +138,9 @@ class ExportController extends Controller
         }
 
         if ($request->filled('category_id')) {
-            $query->where('category_id', $request->category_id);
+            $query->whereHas('categories', function ($q) use ($request) {
+                $q->where('categories.id', $request->category_id);
+            });
         }
 
         if ($request->filled('user_id')) {

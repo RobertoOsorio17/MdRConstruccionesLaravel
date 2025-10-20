@@ -20,9 +20,21 @@ class CommentManagementController extends Controller
      */
     public function index(Request $request)
     {
+        // Include soft-deleted comments if filter is set to 'deleted'
         $query = Comment::with(['user', 'post:id,title,slug', 'parent:id,body,author_name', 'replies'])
                         ->withCount(['reports', 'interactions']);
-        
+
+        // Filter by deletion status
+        if ($request->has('deleted_status')) {
+            if ($request->deleted_status === 'deleted') {
+                $query->onlyTrashed();
+            } elseif ($request->deleted_status === 'active') {
+                // Default: only non-deleted
+            } elseif ($request->deleted_status === 'all') {
+                $query->withTrashed();
+            }
+        }
+
         // Apply status-based filtering.
         if ($request->has('status')) {
             $query->where('status', $request->status);
@@ -102,13 +114,14 @@ class CommentManagementController extends Controller
             'spam' => Comment::where('status', 'spam')->count(),
             'guest_comments' => Comment::whereNull('user_id')->count(),
             'reported_comments' => Comment::has('reports')->count(),
+            'deleted' => Comment::onlyTrashed()->count(),
         ];
-        
+
         return inertia('Admin/Comments/Index', [
             'comments' => $comments,
             'posts' => $posts,
             'stats' => $stats,
-            'filters' => $request->only(['status', 'search', 'post_id', 'user_type', 'date_from', 'date_to', 'sort_by', 'sort_direction'])
+            'filters' => $request->only(['status', 'search', 'post_id', 'user_type', 'date_from', 'date_to', 'sort_by', 'sort_direction', 'deleted_status'])
         ]);
     }
     
@@ -209,17 +222,20 @@ class CommentManagementController extends Controller
 
     /**
      * Delete a comment.
+     *
+     * Uses soft delete to preserve conversation structure.
      */
     public function destroy(Comment $comment): JsonResponse
     {
         // ✅ FIXED IDOR: Authorize action
         $this->authorize('delete', $comment);
 
+        // Use soft delete
         $comment->delete();
 
         return response()->json([
             'success' => true,
-            'message' => 'Comment deleted successfully.'
+            'message' => 'Comentario eliminado exitosamente.'
         ]);
     }
     
@@ -321,6 +337,8 @@ class CommentManagementController extends Controller
 
     /**
      * Bulk delete comments
+     *
+     * Uses soft delete to preserve conversation structure.
      */
     public function bulkDelete(Request $request): JsonResponse
     {
@@ -340,16 +358,16 @@ class CommentManagementController extends Controller
 
         $count = $comments->count();
 
-        // Delete all replies first
-        Comment::whereIn('parent_id', $request->comment_ids)->delete();
-
-        // Delete main comments
-        Comment::whereIn('id', $request->comment_ids)->delete();
+        // Use soft delete to preserve conversation structure
+        // Each comment is soft-deleted individually to trigger model events
+        foreach ($comments as $comment) {
+            $comment->delete();
+        }
 
         return response()->json([
             'success' => true,
             'deleted_count' => $count,
-            'message' => "{$count} comment(s) deleted successfully."
+            'message' => "{$count} comentario(s) eliminado(s) exitosamente."
         ]);
     }
 
@@ -366,6 +384,87 @@ class CommentManagementController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Comment flagged as spam successfully.'
+        ]);
+    }
+
+    /**
+     * Restore a soft-deleted comment.
+     *
+     * Security validations:
+     * - Verifies comment exists and is actually deleted
+     * - Checks parent post integrity (not deleted)
+     * - Validates author ban status
+     * - Logs restoration action for audit trail
+     * - Rate limited to prevent abuse
+     *
+     * @param int $id The comment ID to restore
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function restore($id): JsonResponse
+    {
+        // Find comment including soft-deleted ones
+        $comment = Comment::withTrashed()->findOrFail($id);
+
+        // ✅ SECURITY: Authorize restore action
+        $this->authorize('restore', $comment);
+
+        // ✅ VALIDATION: Verify comment is actually deleted
+        if (!$comment->trashed()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'El comentario no está eliminado y no puede ser restaurado.'
+            ], 400);
+        }
+
+        // ✅ VALIDATION: Check parent post integrity
+        if ($comment->post->trashed()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No se puede restaurar el comentario porque el post padre está eliminado.'
+            ], 422);
+        }
+
+        // ✅ VALIDATION: Check if author is banned (warning, not blocking)
+        $authorWarning = null;
+        if ($comment->user && $comment->user->isBanned()) {
+            $banStatus = $comment->user->getBanStatus();
+            $authorWarning = "Advertencia: El autor de este comentario está actualmente baneado. Motivo: {$banStatus['reason']}";
+        }
+
+        // Restore the comment
+        $comment->restore();
+
+        // ✅ AUDIT: Log restoration action with detailed metadata
+        \App\Models\AdminAuditLog::logAction([
+            'action' => 'restore',
+            'model_type' => Comment::class,
+            'model_id' => $comment->id,
+            'severity' => 'medium',
+            'description' => "Restored comment #{$comment->id} on post '{$comment->post->title}'",
+            'metadata' => [
+                'comment_id' => $comment->id,
+                'post_id' => $comment->post_id,
+                'post_title' => $comment->post->title,
+                'comment_author' => $comment->user ? $comment->user->name : $comment->author_name,
+                'comment_author_id' => $comment->user_id,
+                'deleted_at' => $comment->deleted_at,
+                'restored_by' => auth()->user()->name,
+                'restored_by_id' => auth()->id(),
+                'author_banned' => $comment->user ? $comment->user->isBanned() : false,
+            ]
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Comentario restaurado exitosamente.',
+            'warning' => $authorWarning,
+            'comment' => [
+                'id' => $comment->id,
+                'body' => $comment->body,
+                'author_name' => $comment->user ? $comment->user->name : $comment->author_name,
+                'post_title' => $comment->post->title,
+                'restored_at' => now()->toISOString(),
+            ]
         ]);
     }
     

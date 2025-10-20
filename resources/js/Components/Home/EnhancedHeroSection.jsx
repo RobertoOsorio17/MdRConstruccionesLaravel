@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Box, Container, Typography, Button, Stack, Chip
+import {
+  Box, Container, Typography, Button, Stack, Chip, useTheme
 } from '@mui/material';
-import { 
+import {
   CheckCircle as CheckIcon,
   Schedule as ScheduleIcon,
   Star as StarIcon,
@@ -14,8 +14,12 @@ import {
 } from '@mui/icons-material';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from '@inertiajs/react';
+import { useReducedMotion } from '@/hooks/useReducedMotion';
 
-const EnhancedHeroSection = ({ socialProof, heroBenefits, prefersReducedMotion = false }) => {
+const EnhancedHeroSection = ({ socialProof, heroBenefits }) => {
+  const theme = useTheme();
+  const isDark = theme.palette.mode === 'dark';
+  const { prefersReducedMotion, getTransition, getVariants } = useReducedMotion();
   // Estados para el texto dinámico
   const words = ["hogares", "proyectos", "espacios"];
   const [wordIndex, setWordIndex] = useState(0);
@@ -91,7 +95,7 @@ const EnhancedHeroSection = ({ socialProof, heroBenefits, prefersReducedMotion =
           }}
         />
         
-        {/* Video overlay - Superposición oscura para legibilidad */}
+        {/* Video overlay - Superposición para legibilidad */}
         <Box
           sx={{
             position: 'absolute',
@@ -99,7 +103,9 @@ const EnhancedHeroSection = ({ socialProof, heroBenefits, prefersReducedMotion =
             left: 0,
             width: '100%',
             height: '100%',
-            background: 'rgba(10, 25, 41, 0.7)',
+            background: isDark
+              ? 'rgba(10, 25, 41, 0.85)'
+              : 'rgba(10, 25, 41, 0.7)',
             zIndex: 2,
           }}
         />

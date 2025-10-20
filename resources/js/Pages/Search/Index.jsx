@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Head, router } from '@inertiajs/react';
 import MainLayout from '@/Layouts/MainLayout';
+import DOMPurify from 'dompurify';
 import {
     Container,
     Box,
@@ -496,7 +497,7 @@ function SearchResultCard({ item, index, icon }) {
                                 variant="body2"
                                 color="text.secondary"
                                 sx={{ mb: 2 }}
-                                dangerouslySetInnerHTML={{ __html: item.highlight }}
+                                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(item.highlight) }}
                             />
 
                             <Stack direction="row" spacing={1} flexWrap="wrap">

@@ -50,7 +50,9 @@ createInertiaApp({
 });
 
 // Register Service Worker for PWA functionality
-registerServiceWorker();
+// ⚠️ DISABLED: Uncomment when PWA icons are generated
+// registerServiceWorker();
 
 // Setup PWA install prompt
-setupPWAInstallPrompt();
+// ⚠️ DISABLED: Uncomment when PWA icons are generated
+// setupPWAInstallPrompt();

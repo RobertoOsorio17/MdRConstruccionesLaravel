@@ -13,7 +13,9 @@ import {
     InputAdornment,
     Divider,
     Pagination,
-    CircularProgress
+    CircularProgress,
+    useTheme,
+    Tooltip
 } from '@mui/material';
 import {
     ThumbUpOutlined,
@@ -26,23 +28,24 @@ import {
     VerifiedOutlined
 } from '@mui/icons-material';
 import { motion, AnimatePresence } from 'framer-motion';
+import designSystem from '@/theme/designSystem';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
 const THEME = {
-    primary: '#2563eb',
-    secondary: '#64748b',
-    accent: '#f59e0b',
-    success: '#10b981',
-    warning: '#f59e0b',
-    error: '#ef4444',
-    background: 'rgba(255, 255, 255, 0.05)',
-    surface: 'rgba(255, 255, 255, 0.1)',
-    glass: 'rgba(255, 255, 255, 0.15)',
+    primary: designSystem.colors.primary[600],
+    secondary: designSystem.colors.secondary[500],
+    accent: designSystem.colors.accent.amber[500],
+    success: designSystem.colors.success[600],
+    warning: designSystem.colors.warning[500],
+    error: designSystem.colors.error[500],
+    background: designSystem.colors.surface.secondary,
+    surface: designSystem.colors.surface.primary,
+    glass: designSystem.colors.glass.white,
     text: {
-        primary: '#1e293b',
-        secondary: '#64748b',
-        light: '#94a3b8'
+        primary: designSystem.colors.text.primary,
+        secondary: designSystem.colors.text.secondary,
+        light: designSystem.colors.text.muted
     }
 };
 
@@ -54,6 +57,11 @@ const CommentsTab = ({
     profileUserId,
     isOwnProfile = false
 }) => {
+    const theme = useTheme();
+    const isDark = theme.palette.mode === 'dark';
+    const GLASS = isDark ? designSystem.glassmorphism.dark : designSystem.glassmorphism.light;
+    const BORDER_SOFT = isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid rgba(255,255,255,0.18)';
+    const HOVER_BG = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)';
     const [searchTerm, setSearchTerm] = useState('');
     const [paginatedComments, setPaginatedComments] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -147,15 +155,28 @@ const CommentsTab = ({
     };
 
     const handleLikeComment = async (comment) => {
+        // Prevent liking own comments
+        if (comment.user_id === currentUser?.id) {
+            return;
+        }
         if (onLikeComment) {
             await onLikeComment(comment.id);
         }
     };
 
     const handleDislikeComment = async (comment) => {
+        // Prevent disliking own comments
+        if (comment.user_id === currentUser?.id) {
+            return;
+        }
         if (onDislikeComment) {
             await onDislikeComment(comment.id);
         }
+    };
+
+    // Check if comment is from current user
+    const isOwnComment = (comment) => {
+        return comment.user_id === currentUser?.id;
     };
 
     return (
@@ -170,22 +191,15 @@ const CommentsTab = ({
                     InputProps={{
                         startAdornment: (
                             <InputAdornment position="start">
-                                <SearchOutlined sx={{ color: THEME.text.secondary }} />
+                                <SearchOutlined sx={{ color: theme.palette.text.secondary }} />
                             </InputAdornment>
                         ),
                         sx: {
-                            backgroundColor: THEME.glass,
-                            backdropFilter: 'blur(10px)',
-                            borderRadius: 2,
-                            '& .MuiOutlinedInput-notchedOutline': {
-                                border: '1px solid rgba(255, 255, 255, 0.2)',
-                            },
-                            '&:hover .MuiOutlinedInput-notchedOutline': {
-                                border: '1px solid rgba(255, 255, 255, 0.3)',
-                            },
-                            '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                                border: `2px solid ${THEME.primary}`,
-                            }
+                            ...GLASS,
+                            borderRadius: 3,
+                            '& .MuiOutlinedInput-notchedOutline': { border: BORDER_SOFT },
+                            '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: isDark ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.35)' },
+                            '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: THEME.primary, borderWidth: 2 }
                         }
                     }}
                 />
@@ -202,237 +216,241 @@ const CommentsTab = ({
             {!loading && (
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                     <AnimatePresence>
-                        {paginatedComments.map((comment, index) => (
-                        <motion.div
-                            key={comment.id}
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -20 }}
-                            transition={{ duration: 0.3, delay: index * 0.05 }}
-                            whileHover={{ y: -2 }}
-                        >
-                            <Card
-                                sx={{
-                                    backgroundColor: THEME.glass,
-                                    backdropFilter: 'blur(10px)',
-                                    border: '1px solid rgba(255, 255, 255, 0.2)',
-                                    borderRadius: 3,
-                                    overflow: 'hidden',
-                                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                                    '&:hover': {
-                                        backgroundColor: THEME.surface,
-                                        border: '1px solid rgba(255, 255, 255, 0.3)',
-                                        boxShadow: '0 12px 40px rgba(0, 0, 0, 0.15)',
-                                        transform: 'translateY(-2px)',
-                                    }
-                                }}
+                        {paginatedComments.map((comment, index) => {
+                            const isOwn = isOwnComment(comment);
+
+                            return (
+                            <motion.div
+                                key={comment.id}
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -20 }}
+                                transition={{ duration: 0.3, delay: index * 0.05 }}
+                                whileHover={{ y: -2 }}
                             >
-                                <CardContent sx={{ p: 3 }}>
-                                    {/* Header Section */}
-                                    <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2, mb: 2 }}>
-                                        <Avatar
-                                            src={comment.user?.avatar}
-                                            sx={{
-                                                width: 52,
-                                                height: 52,
-                                                backgroundColor: THEME.primary,
-                                                fontSize: '1.2rem',
-                                                fontWeight: 700,
-                                                border: '3px solid rgba(255, 255, 255, 0.2)',
-                                                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)'
-                                            }}
-                                        >
-                                            {comment.user?.name?.charAt(0) || comment.author_name?.charAt(0) || 'U'}
-                                        </Avatar>
+                                <Card
+                                    sx={{
+                                        ...GLASS,
+                                        borderRadius: 3,
+                                        overflow: 'hidden',
+                                        position: 'relative',
+                                        '&::before': { content: '""', position: 'absolute', top: 0, left: '-150%', width: '50%', height: '100%', background: 'linear-gradient(120deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.20) 50%, rgba(255,255,255,0.05) 100%)', transform: 'skewX(-20deg)', transition: 'left 0.6s ease', pointerEvents: 'none' },
+                                        '&:hover::before': { left: '150%' },
+                                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                                        '&:hover': {
+                                            boxShadow: designSystem.shadows.colored.primaryHover,
+                                            borderColor: THEME.primary,
+                                            transform: 'translateY(-6px)',
+                                        }
+                                    }}
+                                >
+                                    <CardContent sx={{ p: 3 }}>
+                                        {/* Header Section */}
+                                        <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2, mb: 2 }}>
+                                            <Avatar
+                                                src={comment.user?.avatar}
+                                                sx={{
+                                                    width: 52,
+                                                    height: 52,
+                                                    backgroundColor: THEME.primary,
+                                                    fontSize: '1.2rem',
+                                                    fontWeight: 700,
+                                                    border: '3px solid rgba(255, 255, 255, 0.2)',
+                                                    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)'
+                                                }}
+                                            >
+                                                {comment.user?.name?.charAt(0) || comment.author_name?.charAt(0) || 'U'}
+                                            </Avatar>
 
-                                        <Box sx={{ flexGrow: 1, minWidth: 0 }}>
-                                            {/* User Info Row */}
-                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                                                <Typography
-                                                    variant="subtitle1"
-                                                    fontWeight={700}
-                                                    color={THEME.text.primary}
-                                                    sx={{ fontSize: '1rem' }}
-                                                >
-                                                    {comment.user?.name || comment.author_name || 'Usuario'}
-                                                </Typography>
-                                                {comment.user?.is_verified && (
-                                                    <VerifiedOutlined sx={{ fontSize: 18, color: THEME.success }} />
-                                                )}
-                                                <Box sx={{
-                                                    width: 4,
-                                                    height: 4,
-                                                    borderRadius: '50%',
-                                                    backgroundColor: THEME.text.light
-                                                }} />
-                                                <Typography variant="body2" color={THEME.text.light}>
-                                                    {format(new Date(comment.created_at), 'dd MMM yyyy HH:mm', { locale: es })}
-                                                </Typography>
-                                            </Box>
+                                            <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+                                                {/* User Info Row */}
+                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                                                    <Typography
+                                                        variant="subtitle1"
+                                                        fontWeight={700}
+                                                        color={theme.palette.text.primary}
+                                                        sx={{ fontSize: '1rem' }}
+                                                    >
+                                                        {comment.user?.name || comment.author_name || 'Usuario'}
+                                                    </Typography>
+                                                    {comment.user?.is_verified && (
+                                                        <VerifiedOutlined sx={{ fontSize: 18, color: THEME.success }} />
+                                                    )}
+                                                    <Box sx={{
+                                                        width: 4,
+                                                        height: 4,
+                                                        borderRadius: '50%',
+                                                        backgroundColor: theme.palette.text.secondary
+                                                    }} />
+                                                    <Typography variant="body2" color={theme.palette.text.secondary}>
+                                                        {format(new Date(comment.created_at), 'dd MMM yyyy HH:mm', { locale: es })}
+                                                    </Typography>
+                                                </Box>
 
-                                            {/* Post Context */}
-                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-                                                <Typography variant="body2" color={THEME.text.secondary}>
-                                                    Comentario en:
-                                                </Typography>
-                                                <Typography
-                                                    variant="body2"
-                                                    color={THEME.primary}
-                                                    sx={{
-                                                        fontWeight: 600,
-                                                        cursor: 'pointer',
-                                                        textDecoration: 'none',
-                                                        '&:hover': {
-                                                            textDecoration: 'underline',
-                                                            color: THEME.secondary
-                                                        },
-                                                        maxWidth: '300px',
-                                                        overflow: 'hidden',
-                                                        textOverflow: 'ellipsis',
-                                                        whiteSpace: 'nowrap'
-                                                    }}
-                                                    onClick={() => {
-                                                        if (comment.post?.slug) {
-                                                            window.open(`/blog/${comment.post.slug}#comment-${comment.id}`, '_blank');
-                                                        }
-                                                    }}
-                                                >
-                                                    {comment.post?.title || 'Post no disponible'}
-                                                </Typography>
+                                                {/* Post Context */}
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                                                    <Typography variant="body2" color={theme.palette.text.secondary}>
+                                                        Comentario en:
+                                                    </Typography>
+                                                    <Typography
+                                                        variant="body2"
+                                                        color={THEME.primary}
+                                                        sx={{
+                                                            fontWeight: 600,
+                                                            cursor: 'pointer',
+                                                            textDecoration: 'none',
+                                                            '&:hover': {
+                                                                textDecoration: 'underline',
+                                                                color: THEME.secondary
+                                                            },
+                                                            maxWidth: '300px',
+                                                            overflow: 'hidden',
+                                                            textOverflow: 'ellipsis',
+                                                            whiteSpace: 'nowrap'
+                                                        }}
+                                                        onClick={() => {
+                                                            if (comment.post?.slug) {
+                                                                window.open(`/blog/${comment.post.slug}#comment-${comment.id}`, '_blank');
+                                                            }
+                                                        }}
+                                                    >
+                                                        {comment.post?.title || 'Post no disponible'}
+                                                    </Typography>
+                                                </Box>
                                             </Box>
                                         </Box>
-                                    </Box>
 
-                                    {/* Comment Content */}
-                                    <Box sx={{ mb: 3 }}>
-                                        <Typography
-                                            variant="body1"
-                                            color={THEME.text.primary}
-                                            sx={{
-                                                lineHeight: 1.6,
-                                                fontSize: '0.95rem',
-                                                display: '-webkit-box',
-                                                WebkitLineClamp: 4,
-                                                WebkitBoxOrient: 'vertical',
-                                                overflow: 'hidden',
-                                                textOverflow: 'ellipsis',
-                                            }}
-                                        >
-                                            {comment.body || comment.content || 'Contenido no disponible'}
-                                        </Typography>
-                                    </Box>
+                                        {/* Comment Content */}
+                                        <Box sx={{ mb: 3 }}>
+                                            <Typography
+                                                variant="body1"
+                                                color={theme.palette.text.primary}
+                                                sx={{
+                                                    lineHeight: 1.6,
+                                                    fontSize: '0.95rem',
+                                                    display: '-webkit-box',
+                                                    WebkitLineClamp: 4,
+                                                    WebkitBoxOrient: 'vertical',
+                                                    overflow: 'hidden',
+                                                    textOverflow: 'ellipsis',
+                                                }}
+                                            >
+                                                {comment.body || comment.content || 'Contenido no disponible'}
+                                            </Typography>
+                                        </Box>
 
-                                    {/* Footer with Stats and Actions */}
-                                    <Box sx={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'space-between',
-                                        pt: 2,
-                                        borderTop: '1px solid rgba(255, 255, 255, 0.1)'
-                                    }}>
-                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                                <Typography variant="body2" color={THEME.text.light}>
-                                                    👍
-                                                </Typography>
-                                                <Typography variant="body2" color={THEME.text.light} fontWeight={500}>
+                                        {/* Footer with Stats and Actions */}
+                                        <Box sx={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'space-between',
+                                            pt: 2,
+                                            borderTop: '1px solid rgba(255, 255, 255, 0.1)'
+                                        }}>
+                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                {/* Like Button */}
+                                                <Tooltip title={isOwn ? "No puedes dar like a tu propio comentario" : ""}>
+                                                    <span>
+                                                        <IconButton
+                                                            size="small"
+                                                            onClick={() => handleLikeComment(comment)}
+                                                            disabled={isOwn}
+                                                            sx={{
+                                                                color: comment.user_liked ? THEME.success : theme.palette.text.secondary,
+                                                                bgcolor: comment.user_liked ? 'rgba(46, 125, 50, 0.1)' : 'transparent',
+                                                                '&:hover': {
+                                                                    bgcolor: comment.user_liked ? 'rgba(46, 125, 50, 0.2)' : HOVER_BG,
+                                                                    transform: 'scale(1.1)',
+                                                                },
+                                                                '&.Mui-disabled': {
+                                                                    color: theme.palette.text.disabled,
+                                                                    opacity: 0.5
+                                                                },
+                                                                transition: 'all 0.2s'
+                                                            }}
+                                                        >
+                                                            {comment.user_liked ? <ThumbUpAlt fontSize="small" /> : <ThumbUpOutlined fontSize="small" />}
+                                                        </IconButton>
+                                                    </span>
+                                                </Tooltip>
+                                                <Typography variant="body2" color={theme.palette.text.secondary} fontWeight={500}>
                                                     {comment.likes_count || 0}
                                                 </Typography>
-                                            </Box>
-                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                                <Typography variant="body2" color={THEME.text.light}>
-                                                    👎
-                                                </Typography>
-                                                <Typography variant="body2" color={THEME.text.light} fontWeight={500}>
+
+                                                {/* Dislike Button */}
+                                                <Tooltip title={isOwn ? "No puedes dar dislike a tu propio comentario" : ""}>
+                                                    <span>
+                                                        <IconButton
+                                                            size="small"
+                                                            onClick={() => handleDislikeComment(comment)}
+                                                            disabled={isOwn}
+                                                            sx={{
+                                                                color: comment.user_disliked ? THEME.error : theme.palette.text.secondary,
+                                                                bgcolor: comment.user_disliked ? 'rgba(211, 47, 47, 0.1)' : 'transparent',
+                                                                '&:hover': {
+                                                                    bgcolor: comment.user_disliked ? 'rgba(211, 47, 47, 0.2)' : HOVER_BG,
+                                                                    transform: 'scale(1.1)',
+                                                                },
+                                                                '&.Mui-disabled': {
+                                                                    color: theme.palette.text.disabled,
+                                                                    opacity: 0.5
+                                                                },
+                                                                transition: 'all 0.2s',
+                                                                ml: 1
+                                                            }}
+                                                        >
+                                                            {comment.user_disliked ? <ThumbDownAlt fontSize="small" /> : <ThumbDownOutlined fontSize="small" />}
+                                                        </IconButton>
+                                                    </span>
+                                                </Tooltip>
+                                                <Typography variant="body2" color={theme.palette.text.secondary} fontWeight={500}>
                                                     {comment.dislikes_count || 0}
                                                 </Typography>
+
+                                                {/* Replies Count */}
+                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, ml: 2 }}>
+                                                    <CommentOutlined sx={{ fontSize: 18, color: theme.palette.text.secondary }} />
+                                                    <Typography variant="body2" color={theme.palette.text.secondary} fontWeight={500}>
+                                                        {comment.replies_count || 0}
+                                                    </Typography>
+                                                </Box>
                                             </Box>
-                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                                <Typography variant="body2" color={THEME.text.light}>
-                                                    💬
-                                                </Typography>
-                                                <Typography variant="body2" color={THEME.text.light} fontWeight={500}>
-                                                    {comment.replies_count || 0}
-                                                </Typography>
-                                            </Box>
-                                        </Box>
 
-                                        <Button
-                                            variant="contained"
-                                            size="small"
-                                            startIcon={<LaunchOutlined />}
-                                            onClick={() => {
-                                                if (comment.post?.slug) {
-                                                    const url = `/blog/${comment.post.slug}#comment-${comment.id}`;
-                                                    // Open in new tab and use a more reliable method for scrolling
-                                                    const newWindow = window.open(url, '_blank');
-
-                                                    if (newWindow) {
-                                                        // Use a more reliable approach with postMessage
-                                                        const checkAndScroll = () => {
-                                                            try {
-                                                                if (newWindow.document.readyState === 'complete') {
-                                                                    const commentElement = newWindow.document.getElementById(`comment-${comment.id}`);
-                                                                    if (commentElement) {
-                                                                        // Add a small delay to ensure the page is fully rendered
-                                                                        setTimeout(() => {
-                                                                            commentElement.scrollIntoView({
-                                                                                behavior: 'smooth',
-                                                                                block: 'center',
-                                                                                inline: 'nearest'
-                                                                            });
-                                                                            // Add highlight effect
-                                                                            commentElement.style.backgroundColor = 'rgba(37, 99, 235, 0.1)';
-                                                                            commentElement.style.border = '2px solid #2563eb';
-                                                                            commentElement.style.borderRadius = '8px';
-                                                                            setTimeout(() => {
-                                                                                commentElement.style.backgroundColor = '';
-                                                                                commentElement.style.border = '';
-                                                                                commentElement.style.borderRadius = '';
-                                                                            }, 3000);
-                                                                        }, 500);
-                                                                    }
-                                                                } else {
-                                                                    // Retry if page is not ready
-                                                                    setTimeout(checkAndScroll, 100);
-                                                                }
-                                                            } catch (error) {
-                                                                // Cross-origin restrictions, fallback to simple navigation
-                                                                console.log('Cross-origin restriction, using fallback navigation');
-                                                            }
-                                                        };
-
-                                                        // Start checking after a short delay
-                                                        setTimeout(checkAndScroll, 200);
+                                            <Button
+                                                variant="contained"
+                                                size="small"
+                                                startIcon={<LaunchOutlined />}
+                                                onClick={() => {
+                                                    if (comment.post?.slug) {
+                                                        window.open(`/blog/${comment.post.slug}#comment-${comment.id}`, '_blank');
                                                     }
-                                                }
-                                            }}
-                                            sx={{
-                                                fontSize: '0.8rem',
-                                                py: 0.75,
-                                                px: 2,
-                                                backgroundColor: THEME.primary,
-                                                color: 'white',
-                                                borderRadius: 2,
-                                                textTransform: 'none',
-                                                fontWeight: 600,
-                                                boxShadow: '0 4px 12px rgba(37, 99, 235, 0.3)',
-                                                '&:hover': {
-                                                    backgroundColor: THEME.secondary,
-                                                    boxShadow: '0 6px 16px rgba(37, 99, 235, 0.4)',
-                                                    transform: 'translateY(-1px)',
-                                                }
-                                            }}
-                                        >
-                                            Ver en post
-                                        </Button>
-                                    </Box>
-                                </CardContent>
-                            </Card>
-                        </motion.div>
-                    ))}
-                </AnimatePresence>
-            </Box>
+                                                }}
+                                                sx={{
+                                                    fontSize: '0.8rem',
+                                                    py: 0.75,
+                                                    px: 2,
+                                                    backgroundColor: THEME.primary,
+                                                    color: 'white',
+                                                    borderRadius: 2,
+                                                    textTransform: 'none',
+                                                    fontWeight: 600,
+                                                    boxShadow: '0 4px 12px rgba(37, 99, 235, 0.3)',
+                                                    '&:hover': {
+                                                        backgroundColor: THEME.secondary,
+                                                        boxShadow: '0 6px 16px rgba(37, 99, 235, 0.4)',
+                                                        transform: 'translateY(-1px)',
+                                                    }
+                                                }}
+                                            >
+                                                Ver en post
+                                            </Button>
+                                        </Box>
+                                    </CardContent>
+                                </Card>
+                            </motion.div>
+                        )})}
+                    </AnimatePresence>
+                </Box>
             )}
 
             {/* Pagination */}
@@ -446,13 +464,11 @@ const CommentsTab = ({
                         size="large"
                         sx={{
                             '& .MuiPaginationItem-root': {
-                                backgroundColor: THEME.glass,
-                                backdropFilter: 'blur(10px)',
-                                border: '1px solid rgba(255, 255, 255, 0.2)',
-                                color: THEME.text.primary,
+                                ...GLASS,
+                                color: theme.palette.text.primary,
                                 '&:hover': {
-                                    backgroundColor: THEME.surface,
-                                    border: '1px solid rgba(255, 255, 255, 0.3)',
+                                    backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : THEME.surface,
+                                    border: isDark ? '1px solid rgba(255,255,255,0.2)' : '1px solid rgba(255, 255, 255, 0.3)',
                                 },
                                 '&.Mui-selected': {
                                     backgroundColor: THEME.primary,
@@ -479,10 +495,9 @@ const CommentsTab = ({
                             textAlign: 'center',
                             py: 8,
                             px: 4,
-                            backgroundColor: THEME.glass,
-                            backdropFilter: 'blur(10px)',
+                            ...GLASS,
                             borderRadius: 4,
-                            border: '1px solid rgba(255, 255, 255, 0.2)',
+                            border: BORDER_SOFT,
                             boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)'
                         }}
                     >
@@ -494,7 +509,7 @@ const CommentsTab = ({
                             <CommentOutlined
                                 sx={{
                                     fontSize: 64,
-                                    color: THEME.text.light,
+                                    color: theme.palette.text.secondary,
                                     mb: 3,
                                     opacity: 0.7
                                 }}
@@ -502,7 +517,7 @@ const CommentsTab = ({
                         </motion.div>
                         <Typography
                             variant="h5"
-                            color={THEME.text.primary}
+                            color={theme.palette.text.primary}
                             gutterBottom
                             fontWeight={600}
                         >
@@ -510,7 +525,7 @@ const CommentsTab = ({
                         </Typography>
                         <Typography
                             variant="body1"
-                            color={THEME.text.secondary}
+                            color={theme.palette.text.secondary}
                             sx={{ maxWidth: 400, mx: 'auto', lineHeight: 1.6 }}
                         >
                             {searchTerm

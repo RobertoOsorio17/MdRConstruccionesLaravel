@@ -362,4 +362,44 @@ class Comment extends Model
             'edited_at' => now(),
         ]);
     }
+
+    /**
+     * Check if the comment is soft-deleted.
+     *
+     * @return bool
+     */
+    public function isDeleted(): bool
+    {
+        return $this->trashed();
+    }
+
+    /**
+     * Get the display content for the comment.
+     * Returns placeholder text if comment is deleted, otherwise returns the body.
+     *
+     * @return string
+     */
+    public function getDisplayContent(): string
+    {
+        if ($this->isDeleted()) {
+            return '[Comentario eliminado]';
+        }
+
+        return $this->body;
+    }
+
+    /**
+     * Get the display author name for the comment.
+     * Returns placeholder if comment is deleted, otherwise returns the author name.
+     *
+     * @return string
+     */
+    public function getDisplayAuthorName(): string
+    {
+        if ($this->isDeleted()) {
+            return 'Usuario eliminado';
+        }
+
+        return $this->user ? $this->user->name : $this->author_name;
+    }
 }

@@ -19,9 +19,9 @@ class ProjectController extends Controller
     {
         $query = Project::query();
 
-        // Filter by category if provided
-        if ($request->has('category') && !empty($request->category)) {
-            $query->where('category', $request->category);
+        // Filter by location (used as categories in frontend)
+        if ($request->has('location') && !empty($request->location)) {
+            $query->where('location', $request->location);
         }
 
         // Filter by featured if provided
@@ -41,20 +41,20 @@ class ProjectController extends Controller
         $projects = $query->orderBy('featured', 'desc')
             ->orderBy('created_at', 'desc')
             ->get([
-                'id', 'title', 'slug', 'summary', 'gallery', 
+                'id', 'title', 'slug', 'summary', 'gallery',
                 'location', 'budget_estimate', 'start_date', 'end_date',
                 'featured', 'status'
             ]);
 
-        // Get unique categories
-        $categories = Project::distinct()->pluck('location');
+        // Get unique locations (displayed as categories in frontend)
+        $locations = Project::distinct()->whereNotNull('location')->pluck('location');
 
         return Inertia::render('Projects/Index', [
             'projects' => $projects,
-            'categories' => $categories,
+            'locations' => $locations, // Locations displayed as categories
             'filters' => [
                 'search' => $request->search,
-                'category' => $request->category,
+                'location' => $request->location,
                 'featured' => $request->featured,
             ],
         ]);

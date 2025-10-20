@@ -43,6 +43,9 @@ const BenefitGrid = ({
         triggerOnce: true
     });
 
+    // Detectar preferencia de movimiento reducido
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
     // Beneficios por defecto
     const defaultBenefits = [
         {
@@ -101,10 +104,10 @@ const BenefitGrid = ({
 
     // Animación stagger
     const containerVariants = {
-        hidden: { opacity: 0 },
+        hidden: { opacity: prefersReducedMotion ? 1 : 0 },
         visible: {
             opacity: 1,
-            transition: {
+            transition: prefersReducedMotion ? {} : {
                 staggerChildren: 0.1,
                 delayChildren: 0.2
             }
@@ -112,11 +115,11 @@ const BenefitGrid = ({
     };
 
     const itemVariants = {
-        hidden: { opacity: 0, y: 30 },
+        hidden: { opacity: prefersReducedMotion ? 1 : 0, y: prefersReducedMotion ? 0 : 30 },
         visible: {
             opacity: 1,
             y: 0,
-            transition: {
+            transition: prefersReducedMotion ? {} : {
                 duration: 0.6,
                 ease: [0.4, 0, 0.2, 1]
             }
@@ -141,115 +144,132 @@ const BenefitGrid = ({
                 animate={isVisible ? "visible" : "hidden"}
             >
                 <Grid container spacing={4}>
-                    {displayBenefits.map((benefit, index) => (
-                        <Grid item {...gridColumns} key={index}>
-                            <motion.div variants={itemVariants}>
-                                <GlassCard
-                                    variant="medium"
-                                    hover={true}
-                                    elevation={2}
-                                    padding={6}
-                                    sx={{
-                                        height: '100%',
-                                        display: 'flex',
-                                        flexDirection: 'column',
-                                        position: 'relative',
-                                        overflow: 'hidden',
-                                        '&::before': {
-                                            content: '""',
-                                            position: 'absolute',
-                                            top: 0,
-                                            left: 0,
-                                            right: 0,
-                                            height: 4,
-                                            background: `linear-gradient(90deg, ${benefit.color || designSystem.colors.primary[600]} 0%, ${designSystem.colors.accent.purple} 100%)`,
-                                            opacity: 0,
-                                            transition: designSystem.transitions.presets.allNormal
-                                        },
-                                        '&:hover::before': {
-                                            opacity: 1
-                                        }
-                                    }}
-                                >
-                                    <Stack spacing={3} sx={{ height: '100%' }}>
-                                        {/* Icon */}
-                                        <Box
-                                            sx={{
-                                                width: 72,
-                                                height: 72,
-                                                borderRadius: designSystem.borders.radius.xl,
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                                background: `linear-gradient(135deg, ${benefit.color || designSystem.colors.primary[600]} 0%, ${benefit.color || designSystem.colors.primary[700]} 100%)`,
-                                                color: designSystem.colors.text.inverse,
-                                                fontSize: 36,
-                                                boxShadow: `0 8px 24px ${benefit.color || designSystem.colors.primary[600]}40`,
-                                                transition: designSystem.transitions.presets.allNormal,
-                                                '&:hover': {
-                                                    transform: 'scale(1.1) rotate(5deg)'
-                                                }
-                                            }}
-                                        >
-                                            {benefit.icon}
-                                        </Box>
+                    {displayBenefits.map((benefit, index) => {
+                        // Generar key estable basada en title o id
+                        const benefitKey = benefit.id || benefit.title?.replace(/\s+/g, '-').toLowerCase() || `benefit-${index}`;
+                        // Color con fallback consistente
+                        const benefitColor = benefit.color || designSystem.colors.primary[600];
 
-                                        {/* Title */}
-                                        <Typography
-                                            variant="h5"
-                                            fontWeight={700}
-                                            sx={{
-                                                color: designSystem.colors.text.primary
-                                            }}
-                                        >
-                                            {benefit.title}
-                                        </Typography>
-
-                                        {/* Description */}
-                                        <Typography
-                                            variant="body1"
-                                            color="text.secondary"
-                                            sx={{
-                                                flex: 1,
-                                                lineHeight: 1.7
-                                            }}
-                                        >
-                                            {benefit.description}
-                                        </Typography>
-
-                                        {/* Metric */}
-                                        {benefit.metric && (
+                        return (
+                            <Grid item {...gridColumns} key={benefitKey}>
+                                <motion.div variants={itemVariants}>
+                                    <GlassCard
+                                        variant="medium"
+                                        hover={true}
+                                        elevation={2}
+                                        padding={6}
+                                        sx={{
+                                            height: '100%',
+                                            display: 'flex',
+                                            flexDirection: 'column',
+                                            position: 'relative',
+                                            overflow: 'hidden',
+                                            // Focus visible para accesibilidad de teclado
+                                            '&:focus-visible': {
+                                                outline: `3px solid ${designSystem.colors.primary[600]}`,
+                                                outlineOffset: '2px',
+                                                boxShadow: `0 0 0 4px ${designSystem.colors.primary[200]}`
+                                            },
+                                            '&::before': {
+                                                content: '""',
+                                                position: 'absolute',
+                                                top: 0,
+                                                left: 0,
+                                                right: 0,
+                                                height: 4,
+                                                background: `linear-gradient(90deg, ${benefitColor} 0%, ${designSystem.colors.accent.purple[500]} 100%)`,
+                                                opacity: 0,
+                                                transition: designSystem.transitions.presets.allNormal
+                                            },
+                                            '&:hover::before': {
+                                                opacity: 1
+                                            }
+                                        }}
+                                    >
+                                        <Stack spacing={3} sx={{ height: '100%' }}>
+                                            {/* Icon */}
                                             <Box
+                                                aria-hidden="true"
                                                 sx={{
-                                                    mt: 'auto',
-                                                    pt: designSystem.spacing[3],
-                                                    borderTop: `1px solid ${designSystem.colors.border.light}`
+                                                    width: 72,
+                                                    height: 72,
+                                                    borderRadius: designSystem.borders.radius.xl,
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    background: `linear-gradient(135deg, ${benefitColor} 0%, ${benefitColor} 100%)`,
+                                                    color: designSystem.colors.text.inverse,
+                                                    fontSize: 36,
+                                                    boxShadow: `0 8px 24px ${benefitColor}40`,
+                                                    transition: designSystem.transitions.presets.allNormal,
+                                                    ...(!prefersReducedMotion && {
+                                                        '&:hover': {
+                                                            transform: 'scale(1.1) rotate(5deg)'
+                                                        }
+                                                    })
                                                 }}
                                             >
-                                                <Stack direction="row" alignItems="center" spacing={1}>
-                                                    <AutoAwesome
-                                                        sx={{
-                                                            color: benefit.color || designSystem.colors.primary[600],
-                                                            fontSize: 20
-                                                        }}
-                                                    />
-                                                    <Typography
-                                                        variant="subtitle2"
-                                                        fontWeight={700}
-                                                        sx={{
-                                                            color: benefit.color || designSystem.colors.primary[600]
-                                                        }}
-                                                    >
-                                                        {benefit.metric}
-                                                    </Typography>
-                                                </Stack>
+                                                {benefit.icon}
                                             </Box>
-                                        )}
-                                    </Stack>
-                                </GlassCard>
-                            </motion.div>
-                        </Grid>
-                    ))}
+
+                                            {/* Title */}
+                                            <Typography
+                                                variant="h5"
+                                                fontWeight={700}
+                                                sx={{
+                                                    color: designSystem.colors.text.primary
+                                                }}
+                                            >
+                                                {benefit.title}
+                                            </Typography>
+
+                                            {/* Description */}
+                                            <Typography
+                                                variant="body1"
+                                                color="text.secondary"
+                                                sx={{
+                                                    flex: 1,
+                                                    lineHeight: 1.7
+                                                }}
+                                            >
+                                                {benefit.description}
+                                            </Typography>
+
+                                            {/* Metric */}
+                                            {benefit.metric && (
+                                                <Box
+                                                    sx={{
+                                                        mt: 'auto',
+                                                        pt: designSystem.spacing[3],
+                                                        borderTop: `1px solid ${designSystem.colors.border.light}`
+                                                    }}
+                                                >
+                                                    <Stack direction="row" alignItems="center" spacing={1}>
+                                                        <AutoAwesome
+                                                            aria-hidden="true"
+                                                            sx={{
+                                                                color: benefitColor,
+                                                                fontSize: 20
+                                                            }}
+                                                        />
+                                                        <Typography
+                                                            variant="subtitle2"
+                                                            fontWeight={700}
+                                                            sx={{
+                                                                color: benefitColor
+                                                            }}
+                                                        >
+                                                            {benefit.metric}
+                                                        </Typography>
+                                                    </Stack>
+                                                </Box>
+                                            )}
+                                        </Stack>
+                                    </GlassCard>
+                                </motion.div>
+                            </Grid>
+                        );
+                    })}
                 </Grid>
             </motion.div>
 

@@ -183,19 +183,12 @@ class User extends Authenticatable
     }
 
     /**
-     * Get the user's notifications
-     */
-    public function notifications(): HasMany
-    {
-        return $this->hasMany(Notification::class);
-    }
-
-    /**
      * Get unread notifications count
+     * Uses Laravel's built-in notifications() from Notifiable trait
      */
     public function unreadNotificationsCount(): int
     {
-        return $this->notifications()->whereNull('read_at')->count();
+        return $this->unreadNotifications()->count();
     }
 
     /**
@@ -290,7 +283,8 @@ class User extends Authenticatable
     public function likedPosts()
     {
         return $this->morphedByMany(Post::class, 'interactable', 'user_interactions')
-                    ->wherePivot('type', '=', 'like');
+                    ->wherePivot('type', '=', 'like')
+                    ->withPivot('created_at', 'updated_at');
     }
     
     /**

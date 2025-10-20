@@ -96,6 +96,7 @@ const ImageGallery = ({ images = [] }) => {
                             <img
                                 src={image.url || image}
                                 alt={image.alt || `Galería imagen ${index + 1}`}
+                                loading="lazy"
                                 style={{
                                     position: 'absolute',
                                     top: 0,

@@ -1,8 +1,9 @@
 import React from 'react';
-import { 
-  Box, Container, Typography, Grid, Stack, Card, CardContent,
-  useTheme, useMediaQuery 
+import {
+  Box, Container, Typography, Stack, Card, CardContent,
+  useTheme, useMediaQuery, Grid
 } from '@mui/material';
+
 import { 
   CheckCircle as CheckIcon,
   Star as StarIcon,
@@ -222,7 +223,8 @@ const FeatureBlock = ({ feature, index, isReversed, prefersReducedMotion }) => {
 
 const WhyChooseUsSection = ({ whyChooseUs, prefersReducedMotion = false }) => {
   const theme = useTheme();
-  
+  const isDark = theme.palette.mode === 'dark';
+
   if (!whyChooseUs || whyChooseUs.length === 0) return null;
 
   return (
@@ -230,7 +232,7 @@ const WhyChooseUsSection = ({ whyChooseUs, prefersReducedMotion = false }) => {
       component="section"
       sx={{
         py: { xs: 8, md: 12, xl: 16 },
-        bgcolor: 'grey.50',
+        bgcolor: isDark ? 'rgba(15, 23, 42, 0.95)' : 'grey.50',
         position: 'relative',
         overflow: 'hidden',
       }}

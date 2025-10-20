@@ -1,0 +1,83 @@
+version: "3.9"
+
+services:
+  db:
+    image: mysql:8.0
+    container_name: mdr_db
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: mdrconstrucciones
+      MYSQL_USER: mdr
+      MYSQL_PASSWORD: mdr
+    command:
+      - "--default-authentication-plugin=mysql_native_password"
+      - "--character-set-server=utf8mb4"
+      - "--collation-server=utf8mb4_unicode_ci"
+    ports:
+      - "3306:3306"
+    volumes:
+      - dbdata:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-proot"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mdr_app
+    working_dir: /var/www/html
+    volumes:
+      - .:/var/www/html
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    command: >
+      bash -lc "
+      composer install --no-interaction --prefer-dist &&
+      php artisan key:generate --force &&
+      php artisan serve --host=0.0.0.0 --port=8000
+      "
+
+  node:
+    image: node:20
+    container_name: mdr_node
+    working_dir: /var/www/html
+    volumes:
+      - .:/var/www/html
+    environment:
+      - HOST=0.0.0.0
+      - PORT=5173
+      - VITE_HOST=0.0.0.0
+      - VITE_PORT=5173
+    ports:
+      - "5173:5173"
+    depends_on:
+      - app
+    command: >
+      bash -lc "
+      (npm ci || npm install) &&
+      npm run dev -- --host 0.0.0.0 --port 5173
+      "
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin:latest
+    container_name: mdr_pma
+    environment:
+      PMA_HOST: db
+      PMA_USER: root
+      PMA_PASSWORD: root
+    ports:
+      - "8080:80"
+    volumes:
+      - ./phpmyadmin-conf/uploads.ini:/usr/local/etc/php/conf.d/uploads.ini:ro
+      - ./phpmyadmin-conf/config.inc.php:/etc/phpmyadmin/config.inc.php:ro
+    depends_on:
+      - db
+
+volumes:
+  dbdata:

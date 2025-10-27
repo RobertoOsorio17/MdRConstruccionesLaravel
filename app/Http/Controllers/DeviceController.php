@@ -10,7 +10,12 @@ use Inertia\Inertia;
 
 /**
  * Administers the authenticated user's registered devices, enabling review, naming, trust toggles, and clean-up.
- * Relies on the DeviceTrackingService to keep device metadata synchronized and policy compliant.
+ *
+ * Features:
+ * - List and summarize registered devices with derived activity state.
+ * - Rename devices, toggle trust, and remove entries.
+ * - Guard rails to prevent removing the current device.
+ * - Backed by DeviceTrackingService for consistency across controllers.
  */
 class DeviceController extends Controller
 {
@@ -24,7 +29,10 @@ class DeviceController extends Controller
     }
 
     /**
-     * Display a listing of user's devices.
+     * Display a listing of the authenticated user's devices.
+     *
+     * @param Request $request The current HTTP request instance.
+     * @return \Inertia\Response Inertia response with devices and stats.
      */
     public function index(Request $request)
     {
@@ -62,7 +70,11 @@ class DeviceController extends Controller
     }
 
     /**
-     * Update device name.
+     * Update a device custom name.
+     *
+     * @param Request $request The current HTTP request instance.
+     * @param UserDevice $device The device to update.
+     * @return \Illuminate\Http\RedirectResponse Redirect back with status.
      */
     public function update(Request $request, UserDevice $device)
     {
@@ -78,7 +90,11 @@ class DeviceController extends Controller
     }
 
     /**
-     * Trust/untrust a device.
+     * Trust or untrust a device.
+     *
+     * @param Request $request The current HTTP request instance.
+     * @param UserDevice $device The device to toggle trust for.
+     * @return \Illuminate\Http\RedirectResponse Redirect back with status.
      */
     public function trust(Request $request, UserDevice $device)
     {
@@ -100,7 +116,11 @@ class DeviceController extends Controller
     }
 
     /**
-     * Remove a device.
+     * Remove a device from the account.
+     *
+     * @param Request $request The current HTTP request instance.
+     * @param UserDevice $device The device to remove.
+     * @return \Illuminate\Http\RedirectResponse Redirect back with status.
      */
     public function destroy(Request $request, UserDevice $device)
     {
@@ -120,6 +140,9 @@ class DeviceController extends Controller
 
     /**
      * Remove all inactive devices.
+     *
+     * @param Request $request The current HTTP request instance.
+     * @return \Illuminate\Http\RedirectResponse Redirect back with status.
      */
     public function destroyInactive(Request $request)
     {

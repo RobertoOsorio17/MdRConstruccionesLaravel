@@ -26,7 +26,7 @@ import { motion } from 'framer-motion';
 import { useForm } from '@inertiajs/react';
 import { router } from '@inertiajs/react';
 import designSystem from '@/theme/designSystem';
-import { trackCTAClick } from '@/Utils/trackEvent';
+import { trackCTAClick } from '@/Utils/analytics';
 
 /**
  * ContactFormModal Component

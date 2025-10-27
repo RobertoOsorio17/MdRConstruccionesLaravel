@@ -14,12 +14,16 @@ use Inertia\Inertia;
 
 /**
  * Aggregates diagnostic tooling that surfaces environment, cache, and authentication insights for maintainers.
- * Provides safe administrative endpoints to inspect, clear, or analyze system state during troubleshooting.
+ *
+ * Features:
+ * - Secured dashboard for environment, cache, session and auth context.
+ * - JSON endpoints to fetch system information and blog diagnostics.
+ * - Safe log cleanup action with auditing.
  */
 class DebugController extends Controller
 {
     /**
-     * ✅ SECURITY FIX: Protect all debug endpoints with authentication and authorization
+     * Protect all debug endpoints with authentication and authorization.
      */
     public function __construct()
     {
@@ -28,6 +32,8 @@ class DebugController extends Controller
 
     /**
      * Display the system debugging dashboard.
+     *
+     * @return \Inertia\Response Inertia response containing system diagnostics.
      */
     public function index()
     {
@@ -46,6 +52,8 @@ class DebugController extends Controller
 
     /**
      * Provide system information for debugging purposes.
+     *
+     * @return \Illuminate\Http\JsonResponse JSON response with system details.
      */
     public function systemInfo()
     {
@@ -61,6 +69,9 @@ class DebugController extends Controller
 
     /**
      * Clear the application log files.
+     *
+     * @param Request $request The current HTTP request instance.
+     * @return \Illuminate\Http\JsonResponse JSON response describing the result.
      */
     public function clearLogs(Request $request)
     {
@@ -107,6 +118,8 @@ class DebugController extends Controller
 
     /**
      * Debug authentication-specific issues.
+     *
+     * @return \Illuminate\Http\JsonResponse JSON response with authentication context.
      */
     public function debugAuth()
     {
@@ -133,6 +146,8 @@ class DebugController extends Controller
 
     /**
      * Debug blog post issues.
+     *
+     * @return \Illuminate\Http\JsonResponse JSON response with blog-related diagnostics.
      */
     public function debugBlog()
     {
@@ -181,6 +196,8 @@ class DebugController extends Controller
 
     /**
      * Collect general system information.
+     *
+     * @return array An associative array of system diagnostics.
      */
     private function gatherSystemInfo()
     {

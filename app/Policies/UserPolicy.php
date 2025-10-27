@@ -140,4 +140,42 @@ class UserPolicy
         // Only admins can verify users
         return $user->hasRole('admin');
     }
+
+    /**
+     * Determine whether the user can impersonate the model.
+     */
+    public function impersonate(User $admin, User $target): bool
+    {
+        // Cannot impersonate yourself
+        if ($admin->id === $target->id) {
+            return false;
+        }
+
+        // Only admins can impersonate
+        if (!$admin->hasRole('admin')) {
+            return false;
+        }
+
+        // Cannot impersonate other admins or super-admins
+        $blockedRoles = config('impersonation.blocked_roles', ['admin', 'super-admin']);
+        foreach ($blockedRoles as $role) {
+            if ($target->hasRole($role)) {
+                return false;
+            }
+        }
+
+        // Cannot impersonate banned/suspended users
+        if ($target->isBanned()) {
+            return false;
+        }
+
+        // Check if admin has 2FA enabled (if required by config)
+        if (config('impersonation.require_2fa', true)) {
+            if (!$admin->two_factor_secret) {
+                return false;
+            }
+        }
+
+        return true;
+    }
 }

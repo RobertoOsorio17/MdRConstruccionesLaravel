@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
     AppBar,
     Toolbar,
@@ -58,12 +58,17 @@ import { AuthProvider, useAuth } from '@/Components/AuthGuard';
 import PremiumFooter from '@/Components/Layout/PremiumFooter';
 import GlobalSearch from '@/Components/GlobalSearch';
 import TwoFactorWarningBanner from '@/Components/Security/TwoFactorWarningBanner';
+import ImpersonationBanner from '@/Components/Security/ImpersonationBanner';
 import { useAppTheme } from '@/theme/ThemeProvider';
 import DarkModeToggle from '@/Components/UI/DarkModeToggle';
 import MegaMenu from '@/Components/Navigation/MegaMenu';
 import Breadcrumbs from '@/Components/Navigation/Breadcrumbs';
 import KeyboardShortcuts from '@/Components/Navigation/KeyboardShortcuts';
 import useScrollTrigger from '@/Hooks/useScrollTrigger';
+import NotificationDropdown from '@/Components/Notifications/NotificationDropdown';
+import { InactivityProvider } from '@/Contexts/InactivityContext';
+import InactivityDetector from '@/Components/Admin/InactivityDetector';
+import InactivityTimer from '@/Components/Admin/InactivityTimer';
 
 // Componente de menú de usuario
 const UserMenu = () => {
@@ -300,6 +305,9 @@ const MainLayoutContent = ({ children }) => {
     const { url } = page;
     const auth = useAuth();
 
+    // Ref para controlar el timeout del megamenu
+    const megaMenuTimeoutRef = useRef(null);
+
     const handleSearchOpen = () => {
         setSearchOpen(true);
     };
@@ -309,16 +317,43 @@ const MainLayoutContent = ({ children }) => {
     };
 
     const handleMegaMenuOpen = (event) => {
+        // Cancelar cualquier timeout pendiente
+        if (megaMenuTimeoutRef.current) {
+            clearTimeout(megaMenuTimeoutRef.current);
+            megaMenuTimeoutRef.current = null;
+        }
         setMegaMenuAnchor(event.currentTarget);
     };
 
     const handleMegaMenuClose = () => {
+        // Cerrar con un pequeño delay para evitar cierres accidentales
+        megaMenuTimeoutRef.current = setTimeout(() => {
+            setMegaMenuAnchor(null);
+        }, 150);
+    };
+
+    const handleMegaMenuCloseImmediate = () => {
+        // Cerrar inmediatamente (para click away)
+        if (megaMenuTimeoutRef.current) {
+            clearTimeout(megaMenuTimeoutRef.current);
+            megaMenuTimeoutRef.current = null;
+        }
         setMegaMenuAnchor(null);
     };
 
     const handleMegaMenuNavigate = (href) => {
+        handleMegaMenuCloseImmediate();
         router.visit(href);
     };
+
+    // Limpiar timeout al desmontar
+    useEffect(() => {
+        return () => {
+            if (megaMenuTimeoutRef.current) {
+                clearTimeout(megaMenuTimeoutRef.current);
+            }
+        };
+    }, []);
 
     const navigationItems = [
         { title: 'Inicio', href: '/', icon: <HomeIcon /> },
@@ -706,19 +741,28 @@ const MainLayoutContent = ({ children }) => {
                 elevation={0}
                 sx={{
                     background: (theme) => theme.palette.mode === 'dark'
-                        ? 'linear-gradient(145deg, rgba(30, 30, 30, 0.95) 0%, rgba(18, 18, 18, 0.9) 100%)'
-                        : 'linear-gradient(145deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.9) 100%)',
-                    backdropFilter: 'blur(12px)',
-                    WebkitBackdropFilter: 'blur(12px)',
+                        ? scrolled
+                            ? 'linear-gradient(145deg, rgba(20, 20, 20, 0.98) 0%, rgba(10, 10, 10, 0.95) 100%)'
+                            : 'linear-gradient(145deg, rgba(30, 30, 30, 0.95) 0%, rgba(18, 18, 18, 0.9) 100%)'
+                        : scrolled
+                            ? 'linear-gradient(145deg, rgba(255, 255, 255, 0.98) 0%, rgba(250, 250, 252, 0.95) 100%)'
+                            : 'linear-gradient(145deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.9) 100%)',
+                    backdropFilter: scrolled ? 'blur(20px)' : 'blur(12px)',
+                    WebkitBackdropFilter: scrolled ? 'blur(20px)' : 'blur(12px)',
                     borderBottom: (theme) => theme.palette.mode === 'dark'
-                        ? '1px solid rgba(255, 255, 255, 0.1)'
-                        : '1px solid rgba(255, 255, 255, 0.3)',
+                        ? scrolled
+                            ? '1px solid rgba(255, 255, 255, 0.15)'
+                            : '1px solid rgba(255, 255, 255, 0.1)'
+                        : scrolled
+                            ? '1px solid rgba(0, 0, 0, 0.1)'
+                            : '1px solid rgba(255, 255, 255, 0.3)',
                     boxShadow: scrolled
-                        ? '0 6px 30px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(255, 255, 255, 0.15)'
+                        ? '0 8px 32px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(255, 255, 255, 0.1) inset'
                         : (theme) => theme.palette.mode === 'dark'
                             ? '0 4px 24px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.05)'
                             : '0 4px 24px rgba(0, 0, 0, 0.06), 0 0 0 1px rgba(255, 255, 255, 0.2)',
-                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                    transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+                    transform: scrolled ? 'translateY(0)' : 'translateY(0)',
                     '&::before': {
                         content: '""',
                         position: 'absolute',
@@ -727,9 +771,15 @@ const MainLayoutContent = ({ children }) => {
                         right: 0,
                         bottom: 0,
                         background: (theme) => theme.palette.mode === 'dark'
-                            ? 'linear-gradient(145deg, rgba(59, 130, 246, 0.04) 0%, rgba(147, 197, 253, 0.04) 100%)'
-                            : 'linear-gradient(145deg, rgba(59, 130, 246, 0.02) 0%, rgba(147, 197, 253, 0.02) 100%)',
-                        pointerEvents: 'none'
+                            ? scrolled
+                                ? 'linear-gradient(145deg, rgba(59, 130, 246, 0.06) 0%, rgba(147, 197, 253, 0.06) 100%)'
+                                : 'linear-gradient(145deg, rgba(59, 130, 246, 0.04) 0%, rgba(147, 197, 253, 0.04) 100%)'
+                            : scrolled
+                                ? 'linear-gradient(145deg, rgba(59, 130, 246, 0.03) 0%, rgba(147, 197, 253, 0.03) 100%)'
+                                : 'linear-gradient(145deg, rgba(59, 130, 246, 0.02) 0%, rgba(147, 197, 253, 0.02) 100%)',
+                        pointerEvents: 'none',
+                        opacity: scrolled ? 1 : 0.7,
+                        transition: 'opacity 0.4s ease'
                     }
                 }}
             >
@@ -825,6 +875,11 @@ const MainLayoutContent = ({ children }) => {
                                                     handleMegaMenuOpen(e);
                                                 }
                                             }}
+                                            onMouseLeave={() => {
+                                                if (isServiciosMenu) {
+                                                    handleMegaMenuClose();
+                                                }
+                                            }}
                                             onKeyDown={(e) => {
                                                 if (isServiciosMenu && (e.key === 'ArrowDown')) {
                                                     handleMegaMenuOpen(e);
@@ -893,42 +948,14 @@ const MainLayoutContent = ({ children }) => {
                                 </IconButton>
 
                                 {!auth.isGuest && (
-                                    <IconButton
-                                        onClick={() => router.visit('/notifications')}
-                                        aria-label="Notificaciones"
-                                        sx={{
-                                            minWidth: scrolled ? 40 : 44,
-                                            minHeight: scrolled ? 40 : 44,
-                                            borderRadius: 2,
-                                            transition: 'all 0.3s ease',
-                                            '&:hover': {
-                                                background: 'linear-gradient(145deg, rgba(59, 130, 246, 0.1) 0%, rgba(59, 130, 246, 0.05) 100%)',
-                                                transform: 'scale(1.05)'
-                                            }
-                                        }}
-                                    >
-                                        <Badge
-                                            badgeContent={auth.user?.unread_notifications || 0}
-                                            color="error"
-                                            max={99}
-                                            sx={{
-                                                '& .MuiBadge-badge': {
-                                                    fontSize: '0.65rem',
-                                                    minWidth: 18,
-                                                    height: 18,
-                                                    padding: '0 4px',
-                                                    boxShadow: '0 2px 8px rgba(239, 68, 68, 0.4)',
-                                                    animation: auth.user?.unread_notifications > 0 ? 'pulse 2s infinite' : 'none',
-                                                    '@keyframes pulse': {
-                                                        '0%, 100%': { opacity: 1 },
-                                                        '50%': { opacity: 0.7 }
-                                                    }
-                                                }
-                                            }}
-                                        >
-                                            <NotificationsIcon sx={{ color: 'text.primary', fontSize: scrolled ? '1.3rem' : '1.5rem' }} />
-                                        </Badge>
-                                    </IconButton>
+                                    <>
+                                        <NotificationDropdown
+                                            unreadCount={auth.user?.unread_notifications || 0}
+                                        />
+
+                                        {/* Inactivity Timer - Muestra tiempo restante antes de logout */}
+                                        <InactivityTimer />
+                                    </>
                                 )}
 
                                 <DarkModeToggle />
@@ -1009,11 +1036,21 @@ const MainLayoutContent = ({ children }) => {
                 anchorEl={megaMenuAnchor}
                 open={Boolean(megaMenuAnchor)}
                 onClose={handleMegaMenuClose}
+                onCloseImmediate={handleMegaMenuCloseImmediate}
                 onNavigate={handleMegaMenuNavigate}
+                onMouseEnter={() => {
+                    if (megaMenuTimeoutRef.current) {
+                        clearTimeout(megaMenuTimeoutRef.current);
+                        megaMenuTimeoutRef.current = null;
+                    }
+                }}
             />
 
             {/* Keyboard Shortcuts */}
             <KeyboardShortcuts onSearch={handleSearchOpen} />
+
+            {/* Impersonation Banner */}
+            <ImpersonationBanner />
 
             {/* 2FA Warning Banner */}
             <TwoFactorWarningBanner flash={page.props.flash} security={page.props.security} />
@@ -1022,10 +1059,13 @@ const MainLayoutContent = ({ children }) => {
             <Breadcrumbs />
 
             {/* Main Content */}
-            <Box 
-                component="main" 
-                id="main-content"
-                sx={{ flexGrow: 1 }}
+            <Box
+                component="main"
+                sx={{
+                    flexGrow: 1,
+                    marginTop: page.props.impersonation?.isActive ? '64px' : 0,
+                    transition: 'margin-top 0.3s ease',
+                }}
             >
                 {children}
             </Box>
@@ -1066,6 +1106,17 @@ const MainLayoutContent = ({ children }) => {
 
             {/* Global Search Dialog */}
             <GlobalSearch open={searchOpen} onClose={handleSearchClose} />
+
+            {/* Inactivity Detector - Auto-logout por inactividad para todos los usuarios autenticados */}
+            {!auth.isGuest && (
+                <InactivityDetector
+                    enabled={true}
+                    inactivityTimeout={15 * 60 * 1000} // 15 minutos
+                    warningTime={3 * 60 * 1000} // Advertencia 3 minutos antes
+                    heartbeatInterval={2 * 60 * 1000} // Heartbeat cada 2 minutos
+                    debug={false}
+                />
+            )}
         </Box>
     );
 };
@@ -1073,7 +1124,9 @@ const MainLayoutContent = ({ children }) => {
 export default function MainLayout({ children }) {
     return (
         <AuthProvider>
-            <MainLayoutContent children={children} />
+            <InactivityProvider totalTimeout={15 * 60 * 1000}>
+                <MainLayoutContent children={children} />
+            </InactivityProvider>
         </AuthProvider>
     );
 }

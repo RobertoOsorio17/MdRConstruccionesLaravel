@@ -2,13 +2,17 @@
 
 namespace App\Providers;
 
+use App\Events\CommentReported;
 use App\Events\MaintenanceModeToggled;
 use App\Events\PostCreated;
 use App\Events\SettingChanged;
 use App\Listeners\ClearRelatedCache;
+use App\Listeners\HandleImpersonationOnLogout;
 use App\Listeners\InvalidateMLCacheOnPostCreated;
 use App\Listeners\LogSettingChange;
 use App\Listeners\NotifyAdminsOfChange;
+use App\Listeners\NotifyModeratorsOfReport;
+use Illuminate\Auth\Events\Logout;
 use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
 
 /**
@@ -35,6 +39,14 @@ class EventServiceProvider extends ServiceProvider
         // ✅ FIXED: Register ML cache invalidation on new posts
         PostCreated::class => [
             InvalidateMLCacheOnPostCreated::class,
+        ],
+        // ✅ NEW: Notify moderators when comments are reported
+        CommentReported::class => [
+            NotifyModeratorsOfReport::class,
+        ],
+        // ✅ NEW: Handle impersonation on logout
+        Logout::class => [
+            HandleImpersonationOnLogout::class,
         ],
     ];
 }

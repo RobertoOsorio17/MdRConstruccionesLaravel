@@ -10,12 +10,20 @@ use Illuminate\Validation\ValidationException;
 
 /**
  * Manages the social graph between users, exposing endpoints to follow, unfollow, and inspect relationships.
- * Enforces guardrails like self-follow prevention while returning up-to-date follower counts for UI feedback.
+ *
+ * Features:
+ * - Toggle follow/unfollow with guardrails (no self-follow).
+ * - Check follow status with follower/following counters.
+ * - Paginated followers/following JSON for list views.
  */
 class UserFollowController extends Controller
 {
     /**
      * Toggle following status for the given user.
+     *
+     * @param Request $request The current HTTP request instance.
+     * @param User $user The user to follow or unfollow.
+     * @return JsonResponse JSON response with status and follower count.
      */
     public function toggle(Request $request, User $user): JsonResponse
     {
@@ -44,6 +52,10 @@ class UserFollowController extends Controller
     
     /**
      * Retrieve the follow status between the authenticated user and target user.
+     *
+     * @param Request $request The current HTTP request instance.
+     * @param User $user The target user.
+     * @return JsonResponse JSON response with boolean follow status and counts.
      */
     public function getFollowStatus(Request $request, User $user): JsonResponse
     {
@@ -66,6 +78,10 @@ class UserFollowController extends Controller
     
     /**
      * Retrieve a paginated list of followers for the target user.
+     *
+     * @param Request $request The current HTTP request instance.
+     * @param User $user The target user.
+     * @return JsonResponse JSON response with followers pagination.
      */
     public function followers(Request $request, User $user): JsonResponse
     {
@@ -79,6 +95,10 @@ class UserFollowController extends Controller
     
     /**
      * Retrieve a paginated list of profiles the target user follows.
+     *
+     * @param Request $request The current HTTP request instance.
+     * @param User $user The target user.
+     * @return JsonResponse JSON response with following pagination.
      */
     public function following(Request $request, User $user): JsonResponse
     {

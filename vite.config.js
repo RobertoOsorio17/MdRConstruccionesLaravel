@@ -23,6 +23,7 @@ export default defineConfig({
     resolve: {
         alias: {
             '@': '/resources/js',
+            '@mui/material$': '/resources/js/mui-compat.js',
         },
     },
     optimizeDeps: {
@@ -31,6 +32,8 @@ export default defineConfig({
             'react-dom',
             '@inertiajs/react',
             '@mui/material',
+            '@mui/material/index.js',
+            '@mui/material/Unstable_Grid2',
             '@emotion/react',
             '@emotion/styled',
         ],

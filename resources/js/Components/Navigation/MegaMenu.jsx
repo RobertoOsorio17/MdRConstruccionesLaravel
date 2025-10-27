@@ -158,7 +158,7 @@ const services = [
     }
 ];
 
-export default function MegaMenu({ anchorEl, open, onClose, onNavigate, id = 'services-megamenu' }) {
+export default function MegaMenu({ anchorEl, open, onClose, onCloseImmediate, onNavigate, onMouseEnter, id = 'services-megamenu' }) {
     const closeTimeoutRef = useRef(null);
 
     const handleMouseEnter = () => {
@@ -166,19 +166,27 @@ export default function MegaMenu({ anchorEl, open, onClose, onNavigate, id = 'se
             clearTimeout(closeTimeoutRef.current);
             closeTimeoutRef.current = null;
         }
+        // Llamar al onMouseEnter del padre si existe
+        if (onMouseEnter) {
+            onMouseEnter();
+        }
     };
 
     const handleMouseLeave = () => {
-        // Small delay to avoid accidental closes when moving the cursor
+        // Cerrar con delay para evitar cierres accidentales
         closeTimeoutRef.current = setTimeout(() => {
             onClose();
-        }, 120);
+        }, 150);
     };
 
     const handleKeyDown = (e) => {
         if (e.key === 'Escape') {
             e.stopPropagation();
-            onClose();
+            if (onCloseImmediate) {
+                onCloseImmediate();
+            } else {
+                onClose();
+            }
         }
     };
 
@@ -212,20 +220,27 @@ export default function MegaMenu({ anchorEl, open, onClose, onNavigate, id = 'se
                         id={id}
                         role="menu"
                         elevation={0}
+                        component={motion.div}
+                        initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                        transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
                         sx={{
-                            mt: 1,
-                            width: 720,
+                            mt: 1.5,
+                            width: 760,
                             maxWidth: '90vw',
                             background: (theme) => theme.palette.mode === 'dark'
-                                ? 'linear-gradient(145deg, rgba(30, 30, 30, 0.98) 0%, rgba(18, 18, 18, 0.95) 100%)'
-                                : 'linear-gradient(145deg, rgba(255, 255, 255, 0.98) 0%, rgba(255, 255, 255, 0.95) 100%)',
-                            backdropFilter: 'blur(24px)',
-                            WebkitBackdropFilter: 'blur(24px)',
-                            borderRadius: 4,
+                                ? 'linear-gradient(135deg, rgba(25, 30, 45, 0.98) 0%, rgba(15, 20, 35, 0.98) 100%)'
+                                : 'linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(248, 250, 252, 0.98) 100%)',
+                            backdropFilter: 'blur(30px)',
+                            WebkitBackdropFilter: 'blur(30px)',
+                            borderRadius: 5,
                             border: (theme) => theme.palette.mode === 'dark'
-                                ? '1px solid rgba(255, 255, 255, 0.1)'
+                                ? '1px solid rgba(255, 255, 255, 0.12)'
                                 : '1px solid rgba(0, 0, 0, 0.08)',
-                            boxShadow: '0 20px 60px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(255, 255, 255, 0.1)',
+                            boxShadow: (theme) => theme.palette.mode === 'dark'
+                                ? '0 24px 64px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.08) inset'
+                                : '0 24px 64px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(255, 255, 255, 0.8) inset',
                             overflow: 'hidden',
                             position: 'relative',
                             '&::before': {
@@ -234,33 +249,47 @@ export default function MegaMenu({ anchorEl, open, onClose, onNavigate, id = 'se
                                 top: 0,
                                 left: 0,
                                 right: 0,
-                                height: '2px',
-                                background: 'linear-gradient(90deg, transparent 0%, rgba(59, 130, 246, 0.6) 50%, transparent 100%)',
+                                height: '3px',
+                                background: 'linear-gradient(90deg, transparent 0%, rgba(59, 130, 246, 0.8) 50%, transparent 100%)',
+                                boxShadow: '0 0 12px rgba(59, 130, 246, 0.4)',
+                            },
+                            '&::after': {
+                                content: '""',
+                                position: 'absolute',
+                                top: 0,
+                                left: 0,
+                                right: 0,
+                                bottom: 0,
+                                background: (theme) => theme.palette.mode === 'dark'
+                                    ? 'radial-gradient(circle at 20% 20%, rgba(59, 130, 246, 0.08) 0%, transparent 50%)'
+                                    : 'radial-gradient(circle at 20% 20%, rgba(59, 130, 246, 0.04) 0%, transparent 50%)',
+                                pointerEvents: 'none',
                             }
                         }}
                     >
-                        <ClickAwayListener onClickAway={onClose}>
-                            <Box sx={{ p: 3 }} onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave} onKeyDown={handleKeyDown}>
+                        <ClickAwayListener onClickAway={onCloseImmediate || onClose}>
+                            <Box sx={{ p: 4 }} onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave} onKeyDown={handleKeyDown}>
                                 {/* Servicios Destacados */}
                                 <Box sx={{ mb: 3 }}>
                                     <Typography
                                         variant="h6"
                                         sx={{
-                                            mb: 2,
+                                            mb: 3,
                                             fontWeight: 700,
                                             color: 'text.primary',
-                                            fontSize: '1.1rem',
+                                            fontSize: '1.15rem',
                                             display: 'flex',
                                             alignItems: 'center',
-                                            gap: 1
+                                            gap: 1.5
                                         }}
                                     >
                                         <Box
                                             sx={{
-                                                width: 4,
-                                                height: 24,
+                                                width: 5,
+                                                height: 28,
                                                 background: 'linear-gradient(180deg, #3b82f6, #8b5cf6)',
-                                                borderRadius: 1
+                                                borderRadius: 1.5,
+                                                boxShadow: '0 0 12px rgba(59, 130, 246, 0.4)',
                                             }}
                                         />
                                         Servicios Destacados
@@ -273,13 +302,14 @@ export default function MegaMenu({ anchorEl, open, onClose, onNavigate, id = 'se
                                                 initial={{ opacity: 0, y: 20 }}
                                                 animate={{ opacity: 1, y: 0 }}
                                                 transition={{
-                                                    delay: index * 0.05,
-                                                    duration: 0.3,
+                                                    delay: index * 0.06,
+                                                    duration: 0.4,
                                                     type: "spring",
-                                                    stiffness: 300
+                                                    stiffness: 260,
+                                                    damping: 20
                                                 }}
-                                                whileHover={{ scale: 1.05 }}
-                                                whileTap={{ scale: 0.98 }}
+                                                whileHover={{ scale: 1.03, y: -4 }}
+                                                whileTap={{ scale: 0.97 }}
                                             >
                                                 <Box
                                                     component={ButtonBase}
@@ -290,15 +320,16 @@ export default function MegaMenu({ anchorEl, open, onClose, onNavigate, id = 'se
                                                     role="menuitem"
                                                     aria-label={service.title}
                                                     sx={{
-                                                        p: 2.5,
-                                                        borderRadius: 3,
+                                                        p: 3,
+                                                        borderRadius: 4,
                                                         cursor: 'pointer',
                                                         background: (theme) => theme.palette.mode === 'dark'
-                                                            ? 'rgba(255, 255, 255, 0.03)'
-                                                            : 'rgba(255, 255, 255, 0.5)',
+                                                            ? 'linear-gradient(135deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0.02) 100%)'
+                                                            : 'linear-gradient(135deg, rgba(255, 255, 255, 0.8) 0%, rgba(255, 255, 255, 0.6) 100%)',
                                                         border: (theme) => theme.palette.mode === 'dark'
-                                                            ? '1px solid rgba(255, 255, 255, 0.05)'
-                                                            : '1px solid rgba(0, 0, 0, 0.05)',
+                                                            ? '1px solid rgba(255, 255, 255, 0.08)'
+                                                            : '1px solid rgba(0, 0, 0, 0.06)',
+                                                        backdropFilter: 'blur(10px)',
                                                         transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                                                         position: 'relative',
                                                         overflow: 'hidden',
@@ -311,14 +342,13 @@ export default function MegaMenu({ anchorEl, open, onClose, onNavigate, id = 'se
                                                             left: 0,
                                                             right: 0,
                                                             bottom: 0,
-                                                            background: `linear-gradient(145deg, ${alpha(service.color, 0.1)}, transparent)`,
+                                                            background: `linear-gradient(135deg, ${alpha(service.color, 0.15)}, transparent)`,
                                                             opacity: 0,
                                                             transition: 'opacity 0.3s ease',
                                                         },
                                                         '&:hover': {
-                                                            transform: 'translateY(-4px)',
-                                                            boxShadow: `0 12px 24px ${alpha(service.color, 0.2)}`,
-                                                            borderColor: alpha(service.color, 0.3),
+                                                            boxShadow: `0 16px 32px ${alpha(service.color, 0.25)}`,
+                                                            borderColor: alpha(service.color, 0.4),
                                                             '&::before': {
                                                                 opacity: 1,
                                                             },

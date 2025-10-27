@@ -94,8 +94,8 @@ return [
         'users' => [
             'provider' => 'users',
             'table' => env('AUTH_PASSWORD_RESET_TOKEN_TABLE', 'password_reset_tokens'),
-            'expire' => 120, // ✅ SECURITY: 2 hours (reduced from 24h to minimize attack window)
-            'throttle' => 60,
+            'expire' => 60,
+            'throttle' => 120,
         ],
     ],
 

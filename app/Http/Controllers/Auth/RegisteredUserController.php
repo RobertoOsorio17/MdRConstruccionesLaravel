@@ -42,15 +42,16 @@ class RegisteredUserController extends Controller
             abort(403, 'El registro de nuevos usuarios está deshabilitado temporalmente.');
         }
 
-        // Get password requirements from settings
-        $minLength = AdminSetting::getCachedValue('password_min_length', 8, 300);
+        // ✅ SECURITY FIX: Stronger password requirements (minimum 12 characters)
+        $minLength = max(12, AdminSetting::getCachedValue('password_min_length', 12, 300));
         $requireSpecial = AdminSetting::getCachedValue('password_require_special', true, 300);
 
-        // Build password rules dynamically
+        // Build password rules dynamically with stronger requirements
         $passwordRules = Rules\Password::min($minLength)
             ->letters()
             ->mixedCase()
             ->numbers()
+            ->symbols() // ✅ Require special characters
             ->uncompromised();
 
         // Add symbols requirement if enabled

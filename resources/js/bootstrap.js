@@ -62,11 +62,9 @@ window.axios.interceptors.request.use(
         if (token) {
             config.headers = config.headers || {};
             config.headers["X-CSRF-TOKEN"] = token;
-        } else if (!csrfWarningLogged) {
+        } else if (!csrfWarningLogged && import.meta.env.DEV) {
             csrfWarningLogged = true;
-            console.error(
-                "CSRF token not found: https://laravel.com/docs/csrf#csrf-x-csrf-token"
-            );
+            console.warn('CSRF token not found. Ensure meta tag or cookie is available.');
         }
 
         return config;

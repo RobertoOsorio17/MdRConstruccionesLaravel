@@ -62,13 +62,16 @@ const RegisterMUI = () => {
         });
     };
 
+    // ✅ SECURITY FIX: Updated to reflect new password requirements (12 chars minimum)
     const calculatePasswordStrength = (password) => {
         let strength = 0;
-        if (password.length >= 8) strength += 25;
-        if (/[a-z]/.test(password)) strength += 25;
-        if (/[A-Z]/.test(password)) strength += 25;
-        if (/[0-9]/.test(password)) strength += 25;
-        return strength;
+        if (password.length >= 12) strength += 20; // Minimum 12 characters
+        if (password.length >= 16) strength += 10; // Bonus for longer passwords
+        if (/[a-z]/.test(password)) strength += 20; // Lowercase letters
+        if (/[A-Z]/.test(password)) strength += 20; // Uppercase letters
+        if (/[0-9]/.test(password)) strength += 15; // Numbers
+        if (/[^a-zA-Z0-9]/.test(password)) strength += 15; // Special characters
+        return Math.min(100, strength);
     };
 
     const handlePasswordChange = (e) => {

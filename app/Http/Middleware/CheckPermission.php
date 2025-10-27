@@ -28,8 +28,15 @@ class CheckPermission
         /** @var \App\Models\User $user */
         $user = Auth::user();
 
+        // ✅ FIX: Admins and editors always have dashboard access
         // If no permission is provided, enforce dashboard access only.
         if (!$permission) {
+            // Admins and editors have automatic access
+            if ($user->hasRole('admin') || $user->hasRole('editor')) {
+                return $next($request);
+            }
+
+            // For other users, check specific permission
             if (!$user->hasPermission('dashboard.access')) {
                 if ($request->expectsJson()) {
                     return response()->json(['message' => 'Access denied.'], 403);

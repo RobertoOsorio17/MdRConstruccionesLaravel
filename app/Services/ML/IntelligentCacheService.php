@@ -14,7 +14,19 @@ class IntelligentCacheService
 {
     private const CACHE_PREFIX = 'ml_cache:';
     private const DEFAULT_TTL = 3600; // 1 hour
-    
+
+    private const ALLOWED_INVALIDATION_RULES = [
+        'recommendations' => ['allow_wildcard' => true],
+        'profile' => ['allow_wildcard' => false],
+        'insights' => ['allow_wildcard' => false],
+        'vector' => ['allow_wildcard' => false],
+        'similarity' => ['allow_wildcard' => false],
+        'dependent' => ['allow_wildcard' => false],
+        'warmup' => ['allow_wildcard' => false],
+        'stats' => ['allow_wildcard' => false],
+        'deps' => ['allow_wildcard' => false],
+    ];
+
     private array $cacheLevels = [
         'hot' => 300,      // 5 minutes - frequently accessed
         'warm' => 1800,    // 30 minutes - moderately accessed
@@ -105,24 +117,85 @@ class IntelligentCacheService
      */
     public function invalidatePattern(string $pattern): int
     {
+        try {
+            $safePattern = $this->normalizePattern($pattern);
+        } catch (\InvalidArgumentException $exception) {
+            Log::warning('Rejected cache invalidation pattern', [
+                'pattern' => $pattern,
+                'reason' => $exception->getMessage(),
+            ]);
+
+            throw $exception;
+        }
+
         $count = 0;
-        
+
         if (config('cache.default') === 'redis') {
-            $keys = Redis::keys(self::CACHE_PREFIX . $pattern);
-            
+            $keys = Redis::keys($safePattern);
+
             foreach ($keys as $key) {
                 Redis::del($key);
                 $count++;
             }
         } else {
-            // Fallback for non-Redis cache drivers
             Cache::tags(['ml_recommendations', 'ml_profiles', 'ml_vectors'])->flush();
             $count = 1;
         }
 
-        Log::info("Cache invalidated", ['pattern' => $pattern, 'count' => $count]);
+        Log::info('Cache invalidated', [
+            'pattern' => $pattern,
+            'normalized_pattern' => $safePattern,
+            'count' => $count,
+        ]);
 
         return $count;
+    }
+
+    private function normalizePattern(string $pattern): string
+    {
+        $candidate = trim($pattern);
+
+        if ($candidate === '') {
+            throw new \InvalidArgumentException('Pattern must not be empty.');
+        }
+
+        if (!preg_match('/^[A-Za-z0-9]+(?:[:][A-Za-z0-9_\-*]+)*$/', $candidate)) {
+            throw new \InvalidArgumentException('Pattern contains invalid characters.');
+        }
+
+        $segments = explode(':', $candidate);
+        $prefix = strtolower(array_shift($segments));
+
+        if (!array_key_exists($prefix, self::ALLOWED_INVALIDATION_RULES)) {
+            throw new \InvalidArgumentException('Pattern prefix is not allowed.');
+        }
+
+        $rules = self::ALLOWED_INVALIDATION_RULES[$prefix];
+        $wildcardAllowed = $rules['allow_wildcard'];
+        $wildcardCount = 0;
+
+        foreach ($segments as $index => $segment) {
+            if ($segment === '*') {
+                if (!$wildcardAllowed || $wildcardCount > 0 || $prefix !== 'recommendations' || $index !== 0) {
+                    throw new \InvalidArgumentException('Wildcard usage not permitted for this pattern.');
+                }
+
+                $wildcardCount++;
+                continue;
+            }
+
+            if (!preg_match('/^[A-Za-z0-9_-]+$/', $segment)) {
+                throw new \InvalidArgumentException('Pattern segment contains invalid characters.');
+            }
+        }
+
+        if ($prefix === 'recommendations') {
+            if ($wildcardCount !== 1 || count($segments) < 2) {
+                throw new \InvalidArgumentException('Recommendation patterns must include a wildcard segment and a target identifier.');
+            }
+        }
+
+        return self::CACHE_PREFIX . $prefix . ($segments ? ':' . implode(':', $segments) : '');
     }
 
     /**

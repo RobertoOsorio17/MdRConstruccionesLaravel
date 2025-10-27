@@ -7,6 +7,11 @@ $app->make('Illuminate\Contracts\Console\Kernel')->bootstrap();
 
 use App\Models\User;
 
+if (!app()->environment(['local', 'development', 'testing'])) {
+    fwrite(STDERR, "❌ Este script solo puede ejecutarse en entornos locales.\n");
+    exit(1);
+}
+
 $user = User::find(1);
 
 if ($user) {
@@ -18,4 +23,3 @@ if ($user) {
 } else {
     echo "❌ User not found\n";
 }
-

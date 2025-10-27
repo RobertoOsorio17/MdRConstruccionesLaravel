@@ -64,7 +64,7 @@ class ServiceManagementController extends Controller
         $sortBy = $request->get('sort_by', 'created_at');
         $sortOrder = $request->get('sort_order', 'desc');
 
-        // ✅ SECURITY: Whitelist allowed sort fields and directions
+        // Security: Whitelist allowed sort fields and directions.
         $allowedSorts = ['title', 'status', 'featured', 'is_active', 'sort_order', 'created_at', 'views_count', 'price'];
         $allowedDirections = ['asc', 'desc'];
 
@@ -84,11 +84,11 @@ class ServiceManagementController extends Controller
                 'id' => $service->id,
                 'title' => $service->title,
                 'slug' => $service->slug,
-                'excerpt' => $service->excerpt, // ✅ Correct column name
-                'body' => $service->body, // ✅ Correct column name
+                'excerpt' => $service->excerpt, // Correct column name.
+                'body' => $service->body, // Correct column name.
                 'price' => $service->price,
                 'is_active' => $service->is_active,
-                'featured' => $service->featured, // ✅ Correct column name
+                'featured' => $service->featured, // Correct column name.
                 'image_url' => $service->image ? Storage::url($service->image) : null,
                 'category' => $service->category ? [
                     'id' => $service->category->id,
@@ -142,8 +142,8 @@ class ServiceManagementController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'title' => 'required|string|max:255',
-            'excerpt' => 'required|string|max:500', // ✅ Correct column name
-            'body' => 'required|string', // ✅ Correct column name
+            'excerpt' => 'required|string|max:500', // Correct column name.
+            'body' => 'required|string', // Correct column name.
             'category_id' => 'nullable|exists:categories,id',
             'price' => 'nullable|numeric|min:0',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
@@ -157,7 +157,7 @@ class ServiceManagementController extends Controller
 
         $data = $validator->validated();
 
-        // ✅ SECURITY: Ensure slug uniqueness using trait
+        // Security: Ensure slug uniqueness using trait.
         $data['slug'] = $this->generateUniqueSlug($data['title'], Service::class);
 
         // Handle image upload.
@@ -168,7 +168,7 @@ class ServiceManagementController extends Controller
         $service = Service::create($data);
 
         session()->flash('success', 'Service created successfully.');
-        return redirect()->route('admin.services.index'); // ✅ Fixed route name
+        return redirect()->route('admin.services.index'); // Fixed route name.
     }
 
     /**
@@ -282,7 +282,7 @@ class ServiceManagementController extends Controller
 
         $service->update($data);
 
-        return redirect()->route('admin.services.index') // ✅ Fixed route name
+        return redirect()->route('admin.services.index') // Fixed route name.
             ->with('success', 'Service updated successfully.');
     }
 
@@ -298,7 +298,7 @@ class ServiceManagementController extends Controller
 
         $service->delete();
 
-        return redirect()->route('admin.services.index') // ✅ Fixed route name
+        return redirect()->route('admin.services.index') // Fixed route name.
             ->with('success', 'Service deleted successfully.');
     }
 
@@ -331,11 +331,11 @@ class ServiceManagementController extends Controller
                 $message = 'Services deactivated successfully.';
                 break;
             case 'feature':
-                $services->update(['featured' => true]); // ✅ Correct column name
+                $services->update(['featured' => true]); // Correct column name.
                 $message = 'Services marked as featured successfully.';
                 break;
             case 'unfeature':
-                $services->update(['featured' => false]); // ✅ Correct column name
+                $services->update(['featured' => false]); // Correct column name.
                 $message = 'Services unmarked as featured successfully.';
                 break;
             case 'delete':
@@ -351,7 +351,7 @@ class ServiceManagementController extends Controller
                 break;
         }
 
-        return redirect()->route('admin.services.index') // ✅ Fixed route name
+        return redirect()->route('admin.services.index') // Fixed route name.
             ->with('success', $message);
     }
 

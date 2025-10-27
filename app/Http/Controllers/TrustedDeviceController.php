@@ -8,12 +8,19 @@ use Illuminate\Support\Str;
 
 /**
  * Manages the trusted device roster attached to an account, enabling revocation and password-protected actions.
- * Provides JSON responses tailored for security settings interfaces tracking long-lived device tokens.
+ *
+ * Features:
+ * - List, revoke one, or revoke all trusted devices.
+ * - Password confirmation for sensitive actions.
+ * - Recovery code regeneration helper for 2FA workflows.
  */
 class TrustedDeviceController extends Controller
 {
     /**
      * Get all trusted devices for the authenticated user.
+     *
+     * @param Request $request The current HTTP request instance.
+     * @return \Illuminate\Http\JsonResponse JSON response with trusted devices.
      */
     public function index(Request $request)
     {
@@ -39,6 +46,10 @@ class TrustedDeviceController extends Controller
 
     /**
      * Revoke a specific trusted device.
+     *
+     * @param Request $request The current HTTP request instance.
+     * @param int|string $id The trusted device ID.
+     * @return \Illuminate\Http\JsonResponse JSON response indicating success.
      */
     public function destroy(Request $request, $id)
     {
@@ -73,6 +84,9 @@ class TrustedDeviceController extends Controller
 
     /**
      * Revoke all trusted devices.
+     *
+     * @param Request $request The current HTTP request instance.
+     * @return \Illuminate\Http\JsonResponse JSON response with count revoked.
      */
     public function destroyAll(Request $request)
     {
@@ -107,6 +121,9 @@ class TrustedDeviceController extends Controller
 
     /**
      * Regenerate recovery codes.
+     *
+     * @param Request $request The current HTTP request instance.
+     * @return \Illuminate\Http\JsonResponse JSON response with new recovery codes.
      */
     public function regenerateRecoveryCodes(Request $request)
     {
@@ -145,6 +162,9 @@ class TrustedDeviceController extends Controller
 
     /**
      * Parse user agent to extract browser and OS info.
+     *
+     * @param string $userAgent The raw user agent string.
+     * @return string Friendly browser and OS label.
      */
     private function parseUserAgent($userAgent)
     {

@@ -20,7 +20,7 @@ class CategoryController extends Controller
      */
     public function index(Request $request)
     {
-        // ✅ Authorize action
+        // Authorize action.
         $this->authorize('viewAny', Category::class);
 
         $query = Category::withCount('posts');
@@ -79,7 +79,7 @@ class CategoryController extends Controller
      */
     public function create()
     {
-        // ✅ Authorize action
+        // Authorize action.
         $this->authorize('create', Category::class);
 
         return Inertia::render('Admin/Categories/Create');
@@ -90,7 +90,7 @@ class CategoryController extends Controller
      */
     public function store(Request $request)
     {
-        // ✅ Authorize action
+        // Authorize action.
         $this->authorize('create', Category::class);
 
         $validated = $request->validate([
@@ -131,7 +131,7 @@ class CategoryController extends Controller
      */
     public function show(Category $category)
     {
-        // ✅ Authorize action
+        // Authorize action.
         $this->authorize('view', $category);
 
         $category->loadCount('posts');
@@ -157,7 +157,7 @@ class CategoryController extends Controller
      */
     public function edit(Category $category)
     {
-        // ✅ Authorize action
+        // Authorize action.
         $this->authorize('update', $category);
 
         return Inertia::render('Admin/Categories/Edit', [
@@ -178,7 +178,7 @@ class CategoryController extends Controller
      */
     public function update(Request $request, Category $category)
     {
-        // ✅ Authorize action
+        // Authorize action.
         $this->authorize('update', $category);
 
         $validated = $request->validate([
@@ -214,7 +214,7 @@ class CategoryController extends Controller
      */
     public function destroy(Category $category)
     {
-        // ✅ Authorize action
+        // Authorize action.
         $this->authorize('delete', $category);
 
         // Prevent deletion when the category still has related posts.
@@ -234,7 +234,7 @@ class CategoryController extends Controller
      */
     public function toggleStatus(Category $category)
     {
-        // ✅ Authorize action
+        // Authorize action.
         $this->authorize('toggleStatus', $category);
 
         $category->update(['is_active' => !$category->is_active]);
@@ -251,7 +251,7 @@ class CategoryController extends Controller
      */
     public function updateOrder(Request $request)
     {
-        // ✅ Authorize action
+        // Authorize action.
         $this->authorize('updateOrder', Category::class);
 
         $validated = $request->validate([

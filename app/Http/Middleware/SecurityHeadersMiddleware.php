@@ -20,15 +20,23 @@ class SecurityHeadersMiddleware
 
         $isDevelopment = app()->environment(['local', 'development']);
 
-        // Add basic security headers (always applied)
+        // ✅ SECURITY FIX: Add comprehensive security headers (always applied)
         $response->headers->set('X-Content-Type-Options', 'nosniff');
         $response->headers->set('X-XSS-Protection', '1; mode=block');
         $response->headers->set('Referrer-Policy', 'strict-origin-when-cross-origin');
 
+        // ✅ SECURITY FIX: Remove X-Powered-By header to prevent information disclosure
+        $response->headers->remove('X-Powered-By');
+
+        // ✅ SECURITY FIX: X-Permitted-Cross-Domain-Policies
+        $response->headers->set('X-Permitted-Cross-Domain-Policies', 'none');
+
         // Apply stricter headers only in production
         if (!$isDevelopment) {
-            $response->headers->set('X-Frame-Options', 'DENY');
-            $response->headers->set('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
+            $response->headers->set('X-Frame-Options', 'SAMEORIGIN'); // ✅ Changed from DENY to SAMEORIGIN for better compatibility
+
+            // ✅ SECURITY FIX: Enhanced Permissions-Policy
+            $response->headers->set('Permissions-Policy', $this->buildPermissionsPolicy());
 
             // Content Security Policy - only in production
             $csp = $this->buildContentSecurityPolicy();
@@ -38,6 +46,9 @@ class SecurityHeadersMiddleware
             if ($request->isSecure()) {
                 $response->headers->set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
             }
+        } else {
+            // ✅ In development, still set X-Frame-Options but more permissive
+            $response->headers->set('X-Frame-Options', 'SAMEORIGIN');
         }
 
         return $response;
@@ -98,5 +109,33 @@ class SecurityHeadersMiddleware
         }
 
         return implode('; ', $policies);
+    }
+
+    /**
+     * Build Permissions Policy header
+     *
+     * ✅ SECURITY FIX: Comprehensive permissions policy to control browser features
+     */
+    private function buildPermissionsPolicy(): string
+    {
+        $policies = [
+            'geolocation=(self)',           // Allow geolocation only for same origin
+            'microphone=()',                // Block microphone access
+            'camera=()',                    // Block camera access
+            'payment=(self)',               // Allow payment APIs only for same origin
+            'usb=()',                       // Block USB access
+            'magnetometer=()',              // Block magnetometer
+            'gyroscope=()',                 // Block gyroscope
+            'accelerometer=()',             // Block accelerometer
+            'ambient-light-sensor=()',      // Block ambient light sensor
+            'autoplay=(self)',              // Allow autoplay only for same origin
+            'encrypted-media=(self)',       // Allow encrypted media only for same origin
+            'fullscreen=(self)',            // Allow fullscreen only for same origin
+            'picture-in-picture=(self)',    // Allow PiP only for same origin
+            'display-capture=()',           // Block screen capture
+            'document-domain=()',           // Block document.domain modification
+        ];
+
+        return implode(', ', $policies);
     }
 }

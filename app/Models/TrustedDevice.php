@@ -17,6 +17,7 @@ class TrustedDevice extends Model
         'token_hash',
         'device_name',
         'ip_address',
+        'fingerprint',
         'last_used_at',
         'expires_at',
     ];
@@ -64,6 +65,18 @@ class TrustedDevice extends Model
     public static function hashToken(string $token): string
     {
         return hash('sha256', $token);
+    }
+
+    /**
+     * Build a fingerprint hash for the incoming request.
+     */
+    public static function fingerprintFor(
+        ?string $userAgent,
+        ?string $ipAddress
+    ): string {
+        $payload = ($userAgent ?? 'unknown') . '|' . ($ipAddress ?? '0.0.0.0');
+
+        return hash('sha256', $payload);
     }
 
     /**

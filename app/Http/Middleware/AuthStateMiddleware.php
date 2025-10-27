@@ -25,15 +25,17 @@ class AuthStateMiddleware
         // Only enrich Inertia responses.
         if ($request->inertia()) {
             $user = Auth::user();
+            $shouldLog = app()->environment('local');
             
-            Log::debug('AuthState middleware processing', [
-                'route' => $request->route()?->getName(),
-                'is_authenticated' => Auth::check(),
-                'user_id' => $user?->id,
-                'user_email' => $user?->email,
-                'session_id' => session()->getId(),
-                'has_user_object' => !is_null($user)
-            ]);
+            if ($shouldLog) {
+                Log::debug('AuthState middleware processing', [
+                    'route' => $request->route()?->getName(),
+                    'is_authenticated' => Auth::check(),
+                    'user_id' => $user?->id,
+                    'session_id' => session()->getId(),
+                    'has_user_object' => !is_null($user)
+                ]);
+            }
             
             // Basic user information payload.
             $authData = [
@@ -66,10 +68,12 @@ class AuthStateMiddleware
                         'followers_count' => method_exists($user, 'followers') ? $user->followers()->count() : 0,
                     ];
                     
-                    Log::debug('User stats calculated', [
-                        'user_id' => $user->id,
-                        'stats' => $authData['user']['stats']
-                    ]);
+                    if ($shouldLog) {
+                        Log::debug('User stats calculated', [
+                            'user_id' => $user->id,
+                            'stats' => $authData['user']['stats']
+                        ]);
+                    }
 
                     // Inject permissions for role-based accounts.
                     if (method_exists($user, 'roles') && $user->roles()->exists()) {
@@ -85,11 +89,12 @@ class AuthStateMiddleware
                             
                         $authData['user']['permissions'] = $permissions;
                         
-                        Log::debug('User permissions loaded', [
-                            'user_id' => $user->id,
-                            'permissions_count' => count($permissions),
-                            'permissions' => $permissions
-                        ]);
+                        if ($shouldLog) {
+                            Log::debug('User permissions loaded', [
+                                'user_id' => $user->id,
+                                'permissions_count' => count($permissions),
+                            ]);
+                        }
                     }
                 } catch (\Exception $e) {
                     Log::error('Error loading user stats or permissions', [
@@ -111,12 +116,14 @@ class AuthStateMiddleware
             // Share the auth payload with Inertia.
             inertia()->share('auth', $authData);
             
-            Log::debug('Auth data shared with Inertia', [
-                'route' => $request->route()?->getName(),
-                'auth_data_keys' => array_keys($authData),
-                'user_data_keys' => $authData['user'] ? array_keys($authData['user']) : [],
-                'session_id' => session()->getId()
-            ]);
+            if ($shouldLog) {
+                Log::debug('Auth data shared with Inertia', [
+                    'route' => $request->route()?->getName(),
+                    'auth_data_keys' => array_keys($authData),
+                    'user_data_keys' => $authData['user'] ? array_keys($authData['user']) : [],
+                    'session_id' => session()->getId()
+                ]);
+            }
         }
 
         return $response;

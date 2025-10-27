@@ -19,8 +19,32 @@ trait PasswordValidationRules
      */
     protected function passwordRules(): array
     {
-        // Get minimum password length from settings (default: 8)
-        $minLength = AdminSetting::getCachedValue('password_min_length', 8, 300);
+        // ✅ SECURITY FIX: Increased minimum password length from 8 to 12 characters
+        $minLength = max(12, AdminSetting::getCachedValue('password_min_length', 12, 300));
+
+        return [
+            'required',
+            'string',
+            Password::min($minLength)
+                ->letters()
+                ->mixedCase()
+                ->numbers()
+                ->symbols()
+                ->uncompromised(), // Laravel's built-in check against pwned passwords
+            new \App\Rules\NotCommonPassword(), // ✅ SECURITY FIX: Prevent common passwords
+            'confirmed'
+        ];
+    }
+
+    /**
+     * Get password rules for password updates (includes previous password check)
+     *
+     * @param \App\Models\User|null $user
+     * @return array<int, \Illuminate\Contracts\Validation\Rule|array<mixed>|string>
+     */
+    protected function passwordUpdateRules($user = null): array
+    {
+        $minLength = max(12, AdminSetting::getCachedValue('password_min_length', 12, 300));
 
         return [
             'required',
@@ -31,6 +55,8 @@ trait PasswordValidationRules
                 ->numbers()
                 ->symbols()
                 ->uncompromised(),
+            new \App\Rules\NotCommonPassword(),
+            new \App\Rules\NotPreviousPassword($user), // ✅ SECURITY FIX: Prevent password reuse
             'confirmed'
         ];
     }

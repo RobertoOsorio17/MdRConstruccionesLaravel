@@ -107,13 +107,10 @@ const SettingsHero = ({
                 position: 'relative',
                 p: { xs: 2.5, md: 3 },
                 borderRadius: 3,
-                background: `linear-gradient(135deg, ${alpha(
-                    theme.palette.primary.main,
-                    0.15,
-                )}, ${alpha(theme.palette.background.paper, 0.98)})`,
-                border: `1px solid ${alpha(theme.palette.primary.main, 0.2)}`,
-                boxShadow: `0 20px 60px ${alpha(theme.palette.primary.main, 0.12)}`,
-                backdropFilter: 'blur(12px)',
+                backgroundColor: alpha(theme.palette.background.paper, 0.85),
+                border: `1px solid ${alpha(theme.palette.divider, 0.16)}`,
+                boxShadow: `0 12px 28px ${alpha(theme.palette.common.black, 0.1)}`,
+                backdropFilter: 'blur(8px)',
                 overflow: 'hidden',
             }}
         >
@@ -124,7 +121,7 @@ const SettingsHero = ({
                     pointerEvents: 'none',
                     background: `radial-gradient(circle at top right, ${alpha(
                         theme.palette.primary.light,
-                        0.25,
+                        0.12,
                     )}, transparent 55%)`,
                 }}
             />
@@ -143,16 +140,8 @@ const SettingsHero = ({
                                     onClick={onToggleSidebar}
                                     color="inherit"
                                     sx={{
-                                        backgroundColor: alpha(
-                                            theme.palette.common.white,
-                                            0.16,
-                                        ),
-                                        '&:hover': {
-                                            backgroundColor: alpha(
-                                                theme.palette.common.white,
-                                                0.25,
-                                            ),
-                                        },
+                                        backgroundColor: alpha(theme.palette.text.primary, 0.06),
+                                        '&:hover': { backgroundColor: alpha(theme.palette.text.primary, 0.1) },
                                     }}
                                 >
                                     <MenuIcon />
@@ -161,14 +150,7 @@ const SettingsHero = ({
                             <Typography
                                 variant="h4"
                                 fontWeight={700}
-                                sx={{
-                                    background: `linear-gradient(90deg, ${theme.palette.common.white}, ${alpha(
-                                        theme.palette.primary.contrastText,
-                                        0.65,
-                                    )})`,
-                                    WebkitBackgroundClip: 'text',
-                                    color: 'transparent',
-                                }}
+                                sx={{ color: 'text.primary' }}
                             >
                                 Panel de Configuración
                             </Typography>
@@ -177,7 +159,7 @@ const SettingsHero = ({
                             variant="body1"
                             sx={{
                                 maxWidth: 520,
-                                color: alpha(theme.palette.common.white, 0.8),
+                                color: 'text.secondary',
                             }}
                         >
                             Gestiona de forma elegante cada parámetro del sistema.
@@ -198,10 +180,6 @@ const SettingsHero = ({
                             disabled={!hasUnsavedChanges || isSaving}
                             sx={{
                                 minWidth: 160,
-                                boxShadow: `0 12px 30px ${alpha(
-                                    theme.palette.primary.dark,
-                                    0.35,
-                                )}`,
                             }}
                         >
                             {isSaving ? 'Guardando...' : 'Guardar cambios'}
@@ -212,17 +190,9 @@ const SettingsHero = ({
                                 onClick={handleMoreMenuOpen}
                                 aria-label="Más opciones"
                                 sx={{
-                                    backgroundColor: alpha(
-                                        theme.palette.common.white,
-                                        0.16,
-                                    ),
-                                    color: theme.palette.common.white,
-                                    '&:hover': {
-                                        backgroundColor: alpha(
-                                            theme.palette.common.white,
-                                            0.25,
-                                        ),
-                                    },
+                                    backgroundColor: alpha(theme.palette.text.primary, 0.06),
+                                    color: 'text.primary',
+                                    '&:hover': { backgroundColor: alpha(theme.palette.text.primary, 0.1) },
                                 }}
                             >
                                 <MoreVertIcon />
@@ -249,12 +219,9 @@ const SettingsHero = ({
                             sx={{
                                 borderRadius: 2,
                                 fontWeight: 600,
-                                backdropFilter: 'blur(6px)',
-                                backgroundColor: alpha(
-                                    theme.palette.common.black,
-                                    0.2,
-                                ),
-                                color: theme.palette.common.white,
+                                backgroundColor: alpha(theme.palette.warning.main, 0.12),
+                                border: `1px solid ${alpha(theme.palette.warning.main, 0.3)}`,
+                                color: theme.palette.warning.main,
                             }}
                         />
                         <Chip
@@ -262,11 +229,8 @@ const SettingsHero = ({
                             variant="outlined"
                             sx={{
                                 borderRadius: 2,
-                                borderColor: alpha(
-                                    theme.palette.common.white,
-                                    0.4,
-                                ),
-                                color: theme.palette.common.white,
+                                borderColor: alpha(theme.palette.divider, 0.3),
+                                color: 'text.secondary',
                                 fontWeight: 600,
                             }}
                         />
@@ -282,28 +246,11 @@ const SettingsHero = ({
                                 borderRadius: 2,
                                 fontWeight: 600,
                                 cursor: 'pointer',
-                                color: maintenanceEnabled
-                                    ? theme.palette.error.light
-                                    : theme.palette.success.light,
-                                backgroundColor: alpha(
-                                    maintenanceEnabled
-                                        ? theme.palette.error.main
-                                        : theme.palette.success.main,
-                                    0.18,
-                                ),
-                                border: `1px solid ${alpha(
-                                    maintenanceEnabled
-                                        ? theme.palette.error.light
-                                        : theme.palette.success.light,
-                                    0.6,
-                                )}`,
+                                color: maintenanceEnabled ? theme.palette.error.main : theme.palette.success.main,
+                                backgroundColor: alpha(maintenanceEnabled ? theme.palette.error.main : theme.palette.success.main, 0.12),
+                                border: `1px solid ${alpha(maintenanceEnabled ? theme.palette.error.main : theme.palette.success.main, 0.3)}`,
                                 '&:hover': {
-                                    backgroundColor: alpha(
-                                        maintenanceEnabled
-                                            ? theme.palette.error.main
-                                            : theme.palette.success.main,
-                                        0.28,
-                                    ),
+                                    backgroundColor: alpha(maintenanceEnabled ? theme.palette.error.main : theme.palette.success.main, 0.18),
                                 },
                             }}
                         />
@@ -318,14 +265,14 @@ const SettingsHero = ({
                         <Box>
                             <Typography
                                 variant="caption"
-                                sx={{ color: alpha(theme.palette.common.white, 0.6) }}
+                                sx={{ color: 'text.secondary' }}
                             >
                                 Último guardado
                             </Typography>
                             <Typography
                                 variant="body2"
                                 fontWeight={600}
-                                sx={{ color: theme.palette.common.white }}
+                                sx={{ color: 'text.primary' }}
                             >
                                 {formatTimestamp(lastSavedAt)}
                             </Typography>
@@ -333,7 +280,7 @@ const SettingsHero = ({
                         <Box>
                             <Typography
                                 variant="caption"
-                                sx={{ color: alpha(theme.palette.common.white, 0.6) }}
+                                sx={{ color: 'text.secondary' }}
                             >
                                 Estado
                             </Typography>

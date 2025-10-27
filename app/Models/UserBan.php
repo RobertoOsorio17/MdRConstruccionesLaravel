@@ -19,6 +19,8 @@ class UserBan extends Model
         'user_id',
         'banned_by',
         'reason',
+        'admin_notes',
+        'ip_ban',
         'banned_at',
         'expires_at',
         'is_active',
@@ -28,6 +30,7 @@ class UserBan extends Model
         'banned_at' => 'datetime',
         'expires_at' => 'datetime',
         'is_active' => 'boolean',
+        'ip_ban' => 'boolean',
     ];
 
     /**

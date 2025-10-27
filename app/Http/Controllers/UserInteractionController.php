@@ -9,12 +9,20 @@ use Illuminate\Http\JsonResponse;
 
 /**
  * Centralizes lightweight engagement endpoints so users can like, bookmark, and track interactions with content.
- * Keeps counters synchronized and responses consistent for front-end widgets that reflect social activity.
+ *
+ * Features:
+ * - Toggle like and bookmark interactions with consistent JSON replies.
+ * - Small status endpoint for frontend hydration.
+ * - Keeps counters synchronized using model relationships.
  */
 class UserInteractionController extends Controller
 {
     /**
      * Toggle a like on the provided post.
+     *
+     * @param Request $request The current HTTP request instance.
+     * @param Post $post The post being liked or unliked.
+     * @return JsonResponse JSON response with like status and counts.
      */
     public function toggleLike(Request $request, Post $post): JsonResponse
     {
@@ -38,6 +46,10 @@ class UserInteractionController extends Controller
     
     /**
      * Toggle a bookmark on the provided post.
+     *
+     * @param Request $request The current HTTP request instance.
+     * @param Post $post The post being bookmarked or unbookmarked.
+     * @return JsonResponse JSON response with bookmark status and counts.
      */
     public function toggleBookmark(Request $request, Post $post): JsonResponse
     {
@@ -61,6 +73,10 @@ class UserInteractionController extends Controller
     
     /**
      * Retrieve the current interaction status for the authenticated user.
+     *
+     * @param Request $request The current HTTP request instance.
+     * @param Post $post The post to check status against.
+     * @return JsonResponse JSON response with status and counts.
      */
     public function getInteractionStatus(Request $request, Post $post): JsonResponse
     {

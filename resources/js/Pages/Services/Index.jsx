@@ -39,6 +39,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import MainLayout from '@/Layouts/MainLayout';
 import GlassmorphismHero from '@/Components/Services/GlassmorphismHero';
 import GlassmorphismServiceCard from '@/Components/Services/GlassmorphismServiceCard';
+import AnimatedSection from '@/Components/AnimatedSection';
 import { useAppTheme } from '@/theme/ThemeProvider';
 import SkeletonGrid from '@/Components/UI/SkeletonGrid';
 import { usePersistentFilters } from '@/hooks/usePersistentFilters';

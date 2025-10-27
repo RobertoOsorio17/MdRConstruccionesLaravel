@@ -20,6 +20,12 @@ import {
     Paper,
     Fade,
     Zoom,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogActions,
+    Tabs,
+    Tab,
 } from '@mui/material';
 import {
     Visibility,
@@ -35,18 +41,33 @@ import {
     CheckCircle as CheckCircleIcon,
     RocketLaunch as RocketIcon,
     HelpOutline as SupportIcon,
+    VpnKey,
+    Key,
+    Warning,
 } from '@mui/icons-material';
 import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion';
-import { Head, Link, useForm } from '@inertiajs/react';
+import { Head, Link, useForm, router } from '@inertiajs/react';
 import ApplicationLogo from '@/Components/ApplicationLogo';
 import ParticleBackground from '@/Components/Auth/ParticleBackground';
 import AnimatedGradient from '@/Components/Auth/AnimatedGradient';
+import axios from 'axios';
 
 export default function LoginNew({ status, canResetPassword }) {
     const theme = useTheme();
     const [showPassword, setShowPassword] = useState(false);
     const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
     const [isEmailValid, setIsEmailValid] = useState(false);
+
+    // 2FA Modal States
+    const [show2FAModal, setShow2FAModal] = useState(false);
+    const [twoFactorTab, setTwoFactorTab] = useState(0);
+    const [twoFactorCode, setTwoFactorCode] = useState('');
+    const [recoveryCode, setRecoveryCode] = useState('');
+    const [twoFactorError, setTwoFactorError] = useState('');
+    const [twoFactorProcessing, setTwoFactorProcessing] = useState(false);
+    const [twoFactorSuccess, setTwoFactorSuccess] = useState(false);
+    const [attempts, setAttempts] = useState(0);
+    const [rememberDevice, setRememberDevice] = useState(false);
 
     const { data, setData, post, processing, errors, reset } = useForm({
         email: '',
@@ -77,7 +98,116 @@ export default function LoginNew({ status, canResetPassword }) {
         e.preventDefault();
         post(route('login'), {
             onFinish: () => reset('password'),
+            onError: (errors) => {
+                // Check if response indicates 2FA is required
+                if (errors.requires2FA) {
+                    setShow2FAModal(true);
+                    setTwoFactorError('');
+                    setTwoFactorCode('');
+                    setRecoveryCode('');
+                    setAttempts(0);
+                }
+            },
+            preserveScroll: true,
+            preserveState: true,
         });
+    };
+
+    const submit2FA = async (e) => {
+        e.preventDefault();
+
+        if (attempts >= 5) {
+            setTwoFactorError('⚠️ Has alcanzado el límite de intentos. Espera un minuto antes de intentar nuevamente.');
+            return;
+        }
+
+        // Validate input
+        if (twoFactorTab === 0) {
+            if (!/^\d{6}$/.test(twoFactorCode)) {
+                setTwoFactorError('⚠️ Por favor ingresa un código válido de 6 dígitos');
+                return;
+            }
+        } else {
+            if (!recoveryCode || recoveryCode.trim().length === 0) {
+                setTwoFactorError('⚠️ Por favor ingresa un código de recuperación');
+                return;
+            }
+        }
+
+        setTwoFactorProcessing(true);
+        setTwoFactorError('');
+
+        try {
+            const response = await axios.post(route('two-factor.verify'), {
+                code: twoFactorTab === 0 ? twoFactorCode : '',
+                recovery_code: twoFactorTab === 1 ? recoveryCode : '',
+                remember_device: rememberDevice
+            });
+
+            // Success
+            setAttempts(0);
+            setTwoFactorSuccess(true);
+
+            // Check for low recovery codes warning
+            if (response.data.low_recovery_codes) {
+                const remainingCodes = response.data.remaining_codes;
+                setTimeout(() => {
+                    alert(`⚠️ ADVERTENCIA DE SEGURIDAD\n\nSolo te quedan ${remainingCodes} código(s) de recuperación.\n\nTe recomendamos regenerar tus códigos de recuperación inmediatamente desde tu perfil en la sección de Seguridad.`);
+                }, 1600);
+            }
+
+            setTimeout(() => {
+                if (response.data.redirect) {
+                    window.location.href = response.data.redirect;
+                } else {
+                    router.visit(route('dashboard'));
+                }
+            }, response.data.low_recovery_codes ? 2500 : 1500);
+        } catch (error) {
+            setTwoFactorProcessing(false);
+
+            console.error('2FA Verification Error:', error.response?.data);
+
+            if (error.response?.data?.attempts) {
+                setAttempts(error.response.data.attempts);
+            }
+
+            if (error.response?.data?.session_expired) {
+                setShow2FAModal(false);
+                setTwoFactorCode('');
+                setRecoveryCode('');
+                setAttempts(0);
+                window.location.reload();
+            } else if (error.response?.data?.errors) {
+                const errors = error.response.data.errors;
+                let errorMsg = '';
+
+                if (errors.code) {
+                    const codeError = errors.code;
+                    if (codeError.includes('invalid')) {
+                        errorMsg = '❌ El código ingresado es incorrecto. Por favor verifica e intenta nuevamente.';
+                    } else if (codeError.includes('Too many attempts')) {
+                        errorMsg = '⚠️ Demasiados intentos fallidos. Por favor espera 1 minuto antes de intentar nuevamente.';
+                    } else {
+                        errorMsg = codeError;
+                    }
+                } else {
+                    errorMsg = '❌ Código inválido. Por favor intenta de nuevo.';
+                }
+
+                setTwoFactorError(errorMsg);
+            } else if (error.response?.status === 419) {
+                setTwoFactorError('⚠️ Token de seguridad expirado. Recargando página...');
+                setTimeout(() => {
+                    window.location.reload();
+                }, 2000);
+            } else {
+                setTwoFactorError('❌ Ocurrió un error inesperado. Por favor intenta de nuevo.');
+            }
+
+            setTwoFactorCode('');
+            setRecoveryCode('');
+        }
     };
 
     return (
@@ -699,8 +829,171 @@ export default function LoginNew({ status, canResetPassword }) {
                     </Box>
                 </Container>
             </Box>
+
+            {/* 2FA Modal */}
+            <Dialog
+                open={show2FAModal}
+                onClose={() => !twoFactorProcessing && setShow2FAModal(false)}
+                maxWidth="sm"
+                fullWidth
+                PaperProps={{
+                    sx: {
+                        borderRadius: 3,
+                        background: theme.palette.mode === 'dark'
+                            ? 'linear-gradient(135deg, rgba(30, 30, 30, 0.98) 0%, rgba(50, 50, 50, 0.98) 100%)'
+                            : 'linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(245, 245, 255, 0.98) 100%)',
+                        backdropFilter: 'blur(20px)',
+                        boxShadow: '0 24px 48px rgba(0, 0, 0, 0.3)',
+                    }
+                }}
+            >
+                <DialogTitle sx={{
+                    textAlign: 'center',
+                    pb: 1,
+                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    color: 'white',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 1
+                }}>
+                    <SecurityIcon />
+                    <Typography variant="h6" component="span" fontWeight={700}>
+                        Autenticación de Dos Factores
+                    </Typography>
+                </DialogTitle>
+
+                <DialogContent sx={{ pt: 3 }}>
+                    {twoFactorSuccess ? (
+                        <Box sx={{ textAlign: 'center', py: 4 }}>
+                            <CheckCircleIcon sx={{ fontSize: 80, color: 'success.main', mb: 2 }} />
+                            <Typography variant="h6" gutterBottom>
+                                ✅ Verificación Exitosa
+                            </Typography>
+                            <Typography color="text.secondary">
+                                Redirigiendo...
+                            </Typography>
+                        </Box>
+                    ) : (
+                        <>
+                            <Tabs
+                                value={twoFactorTab}
+                                onChange={(e, newValue) => {
+                                    setTwoFactorTab(newValue);
+                                    setTwoFactorError('');
+                                    setTwoFactorCode('');
+                                    setRecoveryCode('');
+                                }}
+                                variant="fullWidth"
+                                sx={{ mb: 3 }}
+                            >
+                                <Tab
+                                    icon={<VpnKey />}
+                                    label="Código de Autenticación"
+                                    iconPosition="start"
+                                />
+                                <Tab
+                                    icon={<Key />}
+                                    label="Código de Recuperación"
+                                    iconPosition="start"
+                                />
+                            </Tabs>
+
+                            {twoFactorError && (
+                                <Alert severity="error" sx={{ mb: 2 }}>
+                                    {twoFactorError}
+                                </Alert>
+                            )}
+
+                            {attempts > 0 && (
+                                <Alert severity="warning" sx={{ mb: 2 }}>
+                                    <Warning sx={{ mr: 1 }} />
+                                    Intentos fallidos: {attempts}/5
+                                </Alert>
+                            )}
+
+                            <Box component="form" onSubmit={submit2FA}>
+                                {twoFactorTab === 0 ? (
+                                    <TextField
+                                        fullWidth
+                                        label="Código de 6 dígitos"
+                                        value={twoFactorCode}
+                                        onChange={(e) => setTwoFactorCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                                        placeholder="000000"
+                                        autoFocus
+                                        disabled={twoFactorProcessing}
+                                        inputProps={{
+                                            maxLength: 6,
+                                            pattern: '[0-9]*',
+                                            inputMode: 'numeric',
+                                            style: {
+                                                textAlign: 'center',
+                                                fontSize: '1.5rem',
+                                                letterSpacing: '0.5rem',
+                                                fontWeight: 700
+                                            }
+                                        }}
+                                        sx={{ mb: 2 }}
+                                    />
+                                ) : (
+                                    <TextField
+                                        fullWidth
+                                        label="Código de Recuperación"
+                                        value={recoveryCode}
+                                        onChange={(e) => setRecoveryCode(e.target.value)}
+                                        placeholder="xxxx-xxxx-xx"
+                                        autoFocus
+                                        disabled={twoFactorProcessing}
+                                        sx={{ mb: 2 }}
+                                    />
+                                )}
+
+                                <FormControlLabel
+                                    control={
+                                        <Checkbox
+                                            checked={rememberDevice}
+                                            onChange={(e) => setRememberDevice(e.target.checked)}
+                                            disabled={twoFactorProcessing}
+                                        />
+                                    }
+                                    label="Confiar en este dispositivo por 30 días"
+                                    sx={{ mb: 2 }}
+                                />
+                            </Box>
+                        </>
+                    )}
+                </DialogContent>
+
+                {!twoFactorSuccess && (
+                    <DialogActions sx={{ px: 3, pb: 3 }}>
+                        <Button
+                            onClick={() => setShow2FAModal(false)}
+                            disabled={twoFactorProcessing}
+                        >
+                            Cancelar
+                        </Button>
+                        {attempts >= 5 && (
+                            <Alert severity="warning" sx={{ mr: 'auto' }}>
+                                Demasiados intentos. Espera 60 segundos antes de volver a intentarlo.
+                            </Alert>
+                        )}
+                        <Button
+                            onClick={submit2FA}
+                            variant="contained"
+                            disabled={twoFactorProcessing || attempts >= 5}
+                            startIcon={twoFactorProcessing ? <CircularProgress size={20} /> : <SecurityIcon />}
+                            sx={{
+                                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                                '&:hover': {
+                                    background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
+                                }
+                            }}
+                        >
+                            {twoFactorProcessing ? 'Verificando...' : 'Verificar'}
+                        </Button>
+                    </DialogActions>
+                )}
+            </Dialog>
         </>
     );
 }
-
-

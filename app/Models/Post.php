@@ -28,7 +28,7 @@ class Post extends Model
         'published_at',
         'seo_title',
         'seo_description',
-        'user_id', // Allow setting user_id (will be validated by policies)
+        // REMOVED: 'user_id' - Use setAuthor() method instead for security
         'status',
         'featured',
     ];
@@ -37,6 +37,7 @@ class Post extends Model
     protected $guarded = [
         'id',
         'views_count', // âœ… CRITICAL: Prevent manipulation of view counts
+        'user_id', // ✅ SECURITY FIX: Prevent post ownership manipulation
         'created_at',
         'updated_at',
     ];
@@ -209,6 +210,24 @@ class Post extends Model
     {
         return $query->where('status', 'published')
                     ->where('published_at', '<=', now());
+    }
+
+    /**
+     * Safely set the post author (only by admins/editors)
+     *
+     * @param User $author The user to set as author
+     * @param User $admin The admin/editor performing the action
+     * @return bool
+     * @throws \Exception
+     */
+    public function setAuthor(User $author, User $admin): bool
+    {
+        if (!$admin->hasRole('admin') && !$admin->hasRole('editor')) {
+            throw new \Exception('Only administrators and editors can set post authors.');
+        }
+
+        $this->user_id = $author->id;
+        return $this->save();
     }
 
     /**
@@ -413,18 +432,6 @@ class Post extends Model
         }
 
         return Str::limit(strip_tags($this->content), 150);
-    }
-
-    /**
-     * Administrative method to set post author
-     */
-    public function setAuthor(User $author, User $admin): bool
-    {
-        if (!$admin->hasRole('admin') && !$admin->hasRole('editor')) {
-            throw new \Exception('Only administrators and editors can set post authors.');
-        }
-
-        return $this->update(['user_id' => $author->id]);
     }
 
     /**

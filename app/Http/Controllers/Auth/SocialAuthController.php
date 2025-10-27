@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers\Auth;
 
+use App\Http\Controllers\Auth\Concerns\HandlesTwoFactorLogin;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Laravel\Socialite\Facades\Socialite;
@@ -18,6 +20,7 @@ use Exception;
  */
 class SocialAuthController extends Controller
 {
+    use HandlesTwoFactorLogin;
     /**
      * Supported OAuth providers
      */
@@ -35,7 +38,12 @@ class SocialAuthController extends Controller
         }
 
         try {
-            return Socialite::driver($provider)->redirect();
+            $state = Str::random(40);
+            session()->put("oauth_state:{$provider}", $state);
+
+            return Socialite::driver($provider)
+                ->with(['state' => $state])
+                ->redirect();
         } catch (Exception $e) {
             // Flash error to session for Inertia to pick up
             session()->flash('error', 'Error al conectar con ' . ucfirst($provider) . '. Por favor, intenta de nuevo.');
@@ -46,10 +54,23 @@ class SocialAuthController extends Controller
     /**
      * Obtain the user information from OAuth provider.
      */
-    public function callback(string $provider)
+    public function callback(Request $request, string $provider)
     {
         if (!in_array($provider, self::SUPPORTED_PROVIDERS)) {
             session()->flash('error', 'Proveedor de autenticación no soportado.');
+            return redirect()->route('login');
+        }
+
+        $expectedState = session()->pull("oauth_state:{$provider}");
+
+        if (empty($expectedState) || !hash_equals($expectedState, (string) $request->input('state'))) {
+            Log::warning('OAuth state mismatch detected', [
+                'provider' => $provider,
+                'ip' => $request->ip(),
+                'user_agent' => $request->userAgent(),
+            ]);
+
+            session()->flash('error', 'No pudimos verificar la sesión de autenticación. Por favor, intenta nuevamente.');
             return redirect()->route('login');
         }
 
@@ -60,26 +81,40 @@ class SocialAuthController extends Controller
             return redirect()->route('login');
         }
 
-        // Find or create user
-        $user = $this->findOrCreateUser($socialUser, $provider);
-
-        // Log the user in
-        Auth::login($user, true);
-
-        // Redirect based on role (use hasRole method from Spatie)
-        if ($user->hasRole('admin')) {
-            session()->flash('success', '¡Bienvenido de vuelta, ' . $user->name . '!');
-            return redirect()->route('admin.dashboard');
+        if (empty($socialUser->getEmail())) {
+            session()->flash('error', 'El proveedor no devolvió un correo electrónico válido. No se pudo completar el acceso.');
+            return redirect()->route('login');
         }
 
-        session()->flash('success', '¡Bienvenido de vuelta, ' . $user->name . '!');
-        return redirect()->route('dashboard');
+        $emailVerified = $this->providerMarksEmailVerified($socialUser);
+
+        $user = $this->findOrCreateUser($socialUser, $provider, $emailVerified);
+
+        $intended = $user->hasRole('admin') || $user->hasRole('editor')
+            ? route('admin.dashboard', absolute: false)
+            : route('dashboard', absolute: false);
+
+        $response = $this->completeInteractiveLogin(
+            $request,
+            $user,
+            remember: false,
+            intended: $intended,
+            twoFactorMode: 'redirect'
+        );
+
+        if (Auth::check() && Auth::id() === $user->id) {
+            session()->flash('success', '¡Bienvenido de vuelta, ' . $user->name . '!');
+        } else {
+            session()->flash('info', 'Completa la verificación de dos factores para finalizar el acceso.');
+        }
+
+        return $response;
     }
 
     /**
      * Find or create a user based on OAuth provider data.
      */
-    private function findOrCreateUser($socialUser, string $provider): User
+    private function findOrCreateUser($socialUser, string $provider, bool $emailVerified): User
     {
         // Check if user already exists with this provider
         $user = User::where('provider', $provider)
@@ -87,11 +122,15 @@ class SocialAuthController extends Controller
             ->first();
 
         if ($user) {
-            // Update tokens
+            // Tokens will be automatically encrypted by the model mutators
             $user->update([
                 'provider_token' => $socialUser->token,
-                'provider_refresh_token' => $socialUser->refreshToken ?? null,
+                'provider_refresh_token' => $socialUser->refreshToken,
             ]);
+
+            if (!$user->hasVerifiedEmail() && $emailVerified) {
+                $user->forceFill(['email_verified_at' => now()])->save();
+            }
 
             return $user;
         }
@@ -101,28 +140,45 @@ class SocialAuthController extends Controller
 
         if ($existingUser) {
             // Link OAuth account to existing user
+            // Tokens will be automatically encrypted by the model mutators
             $existingUser->update([
                 'provider' => $provider,
                 'provider_id' => $socialUser->getId(),
                 'provider_token' => $socialUser->token,
-                'provider_refresh_token' => $socialUser->refreshToken ?? null,
+                'provider_refresh_token' => $socialUser->refreshToken,
             ]);
+
+            if (!$existingUser->hasVerifiedEmail() && $emailVerified) {
+                $existingUser->forceFill(['email_verified_at' => now()])->save();
+            }
 
             return $existingUser;
         }
 
-        // Create new user
+        // Tokens will be automatically encrypted by the model mutators
         $user = User::create([
             'name' => $socialUser->getName() ?? $socialUser->getNickname() ?? 'Usuario',
             'email' => $socialUser->getEmail(),
-            'email_verified_at' => now(), // OAuth users are pre-verified
+            'email_verified_at' => $emailVerified ? now() : null,
             'provider' => $provider,
             'provider_id' => $socialUser->getId(),
             'provider_token' => $socialUser->token,
-            'provider_refresh_token' => $socialUser->refreshToken ?? null,
-            'password' => null, // OAuth users don't need password
+            'provider_refresh_token' => $socialUser->refreshToken,
+            'password' => null,
             'avatar' => $socialUser->getAvatar() ?? null,
         ]);
+
+        if (!$emailVerified) {
+            try {
+                $user->sendEmailVerificationNotification();
+            } catch (Exception $e) {
+                Log::warning('Failed to queue email verification after social signup', [
+                    'user_id' => $user->id,
+                    'provider' => $provider,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
 
         // Assign default role using Spatie method (role column doesn't exist)
         $user->assignRole('user');
@@ -182,5 +238,37 @@ class SocialAuthController extends Controller
             'hasPassword' => !empty($user->password),
         ]);
     }
-}
 
+    /**
+     * Determine if the provider explicitly marks the email as verified.
+     */
+    private function providerMarksEmailVerified($socialUser): bool
+    {
+        $raw = method_exists($socialUser, 'getRaw') ? $socialUser->getRaw() : [];
+        $boolishKeys = [
+            'email_verified', 'verified_email', 'verified', 'email_verified_at', 'email_verified_at_seconds'
+        ];
+
+        foreach ($boolishKeys as $key) {
+            $value = Arr::get($raw, $key);
+
+            if (is_bool($value) && $value === true) {
+                return true;
+            }
+
+            if (is_string($value) && in_array(strtolower($value), ['true', '1', 'yes'], true)) {
+                return true;
+            }
+
+            if (is_numeric($value) && (int) $value === 1) {
+                return true;
+            }
+
+            if ($value instanceof \DateTimeInterface) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+}

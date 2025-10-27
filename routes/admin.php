@@ -34,6 +34,22 @@ Route::get('/login', [App\Http\Controllers\Admin\Auth\AdminAuthController::class
     ->middleware('guest')
     ->name('login');
 
+// Inactivity Detection Routes (require auth but less strict middleware)
+Route::middleware(['auth', 'auth.enhanced', 'role:admin,editor,moderator', 'throttle:admin-heartbeat'])->group(function () {
+    Route::post('/heartbeat', [App\Http\Controllers\Admin\InactivityController::class, 'heartbeat'])
+        ->name('heartbeat');
+    Route::post('/logout-inactivity', [App\Http\Controllers\Admin\InactivityController::class, 'logoutInactivity'])
+        ->name('logout-inactivity');
+    Route::get('/inactivity-config', [App\Http\Controllers\Admin\InactivityController::class, 'getConfig'])
+        ->name('inactivity-config');
+});
+
+// Update inactivity config (admin only)
+Route::middleware(['auth', 'auth.enhanced', 'role:admin'])->group(function () {
+    Route::post('/inactivity-config', [App\Http\Controllers\Admin\InactivityController::class, 'updateConfig'])
+        ->name('inactivity-config.update');
+});
+
 // All admin routes require authentication and admin/editor role with enhanced security
 Route::middleware(['auth', 'auth.enhanced', 'role:admin,editor', 'admin.timeout', 'admin.audit'])->group(function () {
 
@@ -115,6 +131,17 @@ Route::middleware(['auth', 'auth.enhanced', 'role:admin,editor', 'admin.timeout'
     // User Verification Management
     Route::post('/users/{user}/verify', [App\Http\Controllers\Admin\UserManagementController::class, 'verifyUser'])->name('users.verify');
     Route::post('/users/{user}/unverify', [App\Http\Controllers\Admin\UserManagementController::class, 'unverifyUser'])->name('users.unverify');
+
+    // User Impersonation
+    Route::get('/impersonation/sessions', [App\Http\Controllers\Admin\UserImpersonationController::class, 'index'])
+        ->name('impersonation.sessions.index');
+    Route::get('/impersonation/sessions/api', [App\Http\Controllers\Admin\UserImpersonationController::class, 'apiIndex'])
+        ->name('impersonation.sessions.api');
+    Route::delete('/impersonation/sessions/{sessionId}', [App\Http\Controllers\Admin\UserImpersonationController::class, 'forceTerminate'])
+        ->name('impersonation.sessions.terminate');
+    Route::post('/users/{user}/impersonate', [App\Http\Controllers\Admin\UserImpersonationController::class, 'store'])
+        ->middleware('throttle:impersonation')
+        ->name('users.impersonate');
 
     // Service Management
     Route::resource('services', App\Http\Controllers\Admin\ServiceManagementController::class)
@@ -361,6 +388,7 @@ Route::middleware(['auth', 'auth.enhanced', 'role:admin', 'admin.security', 'adm
     Route::get('/system/health', [App\Http\Controllers\Admin\AdminController::class, 'getSystemHealth'])
         ->name('system.health');
     Route::post('/system/cache-clear', [App\Http\Controllers\Admin\AdminController::class, 'clearCaches'])
+        ->middleware('throttle:5,60') // Security fix: Rate limit to 5 requests per hour
         ->name('system.cache-clear');
 
     // Analytics & Reporting

@@ -31,6 +31,7 @@ class AdminAuditLog extends Model
         'url',
         'severity',
         'description',
+        'metadata',
     ];
 
     /**
@@ -42,6 +43,7 @@ class AdminAuditLog extends Model
         'old_values' => 'array',
         'new_values' => 'array',
         'request_data' => 'array',
+        'metadata' => 'array',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];

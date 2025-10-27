@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Close, ChevronLeft, ChevronRight, ZoomIn } from '@mui/icons-material';
 import designSystem from '@/theme/designSystem';
 import { useIntersectionReveal } from '@/Hooks/useIntersectionReveal';
-import { trackSectionView, trackGallery } from '@/Utils/trackEvent';
+import { trackSectionView, trackGallery } from '@/Utils/analytics';
 
 /**
  * VisualGallery Component

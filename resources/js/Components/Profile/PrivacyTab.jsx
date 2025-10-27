@@ -91,7 +91,9 @@ const PrivacyTab = ({ settings, user }) => {
 
             <form onSubmit={handleSubmit}>
                 {/* Profile Visibility */}
-                <Paper elevation={0} sx={{ p: 3, mb: 3, border: '1px solid', borderColor: 'divider' }}>
+                <Paper variant="outlined" sx={{ p: 3, mb: 3 }}>
+                    <Typography variant="overline" sx={{ color: 'text.secondary' }}>Visibilidad del Perfil</Typography>
+
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
                         <VisibilityIcon color="primary" />
                         <Box>
@@ -127,7 +129,9 @@ const PrivacyTab = ({ settings, user }) => {
                 </Paper>
 
                 {/* Information Visibility */}
-                <Paper elevation={0} sx={{ p: 3, mb: 3, border: '1px solid', borderColor: 'divider' }}>
+                <Paper variant="outlined" sx={{ p: 3, mb: 3 }}>
+                    <Typography variant="overline" sx={{ color: 'text.secondary' }}>Información Visible</Typography>
+
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
                         <LockIcon color="primary" />
                         <Box>
@@ -199,7 +203,9 @@ const PrivacyTab = ({ settings, user }) => {
                 </Paper>
 
                 {/* Interactions */}
-                <Paper elevation={0} sx={{ p: 3, mb: 3, border: '1px solid', borderColor: 'divider' }}>
+                <Paper variant="outlined" sx={{ p: 3, mb: 3 }}>
+                    <Typography variant="overline" sx={{ color: 'text.secondary' }}>Interacciones</Typography>
+
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
                         <PeopleIcon color="primary" />
                         <Box>
@@ -253,7 +259,9 @@ const PrivacyTab = ({ settings, user }) => {
                 </Paper>
 
                 {/* Search Engine */}
-                <Paper elevation={0} sx={{ p: 3, mb: 3, border: '1px solid', borderColor: 'divider' }}>
+                <Paper variant="outlined" sx={{ p: 3, mb: 3 }}>
+                    <Typography variant="overline" sx={{ color: 'text.secondary' }}>Motores de Búsqueda</Typography>
+
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
                         <PublicIcon color="primary" />
                         <Box>

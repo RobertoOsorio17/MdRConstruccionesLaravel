@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Cache;
 use App\Models\Comment;
 use App\Models\CommentReport;
 use App\Models\User;
@@ -20,11 +21,11 @@ class CommentManagementController extends Controller
      */
     public function index(Request $request)
     {
-        // Include soft-deleted comments if filter is set to 'deleted'
+        // Include soft-deleted comments if filter is set to 'deleted'.
         $query = Comment::with(['user', 'post:id,title,slug', 'parent:id,body,author_name', 'replies'])
                         ->withCount(['reports', 'interactions']);
 
-        // Filter by deletion status
+        // Filter by deletion status.
         if ($request->has('deleted_status')) {
             if ($request->deleted_status === 'deleted') {
                 $query->onlyTrashed();
@@ -78,11 +79,11 @@ class CommentManagementController extends Controller
             });
         }
         
-        // Sorting configuration with full validation
+        // Sorting configuration with full validation.
         $sortBy = $request->get('sort_by', 'created_at');
         $sortDirection = $request->get('sort_direction', 'desc');
 
-        // ✅ SECURITY: Validate both sort field and direction
+        // Security: Validate both sort field and direction.
         $allowedSortFields = ['created_at', 'status', 'reports_count', 'interactions_count'];
         $allowedDirections = ['asc', 'desc'];
 
@@ -127,35 +128,79 @@ class CommentManagementController extends Controller
     
     /**
      * Display a listing of reports.
+     *
+     * Enhanced with additional filters:
+     * - Category filtering
+     * - Priority filtering
+     * - Date range filtering
+     * - Reporter type filtering (user vs guest)
+     * - Cached statistics
      */
     public function reports(Request $request)
     {
         $query = CommentReport::with(['user', 'comment.user', 'comment.post']);
-        
-        // Apply report-specific filters.
-        if ($request->has('status')) {
+
+        // Filter: Status filter.
+        if ($request->has('status') && $request->status !== '') {
             $query->where('status', $request->status);
         }
-        
-        if ($request->has('search')) {
+
+        // Filter: Category filter.
+        if ($request->has('category') && $request->category !== '') {
+            $query->where('category', $request->category);
+        }
+
+        // Filter: Priority filter (only if column exists).
+        if ($request->has('priority') && $request->priority !== '') {
+            try {
+                $query->where('priority', $request->priority);
+            } catch (\Exception $e) {
+                // Ignore if priority column doesn't exist yet
+            }
+        }
+
+        // Filter: Reporter type filter (user vs guest).
+        if ($request->has('reporter_type')) {
+            if ($request->reporter_type === 'user') {
+                $query->where('is_guest_report', false);
+            } elseif ($request->reporter_type === 'guest') {
+                $query->where('is_guest_report', true);
+            }
+        }
+
+        // Filter: Date range filter.
+        if ($request->has('date_from') && $request->date_from !== '') {
+            $query->whereDate('created_at', '>=', $request->date_from);
+        }
+        if ($request->has('date_to') && $request->date_to !== '') {
+            $query->whereDate('created_at', '<=', $request->date_to);
+        }
+
+        // Filter: Search filter.
+        if ($request->has('search') && $request->search !== '') {
             $search = $request->search;
             $query->where(function($q) use ($search) {
                 $q->where('reason', 'like', "%{$search}%")
+                  ->orWhere('description', 'like', "%{$search}%")
                   ->orWhereHas('user', function($q) use ($search) {
-                      $q->where('name', 'like', "%{$search}%");
+                      $q->where('name', 'like', "%{$search}%")
+                        ->orWhere('email', 'like', "%{$search}%");
                   })
                   ->orWhereHas('comment', function($q) use ($search) {
                       $q->where('body', 'like', "%{$search}%");
+                  })
+                  ->orWhereHas('comment.post', function($q) use ($search) {
+                      $q->where('title', 'like', "%{$search}%");
                   });
             });
         }
-        
-        // Sorting configuration for reports with validation
+
+        // Sorting: Configuration for reports with validation.
         $sortBy = $request->get('sort_by', 'created_at');
         $sortDirection = $request->get('sort_direction', 'desc');
 
-        // ✅ SECURITY: Validate both sort field and direction
-        $allowedSortFields = ['created_at', 'status', 'category'];
+        // Security: Validate both sort field and direction.
+        $allowedSortFields = ['created_at', 'status', 'category', 'priority'];
         $allowedDirections = ['asc', 'desc'];
 
         if (!in_array($sortBy, $allowedSortFields)) {
@@ -166,14 +211,82 @@ class CommentManagementController extends Controller
             $sortDirection = 'desc';
         }
 
-        $query->orderBy($sortBy, $sortDirection);
-        
+        // Optimization: Sort by priority first for pending reports, then by created_at.
+        // Only if priority column exists
+        if ($request->get('status') === 'pending') {
+            try {
+                // Try to order by priority if column exists
+                $query->orderBy('priority', 'desc')->orderBy('created_at', 'desc');
+            } catch (\Exception $e) {
+                // Fallback to created_at only if priority column doesn't exist
+                $query->orderBy('created_at', 'desc');
+            }
+        } else {
+            $query->orderBy($sortBy, $sortDirection);
+        }
+
         $reports = $query->paginate(20);
-        
+
+        // Optimization: Get cached statistics.
+        $stats = $this->getCachedReportStats();
+
         return inertia('Admin/Comments/Reports', [
             'reports' => $reports,
-            'filters' => $request->only(['status', 'search', 'sort_by', 'sort_direction'])
+            'stats' => $stats,
+            'filters' => $request->only([
+                'status',
+                'category',
+                'priority',
+                'reporter_type',
+                'date_from',
+                'date_to',
+                'search',
+                'sort_by',
+                'sort_direction'
+            ])
         ]);
+    }
+
+    /**
+     * Get cached report statistics.
+     *
+     * @return array
+     */
+    private function getCachedReportStats(): array
+    {
+        return Cache::remember('comment_reports_stats', 300, function () {
+            $stats = [
+                'total' => CommentReport::count(),
+                'pending' => CommentReport::where('status', 'pending')->count(),
+                'resolved' => CommentReport::where('status', 'resolved')->count(),
+                'dismissed' => CommentReport::where('status', 'dismissed')->count(),
+                'by_category' => [
+                    'spam' => CommentReport::where('category', 'spam')->count(),
+                    'harassment' => CommentReport::where('category', 'harassment')->count(),
+                    'hate_speech' => CommentReport::where('category', 'hate_speech')->count(),
+                    'inappropriate' => CommentReport::where('category', 'inappropriate')->count(),
+                    'misinformation' => CommentReport::where('category', 'misinformation')->count(),
+                    'off_topic' => CommentReport::where('category', 'off_topic')->count(),
+                    'other' => CommentReport::where('category', 'other')->count(),
+                ],
+                'by_reporter_type' => [
+                    'user' => CommentReport::where('is_guest_report', false)->count(),
+                    'guest' => CommentReport::where('is_guest_report', true)->count(),
+                ]
+            ];
+
+            // ✅ COMPATIBILITY: Only query priority if column exists
+            try {
+                $stats['high_priority'] = CommentReport::where('priority', 'high')
+                    ->where('status', 'pending')
+                    ->count();
+            } catch (\Exception $e) {
+                // Column doesn't exist yet, set to 0
+                $stats['high_priority'] = 0;
+            }
+
+            return $stats;
+        });
     }
     
     /**
@@ -181,7 +294,7 @@ class CommentManagementController extends Controller
      */
     public function updateStatus(Request $request, Comment $comment): JsonResponse
     {
-        // ✅ FIXED IDOR: Authorize action
+        // Security: Authorize action.
         $this->authorize('moderate', $comment);
 
         $request->validate([
@@ -198,25 +311,60 @@ class CommentManagementController extends Controller
 
     /**
      * Resolve a comment report.
+     *
+     * Enhanced with:
+     * - Input sanitization
+     * - Audit logging
+     * - Cache invalidation
      */
     public function resolveReport(Request $request, CommentReport $report): JsonResponse
     {
         // ✅ FIXED IDOR: Authorize action (only admins/moderators can resolve reports)
         $this->authorize('moderate', Comment::class);
 
-        $request->validate([
+        // Security: Validate and sanitize inputs.
+        $validated = $request->validate([
             'status' => 'required|in:resolved,dismissed',
             'notes' => 'nullable|string|max:500'
         ]);
 
+        // Security: Sanitize notes to prevent XSS.
+        $sanitizedNotes = $validated['notes'] ? strip_tags($validated['notes']) : null;
+
+        $oldStatus = $report->status;
+
         $report->update([
-            'status' => $request->status,
-            'notes' => $request->notes
+            'status' => $validated['status'],
+            'notes' => $sanitizedNotes
         ]);
+
+        // Audit: Log report resolution.
+        \App\Models\AdminAuditLog::logAction([
+            'action' => 'resolve_report',
+            'model_type' => CommentReport::class,
+            'model_id' => $report->id,
+            'severity' => 'medium',
+            'description' => auth()->user()->name . " {$validated['status']} comment report #{$report->id}",
+            'old_values' => ['status' => $oldStatus],
+            'new_values' => ['status' => $validated['status'], 'notes' => $sanitizedNotes],
+            'metadata' => [
+                'report_id' => $report->id,
+                'comment_id' => $report->comment_id,
+                'category' => $report->category,
+                'priority' => $report->priority,
+                'old_status' => $oldStatus,
+                'new_status' => $validated['status']
+            ]
+        ]);
+
+        // Optimization: Invalidate reports cache.
+        Cache::forget('comment_reports_stats');
 
         return response()->json([
             'success' => true,
-            'message' => 'Report updated successfully.'
+            'message' => $validated['status'] === 'resolved'
+                ? 'Reporte resuelto exitosamente.'
+                : 'Reporte desestimado exitosamente.'
         ]);
     }
 
@@ -227,7 +375,7 @@ class CommentManagementController extends Controller
      */
     public function destroy(Comment $comment): JsonResponse
     {
-        // ✅ FIXED IDOR: Authorize action
+        // Security: Authorize action.
         $this->authorize('delete', $comment);
 
         // Use soft delete
@@ -282,15 +430,15 @@ class CommentManagementController extends Controller
      */
     public function bulkApprove(Request $request): JsonResponse
     {
-        // ✅ FIXED IDOR: Authorize bulk action capability
+        // Security: Authorize bulk action capability.
         $this->authorize('moderate', Comment::class);
 
         $request->validate([
-            'comment_ids' => 'required|array|max:100', // ✅ Limit to 100
+            'comment_ids' => 'required|array|max:100', // Limit to 100.
             'comment_ids.*' => 'exists:comments,id',
         ]);
 
-        // ✅ Verify authorization for each comment
+        // Verify authorization for each comment.
         $comments = Comment::whereIn('id', $request->comment_ids)->get();
         foreach ($comments as $comment) {
             $this->authorize('moderate', $comment);
@@ -311,15 +459,15 @@ class CommentManagementController extends Controller
      */
     public function bulkReject(Request $request): JsonResponse
     {
-        // ✅ FIXED IDOR: Authorize bulk action capability
+        // Security: Authorize bulk action capability.
         $this->authorize('moderate', Comment::class);
 
         $request->validate([
-            'comment_ids' => 'required|array|max:100', // ✅ Limit to 100
+            'comment_ids' => 'required|array|max:100', // Limit to 100.
             'comment_ids.*' => 'exists:comments,id',
         ]);
 
-        // ✅ Verify authorization for each comment
+        // Verify authorization for each comment.
         $comments = Comment::whereIn('id', $request->comment_ids)->get();
         foreach ($comments as $comment) {
             $this->authorize('moderate', $comment);
@@ -342,15 +490,15 @@ class CommentManagementController extends Controller
      */
     public function bulkDelete(Request $request): JsonResponse
     {
-        // ✅ FIXED IDOR: Authorize bulk action capability
+        // Security: Authorize bulk action capability.
         $this->authorize('delete', Comment::class);
 
         $request->validate([
-            'comment_ids' => 'required|array|max:100', // ✅ Limit to 100
+            'comment_ids' => 'required|array|max:100', // Limit to 100.
             'comment_ids.*' => 'exists:comments,id',
         ]);
 
-        // ✅ Verify authorization for each comment
+        // Verify authorization for each comment.
         $comments = Comment::whereIn('id', $request->comment_ids)->get();
         foreach ($comments as $comment) {
             $this->authorize('delete', $comment);

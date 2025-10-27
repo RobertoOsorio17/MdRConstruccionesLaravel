@@ -16,13 +16,15 @@ class AdminSessionTimeout
 {
     /**
      * Admin session timeout in minutes
+     * ✅ SECURITY FIX: Reduced from 60 to 15 minutes for admin panel
      */
-    private const ADMIN_TIMEOUT = 60; // 1 hour
-    
+    private const ADMIN_TIMEOUT = 15; // 15 minutes (industry standard for admin panels)
+
     /**
      * Warning threshold in minutes before timeout
+     * ✅ SECURITY FIX: Reduced from 10 to 3 minutes
      */
-    private const WARNING_THRESHOLD = 10; // 10 minutes
+    private const WARNING_THRESHOLD = 3; // 3 minutes warning before timeout
 
     /**
      * Handle an incoming request.

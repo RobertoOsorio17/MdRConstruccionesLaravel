@@ -1,5 +1,5 @@
 import { Head, usePage } from '@inertiajs/react';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
 import DOMPurify from 'dompurify';
 
@@ -72,6 +72,16 @@ import InteractionTracker from '@/Components/ML/InteractionTracker';
 import RecommendationsWidget from '@/Components/ML/RecommendationsWidget';
 import MLInsights from '@/Components/ML/MLInsights';
 
+const DOMPURIFY_CONFIG = {
+    ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 'h1', 'h2', 'h3', 'h4', 'ul', 'ol', 'li', 'a', 'img', 'blockquote', 'code', 'pre'],
+    ALLOWED_ATTR: ['href', 'src', 'alt', 'title', 'class', 'target', 'rel', 'id'],
+    ALLOW_DATA_ATTR: false,
+    ALLOW_ARIA_ATTR: true,
+    FORBID_TAGS: ['script', 'style', 'iframe', 'object', 'embed'],
+    FORBID_ATTR: ['onerror', 'onload', 'onclick', 'onmouseover', 'onfocus'],
+    KEEP_CONTENT: false,
+};
+
 const BlogShow = ({ post, suggestedPosts, seo }) => {
     const theme = useTheme();
     const { auth } = usePage().props; // ✅ FIX: Usar auth de Inertia en lugar de useAuth()
@@ -93,6 +103,11 @@ const BlogShow = ({ post, suggestedPosts, seo }) => {
         message: '',
         severity: 'info'
     });
+
+    const sanitizedContent = useMemo(
+        () => DOMPurify.sanitize(post?.content ?? '', DOMPURIFY_CONFIG),
+        [post?.content]
+    );
 
     // Extract table of contents from content
     useEffect(() => {
@@ -1533,7 +1548,7 @@ const BlogShow = ({ post, suggestedPosts, seo }) => {
                                 <Box
                                     className="blog-content tinymce-content"
                                     data-theme={theme.palette.mode}
-                                    dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(post.content) }}
+                                    dangerouslySetInnerHTML={{ __html: sanitizedContent }}
                                 />
                             </Paper>
                         </AnimatedSection>

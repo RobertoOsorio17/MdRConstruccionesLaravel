@@ -8,8 +8,8 @@ use App\Models\SearchAnalytics;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Str;
 
 /**
  * Orchestrates full-text search across posts and categories, including caching, analytics, and highlighting.
@@ -71,15 +71,14 @@ class SearchService
         
         return Cache::remember($cacheKey, self::CACHE_TTL, function () use ($query, $limit) {
             $suggestions = collect();
-            
-            // Get suggestions from search analytics
+
             $analyticsSuggestions = SearchAnalytics::getSuggestions($query, $limit);
             $suggestions = $suggestions->merge($analyticsSuggestions);
-            
-            // ✅ FIX: Use mb_strtolower for proper UTF-8 handling (accents, ñ, etc.)
-            // Get suggestions from post titles
+
+            $likePattern = $this->buildLikePattern($query);
+
             $postSuggestions = Post::select('title')
-                ->where('title', 'LIKE', '%' . $query . '%')
+                ->where('title', 'LIKE', $likePattern)
                 ->where('status', 'published')
                 ->limit($limit)
                 ->pluck('title')
@@ -88,9 +87,8 @@ class SearchService
 
             $suggestions = $suggestions->merge($postSuggestions);
 
-            // Get suggestions from categories
             $categorySuggestions = Category::select('name')
-                ->where('name', 'LIKE', '%' . $query . '%')
+                ->where('name', 'LIKE', $likePattern)
                 ->limit($limit)
                 ->pluck('name')
                 ->map(fn($name) => mb_strtolower($name, 'UTF-8'));
@@ -189,14 +187,16 @@ class SearchService
      */
     private function buildPostsQuery(string $query, array $filters): Builder
     {
+        $likePattern = $this->buildLikePattern($query);
+
         $postsQuery = Post::query()
             ->where('status', 'published')
-            ->where(function ($q) use ($query) {
-                $q->where('title', 'LIKE', '%' . $query . '%')
-                  ->orWhere('excerpt', 'LIKE', '%' . $query . '%')
-                  ->orWhere('content', 'LIKE', '%' . $query . '%')
-                  ->orWhereHas('categories', function ($categoryQuery) use ($query) {
-                      $categoryQuery->where('name', 'LIKE', '%' . $query . '%');
+            ->where(function ($q) use ($likePattern) {
+                $q->where('title', 'LIKE', $likePattern)
+                  ->orWhere('excerpt', 'LIKE', $likePattern)
+                  ->orWhere('content', 'LIKE', $likePattern)
+                  ->orWhereHas('categories', function ($categoryQuery) use ($likePattern) {
+                      $categoryQuery->where('name', 'LIKE', $likePattern);
                   });
             });
 
@@ -245,14 +245,9 @@ class SearchService
                 break;
             case 'relevance':
             default:
-                // Order by relevance (title matches first, then by date)
-                $query->orderByRaw("
-                    CASE
-                        WHEN title LIKE ? THEN 1
-                        WHEN excerpt LIKE ? THEN 2
-                        ELSE 3
-                    END, published_at DESC
-                ", ['%' . $searchQuery . '%', '%' . $searchQuery . '%']);
+                $likePattern = $this->buildLikePattern($searchQuery);
+
+                $query->orderByRaw('CASE WHEN title LIKE ? THEN 1 WHEN excerpt LIKE ? THEN 2 ELSE 3 END, published_at DESC', [$likePattern, $likePattern]);
                 break;
         }
     }
@@ -339,11 +334,17 @@ class SearchService
      */
     private function sanitizeQuery(string $query): string
     {
-        $query = trim($query);
-        $query = substr($query, 0, self::MAX_QUERY_LENGTH);
-        $query = preg_replace('/[^\p{L}\p{N}\s\-_]/u', '', $query);
-        
-        return $query;
+        $normalized = Str::of($query)->squish()->limit(self::MAX_QUERY_LENGTH, '');
+        $sanitized = preg_replace('/[^\p{L}\p{N}\s\-_.\,áéíóúñÁÉÍÓÚÑ]/u', '', (string) $normalized);
+
+        return $sanitized ? trim($sanitized) : '';
+    }
+
+    private function buildLikePattern(string $term): string
+    {
+        $escaped = addcslashes($term, '\%_\\');
+
+        return '%' . $escaped . '%';
     }
 
     /**

@@ -39,6 +39,7 @@ const CommentInteractions = ({ comment, onInteractionChange }) => {
     const [dislikeCount, setDislikeCount] = useState(comment.dislike_count || 0);
     const [userLiked, setUserLiked] = useState(comment.user_liked || false);
     const [userDisliked, setUserDisliked] = useState(comment.user_disliked || false);
+    const [userHasReported, setUserHasReported] = useState(comment.user_has_reported || false);
     const [reportDialogOpen, setReportDialogOpen] = useState(false);
     const [loginDialogOpen, setLoginDialogOpen] = useState(false);
     const [reportReason, setReportReason] = useState('');
@@ -178,7 +179,7 @@ const CommentInteractions = ({ comment, onInteractionChange }) => {
             };
 
             const response = await axios.post(`/comments/${comment.id}/report`, reportData);
-            
+
             if (response.data.success) {
                 setNotification({
                     open: true,
@@ -188,6 +189,8 @@ const CommentInteractions = ({ comment, onInteractionChange }) => {
                 setReportDialogOpen(false);
                 setSelectedReportType('');
                 setCustomReason('');
+                // ✅ NEW: Mark as reported
+                setUserHasReported(true);
             }
         } catch (error) {
             setNotification({
@@ -242,20 +245,25 @@ const CommentInteractions = ({ comment, onInteractionChange }) => {
             </Typography>
 
             {/* Botón de Reportar */}
-            <Tooltip title="Reportar comentario">
-                <IconButton
-                    size="small"
-                    onClick={() => setReportDialogOpen(true)}
-                    sx={{
-                        ml: 2,
-                        '&:hover': {
-                            backgroundColor: 'warning.light',
-                            color: 'warning.main'
-                        }
-                    }}
-                >
-                    <ReportIcon fontSize="small" />
-                </IconButton>
+            <Tooltip title={userHasReported ? "Ya reportaste este comentario" : "Reportar comentario"}>
+                <span>
+                    <IconButton
+                        size="small"
+                        onClick={() => setReportDialogOpen(true)}
+                        disabled={userHasReported}
+                        sx={{
+                            ml: 2,
+                            '&:hover': {
+                                backgroundColor: userHasReported ? 'transparent' : 'warning.light',
+                                color: userHasReported ? 'text.disabled' : 'warning.main'
+                            },
+                            color: userHasReported ? 'text.disabled' : 'inherit',
+                            cursor: userHasReported ? 'not-allowed' : 'pointer'
+                        }}
+                    >
+                        <ReportIcon fontSize="small" />
+                    </IconButton>
+                </span>
             </Tooltip>
 
             {/* Diálogo de Login */}

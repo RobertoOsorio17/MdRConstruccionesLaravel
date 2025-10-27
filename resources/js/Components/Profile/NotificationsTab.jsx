@@ -81,7 +81,9 @@ const NotificationsTab = ({ settings }) => {
 
             <form onSubmit={handleSubmit}>
                 {/* Email Notifications */}
-                <Paper elevation={0} sx={{ p: 3, mb: 3, border: '1px solid', borderColor: 'divider' }}>
+                <Paper variant="outlined" sx={{ p: 3, mb: 3 }}>
+                    <Typography variant="overline" sx={{ color: 'text.secondary' }}>Notificaciones por Email</Typography>
+
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
                         <EmailIcon color="primary" />
                         <Box>
@@ -190,7 +192,9 @@ const NotificationsTab = ({ settings }) => {
                 </Paper>
 
                 {/* Push Notifications */}
-                <Paper elevation={0} sx={{ p: 3, mb: 3, border: '1px solid', borderColor: 'divider' }}>
+                <Paper variant="outlined" sx={{ p: 3, mb: 3 }}>
+                    <Typography variant="overline" sx={{ color: 'text.secondary' }}>Notificaciones Push</Typography>
+
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
                         <NotificationsIcon color="primary" />
                         <Box>

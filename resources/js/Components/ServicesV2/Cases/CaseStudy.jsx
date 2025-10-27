@@ -49,7 +49,7 @@ import SectionContainer from '../Shared/SectionContainer';
 import GlassCard from '../Shared/GlassCard';
 import AnimatedCounter from '../Shared/AnimatedCounter';
 import { useIntersectionReveal } from '@/Hooks/useIntersectionReveal';
-import { trackGallery } from '@/Utils/trackEvent';
+import { trackGallery } from '@/Utils/analytics';
 
 const CaseStudy = ({
     caseData,

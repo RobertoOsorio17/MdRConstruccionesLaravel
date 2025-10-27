@@ -28,11 +28,48 @@ class CacheManager {
         return Date.now() > entry.expiry;
     }
 
+    sanitizeForCache(value) {
+        if (value === null || value === undefined) {
+            return value;
+        }
+
+        if (Array.isArray(value)) {
+            return value.map(item => this.sanitizeForCache(item));
+        }
+
+        if (value instanceof Date) {
+            return new Date(value.getTime());
+        }
+
+        if (value instanceof Map) {
+            return Array.from(value.entries()).map(([key, val]) => ({ key, value: this.sanitizeForCache(val) }));
+        }
+
+        if (value instanceof Set) {
+            return Array.from(value.values()).map(item => this.sanitizeForCache(item));
+        }
+
+        if (typeof value === 'object') {
+            const safe = Object.create(null);
+
+            for (const [key, val] of Object.entries(value)) {
+                if (key === '__proto__' || key === 'constructor' || key === 'prototype') {
+                    continue;
+                }
+
+                safe[key] = this.sanitizeForCache(val);
+            }
+
+            return safe;
+        }
+
+        return value;
+    }
+
     /**
      * Set item in memory cache
      */
     setMemory(key, data, ttl = this.defaultTTL) {
-        // Remove oldest entries if cache is full
         if (this.memoryCache.size >= this.maxMemorySize) {
             const firstKey = this.memoryCache.keys().next().value;
             this.memoryCache.delete(firstKey);
@@ -90,7 +127,7 @@ class CacheManager {
                 return null;
             }
 
-            return entry.data;
+            return this.sanitizeForCache(entry.data);
         } catch (error) {
             console.warn('Failed to get localStorage cache:', error);
             return null;
@@ -104,12 +141,12 @@ class CacheManager {
         const { ttl = this.defaultTTL, useStorage = true, params = {} } = options;
         const cacheKey = this.generateKey(key, params);
 
-        // Always set in memory for fast access
-        this.setMemory(cacheKey, data, ttl);
+        const safeData = this.sanitizeForCache(data);
 
-        // Optionally set in localStorage for persistence
+        this.setMemory(cacheKey, safeData, ttl);
+
         if (useStorage) {
-            this.setStorage(cacheKey, data, ttl);
+            this.setStorage(cacheKey, safeData, ttl);
         }
     }
 

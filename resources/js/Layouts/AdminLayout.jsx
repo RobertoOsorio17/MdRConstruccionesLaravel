@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Head, Link, usePage, router } from '@inertiajs/react';
 import { NotificationProvider } from '@/Contexts/NotificationContext';
+import { InactivityProvider } from '@/Contexts/InactivityContext';
 import NotificationSystem from '@/Components/Admin/NotificationSystem';
 import useAdminNotificationsRealtime from '@/Hooks/useAdminNotificationsRealtime';
 import SessionManager from '@/Components/Admin/SessionManager';
+import InactivityDetector from '@/Components/Admin/InactivityDetector';
+import InactivityTimer from '@/Components/Admin/InactivityTimer';
 import {
     AppBar,
     Box,
@@ -319,9 +322,10 @@ const AdminLayout = ({ children, title = 'Dashboard Admin' }) => {
 
     return (
         <NotificationProvider>
-            <Box sx={{ display: 'flex' }}>
-            <Head title={title} />
-            <CssBaseline />
+            <InactivityProvider totalTimeout={15 * 60 * 1000}>
+                <Box sx={{ display: 'flex' }}>
+                <Head title={title} />
+                <CssBaseline />
             
             {/* AppBar */}
             <AppBar
@@ -357,6 +361,11 @@ const AdminLayout = ({ children, title = 'Dashboard Admin' }) => {
                             size="small"
                             variant="outlined"
                         />
+
+                        {/* Reloj de inactividad - Solo para admin y moderadores */}
+                        {(auth.user?.role === 'admin' || auth.user?.role === 'moderator' || auth.user?.role === 'editor') && (
+                            <InactivityTimer />
+                        )}
 
                         <NotificationSystem
                             notifications={adminNotifications}
@@ -485,7 +494,19 @@ const AdminLayout = ({ children, title = 'Dashboard Admin' }) => {
 
             {/* Session Manager */}
             <SessionManager user={auth.user} />
+
+            {/* Inactivity Detector - Solo para admin, moderadores y editores */}
+            {(auth.user?.role === 'admin' || auth.user?.role === 'moderator' || auth.user?.role === 'editor') && (
+                <InactivityDetector
+                    enabled={true}
+                    inactivityTimeout={15 * 60 * 1000} // 15 minutos
+                    warningTime={3 * 60 * 1000} // Advertencia 3 minutos antes
+                    heartbeatInterval={2 * 60 * 1000} // Heartbeat cada 2 minutos
+                    debug={true} // Cambiar a false para desactivar logs en consola
+                />
+            )}
             </Box>
+            </InactivityProvider>
         </NotificationProvider>
     );
 };

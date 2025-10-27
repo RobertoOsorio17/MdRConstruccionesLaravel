@@ -9,7 +9,7 @@ import 'swiper/css/navigation';
 import 'swiper/css/pagination';
 import designSystem from '@/theme/designSystem';
 import { useIntersectionReveal } from '@/Hooks/useIntersectionReveal';
-import { trackSectionView, trackTestimonialView } from '@/Utils/trackEvent';
+import { trackSectionView, trackTestimonialView } from '@/Utils/analytics';
 import GlassCard from '../Shared/GlassCard';
 
 /**

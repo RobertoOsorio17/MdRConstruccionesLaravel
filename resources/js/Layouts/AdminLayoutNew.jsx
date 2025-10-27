@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Head, Link, usePage, router } from '@inertiajs/react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { InactivityProvider } from '@/Contexts/InactivityContext';
+import InactivityDetector from '@/Components/Admin/InactivityDetector';
+import InactivityTimer from '@/Components/Admin/InactivityTimer';
 import {
     Box,
     CssBaseline,
@@ -49,10 +52,12 @@ import {
     Category as CategoryIcon,
     Tag as TagIcon,
     ContactMail as ContactMailIcon,
-    Close as CloseIcon
+    Close as CloseIcon,
+    Flag as FlagIcon
 } from '@mui/icons-material';
 import NotificationCenter from '@/Components/Admin/NotificationCenter';
 import BreadcrumbsWithFilters from '@/Components/Admin/BreadcrumbsWithFilters';
+import ImpersonationBanner from '@/Components/Security/ImpersonationBanner';
 
 const drawerWidth = 280;
 const drawerWidthCollapsed = 72;
@@ -83,15 +88,13 @@ const getSidebarStyles = (theme) => ({
 // Header with solid surface
 const getHeaderStyles = (theme) => ({
     background: theme.palette.mode === 'dark'
-        ? 'rgba(30, 41, 59, 0.95)'
-        : 'rgba(255, 255, 255, 0.95)',
-    backdropFilter: 'blur(8px)',
-    borderBottom: theme.palette.mode === 'dark'
-        ? '1px solid rgba(255, 255, 255, 0.08)'
-        : '1px solid rgba(0, 0, 0, 0.08)',
+        ? 'rgba(30, 41, 59, 0.92)'
+        : alpha(theme.palette.background.paper, 0.85),
+    backdropFilter: 'blur(10px)',
+    borderBottom: `1px solid ${alpha(theme.palette.divider, 0.16)}`,
     boxShadow: theme.palette.mode === 'dark'
-        ? '0 2px 12px rgba(0, 0, 0, 0.3)'
-        : '0 2px 12px rgba(0, 0, 0, 0.05)',
+        ? '0 2px 12px rgba(0, 0, 0, 0.35)'
+        : `0 2px 12px ${alpha(theme.palette.common.black, 0.06)}`,
 });
 
 // Animation variants
@@ -136,7 +139,7 @@ const AdminLayoutNew = ({
     showFilters = true
 }) => {
     const theme = useTheme();
-    const { auth, flash } = usePage().props;
+    const { auth, flash, impersonation } = usePage().props;
     const [mobileOpen, setMobileOpen] = useState(false);
 
     // Load drawer collapsed state from localStorage
@@ -254,6 +257,13 @@ const AdminLayoutNew = ({
                     icon: <CommentIcon />,
                     href: '/admin/comment-management',
                     active: route().current('admin.comment-management.*')
+                },
+                {
+                    key: 'comment-reports',
+                    label: 'Reportes de comentarios',
+                    icon: <FlagIcon />,
+                    href: '/admin/comment-reports',
+                    active: route().current('admin.comment-reports.*')
                 }
             ]
         },
@@ -343,15 +353,21 @@ const AdminLayoutNew = ({
                                     mx: 1,
                                     mb: 0.5,
                                     justifyContent: isCollapsed ? 'center' : 'flex-start',
-                                    backgroundColor: item.active ? 'rgba(255, 255, 255, 0.15)' : 'transparent',
+                                    backgroundColor: item.active
+                                        ? (theme.palette.mode === 'dark'
+                                            ? 'rgba(255, 255, 255, 0.15)'
+                                            : 'rgba(0, 0, 0, 0.06)')
+                                        : 'transparent',
                                     '&:hover': {
-                                        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                                        backgroundColor: theme.palette.mode === 'dark'
+                                            ? 'rgba(255, 255, 255, 0.1)'
+                                            : 'rgba(0, 0, 0, 0.04)',
                                     },
                                     transition: 'all 0.2s ease-in-out'
                                 }}
                             >
                                 <ListItemIcon sx={{
-                                    color: 'white',
+                                    color: theme.palette.mode === 'dark' ? 'white' : '#1f2937',
                                     minWidth: isCollapsed ? 'auto' : 40,
                                     justifyContent: 'center'
                                 }}>
@@ -362,7 +378,7 @@ const AdminLayoutNew = ({
                                         <ListItemText
                                             primary={item.label}
                                             sx={{
-                                                color: 'white',
+                                                color: theme.palette.mode === 'dark' ? 'white' : '#1f2937',
                                                 '& .MuiTypography-root': {
                                                     fontWeight: item.active ? 600 : 400
                                                 }
@@ -382,7 +398,7 @@ const AdminLayoutNew = ({
                                                 sx={{
                                                     display: 'flex',
                                                     alignItems: 'center',
-                                                    color: 'white',
+                                                    color: theme.palette.mode === 'dark' ? 'white' : '#1f2937',
                                                     opacity: 0.8,
                                                     '&:hover': {
                                                         opacity: 1
@@ -536,16 +552,17 @@ const AdminLayoutNew = ({
     const currentDrawerWidth = drawerCollapsed && !isMobile ? drawerWidthCollapsed : drawerWidth;
 
     return (
-        <Box sx={{ display: 'flex', minHeight: '100vh' }}>
-            <Head title={title} />
-            <CssBaseline />
+        <InactivityProvider totalTimeout={15 * 60 * 1000}>
+            <Box sx={{ display: 'flex', minHeight: '100vh' }}>
+                <Head title={title} />
+                <CssBaseline />
 
             {/* Header */}
             <AppBar
                 position="fixed"
                 sx={{
-                    width: { lg: `calc(100% - ${currentDrawerWidth}px)` },
-                    ml: { lg: `${currentDrawerWidth}px` },
+                    width: { sm: `calc(100% - ${currentDrawerWidth}px)` },
+                    ml: { sm: `${currentDrawerWidth}px` },
                     ...getHeaderStyles(theme),
                     zIndex: theme.zIndex.drawer + 1,
                     transition: 'all 0.3s ease-in-out'
@@ -558,27 +575,57 @@ const AdminLayoutNew = ({
                         aria-label="open drawer"
                         edge="start"
                         onClick={handleDrawerToggle}
-                        sx={{ mr: 2, display: { lg: 'none' } }}
+                        sx={{ mr: 2, display: { sm: 'none' }, color: 'text.primary' }}
                     >
                         <MenuIcon />
                     </IconButton>
 
-                    <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1, color: 'white' }}>
+                    <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1, color: 'text.primary' }}>
                         {title}
                     </Typography>
+
+                    {/* Reloj de inactividad - Solo para admin, moderadores y editores */}
+                    {(auth.user?.role === 'admin' || auth.user?.role === 'moderator' || auth.user?.role === 'editor') && (
+                        <InactivityTimer />
+                    )}
 
                     {/* Notifications */}
                     <NotificationCenter />
 
                     {/* User Menu */}
-                    <Tooltip title="Perfil de usuario">
+                    <Tooltip title={impersonation?.isActive ? `Impersonando a ${impersonation.target.name}` : "Perfil de usuario"}>
                         <IconButton
                             color="inherit"
                             onClick={handleUserMenuOpen}
+                            sx={{ color: 'text.primary' }}
                         >
-                            <Avatar sx={{ width: 32, height: 32, bgcolor: 'primary.main' }}>
-                                {auth.user.name.charAt(0).toUpperCase()}
-                            </Avatar>
+                            <Badge
+                                overlap="circular"
+                                anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                                badgeContent={
+                                    impersonation?.isActive ? (
+                                        <Box
+                                            sx={{
+                                                width: 12,
+                                                height: 12,
+                                                borderRadius: '50%',
+                                                bgcolor: '#805AD5',
+                                                border: '2px solid',
+                                                borderColor: 'background.paper',
+                                                animation: 'pulse 2s infinite',
+                                                '@keyframes pulse': {
+                                                    '0%, 100%': { opacity: 1 },
+                                                    '50%': { opacity: 0.5 },
+                                                },
+                                            }}
+                                        />
+                                    ) : null
+                                }
+                            >
+                                <Avatar sx={{ width: 32, height: 32, bgcolor: 'primary.main' }}>
+                                    {auth.user.name.charAt(0).toUpperCase()}
+                                </Avatar>
+                            </Badge>
                         </IconButton>
                     </Tooltip>
                 </Toolbar>
@@ -588,8 +635,8 @@ const AdminLayoutNew = ({
             <Box
                 component="nav"
                 sx={{
-                    width: { lg: currentDrawerWidth },
-                    flexShrink: { lg: 0 },
+                    width: { sm: currentDrawerWidth },
+                    flexShrink: { sm: 0 },
                     transition: 'width 0.3s ease-in-out'
                 }}
             >
@@ -600,7 +647,7 @@ const AdminLayoutNew = ({
                     onClose={handleDrawerToggle}
                     ModalProps={{ keepMounted: true }}
                     sx={{
-                        display: { xs: 'block', lg: 'none' },
+                        display: { xs: 'block', sm: 'none' },
                         '& .MuiDrawer-paper': {
                             boxSizing: 'border-box',
                             width: drawerWidth,
@@ -620,7 +667,7 @@ const AdminLayoutNew = ({
                 <Drawer
                     variant="permanent"
                     sx={{
-                        display: { xs: 'none', lg: 'block' },
+                        display: { xs: 'none', sm: 'block' },
                         '& .MuiDrawer-paper': {
                             boxSizing: 'border-box',
                             width: currentDrawerWidth,
@@ -640,9 +687,13 @@ const AdminLayoutNew = ({
                 component="main"
                 sx={{
                     flexGrow: 1,
-                    width: { lg: `calc(100% - ${currentDrawerWidth}px)` },
+                    width: { sm: `calc(100% - ${currentDrawerWidth}px)` },
                     minHeight: '100vh',
-                    background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    background: theme.palette.mode === 'dark'
+                        ? 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)'
+                        : 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)',
                     position: 'relative',
                     transition: 'width 0.3s ease-in-out',
                     '&::before': {
@@ -666,13 +717,9 @@ const AdminLayoutNew = ({
                             px: 3,
                             pt: 2,
                             pb: 1,
-                            bgcolor: theme.palette.mode === 'dark'
-                                ? 'rgba(30, 41, 59, 0.5)'
-                                : 'rgba(255, 255, 255, 0.5)',
+                            bgcolor: alpha(theme.palette.background.paper, 0.75),
                             backdropFilter: 'blur(8px)',
-                            borderBottom: theme.palette.mode === 'dark'
-                                ? '1px solid rgba(255, 255, 255, 0.05)'
-                                : '1px solid rgba(0, 0, 0, 0.05)',
+                            borderBottom: `1px solid ${alpha(theme.palette.divider, 0.12)}`,
                             position: 'relative',
                             zIndex: 1
                         }}
@@ -690,12 +737,63 @@ const AdminLayoutNew = ({
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.5 }}
-                    style={{ position: 'relative', zIndex: 1 }}
+                    style={{ position: 'relative', zIndex: 1, height: '100%' }}
                 >
-                    <Box sx={{ p: 3 }}>
+                    <Box sx={{
+                        p: { xs: 2, sm: 3, md: 4 },
+                        maxWidth: '1600px',
+                        mx: 'auto',
+                        width: '100%'
+                    }}>
                         {children}
                     </Box>
                 </motion.div>
+
+                    {/* Footer - elegant */}
+                    <Box
+                        sx={{
+                            px: { xs: 2, sm: 3, md: 4 },
+                            py: 3,
+                            display: 'flex',
+                            flexDirection: { xs: 'column', sm: 'row' },
+                            gap: 2,
+                            justifyContent: 'space-between',
+                            alignItems: { xs: 'flex-start', sm: 'center' },
+                            mt: 'auto',
+                            color: theme.palette.mode === 'dark' ? 'rgba(226, 232, 240, 0.85)' : 'rgba(30, 41, 59, 0.9)',
+                            borderTop: theme.palette.mode === 'dark'
+                                ? '1px solid rgba(255, 255, 255, 0.06)'
+                                : '1px solid rgba(0, 0, 0, 0.06)',
+                            bgcolor: theme.palette.mode === 'dark' ? 'rgba(15, 23, 42, 0.7)' : 'rgba(241, 245, 249, 0.9)',
+                            backgroundImage: theme.palette.mode === 'dark' ? 'linear-gradient(135deg, rgba(102,126,234,0.06), rgba(118,75,162,0.06))' : 'linear-gradient(135deg, rgba(102,126,234,0.06), rgba(118,75,162,0.06))',
+                            backdropFilter: 'blur(10px)',
+                            boxShadow: '0 -6px 18px rgba(0,0,0,0.06)',
+                            position: 'relative'
+                        }}
+                    >
+                        <Box sx={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: 'linear-gradient(90deg, #667eea, #764ba2)', opacity: theme.palette.mode === 'dark' ? 0.6 : 0.85 }} />
+
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                            <Box sx={{ width: 28, height: 28, borderRadius: '50%', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 800, boxShadow: '0 2px 10px rgba(102, 126, 234, 0.35)' }}>
+                                M
+                            </Box>
+                            <Box>
+                                <Typography variant="caption" sx={{ fontWeight: 700, letterSpacing: 0.2 }}>MDR Admin</Typography>
+                                <Typography variant="caption" sx={{ display: 'block', opacity: 0.7 }}>Panel de gestión</Typography>
+                            </Box>
+                        </Box>
+
+                        <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', opacity: 0.85 }}>
+                            <Typography variant="caption">Privacidad</Typography>
+                            <Typography variant="caption">Términos</Typography>
+                            <Typography variant="caption">Soporte</Typography>
+                        </Box>
+
+                        <Box sx={{ opacity: 0.95 }}>
+                            <Typography variant="caption">v1.0 • Hecho con ❤️</Typography>
+                        </Box>
+                    </Box>
+
             </Box>
 
             {/* User Menu */}
@@ -708,9 +806,32 @@ const AdminLayoutNew = ({
                         ...glassmorphismStyles,
                         mt: 1,
                         minWidth: 200,
+                        backgroundColor: alpha(theme.palette.background.paper, 0.95),
+                        backdropFilter: 'blur(10px)',
+                        border: `1px solid ${alpha(theme.palette.divider, 0.12)}`,
                     }
                 }}
             >
+                {impersonation?.isActive && (
+                    <>
+                        <Box sx={{ px: 2, py: 1.5, bgcolor: alpha('#805AD5', 0.1), borderRadius: 1, m: 1 }}>
+                            <Typography variant="caption" sx={{ color: '#805AD5', fontWeight: 600, display: 'block' }}>
+                                🎭 Impersonando
+                            </Typography>
+                            <Typography variant="body2" sx={{ fontWeight: 600, mt: 0.5 }}>
+                                {impersonation.target.name}
+                            </Typography>
+                            <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block' }}>
+                                {impersonation.target.email}
+                            </Typography>
+                        </Box>
+                        <Divider sx={{
+                            borderColor: theme.palette.mode === 'dark'
+                                ? 'rgba(255, 255, 255, 0.1)'
+                                : 'rgba(0, 0, 0, 0.1)'
+                        }} />
+                    </>
+                )}
                 <MenuItem component={Link} href="/user/dashboard" onClick={handleUserMenuClose}>
                     <PersonIcon sx={{ mr: 2 }} />
                     Mi Perfil
@@ -729,6 +850,9 @@ const AdminLayoutNew = ({
                     Cerrar Sesión
                 </MenuItem>
             </Menu>
+
+            {/* Impersonation Banner */}
+            <ImpersonationBanner />
 
             {/* Flash Messages */}
             <AnimatePresence>
@@ -755,7 +879,19 @@ const AdminLayoutNew = ({
                     </Snackbar>
                 )}
             </AnimatePresence>
+
+            {/* Inactivity Detector - Solo para admin, moderadores y editores */}
+            {(auth.user?.role === 'admin' || auth.user?.role === 'moderator' || auth.user?.role === 'editor') && (
+                <InactivityDetector
+                    enabled={true}
+                    inactivityTimeout={15 * 60 * 1000} // 15 minutos
+                    warningTime={3 * 60 * 1000} // Advertencia 3 minutos antes
+                    heartbeatInterval={2 * 60 * 1000} // Heartbeat cada 2 minutos
+                    debug={true} // Cambiar a false para desactivar logs en consola
+                />
+            )}
         </Box>
+        </InactivityProvider>
     );
 };
 

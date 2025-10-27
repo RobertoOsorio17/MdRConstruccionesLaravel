@@ -28,7 +28,7 @@ class AuthRateLimitMiddleware
 
             Log::warning('Authentication blocked - IP rate limit exceeded', [
                 'ip' => $ip,
-                'email' => $email,
+                'email_hash' => $email ? hash('sha256', strtolower($email)) : null,
                 'attempts' => $attempts,
                 'block_duration_minutes' => $blockDuration,
                 'user_agent' => $request->userAgent(),
@@ -147,7 +147,7 @@ class AuthRateLimitMiddleware
         
         Log::info('Failed authentication attempt recorded', [
             'ip' => $ip,
-            'email' => $email ? hash('sha256', strtolower($email)) : null,
+            'email_hash' => $email ? hash('sha256', strtolower($email)) : null,
             'ip_attempts' => $ipAttempts,
             'email_attempts' => $email ? $emailAttempts : null
         ]);

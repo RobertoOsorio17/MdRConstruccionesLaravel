@@ -44,9 +44,8 @@ import FeaturedServicesSection from '@/Components/Home/FeaturedServicesSection';
 import FeaturedProjectsSection from '@/Components/Home/FeaturedProjectsSection';
 import WhyChooseUsSection from '@/Components/Home/WhyChooseUsSection';
 import BrandsSection from '@/Components/Home/BrandsSection';
-import InvestmentGuideSection from '@/Components/Home/InvestmentGuideSection';
 import MeetTheTeamSection from '@/Components/Home/MeetTheTeamSection';
-import BlogSection from '@/Components/Home/BlogSection';
+import LatestPostsSection from '@/Components/Home/LatestPostsSection';
 import { useHomeData, useReducedMotion } from '@/Components/Home/useHomeData';
 
 export default function Welcome({ services = [], featuredProjects = [], latestPosts = [], stats = {}, seo = {} }) {
@@ -121,18 +120,13 @@ export default function Welcome({ services = [], featuredProjects = [], latestPo
                 {/* 7. Process Section: ¿Cómo trabajamos? (Mantener) */}
                 <ProcessSection />
 
-                {/* 7.5. Investment Guide: Calculadora de Presupuesto para Cualificar Leads */}
-                <InvestmentGuideSection 
+                {/* 7.5. Últimos Posts del Blog */}
+                <LatestPostsSection
+                    posts={postsToShow}
                     prefersReducedMotion={prefersReducedMotion}
                 />
 
-                {/* 8. Blog Section: Demostración de Autoridad */}
-                <BlogSection 
-                    blogPosts={postsToShow}
-                    prefersReducedMotion={prefersReducedMotion}
-                />
-
-                {/* 8.5. Meet The Team: Humanizar la Marca */}
+                {/* 8. Meet The Team: Humanizar la Marca */}
                 <MeetTheTeamSection 
                     prefersReducedMotion={prefersReducedMotion}
                 />

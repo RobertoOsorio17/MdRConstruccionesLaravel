@@ -2,8 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Head } from '@inertiajs/react';
 import {
     Box,
-    Container,
-    Grid,
     Card,
     CardContent,
     Typography,
@@ -59,7 +57,7 @@ import {
     Line
 } from 'recharts';
 import { motion } from 'framer-motion';
-import AdminLayout from '@/Layouts/AdminLayout';
+import AdminLayoutNew from '@/Layouts/AdminLayoutNew';
 import ErrorBoundary from '@/Components/ErrorBoundary';
 
 const Dashboard = ({
@@ -76,6 +74,17 @@ const Dashboard = ({
 
     // Estados para manejo de errores y carga - CORRECCIÓN CRÍTICA
     const [isLoading, setIsLoading] = useState(false);
+    // Superficies de tarjeta con efecto glass y buen contraste
+    const cardPaperSx = {
+        p: 3,
+        height: 400,
+        borderRadius: 3,
+        background: theme.palette.mode === 'dark' ? 'rgba(30,41,59,0.55)' : 'rgba(255,255,255,0.75)',
+        backdropFilter: 'blur(8px)',
+        border: `1px solid ${alpha(theme.palette.common.white, theme.palette.mode === 'dark' ? 0.08 : 0.12)}`,
+        boxShadow: '0 12px 30px rgba(0,0,0,0.08)'
+    };
+
     const [error, setError] = useState(null);
 
     // Validación de datos críticos
@@ -151,9 +160,9 @@ const Dashboard = ({
                             </Typography>
                         )}
                     </Box>
-                    <Avatar 
-                        sx={{ 
-                            bgcolor: alpha('white', 0.2), 
+                    <Avatar
+                        sx={{
+                            bgcolor: alpha('white', 0.2),
                             color: 'white',
                             width: 56,
                             height: 56
@@ -162,7 +171,7 @@ const Dashboard = ({
                         {icon}
                     </Avatar>
                 </Box>
-                
+
                 {trend && (
                     <Box sx={{ display: 'flex', alignItems: 'center' }}>
                         <TrendingIcon sx={{ fontSize: 16, mr: 0.5 }} />
@@ -172,7 +181,7 @@ const Dashboard = ({
                     </Box>
                 )}
             </CardContent>
-            
+
             <Box
                 sx={{
                     position: 'absolute',
@@ -193,7 +202,7 @@ const Dashboard = ({
         <Card
             component={motion.div}
             whileHover={{ y: -2 }}
-            sx={{ 
+            sx={{
                 height: '100%',
                 cursor: 'pointer',
                 border: `2px solid ${alpha(theme.palette[action.color].main, 0.2)}`,
@@ -205,8 +214,8 @@ const Dashboard = ({
             onClick={() => window.location.href = action.url}
         >
             <CardContent sx={{ textAlign: 'center', py: 3 }}>
-                <Avatar 
-                    sx={{ 
+                <Avatar
+                    sx={{
                         bgcolor: theme.palette[action.color].main,
                         mx: 'auto',
                         mb: 2,
@@ -223,7 +232,7 @@ const Dashboard = ({
                     {action.description}
                 </Typography>
                 {action.badge > 0 && (
-                    <Chip 
+                    <Chip
                         label={action.badge}
                         color={action.color}
                         size="small"
@@ -262,320 +271,245 @@ const Dashboard = ({
 
     return (
         <ErrorBoundary>
-            <AdminLayout>
+            <AdminLayoutNew
+                title="Dashboard"
+                breadcrumbs={[
+                    { label: 'Dashboard', href: '/admin/dashboard', icon: <DashboardIcon /> }
+                ]}
+                showFilters={false}
+            >
                 <Head title="Dashboard - Panel Admin" />
 
-                <Container maxWidth="xl" sx={{ py: 4 }}>
-                    {/* Header - MEJORADO */}
-                    <Box sx={{ mb: 6 }}>
-                        <Stack direction="row" alignItems="center" spacing={2} sx={{ mb: 2 }}>
-                            <DashboardIcon sx={{ fontSize: 40, color: 'primary.main' }} />
-                            <Box>
-                                <Typography variant="h4" fontWeight="bold" gutterBottom>
-                                    Panel de Control
-                                </Typography>
-                                <Typography variant="body1" color="text.secondary">
-                                    Bienvenido al panel de administración de MDR Construcciones
-                                </Typography>
-                            </Box>
-                        </Stack>
+                {/* Header - MEJORADO */}
+                <Box sx={{ mb: 4 }}>
+                    <Stack direction="row" alignItems="center" spacing={2} sx={{ mb: 2 }}>
+                        <DashboardIcon sx={{ fontSize: 40, color: 'primary.main' }} />
+                        <Box>
+                            <Typography variant="h4" fontWeight="bold" gutterBottom>
+                                Panel de Control
+                            </Typography>
+                            <Typography variant="body1" color="text.secondary">
+                                Bienvenido al panel de administración de MDR Construcciones
+                            </Typography>
+                        </Box>
+                    </Stack>
 
-                        {/* Indicador de estado en tiempo real */}
-                        <Chip
-                            icon={<CheckIcon />}
-                            label="Sistema Operativo"
-                            color="success"
-                            variant="outlined"
-                            size="small"
-                        />
-                    </Box>
+                    {/* Indicador de estado en tiempo real */}
+                    <Chip
+                        icon={<CheckIcon />}
+                        label="Sistema Operativo"
+                        color="success"
+                        variant="outlined"
+                        size="small"
+                    />
+                </Box>
 
-                {/* Stats Cards - CORREGIDAS CON VALIDACIÓN */}
-                <Grid container spacing={3} sx={{ mb: 6 }}>
-                    <Grid item xs={12} sm={6} md={3}>
-                        <StatCard
-                            title="Posts"
-                            value={safeStats?.posts?.total || safeStats.total_posts || 0}
-                            icon={<ArticleIcon />}
-                            color={theme.palette.primary.main}
-                            subtitle={`${safeStats?.posts?.published || 0} publicados, ${safeStats?.posts?.draft || safeStats.draft_posts || 0} borradores`}
-                        />
-                    </Grid>
-                    <Grid item xs={12} sm={6} md={3}>
-                        <StatCard
-                            title="Comentarios"
-                            value={safeStats?.comments?.total || safeStats.total_comments || 0}
-                            icon={<CommentIcon />}
-                            color={theme.palette.secondary.main}
-                            subtitle={`${safeStats?.comments?.pending || safeStats.pending_comments || 0} pendientes`}
-                        />
-                    </Grid>
-                    <Grid item xs={12} sm={6} md={3}>
-                        <StatCard
-                            title="Categorías"
-                            value={safeStats?.categories?.total || safeStats.total_categories || 0}
-                            icon={<CategoryIcon />}
-                            color={theme.palette.success.main}
-                            subtitle={`${safeStats?.categories?.active || safeStats.total_categories || 0} activas`}
-                        />
-                    </Grid>
-                    <Grid item xs={12} sm={6} md={3}>
-                        <StatCard
-                            title="Tags"
-                            value={stats.tags.total}
-                            icon={<TagIcon />}
-                            color={theme.palette.info.main}
-                            subtitle={`${stats.tags.used} en uso`}
-                        />
-                    </Grid>
-                </Grid>
+                {/* Stats Cards - CSS Grid, más responsivo y sin warnings */}
+                <Box sx={{
+                    mb: 6,
+                    display: 'grid',
+                    gap: 3,
+                    gridTemplateColumns: {
+                        xs: '1fr',
+                        sm: 'repeat(2, 1fr)',
+                        md: 'repeat(4, 1fr)'
+                    }
+                }}>
+                    <StatCard
+                        title="Posts"
+                        value={safeStats?.posts?.total || safeStats.total_posts || 0}
+                        icon={<ArticleIcon />}
+                        color={theme.palette.primary.main}
+                        subtitle={`${safeStats?.posts?.published || 0} publicados, ${safeStats?.posts?.draft || safeStats.draft_posts || 0} borradores`}
+                    />
+                    <StatCard
+                        title="Comentarios"
+                        value={safeStats?.comments?.total || safeStats.total_comments || 0}
+                        icon={<CommentIcon />}
+                        color={theme.palette.secondary.main}
+                        subtitle={`${safeStats?.comments?.pending || safeStats.pending_comments || 0} pendientes`}
+                    />
+                    <StatCard
+                        title="Categorías"
+                        value={safeStats?.categories?.total || safeStats.total_categories || 0}
+                        icon={<CategoryIcon />}
+                        color={theme.palette.success.main}
+                        subtitle={`${safeStats?.categories?.active || safeStats.total_categories || 0} activas`}
+                    />
+                    <StatCard
+                        title="Tags"
+                        value={stats.tags?.total || 0}
+                        icon={<TagIcon />}
+                        color={theme.palette.info.main}
+                        subtitle={`${stats.tags?.used || 0} en uso`}
+                    />
+                </Box>
 
                 {/* Quick Actions */}
                 <Box sx={{ mb: 6 }}>
                     <Typography variant="h5" fontWeight="bold" gutterBottom>
                         Acciones Rápidas
                     </Typography>
-                    <Grid container spacing={3}>
+                    <Box sx={{
+                        display: 'grid',
+                        gap: 3,
+                        gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)' }
+                    }}>
                         {quickActions.map((action, index) => (
-                            <Grid item xs={12} sm={6} md={3} key={index}>
+                            <Box key={index}>
                                 <QuickActionCard action={action} />
-                            </Grid>
+                            </Box>
                         ))}
-                    </Grid>
+                    </Box>
                 </Box>
 
-                <Grid container spacing={4}>
-                    {/* Monthly Stats Chart */}
-                    <Grid item xs={12} lg={8}>
-                        <Paper sx={{ p: 3, height: '400px' }}>
-                            <Typography variant="h6" fontWeight="bold" gutterBottom>
-                                Estadísticas Mensuales
-                            </Typography>
-                            <ResponsiveContainer width="100%" height="90%">
-                                <BarChart data={monthlyStats}>
-                                    <CartesianGrid strokeDasharray="3 3" />
-                                    <XAxis dataKey="month" />
-                                    <YAxis />
-                                    <Tooltip />
-                                    <Bar dataKey="posts" fill={theme.palette.primary.main} name="Posts" />
-                                    <Bar dataKey="comments" fill={theme.palette.secondary.main} name="Comentarios" />
-                                </BarChart>
-                            </ResponsiveContainer>
-                        </Paper>
-                    </Grid>
+                {/* Row: Insights (Bar + Pie) */}
+                <Box sx={{
+                    display: 'grid',
+                    gap: 3,
+                    gridTemplateColumns: { xs: '1fr', lg: '2fr 1fr' },
+                    mb: 4
+                }}>
+                    <Paper sx={cardPaperSx}>
+                        <Typography variant="h6" fontWeight="bold" gutterBottom>
+                            Estadísticas Mensuales
+                        </Typography>
+                        <ResponsiveContainer width="100%" height="90%">
+                            <BarChart data={monthlyStats}>
+                                <CartesianGrid strokeDasharray="3 3" />
+                                <XAxis dataKey="month" />
+                                <YAxis />
+                                <Tooltip />
+                                <Bar dataKey="posts" fill={theme.palette.primary.main} name="Posts" />
+                                <Bar dataKey="comments" fill={theme.palette.secondary.main} name="Comentarios" />
+                            </BarChart>
+                        </ResponsiveContainer>
+                    </Paper>
 
-                    {/* Category Distribution */}
-                    <Grid item xs={12} lg={4}>
-                        <Paper sx={{ p: 3, height: '400px' }}>
-                            <Typography variant="h6" fontWeight="bold" gutterBottom>
-                                Distribución por Categorías
-                            </Typography>
-                            <ResponsiveContainer width="100%" height="90%">
-                                <PieChart>
-                                    <Pie
-                                        data={categoryStats}
-                                        cx="50%"
-                                        cy="50%"
-                                        innerRadius={40}
-                                        outerRadius={80}
-                                        paddingAngle={5}
-                                        dataKey="posts_count"
-                                    >
-                                        {categoryStats.map((entry, index) => (
-                                            <Cell key={`cell-${index}`} fill={entry.color} />
-                                        ))}
-                                    </Pie>
-                                    <Tooltip />
-                                </PieChart>
-                            </ResponsiveContainer>
-                            <Box sx={{ mt: 2 }}>
-                                {categoryStats.map((category, index) => (
-                                    <Box key={index} sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                                        <Box 
-                                            sx={{ 
-                                                width: 12, 
-                                                height: 12, 
-                                                bgcolor: category.color, 
-                                                mr: 1,
-                                                borderRadius: '50%'
-                                            }} 
-                                        />
-                                        <Typography variant="caption">
-                                            {category.name} ({category.posts_count})
-                                        </Typography>
-                                    </Box>
-                                ))}
-                            </Box>
-                        </Paper>
-                    </Grid>
+                    <Paper sx={cardPaperSx}>
+                        <Typography variant="h6" fontWeight="bold" gutterBottom>
+                            Distribución por Categorías
+                        </Typography>
+                        <ResponsiveContainer width="100%" height="90%">
+                            <PieChart>
+                                <Pie data={categoryStats} cx="50%" cy="50%" innerRadius={40} outerRadius={80} paddingAngle={5} dataKey="posts_count">
+                                    {categoryStats.map((entry, index) => (
+                                        <Cell key={`cell-${index}`} fill={entry.color} />
+                                    ))}
+                                </Pie>
+                                <Tooltip />
+                            </PieChart>
+                        </ResponsiveContainer>
+                        <Box sx={{ mt: 2 }}>
+                            {categoryStats.map((category, index) => (
+                                <Box key={index} sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                                    <Box sx={{ width: 12, height: 12, bgcolor: category.color, mr: 1, borderRadius: '50%' }} />
+                                    <Typography variant="caption">{category.name} ({category.posts_count})</Typography>
+                                </Box>
+                            ))}
+                        </Box>
+                    </Paper>
+                </Box>
 
-                    {/* Recent Posts */}
-                    <Grid item xs={12} lg={6}>
-                        <Paper sx={{ p: 3 }}>
-                            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-                                <Typography variant="h6" fontWeight="bold">
-                                    Posts Recientes
-                                </Typography>
-                                <Button 
-                                    variant="outlined" 
-                                    size="small"
-                                    href="/admin/posts"
-                                >
-                                    Ver Todos
-                                </Button>
-                            </Box>
-                            <List>
-                                {recentPosts.map((post, index) => (
-                                    <ListItem key={post.id} divider={index < recentPosts.length - 1}>
-                                        <ListItemText
-                                            primary={post.title}
-                                            secondary={
-                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
-                                                    <Chip 
-                                                        label={post.status}
-                                                        size="small"
-                                                        color={
-                                                            post.status === 'published' ? 'success' :
-                                                            post.status === 'draft' ? 'warning' : 'info'
-                                                        }
-                                                    />
-                                                    <Typography variant="caption" color="text.secondary">
-                                                        {formatDate(post.created_at)}
-                                                    </Typography>
-                                                    <Typography variant="caption" color="text.secondary">
-                                                        • {post.views_count} vistas
-                                                    </Typography>
-                                                </Box>
-                                            }
-                                        />
-                                        <IconButton 
-                                            href={`/admin/posts/${post.id}/edit`}
-                                            size="small"
-                                        >
-                                            <EditIcon fontSize="small" />
-                                        </IconButton>
-                                    </ListItem>
-                                ))}
-                            </List>
-                        </Paper>
-                    </Grid>
+                {/* Row: Recents (Posts + Comments) */}
+                <Box sx={{
+                    display: 'grid',
+                    gap: 3,
+                    gridTemplateColumns: { xs: '1fr', lg: '1fr 1fr' },
+                    mb: 4
+                }}>
+                    <Paper sx={{ ...cardPaperSx, height: 'auto' }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+                            <Typography variant="h6" fontWeight="bold">Posts Recientes</Typography>
+                            <Button variant="outlined" size="small" href="/admin/posts">Ver Todos</Button>
+                        </Box>
+                        <List>
+                            {(recentPosts || []).map((post, index) => (
+                                <ListItem key={post.id || index} divider={index < (recentPosts?.length || 0) - 1}>
+                                    <ListItemText
+                                        primary={post.title}
+                                        secondary={
+                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
+                                                <Chip label={post.status} size="small" color={post.status === 'published' ? 'success' : post.status === 'draft' ? 'warning' : 'info'} />
+                                                <Typography variant="caption" color="text.secondary">{formatDate(post.created_at)}</Typography>
+                                                <Typography variant="caption" color="text.secondary">• {post.views_count} vistas</Typography>
+                                            </Box>
+                                        }
+                                    />
+                                    <IconButton href={`/admin/posts/${post.id}/edit`} size="small"><EditIcon fontSize="small" /></IconButton>
+                                </ListItem>
+                            ))}
+                        </List>
+                    </Paper>
 
-                    {/* Recent Comments */}
-                    <Grid item xs={12} lg={6}>
-                        <Paper sx={{ p: 3 }}>
-                            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-                                <Typography variant="h6" fontWeight="bold">
-                                    Comentarios Recientes
-                                </Typography>
-                                <Button 
-                                    variant="outlined" 
-                                    size="small"
-                                    href="/admin/comments"
-                                >
-                                    Ver Todos
-                                </Button>
-                            </Box>
-                            <List>
-                                {recentComments.map((comment, index) => (
-                                    <ListItem key={comment.id} divider={index < recentComments.length - 1}>
-                                        <ListItemText
-                                            primary={comment.content}
-                                            secondary={
-                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
-                                                    <Chip 
-                                                        label={comment.status}
-                                                        size="small"
-                                                        color={
-                                                            comment.status === 'approved' ? 'success' :
-                                                            comment.status === 'pending' ? 'warning' : 'error'
-                                                        }
-                                                    />
-                                                    <Typography variant="caption" color="text.secondary">
-                                                        {comment.author_name}
-                                                    </Typography>
-                                                    <Typography variant="caption" color="text.secondary">
-                                                        • {formatDate(comment.created_at)}
-                                                    </Typography>
-                                                </Box>
-                                            }
-                                        />
-                                        <IconButton 
-                                            href={`/admin/comments/${comment.id}`}
-                                            size="small"
-                                        >
-                                            <ViewIcon fontSize="small" />
-                                        </IconButton>
-                                    </ListItem>
-                                ))}
-                            </List>
-                        </Paper>
-                    </Grid>
+                    <Paper sx={{ ...cardPaperSx, height: 'auto' }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+                            <Typography variant="h6" fontWeight="bold">Comentarios Recientes</Typography>
+                            <Button variant="outlined" size="small" href="/admin/comments">Ver Todos</Button>
+                        </Box>
+                        <List>
+                            {(recentComments || []).map((comment, index) => (
+                                <ListItem key={comment.id || index} divider={index < (recentComments?.length || 0) - 1}>
+                                    <ListItemText
+                                        primary={comment.content}
+                                        secondary={
+                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
+                                                <Chip label={comment.status} size="small" color={comment.status === 'approved' ? 'success' : comment.status === 'pending' ? 'warning' : 'error'} />
+                                                <Typography variant="caption" color="text.secondary">{comment.author_name}</Typography>
+                                                <Typography variant="caption" color="text.secondary">• {formatDate(comment.created_at)}</Typography>
+                                            </Box>
+                                        }
+                                    />
+                                    <IconButton href={`/admin/comments/${comment.id}`} size="small"><ViewIcon fontSize="small" /></IconButton>
+                                </ListItem>
+                            ))}
+                        </List>
+                    </Paper>
+                </Box>
 
-                    {/* Popular Posts */}
-                    <Grid item xs={12} lg={6}>
-                        <Paper sx={{ p: 3 }}>
-                            <Typography variant="h6" fontWeight="bold" gutterBottom>
-                                Posts Más Populares (30 días)
-                            </Typography>
-                            <List>
-                                {popularPosts.map((post, index) => (
-                                    <ListItem key={post.id} divider={index < popularPosts.length - 1}>
-                                        <ListItemIcon>
-                                            <Typography variant="h6" color="primary" fontWeight="bold">
-                                                #{index + 1}
-                                            </Typography>
-                                        </ListItemIcon>
-                                        <ListItemText
-                                            primary={post.title}
-                                            secondary={
-                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                    <ViewIcon sx={{ fontSize: 16 }} />
-                                                    <Typography variant="caption">
-                                                        {post.views_count} vistas
-                                                    </Typography>
-                                                    <Typography variant="caption" color="text.secondary">
-                                                        • {formatDate(post.published_at)}
-                                                    </Typography>
-                                                </Box>
-                                            }
-                                        />
-                                    </ListItem>
-                                ))}
-                            </List>
-                        </Paper>
-                    </Grid>
+                {/* Row: Rankings + Activity */}
+                <Box sx={{
+                    display: 'grid',
+                    gap: 3,
+                    gridTemplateColumns: { xs: '1fr', lg: '1fr 1fr' }
+                }}>
+                    <Paper sx={{ ...cardPaperSx, height: 'auto' }}>
+                        <Typography variant="h6" fontWeight="bold" gutterBottom>Posts Más Populares (30 días)</Typography>
+                        <List>
+                            {(popularPosts || []).map((post, index) => (
+                                <ListItem key={post.id || index} divider={index < (popularPosts?.length || 0) - 1}>
+                                    <ListItemIcon><Typography variant="h6" color="primary" fontWeight="bold">#{index + 1}</Typography></ListItemIcon>
+                                    <ListItemText
+                                        primary={post.title}
+                                        secondary={
+                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                <ViewIcon sx={{ fontSize: 16 }} />
+                                                <Typography variant="caption">{post.views_count} vistas</Typography>
+                                                <Typography variant="caption" color="text.secondary">• {formatDate(post.published_at)}</Typography>
+                                            </Box>
+                                        }
+                                    />
+                                </ListItem>
+                            ))}
+                        </List>
+                    </Paper>
 
-                    {/* Recent Activity */}
-                    <Grid item xs={12} lg={6}>
-                        <Paper sx={{ p: 3 }}>
-                            <Typography variant="h6" fontWeight="bold" gutterBottom>
-                                Actividad Reciente
-                            </Typography>
-                            <List>
-                                {recentActivity.slice(0, 8).map((activity, index) => (
-                                    <ListItem key={index} divider={index < 7}>
-                                        <ListItemIcon>
-                                            {activity.type === 'post' ? 
-                                                <ArticleIcon color="primary" /> : 
-                                                <CommentIcon color="secondary" />
-                                            }
-                                        </ListItemIcon>
-                                        <ListItemText
-                                            primary={
-                                                <Typography variant="body2">
-                                                    <strong>{activity.user}</strong> {activity.action} {activity.title}
-                                                </Typography>
-                                            }
-                                            secondary={activity.created_at}
-                                        />
-                                    </ListItem>
-                                ))}
-                            </List>
-                        </Paper>
-                    </Grid>
-                </Grid>
-            </Container>
-        </AdminLayout>
+                    <Paper sx={{ ...cardPaperSx, height: 'auto' }}>
+                        <Typography variant="h6" fontWeight="bold" gutterBottom>Actividad Reciente</Typography>
+                        <List>
+                            {(recentActivity || []).slice(0, 8).map((activity, index) => (
+                                <ListItem key={index} divider={index < 7}>
+                                    <ListItemIcon>{activity.type === 'post' ? <ArticleIcon color="primary" /> : <CommentIcon color="secondary" />}</ListItemIcon>
+                                    <ListItemText
+                                        primary={<Typography variant="body2"><strong>{activity.user}</strong> {activity.action} {activity.title}</Typography>}
+                                        secondary={activity.created_at}
+                                    />
+                                </ListItem>
+                            ))}
+                        </List>
+                    </Paper>
+                </Box>
+            </AdminLayoutNew>
         </ErrorBoundary>
     );
 };

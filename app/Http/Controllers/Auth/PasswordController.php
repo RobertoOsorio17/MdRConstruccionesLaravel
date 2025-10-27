@@ -6,7 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Models\AdminSetting;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rules\Password;
 
 /**
@@ -17,11 +19,12 @@ class PasswordController extends Controller
 {
     /**
      * Update the user's password.
+     * ✅ SECURITY FIX: Stronger password requirements and prevent password reuse
      */
     public function update(Request $request): RedirectResponse
     {
-        // Get minimum password length from settings
-        $minLength = AdminSetting::getCachedValue('password_min_length', 8, 300);
+        // ✅ SECURITY FIX: Minimum 12 characters (increased from 8)
+        $minLength = max(12, AdminSetting::getCachedValue('password_min_length', 12, 300));
 
         $validated = $request->validate([
             'current_password' => ['required', 'current_password'],
@@ -33,13 +36,37 @@ class PasswordController extends Controller
                     ->numbers()
                     ->symbols()
                     ->uncompromised(),
+                new \App\Rules\NotCommonPassword(), // ✅ Prevent common passwords
+                new \App\Rules\NotPreviousPassword($request->user()), // ✅ Prevent password reuse
                 'confirmed'
             ],
         ]);
 
-        $request->user()->update([
-            'password' => Hash::make($validated['password']),
-            'password_changed_at' => now(),
+        $user = $request->user();
+
+        DB::transaction(function () use ($request, $user, $validated) {
+            $attributes = [
+                'password' => Hash::make($validated['password']),
+            ];
+
+            if (Schema::hasColumn($user->getTable(), 'password_changed_at')) {
+                $attributes['password_changed_at'] = now();
+            }
+
+            $user->forceFill($attributes)->save();
+
+            DB::table('sessions')
+                ->where('user_id', $user->getAuthIdentifier())
+                ->where('id', '!=', $request->session()->getId())
+                ->delete();
+        });
+
+        $request->session()->regenerate(true);
+
+        // ✅ SECURITY FIX: Log password change event
+        \App\Services\SecurityLogger::logPasswordChange($user, [
+            'method' => 'user_initiated',
+            'sessions_invalidated' => true,
         ]);
 
         return back();

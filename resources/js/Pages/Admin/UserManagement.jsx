@@ -55,6 +55,7 @@ import {
     AdminPanelSettings as AdminIcon,
     Person as UserIcon,
     Edit as EditorIcon,
+    PersonSearch as ImpersonateIcon,
 } from '@mui/icons-material';
 import { motion, AnimatePresence } from 'framer-motion';
 import { alpha } from '@mui/material/styles';
@@ -63,6 +64,7 @@ import BanUserModal from '../../Components/Admin/BanUserModal';
 import ModifyBanModal from '../../Components/Admin/ModifyBanModal';
 import BanHistoryModal from '../../Components/Admin/BanHistoryModal';
 import BannedUsersTab from '../../Components/Admin/BannedUsersTab';
+import ImpersonationConfirmDialog from '../../Components/Admin/ImpersonationConfirmDialog';
 
 const UserManagement = () => {
     const { users, stats, roles, filters, flash } = usePage().props;
@@ -91,6 +93,10 @@ const UserManagement = () => {
     // State for ban history modal
     const [banHistoryModalOpen, setBanHistoryModalOpen] = useState(false);
     const [userForBanHistory, setUserForBanHistory] = useState(null);
+
+    // State for impersonation dialog
+    const [impersonationDialogOpen, setImpersonationDialogOpen] = useState(false);
+    const [userToImpersonate, setUserToImpersonate] = useState(null);
 
     // Glassmorphism styles
     const glassmorphismCard = {
@@ -284,6 +290,12 @@ const UserManagement = () => {
     const handleBanUser = (user) => {
         setUserToBan(user);
         setBanModalOpen(true);
+        handleMenuClose();
+    };
+
+    const handleImpersonateUser = (user) => {
+        setUserToImpersonate(user);
+        setImpersonationDialogOpen(true);
         handleMenuClose();
     };
 
@@ -881,6 +893,19 @@ const UserManagement = () => {
                         <EditIcon sx={{ mr: 1, fontSize: 18 }} />
                         Editar
                     </MenuItem>
+                    {selectedUser && !selectedUser.roles?.some(role => {
+                        // Handle both string array and object array formats
+                        const roleName = typeof role === 'string' ? role : role.name;
+                        return ['admin', 'super-admin'].includes(roleName);
+                    }) && (
+                        <MenuItem
+                            onClick={() => handleImpersonateUser(selectedUser)}
+                            sx={{ color: '#805AD5' }}
+                        >
+                            <ImpersonateIcon sx={{ mr: 1, fontSize: 18 }} />
+                            Impersonar
+                        </MenuItem>
+                    )}
                     {selectedUser && !selectedUser.is_banned ? (
                         <MenuItem
                             onClick={() => handleBanUser(selectedUser)}
@@ -1008,6 +1033,16 @@ const UserManagement = () => {
                         </Button>
                     </DialogActions>
                 </Dialog>
+
+                {/* Impersonation Confirmation Dialog */}
+                <ImpersonationConfirmDialog
+                    open={impersonationDialogOpen}
+                    onClose={() => {
+                        setImpersonationDialogOpen(false);
+                        setUserToImpersonate(null);
+                    }}
+                    user={userToImpersonate}
+                />
             </motion.div>
         </AdminLayoutNew>
     );

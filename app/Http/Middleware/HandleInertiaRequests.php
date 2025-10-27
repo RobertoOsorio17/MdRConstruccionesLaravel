@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Models\AdminSetting;
+use App\Services\ImpersonationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Inertia\Middleware;
@@ -152,6 +153,12 @@ class HandleInertiaRequests extends Middleware
             }
         }
 
+        // Get impersonation context
+        $impersonationService = app(ImpersonationService::class);
+        $impersonationContext = $impersonationService->isActive()
+            ? $impersonationService->getSanitizedContext()
+            : null;
+
         return [
             ...parent::share($request),
             'auth' => $authData,
@@ -162,12 +169,14 @@ class HandleInertiaRequests extends Middleware
                 'warning' => $request->session()->get('warning'),
                 'info' => $request->session()->get('info'),
                 '2fa_warning' => $request->session()->get('2fa_warning'),
+                'impersonation_warning' => $request->session()->get('impersonation_warning'),
             ],
             'settings' => $this->getPublicSettings(),
             'security' => [
                 'enable_2fa' => AdminSetting::getCachedValue('enable_2fa', false, 300),
                 'user_has_2fa' => $auth ? !is_null($auth->two_factor_secret) : false,
             ],
+            'impersonation' => $impersonationContext,
         ];
     }
 

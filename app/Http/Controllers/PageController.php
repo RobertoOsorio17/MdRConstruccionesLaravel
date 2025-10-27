@@ -10,12 +10,18 @@ use Inertia\Inertia;
 
 /**
  * Serves static marketing pages while enriching them with dynamic data drawn from projects, settings, and posts.
- * Keeps informational sections like About and Contact synchronized with the latest company metadata.
+ *
+ * Features:
+ * - About: company stats, recent featured projects, and metadata.
+ * - Contact: company contact details and featured services for quick entry.
+ * - Legal/Privacy/Cookies: simple shells with consistent SEO metadata.
  */
 class PageController extends Controller
 {
     /**
      * Display the about page.
+     *
+     * @return \Inertia\Response Inertia response with stats, projects, and company info.
      */
     public function about()
     {
@@ -55,6 +61,8 @@ class PageController extends Controller
 
     /**
      * Display the contact page.
+     *
+     * @return \Inertia\Response Inertia response with contact info and services.
      */
     public function contact()
     {
@@ -87,6 +95,8 @@ class PageController extends Controller
 
     /**
      * Display privacy policy page.
+     *
+     * @return \Inertia\Response Inertia response for the privacy policy.
      */
     public function privacy()
     {
@@ -100,6 +110,8 @@ class PageController extends Controller
 
     /**
      * Display legal notice page.
+     *
+     * @return \Inertia\Response Inertia response for the legal notice.
      */
     public function legal()
     {
@@ -120,6 +132,8 @@ class PageController extends Controller
 
     /**
      * Display cookies policy page.
+     *
+     * @return \Inertia\Response Inertia response for the cookies policy.
      */
     public function cookies()
     {

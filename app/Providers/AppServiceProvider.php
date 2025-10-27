@@ -7,11 +7,14 @@ use App\Models\Post;
 use App\Models\Category;
 use App\Models\Comment;
 use App\Models\ContactRequest;
+use App\Models\User;
 use App\Observers\PostObserver;
 use App\Observers\CategoryObserver;
 use App\Observers\CommentObserver;
 use App\Observers\ContactRequestObserver;
+use App\Policies\UserPolicy;
 use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Vite;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Schema;
@@ -54,6 +57,9 @@ class AppServiceProvider extends ServiceProvider
         Category::observe(CategoryObserver::class);
         Comment::observe(CommentObserver::class);
         ContactRequest::observe(ContactRequestObserver::class);
+
+        // ✅ Register authorization gates
+        Gate::define('impersonate-user', [UserPolicy::class, 'impersonate']);
     }
 
     /**

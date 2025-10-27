@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import { Verified, Security, ThumbUp, EmojiEvents, CheckCircle } from '@mui/icons-material';
 import designSystem from '@/theme/designSystem';
 import { useIntersectionReveal } from '@/Hooks/useIntersectionReveal';
-import { trackSectionView, trackCTAClick } from '@/Utils/trackEvent';
+import { trackSectionView, trackCTAClick } from '@/Utils/analytics';
 import GlassCard from '../Shared/GlassCard';
 
 /**

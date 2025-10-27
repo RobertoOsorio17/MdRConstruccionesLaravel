@@ -9,16 +9,28 @@ use Illuminate\Support\Facades\RateLimiter;
 
 /**
  * Manages public newsletter subscriptions with throttling, validation, and confirmation messaging.
- * Coordinates with mailing services so subscribers receive timely onboarding and curated content.
+ *
+ * Features:
+ * - Per‑IP rate limiting to prevent abuse.
+ * - Double‑opt‑in via tokenized verification links.
+ * - Idempotent flows for already subscribed/unsubscribed states.
+ * - Preference management for content categories.
+ * - Operational logging around subscribe/verify/unsubscribe.
  */
 class NewsletterController extends Controller
 {
     /**
-     * Subscribe to newsletter
+     * Subscribe a user to the newsletter.
+     *
+     * Applies per-IP rate limiting, validates input, and sends a verification
+     * email to confirm the subscription before activating it.
+     *
+     * @param Request $request The incoming HTTP request containing subscription data.
+     * @return \Illuminate\Http\RedirectResponse Redirects back with status messaging.
      */
     public function subscribe(Request $request)
     {
-        // ✅ Rate limiting: 3 subscriptions per hour per IP
+        // 1) Apply a conservative rate limit (3/hour/IP).
         $key = 'newsletter-subscribe:' . $request->ip();
         
         if (RateLimiter::tooManyAttempts($key, 3)) {
@@ -28,7 +40,7 @@ class NewsletterController extends Controller
             ]);
         }
 
-        // ✅ Validate input
+        // 2) Validate input (email with DNS where configured; optional name/preferences).
         $validated = $request->validate([
             'email' => 'required|email:rfc,dns|max:255|regex:/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/',
             'name' => 'nullable|string|max:255|regex:/^[a-zA-Z\s\-\.áéíóúñÁÉÍÓÚÑ]+$/',
@@ -38,7 +50,7 @@ class NewsletterController extends Controller
 
         RateLimiter::hit($key, 3600); // 1 hour
 
-        // Check if already subscribed
+        // 3) Handle existing subscription states (active, unsubscribed, unverified).
         $existing = Newsletter::where('email', $validated['email'])->first();
 
         if ($existing) {
@@ -66,7 +78,7 @@ class NewsletterController extends Controller
             }
         }
 
-        // Create new subscription
+        // 4) Create new subscription and capture client hints.
         $newsletter = Newsletter::create([
             'email' => $validated['email'],
             'name' => $validated['name'] ?? null,
@@ -75,10 +87,10 @@ class NewsletterController extends Controller
             'user_agent' => $request->userAgent(),
         ]);
 
-        // Send verification email
+        // 5) Send verification email (double‑opt‑in).
         $this->sendVerificationEmail($newsletter);
 
-        // ✅ Log subscription
+        // 6) Log subscription for audit/observability.
         \Log::info('Newsletter subscription created', [
             'email' => $newsletter->email,
             'ip' => $request->ip(),
@@ -88,10 +100,15 @@ class NewsletterController extends Controller
     }
 
     /**
-     * Verify email subscription
+     * Verify a newsletter subscription by token.
+     *
+     * @param Request $request The current HTTP request instance.
+     * @param string $token The verification token sent via email.
+     * @return \Illuminate\Http\RedirectResponse Redirect to home with status messaging.
      */
     public function verify(Request $request, $token)
     {
+        // 1) Resolve the subscription by token; 404 if invalid.
         $newsletter = Newsletter::where('token', $token)->firstOrFail();
 
         if ($newsletter->isVerified()) {
@@ -100,7 +117,7 @@ class NewsletterController extends Controller
 
         $newsletter->verify();
 
-        // ✅ Log verification
+        // 2) Log verification to correlate with subscribe event.
         \Log::info('Newsletter subscription verified', [
             'email' => $newsletter->email,
             'ip' => $request->ip(),
@@ -110,10 +127,15 @@ class NewsletterController extends Controller
     }
 
     /**
-     * Unsubscribe from newsletter
+     * Unsubscribe a user from the newsletter.
+     *
+     * @param Request $request The current HTTP request instance.
+     * @param string $token The subscription token used to authenticate the action.
+     * @return \Illuminate\Http\RedirectResponse Redirect to home with status messaging.
      */
     public function unsubscribe(Request $request, $token)
     {
+        // 1) Resolve the subscription by token; 404 if invalid.
         $newsletter = Newsletter::where('token', $token)->firstOrFail();
 
         if ($newsletter->isUnsubscribed()) {
@@ -122,7 +144,7 @@ class NewsletterController extends Controller
 
         $newsletter->unsubscribe();
 
-        // ✅ Log unsubscription
+        // 2) Log unsubscription to track user choice and client context.
         \Log::info('Newsletter unsubscription', [
             'email' => $newsletter->email,
             'ip' => $request->ip(),
@@ -132,13 +154,18 @@ class NewsletterController extends Controller
     }
 
     /**
-     * Update preferences
+     * Update newsletter topic preferences for a subscription.
+     *
+     * @param Request $request The current HTTP request instance.
+     * @param string $token The subscription token authorizing the update.
+     * @return \Illuminate\Http\RedirectResponse Redirect back with status messaging.
      */
     public function updatePreferences(Request $request, $token)
     {
+        // 1) Resolve subscription and validate category choices.
         $newsletter = Newsletter::where('token', $token)->firstOrFail();
 
-        // ✅ Validate
+        // 2) Validate request data (categories from allow‑list).
         $validated = $request->validate([
             'preferences' => 'required|array',
             'preferences.*' => 'string|in:news,projects,services,blog',
@@ -148,7 +175,7 @@ class NewsletterController extends Controller
             'preferences' => $validated['preferences'],
         ]);
 
-        // ✅ Log update
+        // 3) Log preference update for audit trail.
         \Log::info('Newsletter preferences updated', [
             'email' => $newsletter->email,
             'preferences' => $validated['preferences'],
@@ -158,11 +185,15 @@ class NewsletterController extends Controller
     }
 
     /**
-     * Send verification email
+     * Send the subscription verification email.
+     *
+     * @param Newsletter $newsletter The newsletter subscription model.
+     * @return void
      */
     private function sendVerificationEmail(Newsletter $newsletter)
     {
         try {
+            // Compose and send a minimal verification message.
             Mail::send('emails.newsletter.verify', [
                 'newsletter' => $newsletter,
                 'verifyUrl' => route('newsletter.verify', $newsletter->token),
@@ -171,6 +202,7 @@ class NewsletterController extends Controller
                         ->subject('Verify Your Newsletter Subscription - MDR Construcciones');
             });
         } catch (\Exception $e) {
+            // Swallow delivery errors and capture context for later retries.
             \Log::error('Failed to send newsletter verification email', [
                 'email' => $newsletter->email,
                 'error' => $e->getMessage(),

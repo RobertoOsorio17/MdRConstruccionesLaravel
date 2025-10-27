@@ -80,15 +80,15 @@ Route::post('/newsletter/preferences/{token}', [App\Http\Controllers\NewsletterC
     ->name('newsletter.preferences')
     ->middleware('throttle:10,60');
 
-// ✅ Notification Routes (authenticated users only)
+// ✅ Notification API Routes (authenticated users only)
+// Note: Removed /notifications page route - notifications are now shown in dropdown only
 Route::middleware(['auth'])->prefix('notifications')->name('notifications.')->group(function () {
-    Route::get('/', [App\Http\Controllers\NotificationController::class, 'index'])->name('index');
+    // API endpoints for dropdown functionality
     Route::get('/unread-count', [App\Http\Controllers\NotificationController::class, 'getUnreadCount'])->name('unread-count');
     Route::get('/recent', [App\Http\Controllers\NotificationController::class, 'getRecent'])->name('recent');
     Route::post('/{notification}/read', [App\Http\Controllers\NotificationController::class, 'markAsRead'])->name('mark-read');
     Route::post('/mark-all-read', [App\Http\Controllers\NotificationController::class, 'markAllAsRead'])->name('mark-all-read');
     Route::delete('/{notification}', [App\Http\Controllers\NotificationController::class, 'destroy'])->name('destroy');
-    Route::delete('/read/all', [App\Http\Controllers\NotificationController::class, 'deleteAllRead'])->name('delete-all-read');
 });
 
 // ✅ FIXED: Reduced rate limiting to prevent abuse (was 20/min, now 10/min)
@@ -192,11 +192,20 @@ Route::middleware(['throttle:5,1'])->group(function () {
     Route::post('/presupuesto', [ContactController::class, 'budgetRequest'])->name('contact.budget');
 });
 
+// Impersonation Routes (global - accessible from any authenticated context)
+Route::middleware(['auth'])->group(function () {
+    Route::post('/impersonation/stop', [App\Http\Controllers\Admin\UserImpersonationController::class, 'destroy'])
+        ->name('impersonation.stop');
+    Route::post('/impersonation/heartbeat', [App\Http\Controllers\Admin\UserImpersonationController::class, 'heartbeat'])
+        ->name('impersonation.heartbeat');
+});
+
 // Profile Routes (protected)
 Route::middleware(['auth', 'auth.enhanced', 'track.device'])->group(function () {
-    // Dashboard Route (protected) - Main Dashboard
+    // Dashboard Route (protected) - User Dashboard Only
+    // ✅ FIX: Removed 'check.permission' middleware - admins are redirected to admin.dashboard
+    // This dashboard is for regular users only. Admins/editors are automatically redirected.
     Route::get('/dashboard', [App\Http\Controllers\UserDashboardController::class, 'index'])
-        ->middleware(['check.permission'])
         ->name('dashboard');
     
     // Profile Settings (new unified settings page)
@@ -231,6 +240,9 @@ Route::middleware(['auth', 'auth.enhanced', 'track.device'])->group(function () 
         Route::get('/qr-code', [App\Http\Controllers\Auth\TwoFactorController::class, 'qrCode'])
             ->middleware('throttle:10,1') // Max 10 QR code generations per minute
             ->name('qr-code');
+        Route::get('/initial-recovery-codes', [App\Http\Controllers\Auth\TwoFactorController::class, 'initialRecoveryCodes'])
+            ->middleware('throttle:10,1') // Max 10 requests per minute (only during setup)
+            ->name('initial-recovery-codes');
         Route::post('/recovery-codes', [App\Http\Controllers\Auth\TwoFactorController::class, 'recoveryCodes'])
             ->middleware('throttle:5,1') // Max 5 recovery code requests per minute
             ->name('recovery-codes');

@@ -5,7 +5,6 @@ import {
     Box,
     Container,
     Drawer,
-    Grid,
     Snackbar,
     Stack,
     Typography,
@@ -449,8 +448,8 @@ const SettingsScreen = () => {
                     onImport={handleImportPrompt}
                 />
 
-                <Grid container spacing={3}>
-                    <Grid item xs={12} md={3}>
+                <Box sx={{ display: 'grid', gap: 3, gridTemplateColumns: { xs: '1fr', md: 'minmax(260px,3.2fr) minmax(0,9.8fr)' } }}>
+                    <Box sx={{ position: { md: 'sticky' }, top: { md: 24 }, alignSelf: 'start' }}>
                         {mdUp ? (
                             <SettingsSidebar
                                 groups={groupData.sidebarGroups}
@@ -489,9 +488,9 @@ const SettingsScreen = () => {
                                 </Box>
                             </Drawer>
                         )}
-                    </Grid>
+                    </Box>
 
-                    <Grid item xs={12} md={9}>
+                    <Box sx={{ minWidth: 0 }}>
                         {showEmptyState ? (
                             <MotionPaper
                                 initial={{ opacity: 0, y: 16 }}
@@ -500,16 +499,10 @@ const SettingsScreen = () => {
                                 sx={{
                                     p: { xs: 4, md: 6 },
                                     borderRadius: 3,
-                                    border: `1px dashed ${alpha(
-                                        theme.palette.divider,
-                                        0.6,
-                                    )}`,
-                                    backgroundColor: alpha(
-                                        theme.palette.background.paper,
-                                        0.85,
-                                    ),
+                                    border: `1px dashed ${alpha(theme.palette.divider, 0.3)}`,
+                                    backgroundColor: alpha(theme.palette.background.paper, 0.6),
                                     textAlign: 'center',
-                                    backdropFilter: 'blur(10px)',
+                                    backdropFilter: 'blur(8px)',
                                 }}
                             >
                                 <Stack spacing={3} alignItems="center">
@@ -590,19 +583,10 @@ const SettingsScreen = () => {
                                         sx={{
                                             p: { xs: 2.5, md: 3 },
                                             borderRadius: 3,
-                                            border: `1px solid ${alpha(
-                                                theme.palette.divider,
-                                                0.5,
-                                            )}`,
-                                            backgroundColor: alpha(
-                                                theme.palette.background.paper,
-                                                0.85,
-                                            ),
-                                            backdropFilter: 'blur(14px)',
-                                            boxShadow: `0 24px 45px ${alpha(
-                                                theme.palette.common.black,
-                                                0.08,
-                                            )}`,
+                                            border: `1px solid ${alpha(theme.palette.divider, 0.12)}`,
+                                            backgroundColor: alpha(theme.palette.background.paper, 0.6),
+                                            backdropFilter: 'blur(10px)',
+                                            boxShadow: `0 8px 24px ${alpha(theme.palette.common.black, 0.08)}`,
                                         }}
                                     >
                                         <Stack spacing={2}>
@@ -651,8 +635,8 @@ const SettingsScreen = () => {
                                 ))}
                             </Stack>
                         )}
-                    </Grid>
-                </Grid>
+                    </Box>
+                </Box>
             </Stack>
 
             <Drawer

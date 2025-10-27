@@ -10,6 +10,9 @@ return Application::configure(basePath: dirname(__DIR__))
         \App\Providers\EventServiceProvider::class,
         \App\Providers\RateLimitServiceProvider::class,
     ])
+    ->withCommands([
+        \App\Console\Commands\ClearSessions::class,
+    ])
     ->withRouting(
         web: __DIR__.'/../routes/web.php',
         api: __DIR__.'/../routes/api.php',
@@ -30,11 +33,13 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->web(append: [
             \App\Http\Middleware\HandleInertiaRequests::class,
+            \App\Http\Middleware\EnsureImpersonationIsValid::class,
             \Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets::class,
             \App\Http\Middleware\CheckMLBlocked::class,
             \App\Http\Middleware\CheckUserStatus::class,
             \App\Http\Middleware\ForcePasswordChange::class,
             \App\Http\Middleware\Require2FAVerification::class,
+            \App\Http\Middleware\ValidateSessionIntegrity::class, // ✅ REDESIGNED: Now only validates critical auth data
         ]);
 
         // Add security headers to all web requests
@@ -64,6 +69,7 @@ return Application::configure(basePath: dirname(__DIR__))
             // Settings-based middleware
             'check.registration' => \App\Http\Middleware\CheckRegistrationEnabled::class,
             'check.blog' => \App\Http\Middleware\CheckBlogEnabled::class,
+            'deny.banned' => \App\Http\Middleware\EnsureUserNotBanned::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

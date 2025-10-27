@@ -87,6 +87,9 @@ class MediaController extends Controller
 
     /**
      * Upload a new media file with enhanced security validation.
+     *
+     * @param Request $request The current HTTP request containing the file and metadata.
+     * @return \Illuminate\Http\JsonResponse JSON response describing the upload result.
      */
     public function upload(Request $request)
     {
@@ -107,9 +110,9 @@ class MediaController extends Controller
 
         try {
             $file = $request->file('file');
-            $folder = $request->get('folder', 'uploads');
+            $folder = $this->sanitizeFolder($request->get('folder', 'uploads'));
 
-            // Enhanced security: Validate file content by magic bytes
+            // Enhanced security: Validate file content by magic bytes.
             if (!$this->validateFileContent($file)) {
                 return response()->json([
                     'success' => false,
@@ -117,7 +120,7 @@ class MediaController extends Controller
                 ], 422);
             }
 
-            // Validate file type (✅ SECURITY FIX: Removed SVG to prevent XSS attacks)
+            // Validate file type (Security fix: SVG removed to prevent XSS attacks).
             $allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'video/mp4', 'video/webm', 'application/pdf'];
             if (!in_array($file->getMimeType(), $allowedTypes)) {
                 return response()->json([
@@ -130,11 +133,11 @@ class MediaController extends Controller
             $sanitizedName = $this->sanitizeFilename(pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME));
             $filename = time() . '_' . $sanitizedName . '_' . Str::random(8) . '.' . $file->getClientOriginalExtension();
 
-            // Store file
+            // Store file.
             $path = $file->storeAs($folder, $filename, 'public');
             $url = Storage::disk('public')->url($path);
 
-            // Log upload for audit
+            // Log upload for audit.
             \Log::info('Media uploaded', [
                 'user_id' => auth()->id(),
                 'filename' => $filename,
@@ -161,20 +164,33 @@ class MediaController extends Controller
                 ]
             ]);
         } catch (\Exception $e) {
+            // Generate unique error ID for support reference
+            $errorId = 'ERR_' . strtoupper(uniqid());
+
+            // Log detailed error with error ID
             \Log::error('Media upload failed', [
+                'error_id' => $errorId,
                 'user_id' => auth()->id(),
                 'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'file_name' => $request->file('file')?->getClientOriginalName(),
+                'file_size' => $request->file('file')?->getSize(),
             ]);
 
+            // Return generic message to user (security fix: don't expose internal details)
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to upload file: ' . $e->getMessage()
+                'message' => 'Failed to upload file. Please try again or contact support.',
+                'error_id' => $errorId // For support reference
             ], 500);
         }
     }
 
     /**
      * Validate file content by checking magic bytes.
+     *
+     * @param mixed $file The uploaded file instance implementing the Symfony UploadedFile interface.
+     * @return bool True when the file signature matches allowed types; otherwise false.
      */
     private function validateFileContent($file): bool
     {
@@ -204,7 +220,7 @@ class MediaController extends Controller
             $bytes = bin2hex(fread($handle, 8));
             fclose($handle);
 
-            // ✅ SECURITY FIX: Use str_starts_with instead of strpos to prevent false positives
+            // Security fix: Use str_starts_with instead of strpos to prevent false positives.
             foreach ($allowedMagicBytes as $magic) {
                 if (str_starts_with($bytes, $magic)) {
                     return true;
@@ -221,6 +237,24 @@ class MediaController extends Controller
     /**
      * Sanitize filename to prevent security issues.
      */
+    private function sanitizeFolder(string $folder): string
+    {
+        $normalized = trim(str_replace('\\', '/', $folder));
+
+        if ($normalized === '' || str_contains($normalized, '..')) {
+            return 'uploads';
+        }
+
+        $normalized = preg_replace('/[^a-zA-Z0-9_\/-]/', '', $normalized);
+        $normalized = trim($normalized, '/');
+
+        if ($normalized === '') {
+            return 'uploads';
+        }
+
+        return str_starts_with($normalized, 'uploads') ? $normalized : 'uploads/' . $normalized;
+    }
+
     private function sanitizeFilename(string $filename): string
     {
         // Remove any path traversal attempts
@@ -245,7 +279,10 @@ class MediaController extends Controller
     }
 
     /**
-     * Get media list for TinyMCE
+     * Get media list formatted for TinyMCE.
+     *
+     * @param Request $request The current HTTP request instance.
+     * @return \Illuminate\Http\JsonResponse JSON response containing TinyMCE-compatible items.
      */
     public function list(Request $request)
     {
@@ -277,6 +314,9 @@ class MediaController extends Controller
 
     /**
      * Delete a media file.
+     *
+     * @param Request $request The current HTTP request instance containing the path.
+     * @return \Illuminate\Http\JsonResponse JSON response with the delete result.
      */
     public function destroy(Request $request)
     {
@@ -317,11 +357,15 @@ class MediaController extends Controller
 
     /**
      * Bulk delete media files with enhanced security.
+     *
+     * @param Request $request The current HTTP request instance containing the file list.
+     * @return \Illuminate\Http\JsonResponse JSON response summarizing the operation.
      */
     public function bulkDelete(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'files' => 'required|array|max:50', // ✅ SECURITY: Reduced from 100 to 50 to prevent DoS
+            // Security: Reduced from 100 to 50 to prevent DoS.
+            'files' => 'required|array|max:50',
             'files.*' => 'string',
         ]);
 
@@ -386,7 +430,11 @@ class MediaController extends Controller
 
     /**
      * Validate path to prevent path traversal attacks.
-     * ✅ SECURITY FIX: Enhanced validation with realpath() verification
+     *
+     * Security fix: Enhanced validation with realpath() verification.
+     *
+     * @param string $path The relative path under the public disk to validate.
+     * @return bool True when the path is considered safe; otherwise false.
      */
     private function isValidPath(string $path): bool
     {
@@ -420,7 +468,7 @@ class MediaController extends Controller
             return false;
         }
 
-        // ✅ SECURITY FIX: Verify with realpath that resolved path is within public storage
+        // Security fix: Verify with realpath that resolved path is within public storage.
         $publicPath = Storage::disk('public')->path('');
         $fullPath = $publicPath . DIRECTORY_SEPARATOR . $normalizedPath;
         $realPath = realpath($fullPath);
@@ -447,6 +495,9 @@ class MediaController extends Controller
 
     /**
      * Get file type based on extension.
+     *
+     * @param string $filename The file name or path.
+     * @return string A high-level type: image, video, document, or other.
      */
     private function getFileType($filename)
     {
@@ -468,7 +519,11 @@ class MediaController extends Controller
     }
 
     /**
-     * Format bytes to human readable format.
+     * Format bytes to a human-readable string.
+     *
+     * @param int|float $bytes The size in bytes.
+     * @param int $precision Decimal precision to use in formatting.
+     * @return string A formatted size like "12.3 MB".
      */
     private function formatBytes($bytes, $precision = 2)
     {

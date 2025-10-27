@@ -2,9 +2,10 @@
 
 namespace App\Http\Controllers\Admin\Auth;
 
+use App\Http\Controllers\Auth\Concerns\HandlesTwoFactorLogin;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
-use App\Providers\RouteServiceProvider;
+use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -14,7 +15,6 @@ use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
-use Carbon\Carbon;
 
 /**
  * Manages administrator authentication by combining hardened login policies, authorization checks, and auditing hooks.
@@ -22,6 +22,8 @@ use Carbon\Carbon;
  */
 class AdminAuthController extends Controller
 {
+    use HandlesTwoFactorLogin;
+
     /**
      * Display the admin login view.
      *
@@ -43,16 +45,36 @@ class AdminAuthController extends Controller
      */
     public function store(LoginRequest $request): RedirectResponse
     {
-        // Enhanced rate limiting for admin login.
-        $key = 'admin-login:' . $request->ip();
-        
-        if (RateLimiter::tooManyAttempts($key, 5)) {
-            $seconds = RateLimiter::availableIn($key);
-            
+        // Enhanced rate limiting for admin login (IP + email hash).
+        $emailHash = hash('sha256', strtolower($request->email));
+        $ipKey = 'admin-login:' . $request->ip() . ':' . $emailHash;
+        $emailKey = 'admin-login-email:' . $emailHash;
+
+        Log::info('Admin login attempt started', [
+            'email_hash' => $emailHash,
+            'ip' => $request->ip(),
+            'user_agent_hash' => hash('sha256', substr($request->userAgent(), 0, 100)),
+            'timestamp' => now()->toISOString()
+        ]);
+
+        // ✅ SECURITY FIX: Stricter rate limiting for admin login
+        // IP-based: 5 attempts per 15 minutes (was 5 per minute)
+        // Email-based: 10 attempts per 15 minutes with progressive lockout (was 12 per minute)
+        $ipExceeded = RateLimiter::tooManyAttempts($ipKey, 5);
+        $emailAttempts = RateLimiter::attempts($emailKey);
+        $emailMaxAttempts = $this->getEmailMaxAttempts($emailAttempts);
+        $emailExceeded = RateLimiter::tooManyAttempts($emailKey, $emailMaxAttempts);
+
+        if ($ipExceeded || $emailExceeded) {
+            $seconds = max(
+                RateLimiter::availableIn($ipKey),
+                RateLimiter::availableIn($emailKey)
+            );
+
             Log::warning('Admin login rate limit exceeded', [
                 'ip' => $request->ip(),
-                'email' => $request->email,
-                'user_agent' => $request->userAgent(),
+                'email_hash' => $emailHash,
+                'user_agent_hash' => hash('sha256', substr($request->userAgent(), 0, 100)),
                 'available_in' => $seconds
             ]);
             
@@ -64,35 +86,62 @@ class AdminAuthController extends Controller
             ]);
         }
 
-        // Validate credentials.
+        // ✅ SECURITY: Check if account is locked
+        $lockoutService = app(\App\Services\AccountLockoutService::class);
+        if ($lockoutService->isAccountLocked($request->email)) {
+            $remainingSeconds = $lockoutService->getRemainingLockoutTime($request->email);
+            $remainingMinutes = ceil($remainingSeconds / 60);
+
+            Log::warning('Admin login attempt on locked account', [
+                'email_hash' => $emailHash,
+                'ip' => $request->ip(),
+                'remaining_minutes' => $remainingMinutes
+            ]);
+
+            throw ValidationException::withMessages([
+                'email' => "Tu cuenta ha sido bloqueada temporalmente debido a múltiples intentos fallidos. Intenta de nuevo en {$remainingMinutes} minutos.",
+            ]);
+        }
+
         $credentials = $request->only('email', 'password');
-        
-        if (!Auth::attempt($credentials, $request->boolean('remember'))) {
-            RateLimiter::hit($key);
-            
+
+        if (!Auth::validate($credentials)) {
+            // ✅ SECURITY FIX: IP-based 15 minutes decay (increased from 1 minute)
+            RateLimiter::hit($ipKey, 900);
+
+            // ✅ SECURITY FIX: Email-based progressive decay
+            RateLimiter::hit($emailKey, $this->emailDecaySeconds());
+
+            // ✅ SECURITY: Record failed attempt for account lockout
+            $lockoutService->recordFailedAttempt($request->email, $request->ip());
+
             Log::warning('Failed admin login attempt', [
                 'ip' => $request->ip(),
-                'email' => $request->email,
-                'user_agent' => $request->userAgent(),
-                'timestamp' => now()
+                'email_hash' => $emailHash,
+                'user_agent_hash' => hash('sha256', substr($request->userAgent(), 0, 100)),
+                'timestamp' => now()->toISOString()
             ]);
-            
+
             throw ValidationException::withMessages([
                 'email' => trans('auth.failed'),
             ]);
         }
 
-        // Check if user has admin privileges.
-        $user = Auth::user();
+        $user = User::where('email', $request->email)->first();
+
+        if (!$user) {
+            RateLimiter::hit($key);
+            throw ValidationException::withMessages([
+                'email' => trans('auth.failed'),
+            ]);
+        }
         
         if (!$user->hasRole(['admin', 'editor'])) {
-            Auth::logout();
-            
             Log::warning('Non-admin user attempted admin login', [
                 'user_id' => $user->id,
-                'email' => $user->email,
+                'email_hash' => hash('sha256', strtolower($user->email)),
                 'ip' => $request->ip(),
-                'user_agent' => $request->userAgent()
+                'user_agent_hash' => hash('sha256', substr($request->userAgent(), 0, 100))
             ]);
             
             throw ValidationException::withMessages([
@@ -101,14 +150,15 @@ class AdminAuthController extends Controller
         }
 
         // Check if the user is banned from the platform.
-        if ($user->is_banned) {
-            Auth::logout();
-            
+        if ($user->isBanned()) {
+            $banStatus = $user->getBanStatus();
+
             Log::warning('Banned user attempted admin login', [
                 'user_id' => $user->id,
-                'email' => $user->email,
+                'email_hash' => hash('sha256', strtolower($user->email)),
                 'ip' => $request->ip(),
-                'ban_reason' => $user->ban_reason
+                'ban_reason' => $banStatus['reason'] ?? null,
+                'ban_expires_at' => $banStatus['expires_at'] ?? null,
             ]);
             
             throw ValidationException::withMessages([
@@ -116,44 +166,56 @@ class AdminAuthController extends Controller
             ]);
         }
 
-        // Clear rate limiting on successful login.
-        RateLimiter::clear($key);
-        
-        // Update last login timestamp.
-        $user->update([
-            'last_login_at' => Carbon::now(),
-            'last_login_ip' => $request->ip()
-        ]);
+        // Clear rate limiting on successful credential check.
+        RateLimiter::clear($ipKey);
+        RateLimiter::clear($emailKey);
 
-        // Regenerate the session for security.
-        $request->session()->regenerate();
+        // ✅ SECURITY: Clear failed attempts and unlock account on successful login
+        $lockoutService = app(\App\Services\AccountLockoutService::class);
+        $lockoutService->clearFailedAttempts($request->email);
 
-        // Log the successful admin login.
-        Log::info('Successful admin login', [
-            'user_id' => $user->id,
-            'email' => $user->email,
-            'role' => $user->roles->pluck('name')->first(),
-            'ip' => $request->ip(),
-            'user_agent' => $request->userAgent(),
-            'timestamp' => now()
-        ]);
+        $response = $this->completeInteractiveLogin(
+            $request,
+            $user,
+            $request->boolean('remember'),
+            route('admin.dashboard', absolute: false),
+            'redirect'
+        );
 
-        // Create an audit log entry when the model exists.
-        if (class_exists(\App\Models\AuditLog::class)) {
-            \App\Models\AuditLog::create([
+        if (Auth::id() === $user->id) {
+            $request->session()->put('login_ip', $request->ip());
+            $request->session()->put('login_user_agent', $request->userAgent());
+            $request->session()->put('last_activity', now()->timestamp);
+
+            if (!config('admin.allow_concurrent_sessions', false)) {
+                cache()->put("user_session_{$user->id}", $request->session()->getId(), now()->addHours(8));
+            }
+
+            Log::info('Successful admin login', [
                 'user_id' => $user->id,
-                'action' => 'admin_login',
-                'description' => 'Admin user logged in',
-                'ip_address' => $request->ip(),
-                'user_agent' => $request->userAgent(),
-                'metadata' => [
-                    'role' => $user->roles->pluck('name')->first(),
-                    'remember' => $request->boolean('remember')
-                ]
+                'email_hash' => hash('sha256', strtolower($user->email)),
+                'role' => $user->roles->pluck('name')->first(),
+                'ip' => $request->ip(),
+                'user_agent_hash' => hash('sha256', substr($request->userAgent(), 0, 100)),
+                'timestamp' => now()->toISOString()
             ]);
+
+            if (class_exists(\App\Models\AuditLog::class)) {
+                \App\Models\AuditLog::create([
+                    'user_id' => $user->id,
+                    'action' => 'admin_login',
+                    'description' => 'Admin user logged in',
+                    'ip_address' => $request->ip(),
+                    'user_agent' => $request->userAgent(),
+                    'metadata' => [
+                        'role' => $user->roles->pluck('name')->first(),
+                        'remember' => $request->boolean('remember')
+                    ]
+                ]);
+            }
         }
 
-        return redirect()->intended(route('admin.dashboard'));
+        return $response;
     }
 
     /**
@@ -165,12 +227,12 @@ class AdminAuthController extends Controller
     public function destroy(Request $request): RedirectResponse
     {
         $user = Auth::user();
-        
+
         // Log the administrator's logout action.
         if ($user) {
             Log::info('Admin logout', [
                 'user_id' => $user->id,
-                'email' => $user->email,
+                'email_hash' => hash('sha256', strtolower($user->email)),
                 'ip' => $request->ip(),
                 'timestamp' => now()
             ]);
@@ -193,6 +255,19 @@ class AdminAuthController extends Controller
         $request->session()->regenerateToken();
 
         return redirect('/admin/login');
+    }
+
+    private function adminEmailDecaySeconds(string $emailKey): int
+    {
+        $attempts = RateLimiter::attempts($emailKey);
+
+        return match (true) {
+            $attempts >= 20 => 7200,  // 2 hours for aggressive abuse
+            $attempts >= 15 => 3600,
+            $attempts >= 10 => 1800,
+            $attempts >= 6 => 900,
+            default => 300,
+        };
     }
 
     /**
@@ -305,8 +380,38 @@ class AdminAuthController extends Controller
             'security_info' => [
                 'session_timeout' => config('session.lifetime'),
                 'rate_limit' => 5,
-                'rate_limit_window' => 60
+                'rate_limit_window' => 900 // ✅ Updated to 15 minutes (was 60 seconds)
             ]
         ]);
+    }
+
+    /**
+     * Get progressive decay time based on number of failed attempts.
+     * ✅ SECURITY: Progressive lockout with increasing delays
+     */
+    protected function emailDecaySeconds(): int
+    {
+        $emailKey = 'admin_login:email:' . hash('sha256', strtolower(request()->email ?? ''));
+        $attempts = RateLimiter::attempts($emailKey);
+
+        return match (true) {
+            $attempts >= 15 => 3600, // 60 minutes lockout for persistent abuse
+            $attempts >= 10 => 1800, // 30 minutes after 10 failures
+            $attempts >= 6 => 900,   // 15 minutes after 6 failures
+            default => 900,          // 15 minutes default
+        };
+    }
+
+    /**
+     * Get maximum allowed attempts based on current attempt count.
+     * ✅ SECURITY: Progressive reduction of allowed attempts
+     */
+    protected function getEmailMaxAttempts(int $currentAttempts): int
+    {
+        return match (true) {
+            $currentAttempts >= 10 => 1,  // Only 1 more attempt after 10 failures
+            $currentAttempts >= 6 => 3,   // Only 3 more attempts after 6 failures
+            default => 10,                // 10 attempts in first window (15 minutes)
+        };
     }
 }

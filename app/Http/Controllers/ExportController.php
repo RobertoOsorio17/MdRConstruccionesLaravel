@@ -16,16 +16,23 @@ use Inertia\Inertia;
 
 /**
  * Facilitates administrative data exports by validating filters and delegating to Excel/PDF pipelines.
- * Centralizes export authorization to ensure only privileged staff can extract bulk application data.
+ *
+ * Features:
+ * - Centralized authorization checks for exports.
+ * - Consistent filter validation (status, date ranges, ownership).
+ * - Excel/CSV via maatwebsite/excel and PDF via barryvdh/laravel-dompdf.
+ * - Operational logging for audit purposes.
  */
 class ExportController extends Controller
 {
     /**
      * Display export options page.
+     *
+     * @return \Inertia\Response Inertia response with export stats.
      */
     public function index()
     {
-        // ✅ Authorize: Only admins can export data
+        // Authorize: only admins can export data.
         $this->authorize('viewAny', User::class);
 
         return Inertia::render('Admin/Export/Index', [
@@ -39,13 +46,16 @@ class ExportController extends Controller
 
     /**
      * Export posts to Excel/CSV.
+     *
+     * @param Request $request The current HTTP request instance with filters.
+     * @return \Symfony\Component\HttpFoundation\BinaryFileResponse The Excel/CSV download.
      */
     public function exportPosts(Request $request)
     {
-        // ✅ Authorize: Only admins can export
+        // Authorize: only admins can export.
         $this->authorize('viewAny', User::class);
 
-        // ✅ Validate input
+        // Validate input.
         $validated = $request->validate([
             'format' => 'required|in:xlsx,csv',
             'status' => 'nullable|in:draft,published,scheduled',
@@ -65,7 +75,7 @@ class ExportController extends Controller
 
         $filename = 'posts_' . now()->format('Y-m-d_His') . '.' . $validated['format'];
 
-        // ✅ Log export action
+        // Log export action.
         \Log::info('Posts exported', [
             'user_id' => Auth::id(),
             'format' => $validated['format'],
@@ -77,13 +87,16 @@ class ExportController extends Controller
 
     /**
      * Export comments to Excel/CSV.
+     *
+     * @param Request $request The current HTTP request instance with filters.
+     * @return \Symfony\Component\HttpFoundation\BinaryFileResponse The Excel/CSV download.
      */
     public function exportComments(Request $request)
     {
-        // ✅ Authorize: Only admins can export
+        // Authorize: only admins can export.
         $this->authorize('viewAny', User::class);
 
-        // ✅ Validate input
+        // Validate input.
         $validated = $request->validate([
             'format' => 'required|in:xlsx,csv',
             'status' => 'nullable|in:pending,approved,rejected,spam',
@@ -103,7 +116,7 @@ class ExportController extends Controller
 
         $filename = 'comments_' . now()->format('Y-m-d_His') . '.' . $validated['format'];
 
-        // ✅ Log export action
+        // Log export action.
         \Log::info('Comments exported', [
             'user_id' => Auth::id(),
             'format' => $validated['format'],
@@ -115,13 +128,16 @@ class ExportController extends Controller
 
     /**
      * Export posts to PDF.
+     *
+     * @param Request $request The current HTTP request instance with filters.
+     * @return \Symfony\Component\HttpFoundation\BinaryFileResponse The PDF download.
      */
     public function exportPostsPdf(Request $request)
     {
-        // ✅ Authorize: Only admins can export
+        // Authorize: only admins can export.
         $this->authorize('viewAny', User::class);
 
-        // ✅ Validate input
+        // Validate input.
         $validated = $request->validate([
             'status' => 'nullable|in:draft,published,scheduled',
             'category_id' => 'nullable|exists:categories,id',
@@ -157,7 +173,7 @@ class ExportController extends Controller
 
         $posts = $query->latest()->get();
 
-        // ✅ Log export action
+        // Log export action.
         \Log::info('Posts PDF exported', [
             'user_id' => Auth::id(),
             'count' => $posts->count(),
@@ -174,13 +190,16 @@ class ExportController extends Controller
 
     /**
      * Export comments to PDF.
+     *
+     * @param Request $request The current HTTP request instance with filters.
+     * @return \Symfony\Component\HttpFoundation\BinaryFileResponse The PDF download.
      */
     public function exportCommentsPdf(Request $request)
     {
-        // ✅ Authorize: Only admins can export
+        // Authorize: only admins can export.
         $this->authorize('viewAny', User::class);
 
-        // ✅ Validate input
+        // Validate input.
         $validated = $request->validate([
             'status' => 'nullable|in:pending,approved,rejected,spam',
             'post_id' => 'nullable|exists:posts,id',
@@ -214,7 +233,7 @@ class ExportController extends Controller
 
         $comments = $query->latest()->get();
 
-        // ✅ Log export action
+        // Log export action.
         \Log::info('Comments PDF exported', [
             'user_id' => Auth::id(),
             'count' => $comments->count(),
@@ -231,13 +250,16 @@ class ExportController extends Controller
 
     /**
      * Export users to Excel/CSV.
+     *
+     * @param Request $request The current HTTP request instance with filters.
+     * @return \Symfony\Component\HttpFoundation\BinaryFileResponse The Excel/CSV download.
      */
     public function exportUsers(Request $request)
     {
-        // ✅ Authorize: Only admins can export
+        // Authorize: only admins can export.
         $this->authorize('viewAny', User::class);
 
-        // ✅ Validate input
+        // Validate input.
         $validated = $request->validate([
             'format' => 'required|in:xlsx,csv',
             'role' => 'nullable|in:admin,editor,user',
@@ -253,7 +275,7 @@ class ExportController extends Controller
 
         $filename = 'users_' . now()->format('Y-m-d_His') . '.' . $validated['format'];
 
-        // ✅ Log export action
+        // Log export action.
         \Log::info('Users exported', [
             'user_id' => Auth::id(),
             'format' => $validated['format'],

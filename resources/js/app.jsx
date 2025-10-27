@@ -34,10 +34,6 @@ createInertiaApp({
         root.render(
             <ErrorBoundary>
                 <AppThemeProvider>
-                    {/* Skip link para accesibilidad */}
-                    <a href="#main-content" className="skip-link">
-                        Saltar al contenido principal
-                    </a>
                     <App {...props} />
                 </AppThemeProvider>
             </ErrorBoundary>

@@ -22,7 +22,12 @@ use Inertia\Inertia;
 
 /**
  * Curates the administrative dashboard experience by assembling metrics, alerts, and quick actions for staff.
- * Acts as the orchestration point that feeds configurable widgets and surface-level performance snapshots.
+ *
+ * Features:
+ * - Cached KPIs for posts, comments, categories, tags, users, projects, and services.
+ * - Recent activity cards (posts/comments) and popular posts by views.
+ * - Monthly trends using compact grouped queries.
+ * - User growth stats (new vs active users) over the last 30 days.
  */
 class DashboardController extends Controller
 {
@@ -31,7 +36,7 @@ class DashboardController extends Controller
      */
     public function index(Request $request)
     {
-        // Cache dashboard statistics for 5 minutes to reduce database load
+        // 1) Cache dashboard statistics for 5 minutes to reduce database load.
         $stats = Cache::remember('admin_dashboard_stats', 300, function () {
             return [
                 'posts' => [
@@ -78,7 +83,7 @@ class DashboardController extends Controller
             ];
         });
 
-        // Recent posts displayed in activity cards.
+        // 2) Recent posts displayed in activity cards.
         $recentPosts = Post::with(['author:id,name', 'categories:id,name,color'])
             ->orderBy('created_at', 'desc')
             ->limit(5)
@@ -97,7 +102,7 @@ class DashboardController extends Controller
                 ];
             });
 
-        // Most recent comments requiring attention.
+        // 3) Most recent comments requiring attention.
         $recentComments = Comment::with(['post:id,title,slug', 'user:id,name'])
             ->orderBy('created_at', 'desc')
             ->limit(5)
@@ -114,7 +119,7 @@ class DashboardController extends Controller
                 ];
             });
 
-        // ✅ FIX: Popular posts - Filter by published_at instead of created_at
+        // 4) Popular posts within the last 30 days by views (filter by published_at).
         $popularPosts = Post::published()
             ->whereNotNull('published_at')
             ->where('published_at', '>=', Carbon::now()->subDays(30))
@@ -131,7 +136,7 @@ class DashboardController extends Controller
                 ];
             });
 
-        // Enhanced monthly statistics (covering the last six months) - optimized with single queries
+        // 5) Enhanced monthly statistics (last six months) using grouped queries and in-memory merge.
         $monthlyStats = Cache::remember('admin_dashboard_monthly_stats', 300, function () {
             $sixMonthsAgo = Carbon::now()->subMonths(5)->startOfMonth();
 
@@ -167,7 +172,7 @@ class DashboardController extends Controller
                 ->groupBy('month')
                 ->pluck('total', 'month');
 
-            // Build the monthly stats array
+            // Build the monthly stats array with zero-filled months.
             $stats = [];
             for ($i = 5; $i >= 0; $i--) {
                 $date = Carbon::now()->subMonths($i);
@@ -187,7 +192,7 @@ class DashboardController extends Controller
             return $stats;
         });
 
-        // ✅ FIX: User growth trends - Use single query with groupBy instead of 60 queries
+        // 6) User growth trends (last 30 days) with grouped queries.
         $startDate = Carbon::now()->subDays(29)->startOfDay();
         $endDate = Carbon::now()->endOfDay();
 

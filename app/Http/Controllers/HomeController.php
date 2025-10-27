@@ -10,12 +10,18 @@ use Inertia\Inertia;
 
 /**
  * Composes the public home page by aggregating highlighted services, projects, content, and marketing metrics.
- * Ensures visitors receive an up-to-date snapshot of offerings and achievements immediately upon arrival.
+ *
+ * Features:
+ * - Featured services/projects for prominent placement on landing.
+ * - Latest featured posts with author and category context.
+ * - Simple company stats and SEO metadata for the home view.
  */
 class HomeController extends Controller
 {
     /**
      * Display the home page with featured services, projects, and statistics.
+     *
+     * @return \Inertia\Response Inertia response for the public home page.
      */
     public function index()
     {
@@ -31,13 +37,12 @@ class HomeController extends Controller
             ->limit(6)
             ->get(['id', 'title', 'slug', 'summary', 'gallery', 'location']);
 
-        // Pull latest featured blog posts for the home page.
+        // Pull latest 3 blog posts for the home page.
         $latestPosts = Post::where('status', 'published')
-            ->where('featured', true)
             ->with(['author:id,name,avatar', 'categories:id,name,slug,color'])
             ->latest('published_at')
             ->limit(3)
-            ->get(['id', 'title', 'slug', 'excerpt', 'cover_image', 'published_at', 'user_id', 'views_count']);
+            ->get(['id', 'title', 'slug', 'excerpt', 'cover_image', 'published_at', 'user_id', 'views_count', 'featured']);
 
         // Company statistics displayed on the home page.
         $stats = [

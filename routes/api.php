@@ -17,7 +17,7 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
+Route::middleware(['auth:sanctum', 'deny.banned'])->get('/user', function (Request $request) {
     return $request->user();
 });
 
@@ -27,7 +27,7 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 |--------------------------------------------------------------------------
 */
 
-Route::middleware('auth:sanctum')->group(function () {
+Route::middleware(['auth:sanctum', 'deny.banned'])->group(function () {
     // Get current user's comments with pagination
     Route::get('/user/comments', [UserProfileController::class, 'getUserComments'])->name('api.user.comments');
 
@@ -55,7 +55,7 @@ Route::prefix('search')->group(function () {
     Route::get('/popular', [SearchController::class, 'popular'])->name('api.search.popular');
 
     // Search analytics (protected - admin only)
-    Route::middleware(['auth:sanctum', 'auth.enhanced', 'role:admin,editor'])
+    Route::middleware(['auth:sanctum', 'deny.banned', 'auth.enhanced', 'role:admin,editor'])
         ->get('/analytics', [SearchController::class, 'analytics'])
         ->name('api.search.analytics');
 });
@@ -72,7 +72,7 @@ Route::middleware(['throttle:60,1'])->group(function () {
 });
 
 // Error statistics (admin only)
-Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
+Route::middleware(['auth:sanctum', 'deny.banned', 'role:admin'])->group(function () {
     Route::get('/error-stats', [ErrorLogController::class, 'getErrorStats'])->name('api.error-stats');
 });
 
@@ -115,7 +115,7 @@ Route::prefix('ml')->name('api.ml.')->group(function () {
     });
 
     // Authenticated user endpoints
-    Route::middleware(['auth:sanctum'])->group(function () {
+    Route::middleware(['auth:sanctum', 'deny.banned'])->group(function () {
 
         // Update user profile manually
         Route::post('/profile/update', [MLController::class, 'updateProfile'])
@@ -131,7 +131,7 @@ Route::prefix('ml')->name('api.ml.')->group(function () {
     });
 
     // Admin-only ML management endpoints
-    Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
+    Route::middleware(['auth:sanctum', 'deny.banned', 'role:admin'])->group(function () {
 
         // Train ML models
         Route::post('/train', [MLController::class, 'trainModels'])

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Head, router } from '@inertiajs/react';
+import { Head } from '@inertiajs/react';
 import MainLayout from '@/Layouts/MainLayout';
 import {
     Box,
@@ -9,9 +9,7 @@ import {
     Tab,
     Typography,
     useTheme,
-    useMediaQuery,
-    Breadcrumbs,
-    Link as MuiLink
+    useMediaQuery
 } from '@mui/material';
 import {
     Person as PersonIcon,
@@ -19,10 +17,9 @@ import {
     Devices as DevicesIcon,
     Link as LinkIcon,
     Notifications as NotificationsIcon,
-    Lock as PrivacyIcon,
-    Home as HomeIcon
+    Lock as PrivacyIcon
 } from '@mui/icons-material';
-import { Link } from '@inertiajs/react';
+
 
 // Import tab components
 import PersonalInfoTab from '@/Components/Profile/PersonalInfoTab';
@@ -32,9 +29,9 @@ import ConnectedAccountsTab from '@/Components/Profile/ConnectedAccountsTab';
 import NotificationsTab from '@/Components/Profile/NotificationsTab';
 import PrivacyTab from '@/Components/Profile/PrivacyTab';
 
-const Settings = ({ 
-    user, 
-    mustVerifyEmail, 
+const Settings = ({
+    user,
+    mustVerifyEmail,
     status,
     devices = [],
     deviceStats = {},
@@ -43,17 +40,21 @@ const Settings = ({
     twoFactorEnabled = false,
     recoveryCodes = [],
     notificationSettings = {},
-    privacySettings = {}
+    privacySettings = {},
+    force2FASetup = false
 }) => {
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-    
+
     // Get tab from URL or localStorage
     const getInitialTab = () => {
         const urlParams = new URLSearchParams(window.location.search);
         const tabFromUrl = urlParams.get('tab');
         if (tabFromUrl) return tabFromUrl;
-        
+
+        // If 2FA setup is mandatory, force security tab
+        if (force2FASetup) return 'security';
+
         const savedTab = localStorage.getItem('settings_active_tab');
         return savedTab || 'personal';
     };
@@ -76,9 +77,9 @@ const Settings = ({
         { value: 'personal', label: 'Información Personal', icon: <PersonIcon /> },
         { value: 'security', label: 'Seguridad', icon: <SecurityIcon /> },
         { value: 'devices', label: 'Dispositivos', icon: <DevicesIcon /> },
-        { value: 'accounts', label: 'Cuentas Conectadas', icon: <LinkIcon /> },
         { value: 'notifications', label: 'Notificaciones', icon: <NotificationsIcon /> },
-        { value: 'privacy', label: 'Privacidad', icon: <PrivacyIcon /> }
+        { value: 'privacy', label: 'Privacidad', icon: <PrivacyIcon /> },
+        { value: 'accounts', label: 'Cuentas Conectadas', icon: <LinkIcon /> }
     ];
 
     // Render tab content
@@ -88,10 +89,11 @@ const Settings = ({
                 return <PersonalInfoTab user={user} mustVerifyEmail={mustVerifyEmail} status={status} />;
             case 'security':
                 return (
-                    <SecurityTab 
+                    <SecurityTab
                         user={user}
                         twoFactorEnabled={twoFactorEnabled}
                         recoveryCodes={recoveryCodes}
+                        force2FASetup={force2FASetup}
                     />
                 );
             case 'devices':
@@ -119,18 +121,7 @@ const Settings = ({
             <Container maxWidth="lg" sx={{ py: 8 }}>
                 {/* Header */}
                 <Box sx={{ mb: 4 }}>
-                    <Breadcrumbs aria-label="breadcrumb" sx={{ mb: 2 }}>
-                        <MuiLink
-                            component={Link}
-                            href="/"
-                            underline="hover"
-                            sx={{ display: 'flex', alignItems: 'center', color: 'inherit' }}
-                        >
-                            <HomeIcon sx={{ mr: 0.5 }} fontSize="inherit" />
-                            Inicio
-                        </MuiLink>
-                        <Typography color="text.primary">Configuración</Typography>
-                    </Breadcrumbs>
+
                     <Typography variant="h4" component="h1" fontWeight="bold">
                         Configuración de Cuenta
                     </Typography>

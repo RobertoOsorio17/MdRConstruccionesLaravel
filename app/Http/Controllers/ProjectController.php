@@ -8,12 +8,19 @@ use Inertia\Inertia;
 
 /**
  * Presents the public portfolio of construction projects with filtering, search, and related recommendations.
- * Translates domain models into Inertia responses that highlight featured work and contextual metadata.
+ *
+ * Features:
+ * - Index with location/featured/search filters and curated columns.
+ * - Show view with related projects fallback.
+ * - SEO metadata for portfolio views.
  */
 class ProjectController extends Controller
 {
     /**
      * Display a listing of projects.
+     *
+     * @param Request $request The current HTTP request instance with optional filters.
+     * @return \Inertia\Response Inertia response with projects and locations.
      */
     public function index(Request $request)
     {
@@ -62,6 +69,9 @@ class ProjectController extends Controller
 
     /**
      * Display the specified project.
+     *
+     * @param string $slug The project slug.
+     * @return \Inertia\Response Inertia response with project and related items.
      */
     public function show($slug)
     {

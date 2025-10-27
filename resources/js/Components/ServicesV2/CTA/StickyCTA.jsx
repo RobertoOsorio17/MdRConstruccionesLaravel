@@ -36,7 +36,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import designSystem from '@/theme/designSystem';
 import { useDeviceBreakpoints, useScrollDirection } from '@/Hooks/useDeviceBreakpoints';
-import { trackCTAClick } from '@/Utils/trackEvent';
+import { trackCTAClick } from '@/Utils/analytics';
 import { contactConfig, getServiceWhatsAppUrl } from '@/config/contact';
 
 const StickyCTA = ({

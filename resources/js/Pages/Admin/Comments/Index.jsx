@@ -39,7 +39,6 @@ import {
   Tooltip,
   Typography,
   Avatar,
-  Grid,
   Checkbox,
   ToggleButton,
   ToggleButtonGroup,
@@ -347,7 +346,7 @@ const CommentsIndex = ({ comments, posts, stats, filters }) => {
 
   // Preferencias de vista
   const [viewMode, setViewMode] = useState('table'); // 'table' | 'cards'
-  const [density, setDensity] = useState('comfortable'); // 'comfortable' | 'compact'
+  const [density, setDensity] = useState('compact'); // 'comfortable' | 'compact'
 
   // Selección y snackbar
   const [selected, setSelected] = useState(new Set());
@@ -767,227 +766,111 @@ const CommentsIndex = ({ comments, posts, stats, filters }) => {
           </Stack>
         </Box>
 
-        <Grid container spacing={2} sx={{ mb: 3 }}>
-          <Grid item xs={12} sm={6} md={3}>
-            <motion.div
-              whileHover={{ scale: 1.03, y: -5 }}
-              transition={{ duration: 0.3, ease: 'easeOut' }}
-            >
-              <Paper
-                elevation={0}
-                sx={{
-                  p: 2.5,
-                  background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.15)}, ${alpha(theme.palette.primary.dark, 0.08)})`,
-                  backdropFilter: 'blur(30px)',
-                  border: `1px solid ${alpha(theme.palette.primary.main, 0.3)}`,
-                  borderRadius: 3,
-                  position: 'relative',
-                  overflow: 'hidden',
-                  boxShadow: `0 8px 32px ${alpha(theme.palette.primary.main, 0.15)}`,
-                  '&::before': {
-                    content: '""',
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    height: '4px',
-                    background: `linear-gradient(90deg, ${theme.palette.primary.main}, ${theme.palette.primary.light}, ${theme.palette.primary.main})`,
-                    backgroundSize: '200% 100%',
-                    animation: 'shimmer 3s ease-in-out infinite',
-                  },
-                  '&::after': {
-                    content: '""',
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    background: `radial-gradient(circle at top right, ${alpha(theme.palette.primary.light, 0.2)}, transparent 50%)`,
-                    pointerEvents: 'none',
-                  },
-                  '@keyframes shimmer': {
-                    '0%, 100%': { backgroundPosition: '0% 0%' },
-                    '50%': { backgroundPosition: '100% 0%' },
-                  },
-                }}
-              >
-                <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={2}>
-                  <Box sx={{ position: 'relative', zIndex: 1 }}>
-                    <Typography variant="h4" fontWeight={700} color="primary.main">
-                      <AnimatedCounter value={stats?.total ?? items.length} />
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                      Total Comentarios
-                    </Typography>
-                  </Box>
-                  <CommentIcon sx={{ fontSize: 40, color: alpha(theme.palette.primary.main, 0.4), position: 'relative', zIndex: 1 }} />
-                </Stack>
-              </Paper>
-            </motion.div>
-          </Grid>
+        {/* KPIs - CSS Grid */}
+        <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)' }, mb: 3 }}>
+          <motion.div whileHover={{ scale: 1.03, y: -5 }} transition={{ duration: 0.3, ease: 'easeOut' }}>
+            <Paper elevation={0} sx={{
+              p: 2.5,
+              background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.15)}, ${alpha(theme.palette.primary.dark, 0.08)})`,
+              backdropFilter: 'blur(30px)',
+              border: `1px solid ${alpha(theme.palette.primary.main, 0.3)}`,
+              borderRadius: 3,
+              position: 'relative',
+              overflow: 'hidden',
+              boxShadow: `0 8px 32px ${alpha(theme.palette.primary.main, 0.15)}`,
+              '&::before': { content: '""', position: 'absolute', top: 0, left: 0, right: 0, height: '4px',
+                background: `linear-gradient(90deg, ${theme.palette.primary.main}, ${theme.palette.primary.light}, ${theme.palette.primary.main})`, backgroundSize: '200% 100%', animation: 'shimmer 3s ease-in-out infinite' },
+              '&::after': { content: '""', position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+                background: `radial-gradient(circle at top right, ${alpha(theme.palette.primary.light, 0.2)}, transparent 50%)`, pointerEvents: 'none' },
+              '@keyframes shimmer': { '0%, 100%': { backgroundPosition: '0% 0%' }, '50%': { backgroundPosition: '100% 0%' } },
+            }}>
+              <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={2}>
+                <Box sx={{ position: 'relative', zIndex: 1 }}>
+                  <Typography variant="h4" fontWeight={700} color="primary.main">
+                    <AnimatedCounter value={stats?.total ?? items.length} />
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>Total Comentarios</Typography>
+                </Box>
+                <CommentIcon sx={{ fontSize: 40, color: alpha(theme.palette.primary.main, 0.4), position: 'relative', zIndex: 1 }} />
+              </Stack>
+            </Paper>
+          </motion.div>
 
-          <Grid item xs={12} sm={6} md={3}>
-            <motion.div
-              whileHover={{ scale: 1.03, y: -5 }}
-              transition={{ duration: 0.3, ease: 'easeOut' }}
-            >
-              <Paper
-                elevation={0}
-                sx={{
-                  p: 2.5,
-                  background: `linear-gradient(135deg, ${alpha(theme.palette.warning.main, 0.15)}, ${alpha(theme.palette.warning.dark, 0.08)})`,
-                  backdropFilter: 'blur(30px)',
-                  border: `1px solid ${alpha(theme.palette.warning.main, 0.3)}`,
-                  borderRadius: 3,
-                  position: 'relative',
-                  overflow: 'hidden',
-                  boxShadow: `0 8px 32px ${alpha(theme.palette.warning.main, 0.15)}`,
-                  '&::before': {
-                    content: '""',
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    height: '4px',
-                    background: `linear-gradient(90deg, ${theme.palette.warning.main}, ${theme.palette.warning.light}, ${theme.palette.warning.main})`,
-                    backgroundSize: '200% 100%',
-                    animation: 'shimmer 3s ease-in-out infinite',
-                  },
-                  '&::after': {
-                    content: '""',
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    background: `radial-gradient(circle at top right, ${alpha(theme.palette.warning.light, 0.2)}, transparent 50%)`,
-                    pointerEvents: 'none',
-                  },
-                }}
-              >
-                <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={2}>
-                  <Box sx={{ position: 'relative', zIndex: 1 }}>
-                    <Typography variant="h4" fontWeight={700} color="warning.main">
-                      <AnimatedCounter value={stats?.pending ?? 0} />
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                      Pendientes
-                    </Typography>
-                  </Box>
-                  <TrendingUpIcon sx={{ fontSize: 40, color: alpha(theme.palette.warning.main, 0.4), position: 'relative', zIndex: 1 }} />
-                </Stack>
-              </Paper>
-            </motion.div>
-          </Grid>
+          <motion.div whileHover={{ scale: 1.03, y: -5 }} transition={{ duration: 0.3, ease: 'easeOut' }}>
+            <Paper elevation={0} sx={{
+              p: 2.5,
+              background: `linear-gradient(135deg, ${alpha(theme.palette.warning.main, 0.15)}, ${alpha(theme.palette.warning.dark, 0.08)})`,
+              backdropFilter: 'blur(30px)',
+              border: `1px solid ${alpha(theme.palette.warning.main, 0.3)}`,
+              borderRadius: 3,
+              position: 'relative',
+              overflow: 'hidden',
+              boxShadow: `0 8px 32px ${alpha(theme.palette.warning.main, 0.15)}`,
+              '&::before': { content: '""', position: 'absolute', top: 0, left: 0, right: 0, height: '4px', background: `linear-gradient(90deg, ${theme.palette.warning.main}, ${theme.palette.warning.light}, ${theme.palette.warning.main})`, backgroundSize: '200% 100%', animation: 'shimmer 3s ease-in-out infinite' },
+              '&::after': { content: '""', position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: `radial-gradient(circle at top right, ${alpha(theme.palette.warning.light, 0.2)}, transparent 50%)`, pointerEvents: 'none' },
+            }}>
+              <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={2}>
+                <Box sx={{ position: 'relative', zIndex: 1 }}>
+                  <Typography variant="h4" fontWeight={700} color="warning.main">
+                    <AnimatedCounter value={stats?.pending ?? 0} />
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>Pendientes</Typography>
+                </Box>
+                <TrendingUpIcon sx={{ fontSize: 40, color: alpha(theme.palette.warning.main, 0.4), position: 'relative', zIndex: 1 }} />
+              </Stack>
+            </Paper>
+          </motion.div>
 
-          <Grid item xs={12} sm={6} md={3}>
-            <motion.div
-              whileHover={{ scale: 1.03, y: -5 }}
-              transition={{ duration: 0.3, ease: 'easeOut' }}
-            >
-              <Paper
-                elevation={0}
-                sx={{
-                  p: 2.5,
-                  background: `linear-gradient(135deg, ${alpha(theme.palette.success.main, 0.15)}, ${alpha(theme.palette.success.dark, 0.08)})`,
-                  backdropFilter: 'blur(30px)',
-                  border: `1px solid ${alpha(theme.palette.success.main, 0.3)}`,
-                  borderRadius: 3,
-                  position: 'relative',
-                  overflow: 'hidden',
-                  boxShadow: `0 8px 32px ${alpha(theme.palette.success.main, 0.15)}`,
-                  '&::before': {
-                    content: '""',
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    height: '4px',
-                    background: `linear-gradient(90deg, ${theme.palette.success.main}, ${theme.palette.success.light}, ${theme.palette.success.main})`,
-                    backgroundSize: '200% 100%',
-                    animation: 'shimmer 3s ease-in-out infinite',
-                  },
-                  '&::after': {
-                    content: '""',
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    background: `radial-gradient(circle at top right, ${alpha(theme.palette.success.light, 0.2)}, transparent 50%)`,
-                    pointerEvents: 'none',
-                  },
-                }}
-              >
-                <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={2}>
-                  <Box sx={{ position: 'relative', zIndex: 1 }}>
-                    <Typography variant="h4" fontWeight={700} color="success.main">
-                      <AnimatedCounter value={stats?.approved ?? 0} />
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                      Aprobados
-                    </Typography>
-                  </Box>
-                  <ThumbUpIcon sx={{ fontSize: 40, color: alpha(theme.palette.success.main, 0.4), position: 'relative', zIndex: 1 }} />
-                </Stack>
-              </Paper>
-            </motion.div>
-          </Grid>
+          <motion.div whileHover={{ scale: 1.03, y: -5 }} transition={{ duration: 0.3, ease: 'easeOut' }}>
+            <Paper elevation={0} sx={{
+              p: 2.5,
+              background: `linear-gradient(135deg, ${alpha(theme.palette.success.main, 0.15)}, ${alpha(theme.palette.success.dark, 0.08)})`,
+              backdropFilter: 'blur(30px)',
+              border: `1px solid ${alpha(theme.palette.success.main, 0.3)}`,
+              borderRadius: 3,
+              position: 'relative',
+              overflow: 'hidden',
+              boxShadow: `0 8px 32px ${alpha(theme.palette.success.main, 0.15)}`,
+              '&::before': { content: '""', position: 'absolute', top: 0, left: 0, right: 0, height: '4px', background: `linear-gradient(90deg, ${theme.palette.success.main}, ${theme.palette.success.light}, ${theme.palette.success.main})`, backgroundSize: '200% 100%', animation: 'shimmer 3s ease-in-out infinite' },
+              '&::after': { content: '""', position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: `radial-gradient(circle at top right, ${alpha(theme.palette.success.light, 0.2)}, transparent 50%)`, pointerEvents: 'none' },
+            }}>
+              <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={2}>
+                <Box sx={{ position: 'relative', zIndex: 1 }}>
+                  <Typography variant="h4" fontWeight={700} color="success.main">
+                    <AnimatedCounter value={stats?.approved ?? 0} />
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>Aprobados</Typography>
+                </Box>
+                <ThumbUpIcon sx={{ fontSize: 40, color: alpha(theme.palette.success.main, 0.4), position: 'relative', zIndex: 1 }} />
+              </Stack>
+            </Paper>
+          </motion.div>
 
-          <Grid item xs={12} sm={6} md={3}>
-            <motion.div
-              whileHover={{ scale: 1.03, y: -5 }}
-              transition={{ duration: 0.3, ease: 'easeOut' }}
-            >
-              <Paper
-                elevation={0}
-                sx={{
-                  p: 2.5,
-                  background: `linear-gradient(135deg, ${alpha(theme.palette.error.main, 0.15)}, ${alpha(theme.palette.error.dark, 0.08)})`,
-                  backdropFilter: 'blur(30px)',
-                  border: `1px solid ${alpha(theme.palette.error.main, 0.3)}`,
-                  borderRadius: 3,
-                  position: 'relative',
-                  overflow: 'hidden',
-                  boxShadow: `0 8px 32px ${alpha(theme.palette.error.main, 0.15)}`,
-                  '&::before': {
-                    content: '""',
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    height: '4px',
-                    background: `linear-gradient(90deg, ${theme.palette.error.main}, ${theme.palette.error.light}, ${theme.palette.error.main})`,
-                    backgroundSize: '200% 100%',
-                    animation: 'shimmer 3s ease-in-out infinite',
-                  },
-                  '&::after': {
-                    content: '""',
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    background: `radial-gradient(circle at top right, ${alpha(theme.palette.error.light, 0.2)}, transparent 50%)`,
-                    pointerEvents: 'none',
-                  },
-                }}
-              >
-                <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={2}>
-                  <Box sx={{ position: 'relative', zIndex: 1 }}>
-                    <Typography variant="h4" fontWeight={700} color="error.main">
-                      <AnimatedCounter value={(stats?.spam ?? 0) + (stats?.deleted ?? 0)} />
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                      Spam/Eliminados
-                    </Typography>
-                  </Box>
-                  <BlockIcon sx={{ fontSize: 40, color: alpha(theme.palette.error.main, 0.3) }} />
-                </Stack>
-              </Paper>
-            </motion.div>
-          </Grid>
-        </Grid>
+          <motion.div whileHover={{ scale: 1.03, y: -5 }} transition={{ duration: 0.3, ease: 'easeOut' }}>
+            <Paper elevation={0} sx={{
+              p: 2.5,
+              background: `linear-gradient(135deg, ${alpha(theme.palette.error.main, 0.15)}, ${alpha(theme.palette.error.dark, 0.08)})`,
+              backdropFilter: 'blur(30px)',
+              border: `1px solid ${alpha(theme.palette.error.main, 0.3)}`,
+              borderRadius: 3,
+              position: 'relative',
+              overflow: 'hidden',
+              boxShadow: `0 8px 32px ${alpha(theme.palette.error.main, 0.15)}`,
+              '&::before': { content: '""', position: 'absolute', top: 0, left: 0, right: 0, height: '4px', background: `linear-gradient(90deg, ${theme.palette.error.main}, ${theme.palette.error.light}, ${theme.palette.error.main})`, backgroundSize: '200% 100%', animation: 'shimmer 3s ease-in-out infinite' },
+              '&::after': { content: '""', position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: `radial-gradient(circle at top right, ${alpha(theme.palette.error.light, 0.2)}, transparent 50%)`, pointerEvents: 'none' },
+            }}>
+              <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={2}>
+                <Box sx={{ position: 'relative', zIndex: 1 }}>
+                  <Typography variant="h4" fontWeight={700} color="error.main">
+                    <AnimatedCounter value={(stats?.spam ?? 0) + (stats?.deleted ?? 0)} />
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>Spam/Eliminados</Typography>
+                </Box>
+                <BlockIcon sx={{ fontSize: 40, color: alpha(theme.palette.error.main, 0.3) }} />
+              </Stack>
+            </Paper>
+          </motion.div>
+        </Box>
 
         {/* Chips de filtros activos */}
         {(search || status || postId || deletedStatus !== 'active') && (
@@ -1098,9 +981,9 @@ const CommentsIndex = ({ comments, posts, stats, filters }) => {
         )}
       </motion.div>
 
-      <Grid container spacing={2}>
+      <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', md: 'minmax(260px, 3fr) minmax(0, 9fr)', lg: 'minmax(280px, 2.8fr) minmax(0, 9.2fr)' } }}>
         {/* Panel lateral de filtros con glassmorphism */}
-        <Grid item xs={12} md={3} lg={2.8}>
+        <Box>
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
@@ -1322,10 +1205,10 @@ const CommentsIndex = ({ comments, posts, stats, filters }) => {
               </Stack>
             </Paper>
           </motion.div>
-        </Grid>
+        </Box>
 
         {/* Contenido principal con glassmorphism */}
-        <Grid item xs={12} md={9} lg={9.2}>
+        <Box>
           <motion.div
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
@@ -1416,9 +1299,9 @@ const CommentsIndex = ({ comments, posts, stats, filters }) => {
 
             {/* Tabla mejorada con expansión inline */}
             {viewMode === 'table' && (
-              <TableContainer>
+              <TableContainer sx={{ maxHeight: '70vh', overflow: 'auto', borderRadius: 2, background: alpha(theme.palette.background.paper, 0.6), backdropFilter: 'blur(8px)', border: `1px solid ${alpha(theme.palette.divider, 0.1)}` }}>
                 <Table size={density === 'compact' ? 'small' : 'medium'}>
-                  <TableHead>
+                  <TableHead sx={{ '& th': { position: 'sticky', top: 0, zIndex: 2, background: alpha(theme.palette.background.paper, 0.85), backdropFilter: 'blur(6px)' } }}>
                     <TableRow sx={{ background: alpha(theme.palette.primary.main, 0.05) }}>
                       <TableCell padding="checkbox">
                         <Checkbox
@@ -1436,7 +1319,7 @@ const CommentsIndex = ({ comments, posts, stats, filters }) => {
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {items.map((c) => {
+                    {items.map((c, idx) => {
                       const authorName = c.user?.name || c.author_name || 'Invitado';
                       const initials = authorName?.charAt(0)?.toUpperCase?.() || '?';
                       const commentText = c.body || '';
@@ -1451,7 +1334,7 @@ const CommentsIndex = ({ comments, posts, stats, filters }) => {
                             hover
                             sx={{
                               ...densityRowSx,
-                              background: selected.has(c.id) ? alpha(theme.palette.primary.main, 0.05) : 'transparent',
+                              background: selected.has(c.id) ? alpha(theme.palette.primary.main, 0.05) : (idx % 2 ? alpha(theme.palette.action.hover, 0.04) : 'transparent'),
                               transition: 'all 0.2s ease',
                               '&:hover': {
                                 background: alpha(theme.palette.primary.main, 0.08),
@@ -1587,7 +1470,7 @@ const CommentsIndex = ({ comments, posts, stats, filters }) => {
 
             {/* Tarjetas mejoradas con animaciones */}
             {viewMode === 'cards' && (
-              <Grid container spacing={2}>
+              <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)', lg: 'repeat(3, 1fr)' } }}>
                 <AnimatePresence>
                   {items.map((c, index) => {
                     const authorName = c.user?.name || c.author_name || 'Invitado';
@@ -1596,7 +1479,7 @@ const CommentsIndex = ({ comments, posts, stats, filters }) => {
                     const isDeleted = !!c.deleted_at;
 
                     return (
-                      <Grid item xs={12} md={6} lg={4} key={c.id}>
+                      <Box key={c.id}>
                         <motion.div
                           initial={{ opacity: 0, y: 20 }}
                           animate={{ opacity: 1, y: 0 }}
@@ -1779,20 +1662,20 @@ const CommentsIndex = ({ comments, posts, stats, filters }) => {
                             </Stack>
                           </Paper>
                         </motion.div>
-                      </Grid>
+                      </Box>
                     );
                   })}
                 </AnimatePresence>
                 {items.length === 0 && (
-                  <Grid item xs={12}>
+                  <Box sx={{ gridColumn: '1 / -1' }}>
                     <EmptyState
                       icon={EmptyCommentIcon}
                       title="No hay comentarios"
                       description="Ajusta los filtros o limpia la búsqueda para ver más resultados"
                     />
-                  </Grid>
+                  </Box>
                 )}
-              </Grid>
+              </Box>
             )}
 
             {/* Paginación */}
@@ -1810,8 +1693,8 @@ const CommentsIndex = ({ comments, posts, stats, filters }) => {
             )}
           </Paper>
         </motion.div>
-        </Grid>
-      </Grid>
+        </Box>
+      </Box>
 
       {/* Drawer de detalle */}
       <Drawer anchor="right" open={drawer.open} onClose={closeDrawer} PaperProps={{ sx: { width: { xs: '100%', sm: 420 } } }}>

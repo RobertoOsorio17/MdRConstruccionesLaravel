@@ -15,16 +15,19 @@ use Inertia\Inertia;
 class TestimonialController extends Controller
 {
     /**
-     * Display testimonials management
+     * Display testimonials management.
+     *
+     * @param Request $request The current HTTP request instance.
+     * @return \Inertia\Response Inertia response with testimonials, stats, and filters.
      */
     public function index(Request $request)
     {
-        // ✅ Authorize
+        // Authorize.
         if (!auth()->user()->hasPermission('reviews.view')) {
             abort(403, 'Unauthorized action.');
         }
 
-        // ✅ Validate filters
+        // Validate filters.
         $validated = $request->validate([
             'status' => 'nullable|in:pending,approved,rejected',
             'search' => 'nullable|string|max:255',
@@ -81,11 +84,13 @@ class TestimonialController extends Controller
     }
 
     /**
-     * Show create form
+     * Show the create form.
+     *
+     * @return \Inertia\Response Inertia response for the create view.
      */
     public function create()
     {
-        // ✅ Authorize
+        // Authorize.
         if (!auth()->user()->hasPermission('reviews.create')) {
             abort(403, 'Unauthorized action.');
         }
@@ -94,16 +99,19 @@ class TestimonialController extends Controller
     }
 
     /**
-     * Store new testimonial
+     * Store a new testimonial.
+     *
+     * @param Request $request The current HTTP request instance.
+     * @return \Illuminate\Http\RedirectResponse Redirect to index with status.
      */
     public function store(Request $request)
     {
-        // ✅ Authorize
+        // Authorize.
         if (!auth()->user()->hasPermission('reviews.create')) {
             abort(403, 'Unauthorized action.');
         }
 
-        // ✅ Validate
+        // Validate.
         $validated = $request->validate([
             'client_name' => 'required|string|max:255|regex:/^[a-zA-Z\s\-\.áéíóúñÁÉÍÓÚÑ]+$/',
             'client_position' => 'nullable|string|max:255|regex:/^[^<>]*$/',
@@ -144,7 +152,7 @@ class TestimonialController extends Controller
 
         $testimonial = Testimonial::create($validated);
 
-        // ✅ Log action
+        // Log action.
         \Log::info('Testimonial created by admin', [
             'testimonial_id' => $testimonial->id,
             'admin_id' => auth()->id(),
@@ -155,11 +163,14 @@ class TestimonialController extends Controller
     }
 
     /**
-     * Show edit form
+     * Show the edit form.
+     *
+     * @param Testimonial $testimonial The testimonial model.
+     * @return \Inertia\Response Inertia response for the edit view.
      */
     public function edit(Testimonial $testimonial)
     {
-        // ✅ Authorize
+        // Authorize.
         if (!auth()->user()->hasPermission('reviews.edit')) {
             abort(403, 'Unauthorized action.');
         }
@@ -172,16 +183,20 @@ class TestimonialController extends Controller
     }
 
     /**
-     * Update testimonial
+     * Update a testimonial.
+     *
+     * @param Request $request The current HTTP request instance.
+     * @param Testimonial $testimonial The testimonial being updated.
+     * @return \Illuminate\Http\RedirectResponse Redirect to index with status.
      */
     public function update(Request $request, Testimonial $testimonial)
     {
-        // ✅ Authorize
+        // Authorize.
         if (!auth()->user()->hasPermission('reviews.edit')) {
             abort(403, 'Unauthorized action.');
         }
 
-        // ✅ Validate
+        // Validate.
         $validated = $request->validate([
             'client_name' => 'required|string|max:255|regex:/^[a-zA-Z\s\-\.áéíóúñÁÉÍÓÚÑ]+$/',
             'client_position' => 'nullable|string|max:255|regex:/^[^<>]*$/',
@@ -233,7 +248,7 @@ class TestimonialController extends Controller
 
         $testimonial->update($validated);
 
-        // ✅ Log action
+        // Log action.
         \Log::info('Testimonial updated', [
             'testimonial_id' => $testimonial->id,
             'admin_id' => auth()->id(),
@@ -244,11 +259,14 @@ class TestimonialController extends Controller
     }
 
     /**
-     * Delete testimonial
+     * Delete a testimonial.
+     *
+     * @param Testimonial $testimonial The testimonial to delete.
+     * @return \Illuminate\Http\RedirectResponse Redirect back with status.
      */
     public function destroy(Testimonial $testimonial)
     {
-        // ✅ Authorize
+        // Authorize.
         if (!auth()->user()->hasPermission('reviews.delete')) {
             abort(403, 'Unauthorized action.');
         }
@@ -266,7 +284,7 @@ class TestimonialController extends Controller
 
         $testimonial->delete();
 
-        // ✅ Log action
+        // Log action.
         \Log::info('Testimonial deleted', [
             'testimonial_id' => $testimonial->id,
             'admin_id' => auth()->id(),
@@ -277,18 +295,21 @@ class TestimonialController extends Controller
     }
 
     /**
-     * Approve testimonial
+     * Approve a testimonial.
+     *
+     * @param Testimonial $testimonial The testimonial to approve.
+     * @return \Illuminate\Http\RedirectResponse Redirect back with status.
      */
     public function approve(Testimonial $testimonial)
     {
-        // ✅ Authorize
+        // Authorize.
         if (!auth()->user()->hasPermission('reviews.moderate')) {
             abort(403, 'Unauthorized action.');
         }
 
         $testimonial->approve(auth()->user());
 
-        // ✅ Log action
+        // Log action.
         \Log::info('Testimonial approved', [
             'testimonial_id' => $testimonial->id,
             'admin_id' => auth()->id(),
@@ -298,18 +319,21 @@ class TestimonialController extends Controller
     }
 
     /**
-     * Reject testimonial
+     * Reject a testimonial.
+     *
+     * @param Testimonial $testimonial The testimonial to reject.
+     * @return \Illuminate\Http\RedirectResponse Redirect back with status.
      */
     public function reject(Testimonial $testimonial)
     {
-        // ✅ Authorize
+        // Authorize.
         if (!auth()->user()->hasPermission('reviews.moderate')) {
             abort(403, 'Unauthorized action.');
         }
 
         $testimonial->reject();
 
-        // ✅ Log action
+        // Log action.
         \Log::info('Testimonial rejected', [
             'testimonial_id' => $testimonial->id,
             'admin_id' => auth()->id(),

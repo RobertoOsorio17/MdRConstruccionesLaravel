@@ -154,12 +154,12 @@ class PostController extends Controller
             $validated['published_at'] = now();
         }
 
-        // ✅ FIX: Generate slug if empty
+        // Fix: Generate slug if empty.
         if (empty($validated['slug'])) {
             $validated['slug'] = Str::slug($validated['title']);
         }
 
-        // ✅ FIX: Ensure slug uniqueness (moved outside unreachable branch)
+        // Fix: Ensure slug uniqueness (moved outside unreachable branch).
         $originalSlug = $validated['slug'];
         $counter = 1;
         while (Post::where('slug', $validated['slug'])->exists()) {
@@ -177,7 +177,7 @@ class PostController extends Controller
             $validated['published_at'] = $validated['published_at'] ?? null;
         }
 
-        // ✅ FIX: Wrap post creation and relationships in transaction
+        // Fix: Wrap post creation and relationships in transaction.
         $post = \DB::transaction(function () use ($validated) {
             $post = Post::create($validated);
 

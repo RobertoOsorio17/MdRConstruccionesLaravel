@@ -20,7 +20,7 @@ import { Container, Box, Typography } from '@mui/material';
 import { motion } from 'framer-motion';
 import designSystem from '@/theme/designSystem';
 import { useIntersectionReveal } from '@/Hooks/useIntersectionReveal';
-import { trackSectionView } from '@/Utils/trackEvent';
+import { trackSectionView } from '@/Utils/analytics';
 
 const SectionContainer = ({
     children,

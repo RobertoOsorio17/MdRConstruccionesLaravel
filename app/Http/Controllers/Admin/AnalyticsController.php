@@ -20,7 +20,7 @@ use Inertia\Inertia;
  * Drives the analytical reporting section of the admin panel by aggregating behavioral and content metrics into actionable summaries.
  * Supplies data endpoints and dashboard views that power trend visualizations and operational decisions for administrators.
  *
- * ✅ SECURITY FIX: Middleware applied in routes (routes/web.php) instead of constructor for Laravel 11+ compatibility
+ * Security fix: Middleware applied in routes (routes/web.php) instead of constructor for Laravel 11+ compatibility.
  */
 class AnalyticsController extends Controller
 {
@@ -45,7 +45,7 @@ class AnalyticsController extends Controller
      */
     public function getUserAnalytics(Request $request)
     {
-        // ✅ FIX: Validate and sanitize period to prevent TypeError in subDays()
+        // Fix: Validate and sanitize period to prevent TypeError in subDays().
         $period = max(1, min(365, (int)$request->get('period', 30)));
         $startDate = Carbon::now()->subDays($period);
 
@@ -67,7 +67,7 @@ class AnalyticsController extends Controller
      */
     public function getContentAnalytics(Request $request)
     {
-        // ✅ FIX: Validate and sanitize period
+        // Fix: Validate and sanitize period.
         $period = max(1, min(365, (int)$request->get('period', 30)));
         $startDate = Carbon::now()->subDays($period);
 
@@ -89,7 +89,7 @@ class AnalyticsController extends Controller
      */
     public function getServiceAnalytics(Request $request)
     {
-        // ✅ FIX: Validate and sanitize period
+        // Fix: Validate and sanitize period.
         $period = max(1, min(365, (int)$request->get('period', 30)));
         $startDate = Carbon::now()->subDays($period);
 
@@ -111,7 +111,7 @@ class AnalyticsController extends Controller
      */
     public function getProjectAnalytics(Request $request)
     {
-        // ✅ FIX: Validate and sanitize period
+        // Fix: Validate and sanitize period.
         $period = max(1, min(365, (int)$request->get('period', 30)));
         $startDate = Carbon::now()->subDays($period);
 

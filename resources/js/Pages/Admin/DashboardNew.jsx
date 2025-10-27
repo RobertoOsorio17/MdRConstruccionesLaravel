@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
     Box,
-    Grid,
     Card,
     CardContent,
     Typography,
@@ -369,14 +368,14 @@ const DashboardNew = ({
                 initial="hidden"
                 animate="visible"
             >
-                {/* Header */}
+                {/* Encabezado */}
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
                     <Box>
-                        <Typography variant="h4" sx={{ fontWeight: 700, color: '#2D3748', mb: 1 }}>
-                            Dashboard
+                        <Typography variant="h4" sx={{ fontWeight: 800, color: '#1F2937', mb: 0.5 }}>
+                            Panel de Administración
                         </Typography>
-                        <Typography variant="body1" sx={{ color: '#718096' }}>
-                            Bienvenido al panel de administración
+                        <Typography variant="body2" sx={{ color: '#6B7280' }}>
+                            Resumen general y accesos rápidos
                         </Typography>
                     </Box>
                     <Box sx={{ display: 'flex', gap: 2 }}>
@@ -422,199 +421,157 @@ const DashboardNew = ({
                     </Box>
                 </Box>
 
-                {/* Stats Cards */}
-                <Grid container spacing={3} sx={{ mb: 4 }}>
-                    <Grid item {...getWidgetSize('stat-projects')}>
-                        <StatCard
-                            widgetId="stat-projects"
-                            title="Proyectos"
-                            value={stats.projects?.total || 0}
-                            change={-2}
-                            changeType="decrease"
-                            icon={<WorkIcon />}
-                            color="#9F7AEA"
-                            subtitle={`${stats.projects?.completed || 0} completados`}
-                            onResize={handleWidgetResize}
-                        />
-                    </Grid>
-                    <Grid item {...getWidgetSize('stat-services')}>
-                        <StatCard
-                            widgetId="stat-services"
-                            title="Servicios Activos"
-                            value={stats.services?.active || 0}
-                            change={5}
-                            changeType="increase"
-                            icon={<BuildIcon />}
-                            color="#ED8936"
-                            subtitle={`${stats.services?.favorites || 0} favoritos`}
-                            onResize={handleWidgetResize}
-                        />
-                    </Grid>
-                    <Grid item {...getWidgetSize('stat-posts')}>
-                        <StatCard
-                            widgetId="stat-posts"
-                            title="Posts Publicados"
-                            value={stats.posts?.published || 0}
-                            change={8}
-                            changeType="increase"
-                            icon={<ArticleIcon />}
-                            color="#48BB78"
-                            subtitle={`${stats.posts?.draft || 0} borradores`}
-                            onResize={handleWidgetResize}
-                        />
-                    </Grid>
-                    <Grid item {...getWidgetSize('stat-comments')}>
-                        <StatCard
-                            widgetId="stat-comments"
-                            title="Comentarios"
-                            value={stats.comments?.total || 0}
-                            change={12}
-                            changeType="increase"
-                            icon={<CommentIcon />}
-                            color="#4299E1"
-                            subtitle={`${stats.comments?.pending || 0} pendientes`}
-                            onResize={handleWidgetResize}
-                        />
-                    </Grid>
-                </Grid>
+                {/* Stats Cards - CSS Grid 12 cols con soporte a "tama f1o de widget" */}
+                {(() => {
+                    const sz1 = getWidgetSize('stat-projects');
+                    const sz2 = getWidgetSize('stat-services');
+                    const sz3 = getWidgetSize('stat-posts');
+                    const sz4 = getWidgetSize('stat-comments');
+                    const toSpan = (s) => ({ xs: `span ${s?.xs || 12}`, sm: `span ${s?.sm || 6}`, md: `span ${s?.md || 3}`, lg: `span ${s?.lg || 3}`, xl: `span ${s?.xl || 3}` });
+                    return (
+                        <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: 3, mb: 4 }}>
+                            <Box sx={{ gridColumn: toSpan(sz1) }}>
+                                <StatCard
+                                    widgetId="stat-projects"
+                                    title="Proyectos"
+                                    value={stats.projects?.total || 0}
+                                    change={-2}
+                                    changeType="decrease"
+                                    icon={<WorkIcon />}
+                                    color="#9F7AEA"
+                                    subtitle={`${stats.projects?.completed || 0} completados`}
+                                    onResize={handleWidgetResize}
+                                />
+                            </Box>
+                            <Box sx={{ gridColumn: toSpan(sz2) }}>
+                                <StatCard
+                                    widgetId="stat-services"
+                                    title="Servicios Activos"
+                                    value={stats.services?.active || 0}
+                                    change={5}
+                                    changeType="increase"
+                                    icon={<BuildIcon />}
+                                    color="#ED8936"
+                                    subtitle={`${stats.services?.favorites || 0} favoritos`}
+                                    onResize={handleWidgetResize}
+                                />
+                            </Box>
+                            <Box sx={{ gridColumn: toSpan(sz3) }}>
+                                <StatCard
+                                    widgetId="stat-posts"
+                                    title="Posts Publicados"
+                                    value={stats.posts?.published || 0}
+                                    change={8}
+                                    changeType="increase"
+                                    icon={<ArticleIcon />}
+                                    color="#48BB78"
+                                    subtitle={`${stats.posts?.draft || 0} borradores`}
+                                    onResize={handleWidgetResize}
+                                />
+                            </Box>
+                            <Box sx={{ gridColumn: toSpan(sz4) }}>
+                                <StatCard
+                                    widgetId="stat-comments"
+                                    title="Comentarios"
+                                    value={stats.comments?.total || 0}
+                                    change={12}
+                                    changeType="increase"
+                                    icon={<CommentIcon />}
+                                    color="#4299E1"
+                                    subtitle={`${stats.comments?.pending || 0} pendientes`}
+                                    onResize={handleWidgetResize}
+                                />
+                            </Box>
+                        </Box>
+                    );
+                })()}
 
-                {/* Quick Actions */}
-                <Grid container spacing={3} sx={{ mb: 4 }}>
-                    <Grid item xs={12}>
-                        <Typography variant="h5" sx={{ fontWeight: 600, color: '#2D3748', mb: 3 }}>
-                            Acciones Rápidas
-                        </Typography>
-                    </Grid>
-                    {quickActions.slice(0, 4).map((action, index) => (
-                        <Grid item xs={12} sm={6} md={3} key={index}>
-                            <QuickActionCard
-                                title={action.title}
-                                description={action.description}
-                                icon={<ArticleIcon />}
-                                color="#4299E1"
-                                onClick={() => window.location.href = action.url}
-                                badge={action.badge}
-                            />
-                        </Grid>
-                    ))}
-                </Grid>
+                {/* Acciones Rápidas - CSS Grid */}
+                <Box sx={{ mb: 4 }}>
+                    <Typography variant="h5" sx={{ fontWeight: 600, color: '#2D3748', mb: 3 }}>
+                        Acciones Rápidas
+                    </Typography>
+                    <Box sx={{ display: 'grid', gap: 3, gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)' } }}>
+                        {quickActions.slice(0, 4).map((action, index) => (
+                            <Box key={index}>
+                                <QuickActionCard
+                                    title={action.title}
+                                    description={action.description}
+                                    icon={<ArticleIcon />}
+                                    color="#4299E1"
+                                    onClick={() => window.location.href = action.url}
+                                    badge={action.badge}
+                                />
+                            </Box>
+                        ))}
+                    </Box>
+                </Box>
 
-                {/* Main Content Grid */}
-                <Grid container spacing={3}>
-                    {/* Recent Activity */}
-                    <Grid item xs={12} md={6}>
+                {/* Principal - CSS Grid */}
+                <Box sx={{ display: 'grid', gap: 3, gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' } }}>
+                    <Box>
                         <motion.div variants={itemVariants}>
                             <Card sx={glassmorphismCard}>
                                 <CardContent sx={{ p: 3 }}>
-                                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'between', mb: 3 }}>
-                                        <Typography variant="h6" sx={{ fontWeight: 600, color: '#2D3748' }}>
-                                            Actividad Reciente
-                                        </Typography>
-                                        <Tooltip title="Logs de auditoría">
-                                            <IconButton size="small">
-                                                <SecurityIcon />
-                                            </IconButton>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
+                                        <Typography variant="h6" sx={{ fontWeight: 600, color: '#2D3748' }}>Actividad Reciente</Typography>
+                                        <Tooltip title="Logs de auditor a">
+                                            <IconButton size="small"><SecurityIcon /></IconButton>
                                         </Tooltip>
                                     </Box>
-
                                     <List sx={{ maxHeight: 400, overflow: 'auto' }}>
                                         {auditLogs.slice(0, 5).map((log, index) => (
                                             <React.Fragment key={log.id}>
-                                                <ActivityItem
-                                                    user={log.user}
-                                                    action={log.description}
-                                                    time={log.created_at}
-                                                    severity={log.severity}
-                                                />
+                                                <ActivityItem user={log.user} action={log.description} time={log.created_at} severity={log.severity} />
                                                 {index < auditLogs.length - 1 && <Divider />}
                                             </React.Fragment>
                                         ))}
                                         {auditLogs.length === 0 && (
                                             <ListItem>
-                                                <ListItemText
-                                                    primary={
-                                                        <Typography variant="body2" sx={{ color: '#718096', textAlign: 'center' }}>
-                                                            No hay actividad reciente
-                                                        </Typography>
-                                                    }
-                                                />
+                                                <ListItemText primary={<Typography variant="body2" sx={{ color: '#718096', textAlign: 'center' }}>No hay actividad reciente</Typography>} />
                                             </ListItem>
                                         )}
                                     </List>
                                 </CardContent>
                             </Card>
                         </motion.div>
-                    </Grid>
+                    </Box>
 
-                    {/* Recent Posts */}
-                    <Grid item xs={12} md={6}>
+                    <Box>
                         <motion.div variants={itemVariants}>
                             <Card sx={glassmorphismCard}>
                                 <CardContent sx={{ p: 3 }}>
-                                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'between', mb: 3 }}>
-                                        <Typography variant="h6" sx={{ fontWeight: 600, color: '#2D3748' }}>
-                                            Posts Recientes
-                                        </Typography>
-                                        <Tooltip title="Ver todos los posts">
-                                            <IconButton size="small">
-                                                <ArticleIcon />
-                                            </IconButton>
-                                        </Tooltip>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
+                                        <Typography variant="h6" sx={{ fontWeight: 600, color: '#2D3748' }}>Posts Recientes</Typography>
+                                        <Tooltip title="Ver todos los posts"><IconButton size="small"><ArticleIcon /></IconButton></Tooltip>
                                     </Box>
-
                                     <List sx={{ maxHeight: 400, overflow: 'auto' }}>
                                         {recentPosts.slice(0, 5).map((post, index) => (
                                             <React.Fragment key={post.id}>
                                                 <ListItem sx={{ px: 0 }}>
                                                     <ListItemAvatar>
-                                                        <Avatar sx={{ bgcolor: '#4299E1', width: 32, height: 32 }}>
-                                                            <ArticleIcon sx={{ fontSize: 16 }} />
-                                                        </Avatar>
+                                                        <Avatar sx={{ bgcolor: '#4299E1', width: 32, height: 32 }}><ArticleIcon sx={{ fontSize: 16 }} /></Avatar>
                                                     </ListItemAvatar>
                                                     <ListItemText
-                                                        primary={
-                                                            <Typography variant="body2" sx={{ fontWeight: 500, color: '#2D3748' }}>
-                                                                {post.title}
-                                                            </Typography>
-                                                        }
-                                                        secondary={
-                                                            <Box>
-                                                                <Typography variant="caption" sx={{ color: '#718096' }}>
-                                                                    Por {post.author?.name || 'Autor desconocido'}
-                                                                </Typography>
-                                                                <Typography variant="caption" sx={{ color: '#A0AEC0', display: 'block' }}>
-                                                                    {post.created_at}
-                                                                </Typography>
-                                                            </Box>
-                                                        }
+                                                        primary={<Typography variant="body2" sx={{ fontWeight: 500, color: '#2D3748' }}>{post.title}</Typography>}
+                                                        secondary={<Box><Typography variant="caption" sx={{ color: '#718096' }}>Por {post.author?.name || 'Autor desconocido'}</Typography><Typography variant="caption" sx={{ color: '#A0AEC0', display: 'block' }}>{post.created_at}</Typography></Box>}
                                                     />
-                                                    <Chip
-                                                        label={post.status}
-                                                        size="small"
-                                                        color={post.status === 'published' ? 'success' : 'default'}
-                                                        sx={{ textTransform: 'capitalize' }}
-                                                    />
+                                                    <Chip label={post.status} size="small" color={post.status === 'published' ? 'success' : 'default'} sx={{ textTransform: 'capitalize' }} />
                                                 </ListItem>
                                                 {index < recentPosts.length - 1 && <Divider />}
                                             </React.Fragment>
                                         ))}
                                         {recentPosts.length === 0 && (
                                             <ListItem>
-                                                <ListItemText
-                                                    primary={
-                                                        <Typography variant="body2" sx={{ color: '#718096', textAlign: 'center' }}>
-                                                            No hay posts recientes
-                                                        </Typography>
-                                                    }
-                                                />
+                                                <ListItemText primary={<Typography variant="body2" sx={{ color: '#718096', textAlign: 'center' }}>No hay posts recientes</Typography>} />
                                             </ListItem>
                                         )}
                                     </List>
                                 </CardContent>
                             </Card>
                         </motion.div>
-                    </Grid>
-                </Grid>
+                    </Box>
+                </Box>
             </motion.div>
         </AdminLayoutNew>
     );

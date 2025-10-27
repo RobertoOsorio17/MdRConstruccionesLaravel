@@ -10,24 +10,32 @@ use Jenssegers\Agent\Agent;
 
 /**
  * Surfaces active session metadata so users can review and manage devices connected to their account.
- * Interprets session records into human-readable device details while exposing controls for revocation.
+ *
+ * Features:
+ * - Query session store for active devices with UA-derived labels.
+ * - Rename/trust sessions and revoke devices, including current-session handling.
+ * - JSON responses designed for the security settings UI.
  */
 class DeviceSessionController extends Controller
 {
     /**
      * Get all active sessions/devices for the authenticated user.
+     *
+     * @param Request $request The current HTTP request instance.
+     * @return \Illuminate\Http\JsonResponse JSON response with devices and stats.
      */
     public function index(Request $request)
     {
         $user = $request->user();
         $currentSessionId = session()->getId();
         
-        // Get sessions from database
+        // 1) Fetch all sessions for the current user from the database session store.
         $sessions = DB::table('sessions')
             ->where('user_id', $user->id)
             ->orderBy('last_activity', 'desc')
             ->get();
 
+        // 2) Hydrate device metadata using the user agent and mark current session.
         $devices = $sessions->map(function ($session) use ($currentSessionId) {
             $agent = new Agent();
             $agent->setUserAgent($session->user_agent);
@@ -54,13 +62,14 @@ class DeviceSessionController extends Controller
             ];
         });
 
-        // Get stats
+        // 3) Compute aggregate stats for convenience.
         $stats = [
             'total' => $devices->count(),
             'active' => $devices->where('is_active', true)->count(),
             'trusted' => $devices->where('is_trusted', true)->count(),
         ];
 
+        // 4) Return normalized payload for settings interface.
         return response()->json([
             'devices' => $devices->values(),
             'stats' => $stats
@@ -69,6 +78,10 @@ class DeviceSessionController extends Controller
 
     /**
      * Update device custom name.
+     *
+     * @param Request $request The current HTTP request instance.
+     * @param string $id The session identifier.
+     * @return \Illuminate\Http\JsonResponse JSON response indicating success.
      */
     public function update(Request $request, $id)
     {
@@ -94,6 +107,10 @@ class DeviceSessionController extends Controller
 
     /**
      * Mark device as trusted (create trusted device).
+     *
+     * @param Request $request The current HTTP request instance.
+     * @param string $id The session identifier to trust.
+     * @return \Illuminate\Http\JsonResponse JSON response with result and cookies set.
      */
     public function trust(Request $request, $id)
     {
@@ -138,17 +155,20 @@ class DeviceSessionController extends Controller
             'ip' => $request->ip()
         ]);
 
-        // Set secure cookie
+        // ✅ SECURITY FIX: Set secure cookie with partitioned attribute
+        // This prevents cookie injection from compromised subdomains
         cookie()->queue(
-            'trusted_device_token',
-            $token,
-            43200, // 30 days in minutes
-            null,
-            null,
-            true, // secure
-            true, // httpOnly
-            false,
-            'strict' // sameSite
+            cookie(
+                'trusted_device_token',
+                $token,
+                43200, // 30 days in minutes
+                '/', // path
+                config('session.domain'), // domain from config
+                config('session.secure', true), // secure (HTTPS only)
+                true, // httpOnly
+                false, // raw
+                config('session.same_site', 'strict') // sameSite
+            )->withPartitioned() // ✅ Partitioned attribute for better isolation
         );
 
         return response()->json([
@@ -159,6 +179,10 @@ class DeviceSessionController extends Controller
 
     /**
      * Delete a session/device.
+     *
+     * @param Request $request The current HTTP request instance.
+     * @param string $id The session identifier to revoke.
+     * @return \Illuminate\Http\JsonResponse JSON response indicating result (and redirect when current).
      */
     public function destroy(Request $request, $id)
     {
@@ -216,6 +240,9 @@ class DeviceSessionController extends Controller
 
     /**
      * Delete all inactive sessions (except current).
+     *
+     * @param Request $request The current HTTP request instance.
+     * @return \Illuminate\Http\JsonResponse JSON response with deleted count.
      */
     public function destroyInactive(Request $request)
     {
@@ -242,6 +269,9 @@ class DeviceSessionController extends Controller
 
     /**
      * Get device type from agent.
+     *
+     * @param Agent $agent Parsed user agent helper.
+     * @return string One of: mobile, tablet, desktop.
      */
     private function getDeviceType(Agent $agent)
     {
@@ -256,6 +286,9 @@ class DeviceSessionController extends Controller
 
     /**
      * Get display name for device.
+     *
+     * @param Agent $agent Parsed user agent helper.
+     * @return string A friendly name composed from browser and platform.
      */
     private function getDisplayName(Agent $agent)
     {

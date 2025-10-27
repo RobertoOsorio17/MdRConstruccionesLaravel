@@ -10,8 +10,8 @@ use App\Models\SearchHistory;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
+use Illuminate\Support\Str;
 
 /**
  * Provides a unified search experience across posts, services, and projects with caching and personalization support.
@@ -21,10 +21,20 @@ class SearchController extends Controller
 {
     /**
      * Display global search results.
+     *
+     * Flow:
+     * - Validate filter input (type/category/sort/paging).
+     * - Short‑circuit on tiny queries (<2 chars) with suggestions only.
+     * - Persist history for authenticated users.
+     * - Cache aggregated results for 5 minutes.
+     * - Render posts, services, projects, totals, suggestions, categories, and recent searches.
+     *
+     * @param Request $request The current HTTP request instance.
+     * @return \Inertia\Response Inertia response with aggregated results and context.
      */
     public function index(Request $request)
     {
-        // ✅ Validate input
+        // 1) Validate input.
         $validated = $request->validate([
             'q' => 'nullable|string|max:255|regex:/^[a-zA-Z0-9\s\-\_\.\,\á\é\í\ó\ú\ñ]*$/',
             'type' => 'nullable|in:all,posts,services,projects',
@@ -33,7 +43,8 @@ class SearchController extends Controller
             'page' => 'nullable|integer|min:1',
         ]);
 
-        $query = $validated['q'] ?? '';
+        $rawQuery = $validated['q'] ?? '';
+        $query = $this->sanitizeSearchTerm($rawQuery);
         $type = $validated['type'] ?? 'all';
         $categoryId = $validated['category'] ?? null;
         $sort = $validated['sort'] ?? 'relevance';
@@ -46,7 +57,7 @@ class SearchController extends Controller
                     'services' => [],
                     'projects' => [],
                 ],
-                'query' => $query,
+                'query' => $rawQuery,
                 'type' => $type,
                 'total' => 0,
                 'suggestions' => $this->getSuggestions($query),
@@ -54,20 +65,20 @@ class SearchController extends Controller
             ]);
         }
 
-        // ✅ Save search history for authenticated users
+        // 2) Save search history for authenticated users.
         if (Auth::check()) {
             $this->saveSearchHistory($query);
         }
 
-        // ✅ Cache search results for 5 minutes
-        $cacheKey = "search:{$query}:{$type}:{$categoryId}:{$sort}";
+        // 3) Cache search results for 5 minutes to reduce DB pressure.
+        $cacheKey = $this->buildCacheKey($query, $type, $categoryId, $sort);
         $results = Cache::remember($cacheKey, 300, function () use ($query, $type, $categoryId, $sort) {
             return $this->performSearch($query, $type, $categoryId, $sort);
         });
 
         return Inertia::render('Search/Index', [
             'results' => $results,
-            'query' => $query,
+            'query' => $rawQuery,
             'type' => $type,
             'category' => $categoryId,
             'sort' => $sort,
@@ -80,6 +91,17 @@ class SearchController extends Controller
 
     /**
      * Perform the actual search across models.
+     *
+     * Strategy per type:
+     * - Posts: published scope, title/excerpt/content/SEO fields, optional category filter, relevance/date/views sorting.
+     * - Services: title/excerpt/description, optional category filter, basic relevance/date sorting.
+     * - Projects: title/summary/body/location, date/relevance sorting.
+     *
+     * @param string $query The user-provided search query.
+     * @param string $type The content type to search: all, posts, services, or projects.
+     * @param int|null $categoryId Optional category filter for posts or services.
+     * @param string $sort Sorting strategy: relevance, date, or views.
+     * @return array An associative array containing results and totals.
      */
     protected function performSearch(string $query, string $type, ?int $categoryId, string $sort): array
     {
@@ -90,17 +112,17 @@ class SearchController extends Controller
             'total' => 0,
         ];
 
-        // Search in Posts
+        // Search in Posts.
         if ($type === 'all' || $type === 'posts') {
             $results['posts'] = $this->searchPosts($query, $categoryId, $sort);
         }
 
-        // Search in Services
+        // Search in Services.
         if ($type === 'all' || $type === 'services') {
             $results['services'] = $this->searchServices($query, $categoryId, $sort);
         }
 
-        // Search in Projects
+        // Search in Projects.
         if ($type === 'all' || $type === 'projects') {
             $results['projects'] = $this->searchProjects($query, $sort);
         }
@@ -112,16 +134,23 @@ class SearchController extends Controller
 
     /**
      * Search in posts.
+     *
+     * @param string $query The search keyword.
+     * @param int|null $categoryId Optional category to filter posts.
+     * @param string $sort Sorting method to apply.
+     * @return \Illuminate\Support\Collection A collection of transformed post results.
      */
     protected function searchPosts(string $query, ?int $categoryId, string $sort)
     {
+        $likePattern = $this->buildLikePattern($query);
+
         $postsQuery = Post::where('status', 'published')
-            ->where(function ($q) use ($query) {
-                $q->where('title', 'LIKE', "%{$query}%")
-                  ->orWhere('excerpt', 'LIKE', "%{$query}%")
-                  ->orWhere('content', 'LIKE', "%{$query}%")
-                  ->orWhere('seo_title', 'LIKE', "%{$query}%")
-                  ->orWhere('seo_description', 'LIKE', "%{$query}%");
+            ->where(function ($q) use ($likePattern) {
+                $q->where('title', 'LIKE', $likePattern)
+                  ->orWhere('excerpt', 'LIKE', $likePattern)
+                  ->orWhere('content', 'LIKE', $likePattern)
+                  ->orWhere('seo_title', 'LIKE', $likePattern)
+                  ->orWhere('seo_description', 'LIKE', $likePattern);
             })
             ->with(['user:id,name', 'categories:id,name,slug']);
 
@@ -142,11 +171,7 @@ class SearchController extends Controller
                 break;
             default: // relevance
                 // Simple relevance: prioritize title matches
-                $postsQuery->orderByRaw("CASE 
-                    WHEN title LIKE ? THEN 1 
-                    WHEN excerpt LIKE ? THEN 2 
-                    ELSE 3 
-                END", ["%{$query}%", "%{$query}%"]);
+                $postsQuery->orderByRaw('CASE WHEN title LIKE ? THEN 1 WHEN excerpt LIKE ? THEN 2 ELSE 3 END', [$likePattern, $likePattern]);
                 break;
         }
 
@@ -169,30 +194,32 @@ class SearchController extends Controller
 
     /**
      * Search in services.
+     *
+     * @param string $query The search keyword.
+     * @param int|null $categoryId Optional service category filter.
+     * @param string $sort Sorting method to apply.
+     * @return \Illuminate\Support\Collection A collection of transformed service results.
      */
     protected function searchServices(string $query, ?int $categoryId, string $sort)
     {
-        $servicesQuery = Service::where(function ($q) use ($query) {
-            $q->where('title', 'LIKE', "%{$query}%")
-              ->orWhere('excerpt', 'LIKE', "%{$query}%")
-              ->orWhere('description', 'LIKE', "%{$query}%");
+        $likePattern = $this->buildLikePattern($query);
+
+        $servicesQuery = Service::where(function ($q) use ($likePattern) {
+            $q->where('title', 'LIKE', $likePattern)
+              ->orWhere('excerpt', 'LIKE', $likePattern)
+              ->orWhere('description', 'LIKE', $likePattern);
         })->with('category:id,name,slug');
 
-        // Filter by category
         if ($categoryId) {
             $servicesQuery->where('category_id', $categoryId);
         }
 
-        // Apply sorting
         switch ($sort) {
             case 'date':
                 $servicesQuery->orderBy('created_at', 'desc');
                 break;
             default:
-                $servicesQuery->orderByRaw("CASE 
-                    WHEN title LIKE ? THEN 1 
-                    ELSE 2 
-                END", ["%{$query}%"]);
+                $servicesQuery->orderByRaw('CASE WHEN title LIKE ? THEN 1 ELSE 2 END', [$likePattern]);
                 break;
         }
 
@@ -211,28 +238,32 @@ class SearchController extends Controller
         });
     }
 
+
+
     /**
      * Search in projects.
+     *
+     * @param string $query The search keyword.
+     * @param string $sort Sorting method to apply.
+     * @return \Illuminate\Support\Collection A collection of transformed project results.
      */
     protected function searchProjects(string $query, string $sort)
     {
-        $projectsQuery = Project::where(function ($q) use ($query) {
-            $q->where('title', 'LIKE', "%{$query}%")
-              ->orWhere('summary', 'LIKE', "%{$query}%")
-              ->orWhere('body', 'LIKE', "%{$query}%")
-              ->orWhere('location', 'LIKE', "%{$query}%");
+        $likePattern = $this->buildLikePattern($query);
+
+        $projectsQuery = Project::where(function ($q) use ($likePattern) {
+            $q->where('title', 'LIKE', $likePattern)
+              ->orWhere('summary', 'LIKE', $likePattern)
+              ->orWhere('body', 'LIKE', $likePattern)
+              ->orWhere('location', 'LIKE', $likePattern);
         });
 
-        // Apply sorting
         switch ($sort) {
             case 'date':
                 $projectsQuery->orderBy('completion_date', 'desc');
                 break;
             default:
-                $projectsQuery->orderByRaw("CASE 
-                    WHEN title LIKE ? THEN 1 
-                    ELSE 2 
-                END", ["%{$query}%"]);
+                $projectsQuery->orderByRaw('CASE WHEN title LIKE ? THEN 1 ELSE 2 END', [$likePattern]);
                 break;
         }
 
@@ -251,8 +282,13 @@ class SearchController extends Controller
         });
     }
 
+
+
     /**
      * Get search suggestions based on query.
+     *
+     * @param string $query The partial query string.
+     * @return array A list of unique suggestion strings.
      */
     protected function getSuggestions(string $query): array
     {
@@ -260,30 +296,34 @@ class SearchController extends Controller
             return [];
         }
 
-        return Cache::remember("suggestions:{$query}", 3600, function () use ($query) {
+        $cacheKey = sprintf('suggestions:%s', hash('sha256', $query));
+        $likePattern = $this->buildLikePattern($query);
+
+        return Cache::remember($cacheKey, 3600, function () use ($likePattern) {
             $suggestions = [];
 
-            // Get title suggestions from posts
             $postTitles = Post::where('status', 'published')
-                ->where('title', 'LIKE', "%{$query}%")
+                ->where('title', 'LIKE', $likePattern)
                 ->limit(5)
                 ->pluck('title')
                 ->toArray();
 
-            // Get title suggestions from services
-            $serviceTitles = Service::where('title', 'LIKE', "%{$query}%")
+            $serviceTitles = Service::where('title', 'LIKE', $likePattern)
                 ->limit(5)
                 ->pluck('title')
                 ->toArray();
 
             $suggestions = array_merge($postTitles, $serviceTitles);
-            
+
             return array_unique(array_slice($suggestions, 0, 10));
         });
     }
 
     /**
      * Save search history for authenticated users.
+     *
+     * @param string $query The search query to persist.
+     * @return void
      */
     protected function saveSearchHistory(string $query): void
     {
@@ -305,6 +345,8 @@ class SearchController extends Controller
 
     /**
      * Get recent searches for authenticated user.
+     *
+     * @return array A list of recent, unique search strings.
      */
     protected function getRecentSearches(): array
     {
@@ -321,8 +363,37 @@ class SearchController extends Controller
             ->toArray();
     }
 
+    protected function buildCacheKey(string $query, string $type, ?int $categoryId, string $sort): string
+    {
+        return sprintf('search:%s:%s:%s:%s', hash('sha256', $query), $type, $categoryId ?? 'none', $sort);
+    }
+
+    protected function sanitizeSearchTerm(?string $term): string
+    {
+        if ($term === null) {
+            return '';
+        }
+
+        $normalized = Str::of($term)->squish()->limit(200, '');
+        $sanitized = preg_replace('/[^\p{L}\p{N}\s\-_.\,áéíóúñÁÉÍÓÚÑ]/u', '', (string) $normalized);
+
+        return $sanitized ? trim($sanitized) : '';
+    }
+
+    protected function buildLikePattern(string $term): string
+    {
+        $escaped = addcslashes($term, '\%_\\');
+
+        return '%' . $escaped . '%';
+    }
+
+
     /**
      * Highlight search query in text.
+     *
+     * @param string $text The source text to trim around the match.
+     * @param string $query The query to locate.
+     * @return string A trimmed excerpt containing the match when found.
      */
     protected function highlightText(string $text, string $query): string
     {

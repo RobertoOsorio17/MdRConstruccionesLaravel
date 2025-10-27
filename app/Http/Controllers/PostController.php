@@ -19,9 +19,13 @@ class PostController extends Controller
 {
     /**
      * Display enhanced blog index with advanced search and filtering.
+     *
+     * @param Request $request The current HTTP request instance.
+     * @return \Inertia\Response Inertia response with posts, featured items, filters and metadata.
      */
     public function enhancedIndex(Request $request)
     {
+        // 1) Capture context for observability.
         Log::info('Enhanced blog index accessed', [
             'user_id' => Auth::id(),
             'ip' => $request->ip(),
@@ -33,7 +37,8 @@ class PostController extends Controller
 
         try {
             $user = Auth::user();
-
+            
+            // 2) Compose base query with editorial relationships and counts.
             $query = Post::published()
                 ->select(['id', 'title', 'slug', 'excerpt', 'cover_image', 'published_at', 'views_count', 'featured', 'user_id', 'reading_time'])
                 ->with([
@@ -41,7 +46,7 @@ class PostController extends Controller
                     'categories:id,name,slug,color',
                     'tags:id,name,slug,color'
                 ])
-                // ✅ FIXED N+1: Eager load counts to avoid queries in transform loop
+                // Fix: Eager load counts to avoid queries in transform loop.
                 ->withCount(['likes', 'bookmarks', 'approvedComments']);
 
             Log::debug('Initial query setup', [
@@ -50,9 +55,9 @@ class PostController extends Controller
                 'published_posts_count' => Post::where('status', 'published')->count()
             ]);
 
-        // Enhanced search functionality with SQL injection protection
+        // 3) Apply optional full‑text filters with basic SQL injection protection.
         if ($request->has('search') && !empty($request->search)) {
-            // ✅ FIXED: Sanitize search term to prevent SQL injection
+            // Fix: Sanitize search term to prevent SQL injection.
             $searchTerm = trim($request->search);
             // Escape special LIKE characters
             $searchTerm = str_replace(['%', '_'], ['\%', '\_'], $searchTerm);
@@ -72,21 +77,21 @@ class PostController extends Controller
             });
         }
 
-        // Filter by category
+        // 4) Category filter.
         if ($request->has('category') && !empty($request->category)) {
             $query->whereHas('categories', function ($q) use ($request) {
                 $q->where('slug', $request->category);
             });
         }
 
-        // Filter by tag
+        // 5) Single tag filter.
         if ($request->has('tag') && !empty($request->tag)) {
             $query->whereHas('tags', function ($q) use ($request) {
                 $q->where('slug', $request->tag);
             });
         }
 
-        // Filter by multiple tags
+        // 6) Multi‑tag filter.
         if ($request->has('tags') && is_array($request->tags) && !empty($request->tags)) {
             $tagIds = collect($request->tags)->pluck('id')->filter();
             if ($tagIds->isNotEmpty()) {
@@ -96,12 +101,12 @@ class PostController extends Controller
             }
         }
 
-        // Filter by featured posts
+        // 7) Featured posts filter.
         if ($request->has('featured') && $request->featured) {
             $query->where('featured', true);
         }
 
-        // Enhanced sorting options
+        // 8) Sorting configuration with allow‑list.
         $sortBy = $request->get('sortBy', 'published_at');
         $sortOrder = $request->get('sortOrder', 'desc');
         $allowedSortBy = ['published_at', 'views_count', 'likes_count', 'title'];
@@ -125,19 +130,20 @@ class PostController extends Controller
                 break;
         }
 
-        // Secondary sort for consistency
+        // 9) Secondary sort for stable ordering.
         if ($sortBy !== 'published_at') {
             $query->orderBy('published_at', 'desc');
         }
 
-        // Handle per_page parameter with validation
-        // Get posts per page from settings
+        // 10) Pagination size taken from settings; validate "per_page" input.
+        // Get posts per page from settings.
         $defaultPerPage = AdminSetting::getCachedValue('blog_posts_per_page', 12, 300);
         $perPage = $request->input('per_page', $defaultPerPage);
         $perPage = in_array($perPage, [6, 12, 18, 24, 36]) ? $perPage : $defaultPerPage;
 
         $posts = $query->paginate($perPage)->withQueryString();
 
+        // 11) Log query outcome for diagnostics.
         Log::debug('Posts query executed', [
             'user_id' => Auth::id(),
             'total_found' => $posts->total(),
@@ -146,7 +152,7 @@ class PostController extends Controller
             'has_filters' => $request->hasAny(['search', 'category', 'tag', 'tags', 'featured'])
         ]);
 
-        // ✅ FIXED N+1: Load user interactions in bulk before transform
+        // 12) Preload user interactions to avoid N+1 patterns in the transform phase.
         $userInteractions = [];
         if ($user) {
             $postIds = $posts->pluck('id');
@@ -166,7 +172,7 @@ class PostController extends Controller
             ];
         }
 
-        // Transform posts data (optimized - no content loading, no N+1 queries)
+        // 13) Transform posts to slim DTOs (no content body, no N+1).
         $posts->getCollection()->transform(function ($post) use ($user, $userInteractions) {
             return [
                 'id' => $post->id,
@@ -181,30 +187,30 @@ class PostController extends Controller
                 'categories' => $post->categories,
                 'tags' => $post->tags,
                 'reading_time' => $post->reading_time ?? 5, // Default fallback
-                // ✅ FIXED N+1: Use pre-loaded interaction data
+                // Fix: Use pre-loaded interaction data.
                 'is_liked' => $user ? in_array($post->id, $userInteractions['likes']) : false,
                 'is_bookmarked' => $user ? in_array($post->id, $userInteractions['bookmarks']) : false,
-                // ✅ FIXED N+1: Use eager-loaded counts
+                // Fix: Use eager-loaded counts.
                 'likes_count' => $post->likes_count ?? 0,
                 'bookmarks_count' => $post->bookmarks_count ?? 0,
                 'comments_count' => $post->approved_comments_count ?? 0,
             ];
         });
 
-        // Get featured posts (optimized)
+        // 14) Optionally load a small featured set when no filters are applied.
         $featuredPosts = [];
         if (!$request->hasAny(['search', 'category', 'tag', 'tags', 'featured', 'sortBy'])) {
             $featuredPostsCollection = Post::published()
                 ->select(['id', 'title', 'slug', 'excerpt', 'cover_image', 'published_at', 'views_count', 'user_id'])
                 ->where('featured', true)
                 ->with(['author:id,name,avatar,is_verified', 'categories:id,name,slug,color', 'tags:id,name,slug,color'])
-                // ✅ FIXED N+1: Eager load counts
+                // Fix: Eager load counts.
                 ->withCount(['likes', 'bookmarks'])
                 ->orderBy('published_at', 'desc')
                 ->limit(4) // Increased for trending section
                 ->get();
 
-            // ✅ FIXED N+1: Load user interactions in bulk for featured posts
+            // Fix: Load user interactions in bulk for featured posts.
             $featuredUserInteractions = [];
             if ($user && $featuredPostsCollection->isNotEmpty()) {
                 $featuredPostIds = $featuredPostsCollection->pluck('id');
@@ -237,10 +243,10 @@ class PostController extends Controller
                     'categories' => $post->categories,
                     'tags' => $post->tags,
                     'reading_time' => 5, // Default for featured posts
-                    // ✅ FIXED N+1: Use pre-loaded interaction data
+                    // Fix: Use pre-loaded interaction data.
                     'is_liked' => $user ? in_array($post->id, $featuredUserInteractions['likes']) : false,
                     'is_bookmarked' => $user ? in_array($post->id, $featuredUserInteractions['bookmarks']) : false,
-                    // ✅ FIXED N+1: Use eager-loaded counts
+                    // Fix: Use eager-loaded counts.
                     'likes_count' => $post->likes_count ?? 0,
                     'bookmarks_count' => $post->bookmarks_count ?? 0,
                 ];
@@ -311,6 +317,9 @@ class PostController extends Controller
 
     /**
      * Display a listing of blog posts.
+     *
+     * @param Request $request The current HTTP request instance.
+     * @return \Inertia\Response Inertia response with paginated posts and featured content.
      */
     public function index(Request $request)
     {
@@ -326,7 +335,7 @@ class PostController extends Controller
 
         // Search functionality with SQL injection protection
         if ($request->has('search') && !empty($request->search)) {
-            // ✅ FIXED: Sanitize search term
+            // Sanitize search term to prevent SQL injection.
             $searchTerm = trim($request->search);
             $searchTerm = str_replace(['%', '_'], ['\%', '\_'], $searchTerm);
             $searchTerm = substr($searchTerm, 0, 100);
@@ -419,6 +428,9 @@ class PostController extends Controller
 
     /**
      * Display the specified blog post.
+     *
+     * @param Post $post The blog post model instance.
+     * @return \Inertia\Response Inertia response with post details, comments, and suggestions.
      */
     public function show(Post $post)
     {
@@ -454,9 +466,18 @@ class PostController extends Controller
         // Get current user for interaction checks
         $currentUser = Auth::user();
 
-        // ✅ FIX: Format comments to include is_deleted flag and sanitized content
+        // Format comments to include is_deleted flag and sanitized content.
         $formattedComments = $post->comments->map(function ($comment) use ($currentUser) {
             $isDeleted = $comment->trashed();
+
+            // Check if current user has reported this comment.
+            $userHasReported = false;
+            if ($currentUser) {
+                $userHasReported = \App\Models\CommentReport::where('comment_id', $comment->id)
+                    ->where('user_id', $currentUser->id)
+                    ->exists();
+            }
+
             return [
                 'id' => $comment->id,
                 'body' => $isDeleted ? '[Comentario eliminado]' : $comment->body,
@@ -471,8 +492,18 @@ class PostController extends Controller
                 'dislikes_count' => $comment->dislikeCount(),
                 'user_has_liked' => $currentUser ? $comment->isLikedBy($currentUser) : false,
                 'user_has_disliked' => $currentUser ? $comment->isDislikedBy($currentUser) : false,
+                'user_has_reported' => $userHasReported,
                 'replies' => $comment->replies->map(function ($reply) use ($currentUser) {
                     $isReplyDeleted = $reply->trashed();
+
+                    // Check if current user has reported this reply.
+                    $userHasReportedReply = false;
+                    if ($currentUser) {
+                        $userHasReportedReply = \App\Models\CommentReport::where('comment_id', $reply->id)
+                            ->where('user_id', $currentUser->id)
+                            ->exists();
+                    }
+
                     return [
                         'id' => $reply->id,
                         'body' => $isReplyDeleted ? '[Comentario eliminado]' : $reply->body,
@@ -487,6 +518,7 @@ class PostController extends Controller
                         'dislikes_count' => $reply->dislikeCount(),
                         'user_has_liked' => $currentUser ? $reply->isLikedBy($currentUser) : false,
                         'user_has_disliked' => $currentUser ? $reply->isDislikedBy($currentUser) : false,
+                        'user_has_reported' => $userHasReportedReply,
                     ];
                 })
             ];
@@ -544,6 +576,9 @@ class PostController extends Controller
 
     /**
      * Calculate reading time for content.
+     *
+     * @param string $content The HTML or plain text content body.
+     * @return string A human-readable reading time label.
      */
     private function calculateReadingTime($content)
     {
@@ -555,7 +590,10 @@ class PostController extends Controller
     }
 
     /**
-     * Get personalized suggested posts for guests based on their local storage data
+     * Get personalized suggested posts for guests based on their local storage data.
+     *
+     * @param Request $request The current HTTP request instance.
+     * @return \Illuminate\Http\JsonResponse JSON response with recommended posts.
      */
     public function getGuestRecommendations(Request $request)
     {
@@ -638,7 +676,7 @@ class PostController extends Controller
             ->with(['author:id,name,avatar,is_verified', 'categories:id,name,slug', 'tags:id,name,slug,color'])
             ->withCount(['likes', 'bookmarks', 'approvedComments']);
 
-        // ✅ FIXED: Limit query to prevent loading thousands of posts
+        // Limit query to prevent loading thousands of posts.
         // We fetch 2x the limit to have enough posts for scoring and filtering
         $unreadPosts = $query->limit($limit * 2)->get();
 
@@ -651,7 +689,7 @@ class PostController extends Controller
             $interestingReadIds = [];
             foreach ($visitedPosts as $id => $visitedPost) {
                 if ($visitedPost['averageTimeSpent'] > 120000 || $visitedPost['visits'] > 1) {
-                    $interestingReadIds[] = intval($id); // Convertir a entero
+                    $interestingReadIds[] = intval($id); // Convert to integer.
                 }
             }
             

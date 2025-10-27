@@ -14,11 +14,14 @@ use Inertia\Inertia;
 class TestimonialController extends Controller
 {
     /**
-     * Display testimonials page
+     * Display the testimonials page.
+     *
+     * @param Request $request The current HTTP request instance.
+     * @return \Inertia\Response Inertia response with testimonials and filters.
      */
     public function index(Request $request)
     {
-        // ✅ Validate filters
+        // Validate filters.
         $validated = $request->validate([
             'project_type' => 'nullable|string|max:100',
             'rating' => 'nullable|integer|min:1|max:5',
@@ -71,7 +74,9 @@ class TestimonialController extends Controller
     }
 
     /**
-     * Show testimonial submission form
+     * Show the testimonial submission form.
+     *
+     * @return \Inertia\Response Inertia response for the create view.
      */
     public function create()
     {
@@ -79,11 +84,14 @@ class TestimonialController extends Controller
     }
 
     /**
-     * Store new testimonial
+     * Store a new testimonial.
+     *
+     * @param Request $request The current HTTP request instance.
+     * @return \Illuminate\Http\RedirectResponse Redirect to index with status.
      */
     public function store(Request $request)
     {
-        // ✅ Validate input with strict rules
+        // Validate input with strict rules.
         $validated = $request->validate([
             'client_name' => 'required|string|max:255|regex:/^[a-zA-Z\s\-\.áéíóúñÁÉÍÓÚÑ]+$/',
             'client_position' => 'nullable|string|max:255|regex:/^[^<>]*$/',
@@ -121,7 +129,7 @@ class TestimonialController extends Controller
         // Create testimonial (pending approval)
         $testimonial = Testimonial::create($validated);
 
-        // ✅ Log creation
+        // Log creation.
         \Log::info('Testimonial submitted', [
             'testimonial_id' => $testimonial->id,
             'client_name' => $testimonial->client_name,
@@ -134,7 +142,10 @@ class TestimonialController extends Controller
     }
 
     /**
-     * Display single testimonial
+     * Display a single testimonial.
+     *
+     * @param Testimonial $testimonial The testimonial model.
+     * @return \Inertia\Response Inertia response with testimonial details.
      */
     public function show(Testimonial $testimonial)
     {

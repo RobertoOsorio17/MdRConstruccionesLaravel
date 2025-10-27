@@ -20,7 +20,10 @@ use App\Models\Setting;
 class ContactController extends Controller
 {
     /**
-     * Validate file using magic bytes (file signature)
+     * Validate file using magic bytes (file signature).
+     *
+     * @param mixed $file The uploaded file instance.
+     * @return bool True when the file header matches allowed signatures.
      */
     private function validateFileMagicBytes($file): bool
     {
@@ -28,7 +31,7 @@ class ContactController extends Controller
         $bytes = fread($handle, 8);
         fclose($handle);
 
-        // Magic bytes for allowed file types (only modern formats)
+        // Magic bytes for allowed file types (only modern formats).
         $magicBytes = [
             'pdf' => ['25504446'], // %PDF
             'jpg' => ['FFD8FF'], // JPEG
@@ -55,17 +58,20 @@ class ContactController extends Controller
     }
 
     /**
-     * Sanitize filename to prevent directory traversal and other attacks
+     * Sanitize filename to prevent directory traversal and other attacks.
+     *
+     * @param string $filename The original client filename.
+     * @return string A sanitized, length-limited filename.
      */
     private function sanitizeFilename(string $filename): string
     {
-        // Remove path separators
+        // Remove path separators.
         $filename = str_replace(['/', '\\', '..'], '', $filename);
 
-        // Remove special characters except dots, dashes, and underscores
+        // Remove special characters except dots, dashes, and underscores.
         $filename = preg_replace('/[^a-zA-Z0-9._\-]/', '_', $filename);
 
-        // Limit length
+        // Limit length.
         if (strlen($filename) > 100) {
             $extension = pathinfo($filename, PATHINFO_EXTENSION);
             $name = substr(pathinfo($filename, PATHINFO_FILENAME), 0, 95);
@@ -77,10 +83,17 @@ class ContactController extends Controller
 
     /**
      * Handle contact form submission.
+     *
+     * Applies rate limiting, strict validation, reCAPTCHA verification, secure
+     * attachment processing, and sends email notifications.
+     *
+     * @param Request $request The inbound HTTP request.
+     * @param RecaptchaService $recaptcha reCAPTCHA verification service.
+     * @return \Illuminate\Http\RedirectResponse Redirects back with status or errors.
      */
     public function submit(Request $request, RecaptchaService $recaptcha)
     {
-        // ✅ Rate limiting: 3 submissions per hour per IP
+        // 1) Throttle: 3 submissions/hour/IP to curb abuse.
         $key = 'contact-submit:' . $request->ip();
 
         if (RateLimiter::tooManyAttempts($key, 3)) {
@@ -90,13 +103,12 @@ class ContactController extends Controller
             ]);
         }
 
-        // ✅ Validate with strict rules
-        // Usar email:rfc en desarrollo, email:rfc,dns en producción
+        // 2) Validate with strict rules. Use email:rfc in dev, email:rfc,dns in prod.
         $emailValidation = app()->environment('production')
             ? 'required|email:rfc,dns|max:255|regex:/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/'
             : 'required|email:rfc|max:255|regex:/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/';
 
-        // ✅ reCAPTCHA es OBLIGATORIO siempre (producción y desarrollo)
+        // 3) reCAPTCHA is mandatory in all environments.
         $recaptchaValidation = 'required|string';
 
         $validated = $request->validate([
@@ -105,11 +117,11 @@ class ContactController extends Controller
             'phone' => [
                 function ($attribute, $value, $fail) use ($request) {
                     $preferredContact = $request->input('preferred_contact');
-                    // Si eligió Teléfono o WhatsApp, el teléfono es obligatorio
+                    // If user chose Phone or WhatsApp, phone number is required.
                     if (in_array($preferredContact, ['Teléfono', 'WhatsApp']) && empty($value)) {
                         $fail("El teléfono es obligatorio si eliges contacto por {$preferredContact}.");
                     }
-                    // Validar formato si está presente
+                    // Validate format when provided.
                     if (!empty($value) && !preg_match('/^[\d\s\+\-\(\)]+$/', $value)) {
                         $fail('El formato del teléfono no es válido.');
                     }
@@ -120,11 +132,11 @@ class ContactController extends Controller
             'contact_time' => 'nullable|string|max:50',
             'service' => 'nullable|string|max:255|regex:/^[^<>]*$/',
             'message' => 'required|string|min:10|max:2000|regex:/^[^<>]*$/',
-            'attachments' => 'nullable|array|max:5', // Máximo 5 archivos
-            // ✅ IMPROVED: Only modern Office formats (docx/xlsx) - removed old .doc/.xls for security
+            'attachments' => 'nullable|array|max:5', // Maximum of 5 files.
+            // Improved: Only modern Office formats (docx/xlsx) - removed old .doc/.xls for security.
             'attachments.*' => 'nullable|file|mimetypes:application/pdf,image/jpeg,image/png,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet|max:10240', // Max 10MB per file
             'privacy_accepted' => 'required|accepted',
-            'recaptcha_token' => $recaptchaValidation, // ✅ OBLIGATORIO SIEMPRE
+            'recaptcha_token' => $recaptchaValidation, // Required in all environments.
         ], [
             'name.required' => 'El nombre es obligatorio.',
             'name.regex' => 'El nombre solo puede contener letras.',
@@ -141,7 +153,7 @@ class ContactController extends Controller
             'recaptcha_token.required' => 'Error de verificación de seguridad. Por favor, recarga la página.',
         ]);
 
-        // ✅ FIXED: Validate total size of all attachments (max 25MB total)
+        // 4) Validate total size of all attachments (max 25MB total).
         if ($request->hasFile('attachments')) {
             $totalSize = 0;
             foreach ($request->file('attachments') as $file) {
@@ -156,7 +168,7 @@ class ContactController extends Controller
             }
         }
 
-        // ✅ reCAPTCHA verification (skip in non-production environments)
+        // 5) Verify reCAPTCHA (skip only when service disabled and environment allows).
         $recaptchaToken = $validated['recaptcha_token'];
 
         if (!$recaptcha->isEnabled()) {
@@ -168,17 +180,21 @@ class ContactController extends Controller
                     'email' => 'Error de configuración del sistema. Por favor, contáctanos por teléfono.'
                 ]);
             }
-            // Allow bypass in non-production environments
+            // Allow bypass in non-production environments.
             Log::info('reCAPTCHA bypassed in non-production environment', [
                 'environment' => app()->environment(),
             ]);
         }
 
-        // ✅ Verify reCAPTCHA token (ALWAYS)
-        if (!$recaptcha->verify($recaptchaToken, $request->ip())) {
+        // 6) Verify reCAPTCHA token (always).
+        $recaptchaResult = $recaptcha->verify($recaptchaToken, 'contact_form');
+
+        if (!($recaptchaResult['success'] ?? false)) {
             Log::warning('reCAPTCHA verification failed', [
                 'ip' => $request->ip(),
                 'user_agent' => $request->userAgent(),
+                'errors' => $recaptchaResult['error-codes'] ?? [],
+                'score' => $recaptchaResult['score'] ?? 0,
             ]);
             return back()->withErrors([
                 'email' => 'Verificación de seguridad fallida. Por favor, intenta de nuevo.'
@@ -188,7 +204,7 @@ class ContactController extends Controller
 
 
         try {
-            // ✅ Create contact request in database FIRST
+            // 7) Create the contact request in database first.
             $contactRequest = ContactRequest::create([
                 'name' => strip_tags($validated['name']),
                 'email' => strip_tags($validated['email']),
@@ -202,7 +218,7 @@ class ContactController extends Controller
                 'user_agent' => $request->userAgent(),
             ]);
 
-            // ✅ Handle file uploads with ENCRYPTED storage
+            // 8) Handle file uploads with encrypted storage (validate, encrypt, persist, log).
             $attachmentCount = 0;
             $totalSize = 0;
 
@@ -210,7 +226,7 @@ class ContactController extends Controller
                 foreach ($request->file('attachments') as $file) {
                     $attachmentCount++;
 
-                    // Límite de archivos
+                    // Enforce maximum file count.
                     if ($attachmentCount > 5) {
                         Log::warning('Too many files uploaded', [
                             'ip' => $request->ip(),
@@ -221,7 +237,7 @@ class ContactController extends Controller
                         ]);
                     }
 
-                    // Validar extensión (removed old .doc/.xls formats for security)
+                    // Validate extension (removed old .doc/.xls formats for security).
                     $allowedExtensions = ['pdf', 'jpg', 'jpeg', 'png', 'docx', 'xlsx'];
                     $extension = strtolower($file->getClientOriginalExtension());
 
@@ -236,7 +252,7 @@ class ContactController extends Controller
                         ]);
                     }
 
-                    // Validar MIME type (only modern formats)
+                    // Validate MIME type (only modern formats).
                     $mimeType = $file->getMimeType();
                     $allowedMimes = [
                         'application/pdf',
@@ -258,7 +274,7 @@ class ContactController extends Controller
                         ]);
                     }
 
-                    // ✅ CRITICAL: Validate file using magic bytes (file signature)
+                    // Critical: Validate file using magic bytes (file signature).
                     if (!$this->validateFileMagicBytes($file)) {
                         Log::warning('File failed magic bytes validation', [
                             'filename' => $file->getClientOriginalName(),
@@ -271,7 +287,7 @@ class ContactController extends Controller
                         ]);
                     }
 
-                    // Validar tamaño mínimo (evitar archivos vacíos o sospechosos)
+                    // Validate minimum size (avoid empty or suspicious files).
                     if ($file->getSize() < 100) {
                         Log::warning('File too small', [
                             'size' => $file->getSize(),
@@ -283,14 +299,14 @@ class ContactController extends Controller
                         ]);
                     }
 
-                    // Validar tamaño máximo por archivo (10MB)
+                    // Validate maximum file size per file (10MB).
                     if ($file->getSize() > 10485760) {
                         return back()->withErrors([
                             'attachments' => 'Cada archivo no debe superar los 10MB.'
                         ]);
                     }
 
-                    // Validar tamaño total (25MB)
+                    // Validate total size (25MB).
                     $totalSize += $file->getSize();
                     if ($totalSize > 26214400) {
                         return back()->withErrors([
@@ -298,7 +314,7 @@ class ContactController extends Controller
                         ]);
                     }
 
-                    // ✅ Store file with ENCRYPTION
+                    // Store file with encryption.
                     try {
                         $attachment = ContactRequestAttachment::storeEncrypted($file, $contactRequest->id);
 
@@ -320,10 +336,10 @@ class ContactController extends Controller
                 }
             }
 
-            // ✅ Hit rate limiter
+            // 9) Hit rate limiter after successful persistence to enforce quota windows.
             RateLimiter::hit($key, 3600);
 
-            // ✅ Log creation with detailed info
+            // 10) Log creation for operational traceability.
             Log::info('New contact form submission', [
                 'id' => $contactRequest->id,
                 'name' => $contactRequest->name,
@@ -338,12 +354,12 @@ class ContactController extends Controller
                 'user_agent' => $request->userAgent(),
             ]);
 
-            // ✅ IMPLEMENTED: Send email notification to admin
+            // 11) Send email notification to admin.
             $adminEmail = config('mail.admin_email', config('mail.from.address'));
             $adminNotifiable = new \App\Models\AnonymousNotifiable($adminEmail, 'Admin');
             $adminNotifiable->notify(new \App\Notifications\NewContactRequestNotification($contactRequest));
 
-            // ✅ IMPLEMENTED: Send confirmation email to user
+            // 12) Send confirmation email to user.
             $userNotifiable = new \App\Models\AnonymousNotifiable($contactRequest->email, $contactRequest->name);
             $userNotifiable->notify(new \App\Notifications\ContactRequestConfirmation($contactRequest));
 
@@ -375,10 +391,16 @@ class ContactController extends Controller
 
     /**
      * Handle budget request form submission.
+     *
+     * Applies strict validation and reCAPTCHA verification and stores the request for follow-up, then notifies admin and user.
+     *
+     * @param Request $request The current HTTP request instance.
+     * @param RecaptchaService $recaptcha reCAPTCHA verification service.
+     * @return \Illuminate\Http\RedirectResponse Redirect back with status.
      */
     public function budgetRequest(Request $request, RecaptchaService $recaptcha)
     {
-        // ✅ FIXED: reCAPTCHA validation to prevent spam
+        // reCAPTCHA validation to prevent spam.
         $recaptchaValidation = 'required|string';
 
         $validated = $request->validate([
@@ -392,7 +414,7 @@ class ContactController extends Controller
             'timeline' => 'nullable|string|max:100',
             'description' => 'required|string|max:2000',
             'privacy_accepted' => 'required|accepted',
-            'recaptcha_token' => $recaptchaValidation, // ✅ FIXED: reCAPTCHA required
+            'recaptcha_token' => $recaptchaValidation, // reCAPTCHA required.
         ], [
             'name.required' => 'The name field is required.',
             'email.required' => 'The email field is required.',
@@ -404,7 +426,7 @@ class ContactController extends Controller
             'recaptcha_token.required' => 'Security verification error. Please reload the page.',
         ]);
 
-        // ✅ FIXED: Verify reCAPTCHA token
+        // Verify reCAPTCHA token.
         $recaptchaToken = $validated['recaptcha_token'];
 
         if (!$recaptcha->isEnabled()) {
@@ -415,18 +437,19 @@ class ContactController extends Controller
             return back()->with('error', 'Security verification is not configured. Please contact support.');
         }
 
-        $recaptchaResult = $recaptcha->verify($recaptchaToken, $request->ip());
+        $recaptchaResult = $recaptcha->verify($recaptchaToken, 'budget_request');
 
-        if (!$recaptchaResult['success']) {
+        if (!($recaptchaResult['success'] ?? false)) {
             Log::warning('reCAPTCHA verification failed for budget request', [
                 'ip' => $request->ip(),
                 'errors' => $recaptchaResult['error-codes'] ?? [],
+                'score' => $recaptchaResult['score'] ?? 0,
             ]);
             return back()->with('error', 'Security verification failed. Please try again.');
         }
 
         try {
-            // ✅ BUGFIX: Store the budget request in database instead of just logging
+            // Bugfix: Store the budget request in database instead of just logging.
             $contactRequest = ContactRequest::create([
                 'name' => strip_tags($validated['name']),
                 'email' => strip_tags($validated['email']),

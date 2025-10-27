@@ -50,6 +50,7 @@ class User extends Authenticatable
         'provider_token',
         'provider_refresh_token',
         'email_verified_at', // ✅ Allow for OAuth flow (will be validated)
+        'last_active_at', // ✅ For inactivity detection
     ];
 
     // ✅ Protected fields that should NOT be mass-assignable
@@ -63,6 +64,7 @@ class User extends Authenticatable
         'ml_blocked_at',
         'ml_blocked_reason',
         'ml_anomaly_score',
+        'profile_visibility', // ✅ SECURITY FIX: Prevent IDOR via mass assignment
     ];
 
     /**
@@ -102,6 +104,7 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'last_login_at' => 'datetime',
+            'last_active_at' => 'datetime',
             'birth_date' => 'date',
             'profile_updated_at' => 'datetime',
             'social_links' => 'array',
@@ -114,6 +117,84 @@ class User extends Authenticatable
             'ml_blocked' => 'boolean',
             'ml_blocked_at' => 'datetime',
         ];
+    }
+
+    /**
+     * Decrypt provider_token when accessing it
+     */
+    public function getProviderTokenAttribute($value)
+    {
+        if (!$value) {
+            return null;
+        }
+
+        try {
+            return \Crypt::decryptString($value);
+        } catch (\Exception $e) {
+            \Log::warning('Failed to decrypt provider_token', [
+                'user_id' => $this->id,
+                'error' => $e->getMessage()
+            ]);
+            return null;
+        }
+    }
+
+    /**
+     * Encrypt provider_token when setting it
+     */
+    public function setProviderTokenAttribute($value)
+    {
+        if (!$value) {
+            $this->attributes['provider_token'] = null;
+            return;
+        }
+
+        // If already encrypted (starts with encrypted prefix), don't re-encrypt
+        if (str_starts_with($value, 'eyJpdiI6')) {
+            $this->attributes['provider_token'] = $value;
+            return;
+        }
+
+        $this->attributes['provider_token'] = \Crypt::encryptString($value);
+    }
+
+    /**
+     * Decrypt provider_refresh_token when accessing it
+     */
+    public function getProviderRefreshTokenAttribute($value)
+    {
+        if (!$value) {
+            return null;
+        }
+
+        try {
+            return \Crypt::decryptString($value);
+        } catch (\Exception $e) {
+            \Log::warning('Failed to decrypt provider_refresh_token', [
+                'user_id' => $this->id,
+                'error' => $e->getMessage()
+            ]);
+            return null;
+        }
+    }
+
+    /**
+     * Encrypt provider_refresh_token when setting it
+     */
+    public function setProviderRefreshTokenAttribute($value)
+    {
+        if (!$value) {
+            $this->attributes['provider_refresh_token'] = null;
+            return;
+        }
+
+        // If already encrypted (starts with encrypted prefix), don't re-encrypt
+        if (str_starts_with($value, 'eyJpdiI6')) {
+            $this->attributes['provider_refresh_token'] = $value;
+            return;
+        }
+
+        $this->attributes['provider_refresh_token'] = \Crypt::encryptString($value);
     }
 
     /**
@@ -423,6 +504,7 @@ class User extends Authenticatable
     /**
      * Verificar si el usuario tiene un rol específico
      * Verifica tanto el campo 'role' como las relaciones en la tabla 'roles'
+     * ✅ SECURITY FIX: Check both role field and roles relationship for consistency
      */
     public function hasRole(string|array $roleName): bool
     {
@@ -430,25 +512,37 @@ class User extends Authenticatable
             return $this->hasAnyRole($roleName);
         }
 
-        // Verificar el campo 'role' directo en la tabla users
+        // Check roles relationship (primary source)
+        if ($this->roles()->where('name', $roleName)->exists()) {
+            return true;
+        }
+
+        // Fallback: Check role field for backward compatibility
+        // This handles cases where role is set directly on the user model
         if ($this->role === $roleName) {
             return true;
         }
 
-        // Verificar las relaciones en la tabla roles
-        return $this->roles()->where('name', $roleName)->exists();
+        return false;
     }
 
     /**
      * Verificar si el usuario tiene cualquiera de los roles especificados
+     * ✅ SECURITY FIX: Check both role field and roles relationship for consistency
      */
     public function hasAnyRole(array $roles): bool
     {
-        if ($this->role && in_array($this->role, $roles, true)) {
+        // Check roles relationship (primary source)
+        if ($this->roles()->whereIn('name', $roles)->exists()) {
             return true;
         }
 
-        return $this->roles()->whereIn('name', $roles)->exists();
+        // Fallback: Check role field for backward compatibility
+        if (in_array($this->role, $roles)) {
+            return true;
+        }
+
+        return false;
     }
 
     /**

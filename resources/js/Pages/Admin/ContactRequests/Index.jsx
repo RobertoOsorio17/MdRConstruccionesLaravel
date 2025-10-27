@@ -27,7 +27,7 @@ import {
     DialogContent,
     DialogActions,
     Stack,
-    Grid,
+
     alpha,
     useTheme,
     Tooltip,
@@ -72,11 +72,11 @@ export default function ContactRequestsIndex({ requests, stats, filters }) {
 
     // Glassmorphism style
     const glassStyle = {
-        background: alpha('#ffffff', 0.85),
-        backdropFilter: 'blur(20px)',
+        background: alpha(theme.palette.background.paper, 0.6),
+        backdropFilter: 'blur(12px)',
         borderRadius: 3,
-        border: `1px solid ${alpha('#ffffff', 0.3)}`,
-        boxShadow: `0 8px 32px 0 ${alpha('#000000', 0.1)}`,
+        border: `1px solid ${alpha(theme.palette.divider, 0.12)}`,
+        boxShadow: `0 8px 24px ${alpha(theme.palette.common.black, 0.08)}`,
     };
 
     const handleSearch = () => {
@@ -174,7 +174,7 @@ export default function ContactRequestsIndex({ requests, stats, filters }) {
                         <Typography variant="body2" color="text.secondary" gutterBottom>
                             {title}
                         </Typography>
-                        <Typography variant="h3" fontWeight="bold" color={color}>
+                        <Typography variant="h4" fontWeight="bold" sx={{ color: 'text.primary' }}>
                             {value}
                         </Typography>
                     </Box>
@@ -188,7 +188,7 @@ export default function ContactRequestsIndex({ requests, stats, filters }) {
                             justifyContent: 'center',
                         }}
                     >
-                        <Icon sx={{ color, fontSize: 40 }} />
+                        <Icon sx={{ color, fontSize: 32 }} />
                     </Box>
                 </Box>
             </CardContent>
@@ -209,8 +209,8 @@ export default function ContactRequestsIndex({ requests, stats, filters }) {
                 </Box>
 
                 {/* Stats Cards */}
-                <Grid container spacing={3} sx={{ mb: 4 }}>
-                    <Grid item xs={12} sm={6} md={3}>
+                <Box sx={{ display: 'grid', gap: 3, gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)' }, mb: 4 }}>
+                    <Box>
                         <motion.div
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
@@ -223,8 +223,8 @@ export default function ContactRequestsIndex({ requests, stats, filters }) {
                                 color={theme.palette.primary.main}
                             />
                         </motion.div>
-                    </Grid>
-                    <Grid item xs={12} sm={6} md={3}>
+                    </Box>
+                    <Box>
                         <motion.div
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
@@ -237,8 +237,8 @@ export default function ContactRequestsIndex({ requests, stats, filters }) {
                                 color={theme.palette.error.main}
                             />
                         </motion.div>
-                    </Grid>
-                    <Grid item xs={12} sm={6} md={3}>
+                    </Box>
+                    <Box>
                         <motion.div
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
@@ -251,8 +251,8 @@ export default function ContactRequestsIndex({ requests, stats, filters }) {
                                 color={theme.palette.warning.main}
                             />
                         </motion.div>
-                    </Grid>
-                    <Grid item xs={12} sm={6} md={3}>
+                    </Box>
+                    <Box>
                         <motion.div
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
@@ -265,8 +265,8 @@ export default function ContactRequestsIndex({ requests, stats, filters }) {
                                 color={theme.palette.success.main}
                             />
                         </motion.div>
-                    </Grid>
-                </Grid>
+                    </Box>
+                </Box>
 
                 {/* Filters - Premium Glassmorphism Design */}
                 <motion.div
@@ -310,9 +310,9 @@ export default function ContactRequestsIndex({ requests, stats, filters }) {
                                 </Stack>
 
                                 {/* Filters Grid */}
-                                <Grid container spacing={2.5}>
+                                <Box sx={{ display: 'grid', gap: 2.5, gridTemplateColumns: { xs: '1fr', md: 'repeat(12, 1fr)' } }}>
                                     {/* Search Field */}
-                                    <Grid item xs={12} md={4}>
+                                    <Box sx={{ gridColumn: { md: 'span 4' } }}>
                                         <TextField
                                             fullWidth
                                             placeholder="Buscar por nombre, email o teléfono..."
@@ -326,25 +326,25 @@ export default function ContactRequestsIndex({ requests, stats, filters }) {
                                             }}
                                             sx={{
                                                 '& .MuiOutlinedInput-root': {
-                                                    backgroundColor: alpha('#fff', 0.6),
-                                                    backdropFilter: 'blur(10px)',
+                                                    backgroundColor: alpha(theme.palette.background.paper, 0.6),
+                                                    backdropFilter: 'blur(8px)',
                                                     borderRadius: '12px',
-                                                    transition: 'all 0.3s ease',
+                                                    transition: 'all 0.2s ease',
+                                                    border: `1px solid ${alpha(theme.palette.divider, 0.12)}`,
                                                     '&:hover': {
-                                                        backgroundColor: alpha('#fff', 0.8),
-                                                        boxShadow: '0 4px 12px rgba(102, 126, 234, 0.15)',
+                                                        backgroundColor: alpha(theme.palette.background.paper, 0.75),
                                                     },
                                                     '&.Mui-focused': {
-                                                        backgroundColor: alpha('#fff', 0.95),
-                                                        boxShadow: '0 4px 16px rgba(102, 126, 234, 0.25)',
+                                                        backgroundColor: alpha(theme.palette.background.paper, 0.9),
+                                                        borderColor: alpha(theme.palette.primary.main, 0.3),
                                                     },
                                                 },
                                             }}
                                         />
-                                    </Grid>
+                                    </Box>
 
                                     {/* Status Filter */}
-                                    <Grid item xs={12} sm={6} md={3}>
+                                    <Box sx={{ gridColumn: { md: 'span 3' } }}>
                                         <FormControl fullWidth>
                                             <InputLabel>Estado</InputLabel>
                                             <Select
@@ -352,17 +352,17 @@ export default function ContactRequestsIndex({ requests, stats, filters }) {
                                                 onChange={(e) => setStatusFilter(e.target.value)}
                                                 label="Estado"
                                                 sx={{
-                                                    backgroundColor: alpha('#fff', 0.6),
-                                                    backdropFilter: 'blur(10px)',
+                                                    backgroundColor: alpha(theme.palette.background.paper, 0.6),
+                                                    backdropFilter: 'blur(8px)',
                                                     borderRadius: '12px',
-                                                    transition: 'all 0.3s ease',
+                                                    transition: 'all 0.2s ease',
+                                                    border: `1px solid ${alpha(theme.palette.divider, 0.12)}`,
                                                     '&:hover': {
-                                                        backgroundColor: alpha('#fff', 0.8),
-                                                        boxShadow: '0 4px 12px rgba(102, 126, 234, 0.15)',
+                                                        backgroundColor: alpha(theme.palette.background.paper, 0.75),
                                                     },
                                                     '&.Mui-focused': {
-                                                        backgroundColor: alpha('#fff', 0.95),
-                                                        boxShadow: '0 4px 16px rgba(102, 126, 234, 0.25)',
+                                                        backgroundColor: alpha(theme.palette.background.paper, 0.9),
+                                                        borderColor: alpha(theme.palette.primary.main, 0.3),
                                                     },
                                                 }}
                                             >
@@ -398,10 +398,10 @@ export default function ContactRequestsIndex({ requests, stats, filters }) {
                                                 </MenuItem>
                                             </Select>
                                         </FormControl>
-                                    </Grid>
+                                    </Box>
 
                                     {/* Service Filter */}
-                                    <Grid item xs={12} sm={6} md={3}>
+                                    <Box sx={{ gridColumn: { md: 'span 3' } }}>
                                         <FormControl fullWidth>
                                             <InputLabel>Servicio</InputLabel>
                                             <Select
@@ -409,17 +409,17 @@ export default function ContactRequestsIndex({ requests, stats, filters }) {
                                                 onChange={(e) => setServiceFilter(e.target.value)}
                                                 label="Servicio"
                                                 sx={{
-                                                    backgroundColor: alpha('#fff', 0.6),
-                                                    backdropFilter: 'blur(10px)',
+                                                    backgroundColor: alpha(theme.palette.background.paper, 0.6),
+                                                    backdropFilter: 'blur(8px)',
                                                     borderRadius: '12px',
-                                                    transition: 'all 0.3s ease',
+                                                    transition: 'all 0.2s ease',
+                                                    border: `1px solid ${alpha(theme.palette.divider, 0.12)}`,
                                                     '&:hover': {
-                                                        backgroundColor: alpha('#fff', 0.8),
-                                                        boxShadow: '0 4px 12px rgba(102, 126, 234, 0.15)',
+                                                        backgroundColor: alpha(theme.palette.background.paper, 0.75),
                                                     },
                                                     '&.Mui-focused': {
-                                                        backgroundColor: alpha('#fff', 0.95),
-                                                        boxShadow: '0 4px 16px rgba(102, 126, 234, 0.25)',
+                                                        backgroundColor: alpha(theme.palette.background.paper, 0.9),
+                                                        borderColor: alpha(theme.palette.primary.main, 0.3),
                                                     },
                                                 }}
                                             >
@@ -432,10 +432,10 @@ export default function ContactRequestsIndex({ requests, stats, filters }) {
                                                 <MenuItem value="Otro">Otro</MenuItem>
                                             </Select>
                                         </FormControl>
-                                    </Grid>
+                                    </Box>
 
                                     {/* Action Buttons */}
-                                    <Grid item xs={12} md={2}>
+                                    <Box sx={{ gridColumn: { md: 'span 2' } }}>
                                         <Stack spacing={1.5} direction={{ xs: 'row', md: 'column' }}>
                                             <Button
                                                 fullWidth
@@ -488,8 +488,8 @@ export default function ContactRequestsIndex({ requests, stats, filters }) {
                                                 </Button>
                                             )}
                                         </Stack>
-                                    </Grid>
-                                </Grid>
+                                    </Box>
+                                </Box>
                             </Stack>
                         </CardContent>
                     </Card>
@@ -655,9 +655,9 @@ export default function ContactRequestsIndex({ requests, stats, filters }) {
 
                 {/* Table */}
                 <Card sx={glassStyle}>
-                    <TableContainer>
-                        <Table>
-                            <TableHead>
+                    <TableContainer sx={{ maxHeight: '70vh', overflow: 'auto' }}>
+                        <Table size="small">
+                            <TableHead sx={{ '& th': { position: 'sticky', top: 0, zIndex: 1, background: alpha(theme.palette.background.paper, 0.9), backdropFilter: 'blur(6px)' } }}>
                                 <TableRow>
                                     <TableCell padding="checkbox">
                                         <Checkbox
@@ -680,12 +680,13 @@ export default function ContactRequestsIndex({ requests, stats, filters }) {
                                 </TableRow>
                             </TableHead>
                             <TableBody>
-                                {requests.data.map((request) => (
+                                {requests.data.map((request, idx) => (
                                     <TableRow
                                         key={request.id}
                                         sx={{
+                                            backgroundColor: idx % 2 ? alpha(theme.palette.action.hover, 0.04) : 'transparent',
                                             '&:hover': {
-                                                backgroundColor: alpha(theme.palette.primary.main, 0.05),
+                                                backgroundColor: alpha(theme.palette.primary.main, 0.06),
                                             },
                                         }}
                                     >

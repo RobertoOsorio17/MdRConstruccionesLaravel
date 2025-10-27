@@ -14,14 +14,21 @@ use Inertia\Response;
 
 /**
  * Collects metrics and content tailored to authenticated users, composing the personalized dashboard experience.
- * Mixes editorial insights, engagement summaries, and administrative fallbacks to keep members informed.
+ *
+ * Features:
+ * - Overview: recent comments/saves, quick stats, and personalization.
+ * - Admin view: system counts and recent activity shortcuts.
+ * - Lists: saved posts, liked posts, following, liked comments (with filters/pagination).
+ * - Preferences: lightweight settings endpoint for UI prototyping.
  */
 class UserDashboardController extends Controller
 {
     /**
      * Display user dashboard overview.
+     *
+     * @return Response|RedirectResponse Inertia response with personalized dashboard data or redirect for admins.
      */
-    public function index(): Response
+    public function index(): Response|\Illuminate\Http\RedirectResponse
     {
         Log::info('Dashboard access attempt', [
             'user_id' => Auth::id(),
@@ -32,13 +39,22 @@ class UserDashboardController extends Controller
         ]);
 
         $user = Auth::user();
-        
+
         if (!$user) {
             Log::warning('Dashboard access failed - No authenticated user', [
                 'session_id' => session()->getId(),
                 'ip' => request()->ip()
             ]);
             return redirect()->route('login')->with('error', 'Session expired. Please log in again.');
+        }
+
+        // ✅ FIX: Redirect admins/editors to their dedicated admin dashboard
+        if ($user->hasRole('admin') || $user->hasRole('editor')) {
+            Log::info('Admin/Editor redirected to admin dashboard', [
+                'user_id' => $user->id,
+                'role' => $user->role
+            ]);
+            return redirect()->route('admin.dashboard');
         }
 
         Log::info('Dashboard loading for user', [
@@ -48,86 +64,34 @@ class UserDashboardController extends Controller
         ]);
         
         try {
-            // Determine whether the current user has administrative privileges.
-            $isAdmin = $user->role === 'admin';
-            
-            if ($isAdmin) {
-                // System statistics shown to administrators.
-                $stats = [
-                    'total_posts' => Post::count(),
-                    'total_users' => User::count(),
-                    'total_comments' => Comment::count(),
-                    'total_categories' => \App\Models\Category::count(),
-                    'posts' => [
-                        'total' => Post::count(),
-                        'published' => Post::where('status', 'published')->count(),
-                        'draft' => Post::where('status', 'draft')->count(),
-                        'featured' => Post::where('featured', true)->count(),
-                    ],
-                    'users' => [
-                        'total' => User::count(),
-                        'active' => User::whereNotNull('email_verified_at')->count(),
-                        'admins' => User::where('role', 'admin')->count(),
-                    ],
-                    'comments' => [
-                        'total' => Comment::count(),
-                        'approved' => Comment::where('status', 'approved')->count(),
-                        'pending' => Comment::where('status', 'pending')->count(),
-                    ],
-                    'categories' => [
-                        'total' => \App\Models\Category::count(),
-                        'active' => \App\Models\Category::where('is_active', true)->count(),
-                    ],
-                    'performance' => [
-                        'score' => 98,
-                        'trends' => [
-                            'posts' => 15,
-                            'users' => 8,
-                            'comments' => -3,
-                            'performance' => 2
-                        ]
-                    ]
-                ];
-                
-                // Recent activity timeline for administrators.
-                $recentComments = Comment::with(['post:id,title,slug', 'user:id,name'])
-                    ->latest()
-                    ->take(5)
-                    ->get();
-                    
-                $recentSavedPosts = Post::with(['author:id,name,avatar', 'categories:id,name,color'])
-                    ->orderBy('created_at', 'desc')
-                    ->take(5)
-                    ->get();
-                    
-            } else {
-                // Personal statistics for regular users.
-                $stats = [
-                    'comments_count' => $user->comments()->count(),
-                    'saved_posts_count' => $user->savedPosts()->count(),
-                    'following_count' => $user->following()->count(),
-                    'followers_count' => $user->followers()->count(),
-                ];
+            // ✅ FIX: This dashboard is now for regular users only
+            // Admins/editors are redirected to admin.dashboard above
 
-                // Retrieve the authenticated user's recent comments.
-                $recentComments = $user->comments()
-                    ->with(['post:id,title,slug'])
-                    ->latest()
-                    ->take(5)
-                    ->get();
+            // Personal statistics for regular users
+            $stats = [
+                'comments_count' => $user->comments()->count(),
+                'saved_posts_count' => $user->savedPosts()->count(),
+                'following_count' => $user->following()->count(),
+                'followers_count' => $user->followers()->count(),
+            ];
 
-                $recentSavedPosts = $user->savedPosts()
-                    ->with(['author:id,name,avatar'])
-                    ->orderByPivot('created_at', 'desc')
-                    ->take(5)
-                    ->get();
-            }
+            // Retrieve the authenticated user's recent comments
+            $recentComments = $user->comments()
+                ->with(['post:id,title,slug'])
+                ->latest()
+                ->take(5)
+                ->get();
+
+            $recentSavedPosts = $user->savedPosts()
+                ->with(['author:id,name,avatar'])
+                ->orderByPivot('created_at', 'desc')
+                ->take(5)
+                ->get();
 
             Log::debug('Dashboard stats calculated', $stats);
 
             Log::info('Dashboard data loaded successfully', [
                 'user_id' => $user->id,
-                'is_admin' => $isAdmin,
                 'recent_comments_count' => $recentComments->count(),
                 'recent_saved_posts_count' => $recentSavedPosts->count()
             ]);
@@ -177,7 +141,10 @@ class UserDashboardController extends Controller
     }
 
     /**
-     * Display user's saved posts
+     * Display the user's saved posts.
+     *
+     * @param Request $request The current HTTP request instance.
+     * @return Response Inertia response with saved posts and filters.
      */
     public function savedPosts(Request $request): Response
     {
@@ -225,7 +192,10 @@ class UserDashboardController extends Controller
     }
 
     /**
-     * Display user's following list
+     * Display the user's following list.
+     *
+     * @param Request $request The current HTTP request instance.
+     * @return Response Inertia response with following users and filters.
      */
     public function following(Request $request): Response
     {
@@ -255,7 +225,9 @@ class UserDashboardController extends Controller
     }
 
     /**
-     * Display user preferences
+     * Display the user preferences screen.
+     *
+     * @return Response Inertia response with user profile snapshot and default preferences.
      */
     public function preferences(): Response
     {
@@ -278,7 +250,10 @@ class UserDashboardController extends Controller
     }
 
     /**
-     * Update user preferences
+     * Update user preferences.
+     *
+     * @param Request $request The current HTTP request instance.
+     * @return \Illuminate\Http\RedirectResponse Redirect back with status.
      */
     public function updatePreferences(Request $request)
     {
@@ -298,7 +273,10 @@ class UserDashboardController extends Controller
     }
 
     /**
-     * Display user's liked posts
+     * Display the user's liked posts.
+     *
+     * @param Request $request The current HTTP request instance.
+     * @return Response Inertia response with liked posts and filters.
      */
     public function likedPosts(Request $request): Response
     {
@@ -346,7 +324,10 @@ class UserDashboardController extends Controller
     }
 
     /**
-     * Display user's bookmarks (alias for saved posts)
+     * Display the user's bookmarks (alias for saved posts).
+     *
+     * @param Request $request The current HTTP request instance.
+     * @return Response Inertia response with saved posts.
      */
     public function bookmarks(Request $request): Response
     {
@@ -354,7 +335,10 @@ class UserDashboardController extends Controller
     }
 
     /**
-     * Display user's liked comments
+     * Display the user's liked comments.
+     *
+     * @param Request $request The current HTTP request instance.
+     * @return Response Inertia response with liked comments and filters.
      */
     public function likedComments(Request $request): Response
     {
@@ -386,7 +370,10 @@ class UserDashboardController extends Controller
     }
 
     /**
-     * Remove a saved post
+     * Remove a saved post.
+     *
+     * @param Post $post The post to remove from saved.
+     * @return \Illuminate\Http\JsonResponse JSON response indicating success.
      */
     public function removeSavedPost(Post $post)
     {
@@ -399,9 +386,12 @@ class UserDashboardController extends Controller
     }
 
     /**
-     * Delete a comment
+     * Delete a comment.
      *
      * Uses soft delete to preserve conversation structure.
+     *
+     * @param Comment $comment The comment to delete.
+     * @return \Illuminate\Http\JsonResponse JSON response indicating success or failure.
      */
     public function deleteComment(Comment $comment)
     {
@@ -423,7 +413,10 @@ class UserDashboardController extends Controller
     }
 
     /**
-     * Unfollow a user
+     * Unfollow a user.
+     *
+     * @param User $user The user to unfollow.
+     * @return \Illuminate\Http\JsonResponse JSON response indicating success.
      */
     public function unfollowUser(User $user)
     {

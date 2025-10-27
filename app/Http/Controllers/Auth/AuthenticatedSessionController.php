@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Auth\Concerns\HandlesTwoFactorLogin;
 use App\Http\Requests\Auth\LoginRequest;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -19,6 +20,8 @@ use Inertia\Response;
  */
 class AuthenticatedSessionController extends Controller
 {
+    use HandlesTwoFactorLogin;
+
     /**
      * Display the login view.
      */
@@ -26,8 +29,7 @@ class AuthenticatedSessionController extends Controller
     {
         Log::info('Login page accessed', [
             'ip' => request()->ip(),
-            'user_agent' => request()->userAgent(),
-            'session_id' => session()->getId(),
+            'user_agent_hash' => hash('sha256', substr(request()->userAgent() ?? 'unknown', 0, 100)),
             'timestamp' => now()->toISOString()
         ]);
 
@@ -44,9 +46,9 @@ class AuthenticatedSessionController extends Controller
     {
         // ✅ FIXED: Don't log full email, use masked version
         Log::info('Login attempt started', [
-            'email_hash' => hash('sha256', $request->email), // Hash instead of plain email
+            'email_hash' => hash('sha256', strtolower($request->email)),
             'ip' => $request->ip(),
-            'user_agent' => substr($request->userAgent(), 0, 100), // Limit length
+            'user_agent_hash' => hash('sha256', substr($request->userAgent(), 0, 100)),
             'timestamp' => now()->toISOString()
         ]);
 
@@ -68,7 +70,7 @@ class AuthenticatedSessionController extends Controller
                 // Log the banned login attempt
                 Log::warning('Banned user attempted login', [
                     'user_id' => $user->id,
-                    'user_email' => $user->email,
+                    'email_hash' => hash('sha256', strtolower($user->email)),
                     'ban_reason' => $banStatus['reason'],
                     'ban_expires' => $banStatus['expires_at'],
                     'ip' => $request->ip(),
@@ -104,116 +106,22 @@ class AuthenticatedSessionController extends Controller
                 'timestamp' => now()->toISOString()
             ]);
 
-            // Check if user has 2FA enabled
-            if ($user->two_factor_secret && $user->two_factor_confirmed_at) {
-
-                // Check for trusted device FIRST
-                $trustedDeviceToken = $request->cookie('trusted_device_token');
-
-                if ($trustedDeviceToken) {
-                    $tokenHash = \App\Models\TrustedDevice::hashToken($trustedDeviceToken);
-
-                    $trustedDevice = $user->trustedDevices()
-                        ->where('token_hash', $tokenHash)
-                        ->valid()
-                        ->first();
-
-                    if ($trustedDevice) {
-                        // Update last used
-                        $trustedDevice->updateLastUsed();
-
-                        Log::info('Login via trusted device - skipping 2FA', [
-                            'user_id' => $user->id,
-                            'device_id' => $trustedDevice->id,
-                            'ip' => $request->ip(),
-                            'timestamp' => now()->toISOString()
-                        ]);
-
-                        // Skip 2FA challenge - allow direct login
-                        Auth::login($user, $request->boolean('remember'));
-
-                        $user->forceFill([
-                            'last_login_at' => now(),
-                            'last_login_ip' => $request->ip()
-                        ])->save();
-
-                        $request->session()->regenerate();
-
-                        $intended = $user->hasPermission('dashboard.access')
-                            ? route('dashboard', absolute: false)
-                            : route('user.dashboard', absolute: false);
-
-                        return redirect()->intended($intended);
-                    }
-                }
-
-                // No trusted device found - require 2FA
-                Log::info('User has 2FA enabled, requiring 2FA verification', [
-                    'user_id' => $user->id,
-                    'timestamp' => now()->toISOString()
-                ]);
-
-                // Store intended URL before 2FA challenge
-                session()->put('url.intended', $user->hasPermission('dashboard.access')
-                    ? route('dashboard', absolute: false)
-                    : route('user.dashboard', absolute: false));
-
-                // Store user ID and credentials hash for 2FA verification
-                // DO NOT authenticate the user yet!
-                session()->put('2fa_required', true);
-                session()->put('login.id', $user->id);
-                session()->put('login.remember', $request->boolean('remember'));
-                session()->put('login.password_hash', $user->password); // Verify password hasn't changed
-                session()->put('login.attempt_time', now()->timestamp); // Expire after 5 minutes
-
-                // ✅ FIXED: Don't log email
-                Log::info('2FA required - user NOT authenticated yet', [
-                    'user_id' => $user->id,
-                    'timestamp' => now()->toISOString()
-                ]);
-
-                // Throw validation exception to trigger 2FA modal in frontend
-                // The frontend checks if errors.requires2FA is truthy
-                throw ValidationException::withMessages([
-                    'requires2FA' => 'true'
-                ]);
-            }
-
-            // No 2FA required - authenticate user now
-            Auth::login($user, $request->boolean('remember'));
-
-            // Enhanced session security: regenerate session ID and token
+            // ✅ SECURITY FIX: Regenerate session BEFORE authentication to prevent session fixation
+            // This ensures any session ID set by an attacker is replaced with a new one
             $request->session()->regenerate();
-            $request->session()->regenerateToken();
 
-            // Initialize session activity tracking
-            session(['last_activity' => time()]);
+            return $this->completeInteractiveLogin(
+                $request,
+                $user,
+                $request->boolean('remember')
+            );
 
-            // Update last_login_at and IP
-            $user->forceFill([
-                'last_login_at' => now(),
-                'last_login_ip' => $request->ip()
-            ])->save();
-
-            // ✅ FIXED: Don't log email
-            Log::info('User authenticated successfully (no 2FA)', [
-                'user_id' => $user->id,
-                'timestamp' => now()->toISOString()
-            ]);
-
-            // Redirect based on user permissions
-            if ($user && $user->hasPermission('dashboard.access')) {
-                return redirect()->intended(route('dashboard', absolute: false));
-            } else {
-                return redirect()->intended(route('user.dashboard', absolute: false));
-            }
-            
         } catch (\Exception $e) {
             // ✅ FIXED: Don't log email or session ID
             Log::error('Login failed', [
-                'error' => $e->getMessage(),
+                'error' => class_basename($e),
                 'ip' => $request->ip(),
-                'user_agent' => substr($request->userAgent(), 0, 100),
+                'user_agent_hash' => hash('sha256', substr($request->userAgent(), 0, 100)),
                 'timestamp' => now()->toISOString()
             ]);
 
@@ -226,6 +134,7 @@ class AuthenticatedSessionController extends Controller
      */
     public function destroy(Request $request): RedirectResponse
     {
+        $user = Auth::user();
         $userId = Auth::id();
 
         // ✅ FIXED: Don't log email or session IDs
@@ -234,6 +143,11 @@ class AuthenticatedSessionController extends Controller
             'ip' => $request->ip(),
             'timestamp' => now()->toISOString()
         ]);
+
+        // ✅ SECURITY FIX: Log logout event before logging out
+        if ($user) {
+            \App\Services\SecurityLogger::logLogout($user, 'user_initiated');
+        }
 
         Auth::guard('web')->logout();
 

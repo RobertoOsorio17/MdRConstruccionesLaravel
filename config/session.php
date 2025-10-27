@@ -2,6 +2,26 @@
 
 use Illuminate\Support\Str;
 
+// ✅ SECURITY FIX: Default session lifetime reduced to 15 minutes
+// This is the base session lifetime - role-based middleware will apply stricter limits
+$configuredLifetime = (int) env('SESSION_LIFETIME', 15);
+$maxLifetime = (int) env('SESSION_MAX_LIFETIME', 60); // Max 60 minutes for regular users
+$minLifetime = 5; // Minimum 5 minutes
+$safeLifetime = max($minLifetime, min($configuredLifetime, $maxLifetime));
+
+$environment = env('APP_ENV', 'production');
+$forcedSecureEnvironments = ['production', 'staging'];
+$configuredSecureCookie = env('SESSION_SECURE_COOKIE');
+
+if (in_array($environment, $forcedSecureEnvironments, true)) {
+    $secureCookies = true;
+} elseif ($configuredSecureCookie === null) {
+    $secureCookies = $environment !== 'local';
+} else {
+    $normalized = strtolower((string) $configuredSecureCookie);
+    $secureCookies = in_array($normalized, ['1', 'true', 'on', 'yes'], true);
+}
+
 return [
 
     /*
@@ -20,6 +40,8 @@ return [
 
     'driver' => env('SESSION_DRIVER', 'database'),
 
+    'serialization' => env('SESSION_SERIALIZATION', 'json'),
+
     /*
     |--------------------------------------------------------------------------
     | Session Lifetime
@@ -32,7 +54,7 @@ return [
     |
     */
 
-    'lifetime' => (int) env('SESSION_LIFETIME', 30),
+    'lifetime' => $safeLifetime,
 
     'expire_on_close' => env('SESSION_EXPIRE_ON_CLOSE', false),
 
@@ -47,7 +69,7 @@ return [
     |
     */
 
-    'encrypt' => env('SESSION_ENCRYPT', false),
+    'encrypt' => env('SESSION_ENCRYPT', true),
 
     /*
     |--------------------------------------------------------------------------
@@ -169,7 +191,7 @@ return [
     |
     */
 
-    'secure' => env('SESSION_SECURE_COOKIE', true),
+    'secure' => $secureCookies,
 
     /*
     |--------------------------------------------------------------------------
@@ -213,5 +235,23 @@ return [
     */
 
     'partitioned' => env('SESSION_PARTITIONED_COOKIE', false),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Session Integrity Validation
+    |--------------------------------------------------------------------------
+    |
+    | This option controls whether session integrity validation is enabled.
+    | When enabled, the ValidateSessionIntegrity middleware will check that
+    | critical session data (user_id, roles) hasn't been tampered with.
+    |
+    | This provides protection against session hijacking and tampering attacks.
+    | It's recommended to keep this enabled in production environments.
+    |
+    | Default: true (enabled)
+    |
+    */
+
+    'validate_integrity' => env('SESSION_VALIDATE_INTEGRITY', true),
 
 ];

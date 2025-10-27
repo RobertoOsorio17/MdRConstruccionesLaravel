@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Head, Link, router } from '@inertiajs/react';
-import AdminLayout from '@/Layouts/AdminLayout';
+import AdminLayoutNew from '@/Layouts/AdminLayoutNew';
 import {
     Box,
     Paper,
@@ -76,7 +76,7 @@ const ServicesIndex = ({ services }) => {
     };
 
     return (
-        <AdminLayout title="Gestión de Servicios">
+        <AdminLayoutNew title="Gestión de Servicios">
             <Head title="Servicios - Dashboard" />
             
             <Box sx={{ mb: 4 }}>
@@ -110,13 +110,15 @@ const ServicesIndex = ({ services }) => {
                 </Box>
 
                 {/* Estadísticas rápidas */}
-                <Box sx={{ display: 'flex', gap: 3, mb: 4 }}>
-                    <Paper 
-                        sx={{ 
-                            p: 3, 
-                            flex: 1, 
-                            borderRadius: 2,
-                            background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.1)} 0%, ${alpha(theme.palette.primary.main, 0.05)} 100%)`
+                <Box sx={{ display: 'grid', gap: 3, gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(3, 1fr)' }, mb: 4 }}>
+                    <Paper
+                        sx={{
+                            p: 3,
+                            borderRadius: 3,
+                            backdropFilter: 'blur(14px)',
+                            background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.1)} 0%, ${alpha(theme.palette.primary.main, 0.05)} 100%)`,
+                            border: `1px solid ${alpha(theme.palette.primary.main, 0.2)}`,
+                            boxShadow: `0 8px 24px ${alpha(theme.palette.primary.main, 0.12)}`
                         }}
                     >
                         <Typography variant="h3" color="primary" fontWeight="bold">
@@ -126,13 +128,15 @@ const ServicesIndex = ({ services }) => {
                             Total Servicios
                         </Typography>
                     </Paper>
-                    
-                    <Paper 
-                        sx={{ 
-                            p: 3, 
-                            flex: 1, 
-                            borderRadius: 2,
-                            background: `linear-gradient(135deg, ${alpha(theme.palette.success.main, 0.1)} 0%, ${alpha(theme.palette.success.main, 0.05)} 100%)`
+
+                    <Paper
+                        sx={{
+                            p: 3,
+                            borderRadius: 3,
+                            backdropFilter: 'blur(14px)',
+                            background: `linear-gradient(135deg, ${alpha(theme.palette.success.main, 0.1)} 0%, ${alpha(theme.palette.success.main, 0.05)} 100%)`,
+                            border: `1px solid ${alpha(theme.palette.success.main, 0.2)}`,
+                            boxShadow: `0 8px 24px ${alpha(theme.palette.success.main, 0.12)}`
                         }}
                     >
                         <Typography variant="h3" color="success.main" fontWeight="bold">
@@ -142,13 +146,15 @@ const ServicesIndex = ({ services }) => {
                             Activos
                         </Typography>
                     </Paper>
-                    
-                    <Paper 
-                        sx={{ 
-                            p: 3, 
-                            flex: 1, 
-                            borderRadius: 2,
-                            background: `linear-gradient(135deg, ${alpha(theme.palette.warning.main, 0.1)} 0%, ${alpha(theme.palette.warning.main, 0.05)} 100%)`
+
+                    <Paper
+                        sx={{
+                            p: 3,
+                            borderRadius: 3,
+                            backdropFilter: 'blur(14px)',
+                            background: `linear-gradient(135deg, ${alpha(theme.palette.warning.main, 0.1)} 0%, ${alpha(theme.palette.warning.main, 0.05)} 100%)`,
+                            border: `1px solid ${alpha(theme.palette.warning.main, 0.2)}`,
+                            boxShadow: `0 8px 24px ${alpha(theme.palette.warning.main, 0.12)}`
                         }}
                     >
                         <Typography variant="h3" color="warning.main" fontWeight="bold">
@@ -162,10 +168,10 @@ const ServicesIndex = ({ services }) => {
             </Box>
 
             {/* Tabla de servicios */}
-            <Paper sx={{ borderRadius: 3, overflow: 'hidden' }}>
-                <TableContainer>
+            <Paper sx={{ borderRadius: 3, overflow: 'hidden', background: alpha(theme.palette.background.paper, 0.6), backdropFilter: 'blur(10px)', border: `1px solid ${alpha(theme.palette.divider, 0.12)}`, boxShadow: `0 8px 24px ${alpha(theme.palette.common.black, 0.08)}` }}>
+                <TableContainer sx={{ maxHeight: '70vh', overflow: 'auto' }}>
                     <Table>
-                        <TableHead>
+                        <TableHead sx={{ '& th': { position: 'sticky', top: 0, zIndex: 2, background: alpha(theme.palette.background.paper, 0.85), backdropFilter: 'blur(6px)' } }}>
                             <TableRow sx={{ backgroundColor: alpha(theme.palette.primary.main, 0.05) }}>
                                 <TableCell>Orden</TableCell>
                                 <TableCell>Servicio</TableCell>
@@ -184,9 +190,8 @@ const ServicesIndex = ({ services }) => {
                                     animate={{ opacity: 1, y: 0 }}
                                     transition={{ delay: index * 0.1 }}
                                     sx={{
-                                        '&:hover': {
-                                            backgroundColor: alpha(theme.palette.primary.main, 0.02)
-                                        }
+                                        backgroundColor: index % 2 ? alpha(theme.palette.action.hover, 0.04) : 'transparent',
+                                        '&:hover': { backgroundColor: alpha(theme.palette.primary.main, 0.06) }
                                     }}
                                 >
                                     <TableCell>
@@ -347,7 +352,7 @@ const ServicesIndex = ({ services }) => {
                     </Button>
                 </DialogActions>
             </Dialog>
-        </AdminLayout>
+        </AdminLayoutNew>
     );
 };
 

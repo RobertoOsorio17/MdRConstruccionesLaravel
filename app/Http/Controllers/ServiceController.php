@@ -8,12 +8,18 @@ use Inertia\Inertia;
 
 /**
  * Presents the catalogue of public services by transforming domain models into visitor-friendly listings and detail payloads.
- * Handles resilient queries, featured segmentation, and view recording so offerings stay visible and informative.
+ *
+ * Features:
+ * - Index with featured subset extraction for highlights.
+ * - Show views (v1/v2) with related services and testimonials.
+ * - Resilient queries with guarded fallbacks and SEO metadata.
  */
 class ServiceController extends Controller
 {
     /**
      * Display a listing of services.
+     *
+     * @return \Inertia\Response Inertia response with all services and featured subset.
      */
     public function index()
     {
@@ -48,6 +54,9 @@ class ServiceController extends Controller
 
     /**
      * Display the specified service.
+     *
+     * @param Service $service The service model instance.
+     * @return \Inertia\Response Inertia response with service details and related services.
      */
     public function show(Service $service)
     {
@@ -111,6 +120,9 @@ class ServiceController extends Controller
 
     /**
      * Display the specified service with ServicesV2 components.
+     *
+     * @param Service $service The service model instance.
+     * @return \Inertia\Response Inertia response for the Services V2 view.
      */
     public function showV2(Service $service)
     {

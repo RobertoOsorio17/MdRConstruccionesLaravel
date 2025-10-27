@@ -60,6 +60,32 @@ const LoginMUI = ({ status, canResetPassword }) => {
     const [rateLimitExpiry, setRateLimitExpiry] = useState(null);
     const [countdown, setCountdown] = useState(0);
     const [rememberDevice, setRememberDevice] = useState(false);
+    const [urlMessage, setUrlMessage] = useState(null);
+
+    // ✅ SECURITY FIX: Only allow whitelisted messages from URL
+    // This prevents phishing attacks via crafted URLs
+    useEffect(() => {
+        const ALLOWED_MESSAGES = {
+            'session_expired_inactivity': 'Tu sesión ha expirado por inactividad. Por favor, inicia sesión nuevamente.',
+            'session_expired': 'Tu sesión ha expirado. Por favor, inicia sesión nuevamente.',
+            'concurrent_session': 'Se ha detectado otra sesión activa. Por favor, inicia sesión nuevamente.',
+            'logout_success': 'Has cerrado sesión correctamente.',
+            'account_suspended': 'Tu cuenta ha sido suspendida. Contacta al administrador.',
+            'password_changed': 'Tu contraseña ha sido cambiada. Por favor, inicia sesión con tu nueva contraseña.',
+        };
+
+        const params = new URLSearchParams(window.location.search);
+        const messageKey = params.get('message');
+
+        if (messageKey && ALLOWED_MESSAGES[messageKey]) {
+            setUrlMessage(ALLOWED_MESSAGES[messageKey]);
+            // Clean URL without reloading
+            window.history.replaceState({}, '', window.location.pathname);
+        } else if (messageKey) {
+            // Log suspicious attempt to inject arbitrary message
+            console.warn('Attempted to inject unauthorized message:', messageKey);
+        }
+    }, []);
 
     const { data, setData, post, processing, errors, reset } = useForm({
         email: '',
@@ -403,6 +429,23 @@ const LoginMUI = ({ status, canResetPassword }) => {
                                 >
                                     <Alert severity="success" sx={{ mb: 3, borderRadius: 2 }}>
                                         {status}
+                                    </Alert>
+                                </motion.div>
+                            )}
+
+                            {/* ✅ URL Message Alert (e.g., session expired) */}
+                            {urlMessage && (
+                                <motion.div
+                                    initial={{ opacity: 0, x: -20 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    transition={{ delay: 0.3 }}
+                                >
+                                    <Alert
+                                        severity="warning"
+                                        sx={{ mb: 3, borderRadius: 2 }}
+                                        onClose={() => setUrlMessage(null)}
+                                    >
+                                        {urlMessage}
                                     </Alert>
                                 </motion.div>
                             )}

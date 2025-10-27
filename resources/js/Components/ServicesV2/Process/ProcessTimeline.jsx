@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import { CheckCircle, ArrowForward } from '@mui/icons-material';
 import designSystem from '@/theme/designSystem';
 import { useIntersectionReveal } from '@/Hooks/useIntersectionReveal';
-import { trackSectionView } from '@/Utils/trackEvent';
+import { trackSectionView } from '@/Utils/analytics';
 import GlassCard from '../Shared/GlassCard';
 
 /**

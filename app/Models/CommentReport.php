@@ -23,6 +23,7 @@ class CommentReport extends Model
         'category',
         'description',
         'status',
+        'priority',
         'notes',
         'ip_address',
         'user_agent',

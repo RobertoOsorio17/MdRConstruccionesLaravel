@@ -9,12 +9,20 @@ use App\Models\Category;
 
 /**
  * Delivers polished fallback views when visitors encounter application errors or missing content.
- * Supplements error pages with curated recommendations to keep users engaged despite navigation issues.
+ *
+ * Features:
+ * - 404 page with popular/recent posts and category navigation.
+ * - 500 page with contextual logging and an error identifier.
+ * - 403/503 pages with tailored content for forbidden/maintenance scenarios.
+ * - Analytics logging for 404s (and silent failover when tables are missing).
  */
 class ErrorController extends Controller
 {
     /**
-     * Show the 404 error page
+     * Show the 404 error page.
+     *
+     * @param Request $request The current HTTP request instance.
+     * @return \Symfony\Component\HttpFoundation\Response The rendered 404 response.
      */
     public function notFound(Request $request)
     {
@@ -58,8 +66,8 @@ class ErrorController extends Controller
                     ];
                 });
         } catch (\Exception $e) {
-            // ✅ FIXED: Use Log::error() for critical database errors instead of warning
-            // Fallback if posts table has issues
+            // Fix: Use Log::error() for critical database errors instead of warnings.
+            // Fallback if posts table has issues.
             $recentPosts = collect([]);
             \Log::error('Critical error fetching recent posts for 404 page', [
                 'error' => $e->getMessage(),
@@ -68,7 +76,7 @@ class ErrorController extends Controller
                 'user_id' => auth()->id(),
             ]);
 
-            // ✅ FIXED: Notify admins of critical database errors
+            // Fix: Notify admins of critical database errors.
             if (app()->environment('production')) {
                 try {
                     \Illuminate\Support\Facades\Notification::route('mail', config('mail.admin_email'))
@@ -96,8 +104,8 @@ class ErrorController extends Controller
                     ];
                 });
         } catch (\Exception $e) {
-            // ✅ FIXED: Use Log::error() for critical database errors
-            // Fallback if categories table has issues
+            // Fix: Use Log::error() for critical database errors.
+            // Fallback if categories table has issues.
             $categories = collect([]);
             \Log::error('Critical error fetching categories for 404 page', [
                 'error' => $e->getMessage(),
@@ -119,7 +127,11 @@ class ErrorController extends Controller
     }
 
     /**
-     * Show the 500 error page
+     * Show the 500 error page.
+     *
+     * @param Request $request The current HTTP request instance.
+     * @param \Throwable|null $exception Optional exception that triggered the page.
+     * @return \Symfony\Component\HttpFoundation\Response The rendered 500 response.
      */
     public function serverError(Request $request, $exception = null)
     {
@@ -141,7 +153,10 @@ class ErrorController extends Controller
     }
 
     /**
-     * Show the 403 error page
+     * Show the 403 error page.
+     *
+     * @param Request $request The current HTTP request instance.
+     * @return \Symfony\Component\HttpFoundation\Response The rendered 403 response.
      */
     public function forbidden(Request $request)
     {
@@ -152,7 +167,10 @@ class ErrorController extends Controller
     }
 
     /**
-     * Show the 503 error page (maintenance mode)
+     * Show the 503 error page (maintenance mode).
+     *
+     * @param Request $request The current HTTP request instance.
+     * @return \Symfony\Component\HttpFoundation\Response The rendered 503 response.
      */
     public function maintenance(Request $request)
     {
@@ -162,7 +180,10 @@ class ErrorController extends Controller
     }
 
     /**
-     * Log 404 errors for analytics
+     * Log 404 errors for analytics.
+     *
+     * @param Request $request The current HTTP request instance.
+     * @return void
      */
     private function log404Error(Request $request)
     {

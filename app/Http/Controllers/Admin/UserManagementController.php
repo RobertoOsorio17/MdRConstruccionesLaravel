@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Models\UserBan;
 use App\Models\Role;
 use App\Models\Comment;
+use App\Models\TrustedDevice;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
@@ -48,7 +49,7 @@ class UserManagementController extends Controller
         // Filter by a primary role slug or ensure any custom role assignments.
         if ($request->filled('role')) {
             if ($request->role === 'simple_role') {
-                // ✅ FIXED: Use whereNotNull instead of != null (SQL always false)
+                // Fix: Use whereHas('roles') to include users with any role.
                 // Note: 'role' column doesn't exist - this should filter users WITH roles
                 $query->whereHas('roles');
             } else {
@@ -93,7 +94,7 @@ class UserManagementController extends Controller
         $sortField = $request->get('sort', 'created_at');
         $sortDirection = $request->get('direction', 'desc');
 
-        // ✅ SECURITY: Whitelist both field and direction to prevent SQL injection
+        // Security: Whitelist both field and direction to prevent SQL injection.
         $allowedSorts = ['name', 'email', 'role', 'created_at', 'last_login_at'];
         $allowedDirections = ['asc', 'desc'];
 
@@ -199,7 +200,19 @@ class UserManagementController extends Controller
             'name' => 'required|string|max:255|regex:/^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]+$/',
             // ✅ FIXED: Use email:rfc,dns instead of regex for better international email support
             'email' => 'required|string|email:rfc,dns|max:255|unique:users',
-            'password' => 'required|string|min:8|confirmed|regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]+$/',
+            // ✅ SECURITY FIX: Stronger password requirements (12 chars minimum + complexity + breach check)
+            'password' => [
+                'required',
+                'string',
+                'confirmed',
+                \Illuminate\Validation\Rules\Password::min(12)
+                    ->letters()
+                    ->mixedCase()
+                    ->numbers()
+                    ->symbols()
+                    ->uncompromised(), // ✅ Check against HaveIBeenPwned database
+                new \App\Rules\NotCommonPassword(), // Prevent common passwords
+            ],
             'role' => 'nullable|string|in:admin,editor,user',
             'roles' => 'nullable|array|max:3',
             'roles.*' => 'exists:roles,id',
@@ -221,13 +234,14 @@ class UserManagementController extends Controller
 
         $this->guardAdminRoleAssignment($request->input('roles', []));
 
+        // ✅ SECURITY: Sanitize user input to prevent XSS
         $user = User::create([
-            'name' => $request->name,
+            'name' => strip_tags($request->name),
             'email' => $request->email,
             'password' => Hash::make($request->password),
-            'bio' => $request->bio,
-            'website' => $request->website,
-            'location' => $request->location,
+            'bio' => strip_tags($request->bio),
+            'website' => filter_var($request->website, FILTER_SANITIZE_URL),
+            'location' => strip_tags($request->location),
             'email_verified_at' => now(), // Auto-verify admin-created users.
         ]);
 
@@ -395,12 +409,13 @@ class UserManagementController extends Controller
             $this->guardAdminRoleAssignment($request->roles);
         }
 
+        // ✅ SECURITY: Sanitize user input to prevent XSS
         $updateData = [
-            'name' => $request->name,
+            'name' => strip_tags($request->name),
             'email' => $request->email,
-            'bio' => $request->bio,
-            'website' => $request->website,
-            'location' => $request->location,
+            'bio' => strip_tags($request->bio),
+            'website' => filter_var($request->website, FILTER_SANITIZE_URL),
+            'location' => strip_tags($request->location),
         ];
 
         // Update the password when a new credential has been supplied.
@@ -416,21 +431,51 @@ class UserManagementController extends Controller
         // Remove the obsolete is_active flag because bans control activation.
         unset($updateData['is_active']);
 
+        // ✅ SECURITY FIX: Track if role is changing for session regeneration
+        $originalRoles = $user->roles->pluck('id')->toArray();
+        $roleChanged = false;
+
         $user->update($updateData);
 
         // Update role using Spatie method (role is in $guarded)
         if ($request->filled('role')) {
             // Remove all current roles and assign the new one
             $user->syncRoles([$request->role]);
+            $roleChanged = true;
         }
 
         // Sync any additional role selections after the profile details are updated.
         if ($request->has('roles')) {
-            $user->roles()->sync($request->roles ?? []);
+            $newRoles = $request->roles ?? [];
+            $user->roles()->sync($newRoles);
+
+            // Check if roles actually changed
+            if (array_diff($originalRoles, $newRoles) || array_diff($newRoles, $originalRoles)) {
+                $roleChanged = true;
+            }
+        }
+
+        // ✅ SECURITY FIX: Force logout on all sessions if role/privileges changed
+        if ($roleChanged || $request->filled('password')) {
+            \DB::table('sessions')
+                ->where('user_id', $user->id)
+                ->delete();
+
+            // Log the security action
+            \App\Services\SecurityLogger::logBulkOperation(
+                'force_logout_privilege_change',
+                1,
+                auth()->user(),
+                [
+                    'target_user_id' => $user->id,
+                    'target_user_email' => $user->email,
+                    'reason' => $roleChanged ? 'role_changed' : 'password_changed',
+                ]
+            );
         }
 
         return redirect()->route('admin.users.index')
-            ->with('success', 'Usuario actualizado exitosamente.');
+            ->with('success', 'Usuario actualizado exitosamente.' . ($roleChanged || $request->filled('password') ? ' Se han cerrado todas sus sesiones activas.' : ''));
     }
 
     /**
@@ -530,12 +575,30 @@ class UserManagementController extends Controller
                 // ✅ FIXED: Load role before accessing display_name
                 $role = \Spatie\Permission\Models\Role::findOrFail($request->role_id);
                 $users = User::whereIn('id', $userIds)->get();
+
+                $count = 0;
+                $skipped = 0;
+
                 foreach ($users as $user) {
+                    // ✅ SECURITY: Prevent degrading super-admins
+                    if ($user->hasRole('super_admin') || $user->hasRole('super-admin') || $user->hasRole('superadmin')) {
+                        $skipped++;
+                        \Log::warning('Attempted to change super-admin role via bulk action', [
+                            'admin_id' => auth()->id(),
+                            'target_user_id' => $user->id,
+                            'target_role' => $role->name,
+                        ]);
+                        continue;
+                    }
+
                     $user->roles()->sync([$request->role_id]);
+                    $count++;
                 }
-                $count = $users->count();
-                $message = "Se asignÃƒÆ’Ã‚Â³ el rol '{$role->display_name}' a {$count} usuarios.";
-                $message = "Se asignÃƒÆ’Ã‚Â³ el rol '{$role->display_name}' a {$count} usuarios.";
+                
+                $message = "Se asignó el rol '{$role->display_name}' a {$count} usuarios.";
+                if ($skipped > 0) {
+                    $message .= " ({$skipped} super-admins fueron omitidos por seguridad)";
+                }
                 break;
         }
 
@@ -671,7 +734,9 @@ class UserManagementController extends Controller
         // Validate the incoming ban request data.
         $validator = Validator::make($request->all(), [
             'reason' => 'required|string|max:1000',
-            'duration' => 'nullable|string|in:1_hour,1_day,1_week,1_month,3_months,6_months,1_year,permanent',
+            'duration' => 'nullable|string|in:1_hour,1_day,1_week,1_month,3_months,6_months,1_year,permanent,custom',
+            'custom_expires_at' => 'nullable|required_if:duration,custom|date|after:now',
+            'expires_at' => 'nullable|date|after:now',
             'ip_ban' => 'nullable|boolean',
             'admin_notes' => 'nullable|string|max:1000',
         ]);
@@ -690,16 +755,21 @@ class UserManagementController extends Controller
         // Calculate the ban expiration timestamp from the provided duration.
         $expiresAt = null;
         if ($request->duration && $request->duration !== 'permanent') {
-            $expiresAt = match($request->duration) {
-                '1_hour' => now()->addHour(),
-                '1_day' => now()->addDay(),
-                '1_week' => now()->addWeek(),
-                '1_month' => now()->addMonth(),
-                '3_months' => now()->addMonths(3),
-                '6_months' => now()->addMonths(6),
-                '1_year' => now()->addYear(),
-                default => null,
-            };
+            if ($request->duration === 'custom') {
+                $custom = $request->custom_expires_at ?? $request->expires_at;
+                $expiresAt = $custom ? \Carbon\Carbon::parse($custom) : null;
+            } else {
+                $expiresAt = match($request->duration) {
+                    '1_hour' => now()->addHour(),
+                    '1_day' => now()->addDay(),
+                    '1_week' => now()->addWeek(),
+                    '1_month' => now()->addMonth(),
+                    '3_months' => now()->addMonths(3),
+                    '6_months' => now()->addMonths(6),
+                    '1_year' => now()->addYear(),
+                    default => null,
+                };
+            }
         }
 
         // Create a ban record while logging the administrative action.
@@ -708,16 +778,60 @@ class UserManagementController extends Controller
                 'user_id' => $user->id,
                 'banned_by' => auth()->id(),
                 'reason' => $request->reason,
+                'admin_notes' => $request->admin_notes,
+                'ip_ban' => $request->ip_ban ?? false,
                 'banned_at' => now(),
                 'expires_at' => $expiresAt,
                 'is_active' => true,
+            ]);
+
+            // Revoke trusted devices for the banned user to prevent bypass
+            TrustedDevice::where('user_id', $user->id)->delete();
+
+            // If IP ban is requested, also ban the user's IP address
+            if ($request->ip_ban && $user->last_login_ip) {
+                \App\Models\IpBan::banIp(
+                    $user->last_login_ip,
+                    "IP banned due to user ban: {$request->reason}",
+                    'manual',
+                    $expiresAt ? now()->diffInDays($expiresAt) : null,
+                    auth()->id()
+                );
+            }
+
+            // Revoke Sanctum tokens if present
+            try {
+                if (method_exists($user, 'tokens')) {
+                    $user->tokens()->delete();
+                }
+            } catch (\Throwable $e) {
+                \Log::warning('Failed to revoke API tokens after ban', ['user_id' => $user->id, 'error' => $e->getMessage()]);
+            }
+
+            // Log to admin audit log
+            \App\Models\AdminAuditLog::logAction([
+                'action' => 'ban.user',
+                'severity' => 'high',
+                'model_type' => \App\Models\User::class,
+                'model_id' => $user->id,
+                'description' => 'User banned by administrator',
+                'request_data' => [
+                    'user_email' => $user->email,
+                    'user_name' => $user->name,
+                    'reason' => $request->reason,
+                    'duration' => $request->duration,
+                    'expires_at' => $expiresAt?->toDateTimeString(),
+                    'ip_ban' => $request->ip_ban ?? false,
+                    'ip_address' => $user->last_login_ip,
+                ],
             ]);
 
             \Log::info('User banned successfully', [
                 'ban_id' => $ban->id,
                 'user_id' => $user->id,
                 'banned_by' => auth()->id(),
-                'expires_at' => $expiresAt
+                'expires_at' => $expiresAt,
+                'ip_ban' => $request->ip_ban ?? false
             ]);
 
             session()->flash('success', 'User has been banned successfully.');
@@ -764,7 +878,9 @@ class UserManagementController extends Controller
         // Validate the incoming modification request data.
         $validator = Validator::make($request->all(), [
             'reason' => 'required|string|max:1000',
-            'duration' => 'nullable|string|in:1_hour,1_day,1_week,1_month,3_months,6_months,1_year,permanent',
+            'duration' => 'nullable|string|in:1_hour,1_day,1_week,1_month,3_months,6_months,1_year,permanent,custom',
+            'custom_expires_at' => 'nullable|required_if:duration,custom|date|after:now',
+            'expires_at' => 'nullable|date|after:now',
             'ip_ban' => 'nullable|boolean',
             'admin_notes' => 'nullable|string|max:1000',
         ]);
@@ -777,16 +893,21 @@ class UserManagementController extends Controller
         // Calculate the new ban expiration timestamp.
         $expiresAt = null;
         if ($request->duration && $request->duration !== 'permanent') {
-            $expiresAt = match($request->duration) {
-                '1_hour' => now()->addHour(),
-                '1_day' => now()->addDay(),
-                '1_week' => now()->addWeek(),
-                '1_month' => now()->addMonth(),
-                '3_months' => now()->addMonths(3),
-                '6_months' => now()->addMonths(6),
-                '1_year' => now()->addYear(),
-                default => null,
-            };
+            if ($request->duration === 'custom') {
+                $custom = $request->custom_expires_at ?? $request->expires_at;
+                $expiresAt = $custom ? \Carbon\Carbon::parse($custom) : null;
+            } else {
+                $expiresAt = match($request->duration) {
+                    '1_hour' => now()->addHour(),
+                    '1_day' => now()->addDay(),
+                    '1_week' => now()->addWeek(),
+                    '1_month' => now()->addMonth(),
+                    '3_months' => now()->addMonths(3),
+                    '6_months' => now()->addMonths(6),
+                    '1_year' => now()->addYear(),
+                    default => null,
+                };
+            }
         }
 
         // Update the active ban record.
@@ -800,17 +921,55 @@ class UserManagementController extends Controller
                 return back()->withErrors(['error' => 'Active ban record not found.']);
             }
 
+            $oldIpBan = $ban->ip_ban;
+
             $ban->update([
                 'reason' => $request->reason,
                 'expires_at' => $expiresAt,
                 'admin_notes' => $request->admin_notes,
+                'ip_ban' => $request->ip_ban ?? false,
+            ]);
+
+            // Handle IP ban changes
+            if ($request->ip_ban && !$oldIpBan && $user->last_login_ip) {
+                // IP ban was just enabled
+                \App\Models\IpBan::banIp(
+                    $user->last_login_ip,
+                    "IP banned due to user ban modification: {$request->reason}",
+                    'manual',
+                    $expiresAt ? now()->diffInDays($expiresAt) : null,
+                    auth()->id()
+                );
+            } elseif (!$request->ip_ban && $oldIpBan && $user->last_login_ip) {
+                // IP ban was just disabled
+                \App\Models\IpBan::where('ip_address', $user->last_login_ip)
+                    ->where('is_active', true)
+                    ->update(['is_active' => false]);
+            }
+
+            // Log to admin audit log
+            \App\Models\AdminAuditLog::logAction([
+                'action' => 'ban.modify',
+                'severity' => 'medium',
+                'model_type' => \App\Models\User::class,
+                'model_id' => $user->id,
+                'description' => 'User ban modified by administrator',
+                'request_data' => [
+                    'user_email' => $user->email,
+                    'user_name' => $user->name,
+                    'reason' => $request->reason,
+                    'duration' => $request->duration,
+                    'expires_at' => $expiresAt?->toDateTimeString(),
+                    'ip_ban' => $request->ip_ban ?? false,
+                ],
             ]);
 
             \Log::info('Ban modified successfully', [
                 'ban_id' => $ban->id,
                 'user_id' => $user->id,
                 'modified_by' => auth()->id(),
-                'new_expires_at' => $expiresAt
+                'new_expires_at' => $expiresAt,
+                'ip_ban' => $request->ip_ban ?? false
             ]);
 
             return back()->with('success', 'Ban has been modified successfully.');
@@ -845,8 +1004,35 @@ class UserManagementController extends Controller
             return back()->withErrors(['error' => 'User is not currently banned.']);
         }
 
+        // Get the active ban before deactivating
+        $activeBan = $user->bans()->active()->first();
+
         // Deactivate the active ban entries instead of deleting their history.
         $user->bans()->active()->update(['is_active' => false]);
+
+        // If the ban had IP ban enabled, also deactivate the IP ban
+        if ($activeBan && $activeBan->ip_ban && $user->last_login_ip) {
+            \App\Models\IpBan::where('ip_address', $user->last_login_ip)
+                ->where('is_active', true)
+                ->update(['is_active' => false]);
+        }
+
+        // Clear trusted devices so the user must re-verify upon reinstatement
+        TrustedDevice::where('user_id', $user->id)->delete();
+
+        // Log to admin audit log
+        \App\Models\AdminAuditLog::logAction([
+            'action' => 'ban.remove',
+            'severity' => 'medium',
+            'model_type' => \App\Models\User::class,
+            'model_id' => $user->id,
+            'description' => 'User unbanned by administrator',
+            'request_data' => [
+                'user_email' => $user->email,
+                'user_name' => $user->name,
+                'had_ip_ban' => $activeBan?->ip_ban ?? false,
+            ],
+        ]);
 
         session()->flash('success', 'User has been unbanned successfully.');
         return redirect()->back();
@@ -1289,12 +1475,6 @@ class UserManagementController extends Controller
         }
     }
 }
-
-
-
-
-
-
 
 
 

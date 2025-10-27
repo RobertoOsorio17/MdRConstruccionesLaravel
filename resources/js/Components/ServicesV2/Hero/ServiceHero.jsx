@@ -42,7 +42,7 @@ import {
 import { motion, useScroll, useTransform } from 'framer-motion';
 import designSystem from '@/theme/designSystem';
 import { useDeviceBreakpoints } from '@/Hooks/useDeviceBreakpoints';
-import { trackCTAClick } from '@/Utils/trackEvent';
+import { trackCTAClick } from '@/Utils/analytics';
 import AnimatedCounter from '../Shared/AnimatedCounter';
 
 const ServiceHero = ({

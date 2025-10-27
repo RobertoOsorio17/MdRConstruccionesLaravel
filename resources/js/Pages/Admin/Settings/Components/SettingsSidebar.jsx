@@ -72,9 +72,9 @@ const SettingsSidebar = ({
             sx={{
                 p: 2.5,
                 borderRadius: 3,
-                backgroundColor: alpha(theme.palette.background.paper, 0.75),
-                border: `1px solid ${alpha(theme.palette.divider, 0.4)}`,
-                backdropFilter: 'blur(16px)',
+                backgroundColor: alpha(theme.palette.background.paper, 0.6),
+                border: `1px solid ${alpha(theme.palette.divider, 0.12)}`,
+                backdropFilter: 'blur(10px)',
                 height: '100%',
                 display: 'flex',
                 flexDirection: 'column',
@@ -91,7 +91,8 @@ const SettingsSidebar = ({
                     mb: 2,
                     '& .MuiOutlinedInput-root': {
                         borderRadius: 2,
-                        backgroundColor: alpha(theme.palette.background.default, 0.6),
+                        backgroundColor: alpha(theme.palette.background.paper, 0.6),
+                        border: `1px solid ${alpha(theme.palette.divider, 0.12)}`,
                         backdropFilter: 'blur(6px)',
                     },
                 }}

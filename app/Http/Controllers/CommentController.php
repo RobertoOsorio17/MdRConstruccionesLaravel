@@ -17,7 +17,17 @@ use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 
 /**
  * Powers public comment submission and moderation logic, balancing usability with anti-abuse safeguards.
- * Coordinates validation rules, rate limiting, editing, and status transitions for conversations under blog posts.
+ *
+ * Features:
+ * - Global feature flag to enable/disable comments site‑wide.
+ * - Per‑IP rate limiting to reduce spam bursts.
+ * - Split validation flows for authenticated users and guests.
+ * - Guest device fingerprint + IP checks to cap anonymous posting per post.
+ * - HTML sanitization and link hardening to mitigate XSS.
+ * - Simple spam heuristics with status escalation to 'spam'.
+ * - Reply constraints (only reply to top‑level comments) to keep thread depth shallow.
+ * - Soft deletion to preserve conversation structure.
+ * - Edit history with pessimistic locking to avoid race conditions.
  */
 class CommentController extends Controller
 {
@@ -32,7 +42,7 @@ class CommentController extends Controller
      */
     public function store(Request $request, Post $post)
     {
-        // Check if comments are globally enabled
+        // 1) Check if comments are globally enabled via settings.
         $commentsEnabled = AdminSetting::getCachedValue('blog_allow_comments', true, 300);
         if (!$commentsEnabled) {
             return response()->json([
@@ -40,17 +50,17 @@ class CommentController extends Controller
             ], 403);
         }
 
-        // Check if post allows comments.
+        // 2) Ensure the target post is published and not trashed.
         if ($post->status !== 'published' || $post->trashed()) {
             abort(404);
         }
 
-        // ✅ FIX: Rate limiting with proper callback return value
+        // 3) Apply per‑IP rate limiting to throttle comment creation.
         $executed = RateLimiter::attempt(
             'comments:' . $request->ip(),
             $perMinute = 3,
             function () {
-                // ✅ FIX: Return true to indicate successful execution
+                // Return true to indicate successful execution.
                 return true;
             }
         );
@@ -61,9 +71,9 @@ class CommentController extends Controller
             ]);
         }
 
-        // Validation rules differ for guests vs authenticated users.
+        // 4) Validation rules differ for guests vs authenticated users.
         if (Auth::check()) {
-            // Check if authenticated user is banned.
+            // 4a) For authenticated users, block banned accounts and validate payload.
             $user = Auth::user();
             if ($user->isBanned()) {
                 $banStatus = $user->getBanStatus();
@@ -85,20 +95,20 @@ class CommentController extends Controller
                 ], 403);
             }
 
-            // ✅ Authenticated user validation with enhanced security
+            // 4b) Authenticated user validation with enhanced security.
             $validated = $request->validate([
                 'body' => [
                     'required',
                     'string',
                     'min:10',
                     'max:2000',
-                    'regex:/^[^<>]*$/', // ✅ Prevent HTML tags
+                    'regex:/^[^<>]*$/', // Prevent HTML tags.
                 ],
                 'parent_id' => [
                     'nullable',
                     'exists:comments,id',
                     function ($attribute, $value, $fail) use ($post) {
-                        // ✅ Verify parent comment belongs to same post
+                        // Verify parent comment belongs to same post.
                         if ($value) {
                             $parent = Comment::find($value);
                             if ($parent && $parent->post_id !== $post->id) {
@@ -113,7 +123,12 @@ class CommentController extends Controller
             $validated['author_name'] = null;
             $validated['author_email'] = null;
         } else {
-            // ✅ FIXED: Use device fingerprinting for guest comment limits
+            // 4c) Guest users: derive a device fingerprint and enforce per‑post caps.
+            //     This helps control abuse from non‑logged‑in traffic while still
+            //     allowing limited participation.
+            //     (Max 2 comments per device/IP per post.)
+            
+            // Use device fingerprinting for guest comment limits.
             $clientData = DeviceFingerprintHelper::parseClientData($request);
             $deviceFingerprint = DeviceFingerprintHelper::generate($request, $clientData);
 
@@ -145,21 +160,21 @@ class CommentController extends Controller
                 ], 429);
             }
 
-            // ✅ Guest user validation with enhanced security
+            // Guest user validation with enhanced security.
             $validated = $request->validate([
                 'body' => [
                     'required',
                     'string',
                     'min:10',
                     'max:2000',
-                    'regex:/^[^<>]*$/', // ✅ Prevent HTML tags
+                    'regex:/^[^<>]*$/', // Prevent HTML tags.
                 ],
                 'author_name' => [
                     'required',
                     'string',
                     'min:2',
                     'max:100',
-                    // ✅ FIX: Support Unicode letters (ñ, á, é, etc.) for Spanish names
+                    // Support Unicode letters (ñ, á, é, etc.) for Spanish names.
                     'regex:/^[\p{L}\p{M}\s\-\'\.]+$/u', // Unicode letters, marks, spaces, hyphens, apostrophes, dots
                 ],
                 'author_email' => [
@@ -171,7 +186,7 @@ class CommentController extends Controller
                     'nullable',
                     'exists:comments,id',
                     function ($attribute, $value, $fail) use ($post) {
-                        // ✅ Verify parent comment belongs to same post
+                        // Verify parent comment belongs to same post.
                         if ($value) {
                             $parent = Comment::find($value);
                             if ($parent && $parent->post_id !== $post->id) {
@@ -185,7 +200,7 @@ class CommentController extends Controller
             $validated['user_id'] = null;
         }
 
-        // Sanitize the comment body before persisting it.
+        // 5) Sanitize the comment body before persisting it (XSS mitigation and safe links).
         $validated['body'] = $this->sanitizeCommentBody($validated['body']);
 
         if ($validated['body'] === '') {
@@ -194,15 +209,15 @@ class CommentController extends Controller
             ]);
         }
 
-        // If replying to a comment, ensure it belongs to this post.
+        // 6) If replying to a comment, ensure the parent belongs to this post.
         if (!empty($validated['parent_id'])) {
             $parentComment = Comment::find($validated['parent_id']);
             if (!$parentComment || $parentComment->post_id !== $post->id) {
                 abort(422, 'The parent comment does not belong to this post.');
             }
 
-            // ✅ YouTube-style: Only allow replies to main comments (level 0)
-            // If the parent comment has a parent_id, it means it's already a reply
+            // YouTube‑style: Only allow replies to main comments (level 0).
+            // If the parent comment has a parent_id, it means it is already a reply.
             if ($parentComment->parent_id !== null) {
                 return response()->json([
                     'success' => false,
@@ -212,12 +227,12 @@ class CommentController extends Controller
             }
         }
 
-        // Set additional fields.
+        // 7) Set additional fields (post, client hints).
         $validated['post_id'] = $post->id;
         $validated['ip_address'] = $request->ip();
         $validated['user_agent'] = $request->userAgent();
 
-        // Set status based on user type.
+        // 8) Set initial moderation status based on user type.
         if (Auth::check()) {
             // Authenticated users get auto-approved comments.
             $validated['status'] = 'approved';
@@ -226,19 +241,19 @@ class CommentController extends Controller
             $validated['status'] = 'pending';
         }
 
-        // Basic spam detection.
+        // 9) Apply basic spam heuristics; escalate status when score is high.
         $spamScore = $this->calculateSpamScore($validated['body'], $validated['author_name'] ?? null);
         if ($spamScore > 7) {
             $validated['status'] = 'spam';
         }
 
-        // Create the comment - use direct assignment for admin-only fields
+        // 10) Create and persist the comment; assign admin‑only fields explicitly.
         $comment = new Comment($validated);
         $comment->status = $validated['status'];
         $comment->ip_address = $request->ip();
         $comment->user_agent = $request->userAgent();
 
-        // ✅ FIXED: Store device fingerprint for guest comments
+        // Store device fingerprint for guest comments.
         if (!Auth::check()) {
             $clientData = DeviceFingerprintHelper::parseClientData($request);
             $comment->device_fingerprint = DeviceFingerprintHelper::generate($request, $clientData);
@@ -251,7 +266,7 @@ class CommentController extends Controller
 
         $comment->save();
 
-        // Load relationships for response.
+        // 11) Load minimal relationships for response shaping.
         $comment->load(['user:id,name', 'parent:id,author_name']);
 
         return response()->json([
@@ -323,7 +338,16 @@ class CommentController extends Controller
     }
 
     /**
-     * Sanitize comment content to mitigate XSS attacks while allowing safe basic formatting.
+     * Sanitize comment content to mitigate XSS while allowing minimal formatting.
+     *
+     * Strategy:
+     * - Strip script/style blocks explicitly.
+     * - Whitelist simple tags for readability (b, i, em, strong, a, br, p).
+     * - Rebuild <a> tags to only allow http/https href and add rel/target attributes.
+     * - Normalize whitespace and trim.
+     *
+     * @param string|null $body The raw comment body.
+     * @return string The sanitized content ready for storage.
      */
     private function sanitizeCommentBody(?string $body): string
     {
@@ -357,9 +381,6 @@ class CommentController extends Controller
         return trim($body);
     }
 
-    /**
-     * Get the appropriate message based on comment status and user type.
-     */
     /**
      * Resolve a user-friendly status message for the given comment.
      *
@@ -440,6 +461,23 @@ class CommentController extends Controller
 
         $formattedComments = $comments->map(function ($comment) use ($userIp, $currentUser) {
             $isDeleted = $comment->trashed();
+
+            // Check if user has reported this comment.
+            $userHasReported = false;
+            if ($currentUser) {
+                $userHasReported = \App\Models\CommentReport::where('comment_id', $comment->id)
+                    ->where('user_id', $currentUser->id)
+                    ->exists();
+            }
+
+            // Check if user has reported this comment
+            $userHasReported = false;
+            if ($currentUser) {
+                $userHasReported = \App\Models\CommentReport::where('comment_id', $comment->id)
+                    ->where('user_id', $currentUser->id)
+                    ->exists();
+            }
+
             return [
                 'id' => $comment->id,
                 'body' => $isDeleted ? '[Comentario eliminado]' : $comment->body,
@@ -450,12 +488,32 @@ class CommentController extends Controller
                 'is_guest' => $comment->isGuest(),
                 'is_own_pending' => !Auth::check() && $comment->status === 'pending' && $comment->ip_address === $userIp,
                 'is_deleted' => $isDeleted,
+                'user_id' => $comment->user_id,
                 'likes_count' => $comment->likeCount(),
                 'dislikes_count' => $comment->dislikeCount(),
                 'user_has_liked' => $currentUser ? $comment->isLikedBy($currentUser) : false,
                 'user_has_disliked' => $currentUser ? $comment->isDislikedBy($currentUser) : false,
+                'user_has_reported' => $userHasReported,
+                'user_has_reported' => $userHasReported,
                 'replies' => $comment->replies->map(function ($reply) use ($userIp, $currentUser) {
                     $isReplyDeleted = $reply->trashed();
+
+                    // Check if user has reported this reply.
+                    $userHasReportedReply = false;
+                    if ($currentUser) {
+                        $userHasReportedReply = \App\Models\CommentReport::where('comment_id', $reply->id)
+                            ->where('user_id', $currentUser->id)
+                            ->exists();
+                    }
+
+                    // Check if user has reported this reply
+                    $userHasReportedReply = false;
+                    if ($currentUser) {
+                        $userHasReportedReply = \App\Models\CommentReport::where('comment_id', $reply->id)
+                            ->where('user_id', $currentUser->id)
+                            ->exists();
+                    }
+
                     return [
                         'id' => $reply->id,
                         'body' => $isReplyDeleted ? '[Comentario eliminado]' : $reply->body,
@@ -466,10 +524,13 @@ class CommentController extends Controller
                         'is_guest' => $reply->isGuest(),
                         'is_own_pending' => !Auth::check() && $reply->status === 'pending' && $reply->ip_address === $userIp,
                         'is_deleted' => $isReplyDeleted,
+                        'user_id' => $reply->user_id,
                         'likes_count' => $reply->likeCount(),
                         'dislikes_count' => $reply->dislikeCount(),
                         'user_has_liked' => $currentUser ? $reply->isLikedBy($currentUser) : false,
                         'user_has_disliked' => $currentUser ? $reply->isDislikedBy($currentUser) : false,
+                        'user_has_reported' => $userHasReportedReply,
+                        'user_has_reported' => $userHasReportedReply,
                     ];
                 })
             ];
@@ -507,26 +568,26 @@ class CommentController extends Controller
         }
 
         try {
-            // ✅ RACE CONDITION FIX: All validations inside transaction with pessimistic locking
+            // Race condition fix: perform all validations inside transaction with pessimistic locking.
             DB::transaction(function () use ($comment, $originalContent, $newContent, $request) {
-                // Lock the row FIRST to prevent concurrent modifications
+                // Lock the row first to prevent concurrent modifications.
                 $lockedComment = Comment::where('id', $comment->id)->lockForUpdate()->first();
 
                 if (!$lockedComment) {
                     throw new \Exception('Comment not found or was deleted');
                 }
 
-                // Check edit window (24 hours) inside transaction
+                // Check edit window (24 hours) inside transaction.
                 if (!$lockedComment->canBeEditedBy($request->user())) {
                     throw new \Exception('EDIT_WINDOW_EXPIRED');
                 }
 
-                // Check edit limit inside transaction (prevents race condition)
+                // Check edit limit inside transaction (prevents race condition).
                 if ($lockedComment->hasReachedEditLimit($request->user())) {
                     throw new \Exception('EDIT_LIMIT_REACHED');
                 }
 
-                // Create edit history record
+                // Create edit history record.
                 $lockedComment->captureEdit(
                     $originalContent,
                     $newContent,
@@ -534,16 +595,17 @@ class CommentController extends Controller
                     $request->edit_reason
                 );
 
-                // Update comment
-                $lockedComment->update([
+                // Update comment.
+                $lockedComment->forceFill([
                     'body' => $newContent,
                     'edited_at' => now(),
                     'edit_reason' => $request->edit_reason,
-                    'edit_count' => $lockedComment->edit_count + 1,
-                ]);
+                ])->save();
+
+                $lockedComment->increment('edit_count');
             }, 3); // Retry up to 3 times on deadlock
 
-            // Reload comment with relationships
+            // Reload comment with relationships.
             $comment->refresh();
             $comment->load(['user:id,name,avatar,is_verified']);
 
@@ -564,7 +626,7 @@ class CommentController extends Controller
             ]);
 
         } catch (\Illuminate\Database\QueryException $e) {
-            // ✅ FIXED: Handle deadlocks specifically
+            // Handle deadlocks specifically.
             if ($e->getCode() === '40001' || str_contains($e->getMessage(), 'Deadlock')) {
                 \Log::warning('Deadlock detected while updating comment', [
                     'comment_id' => $comment->id,
@@ -693,7 +755,7 @@ class CommentController extends Controller
             ], 404);
         }
 
-        // ✅ Use policy for authorization
+        // Use policy for authorization.
         $this->authorize('delete', $comment);
 
         if ($comment->trashed()) {

@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { router } from '@inertiajs/react';
 import {
     Box,
-    Grid,
     TextField,
     Button,
     Avatar,
@@ -13,6 +12,7 @@ import {
     CircularProgress,
     Paper
 } from '@mui/material';
+import Grid from '@mui/material/Grid';
 import {
     PhotoCamera as PhotoIcon,
     Delete as DeleteIcon,
@@ -216,94 +216,113 @@ const PersonalInfoTab = ({ user, mustVerifyEmail, status }) => {
 
             {/* Form */}
             <form onSubmit={handleSubmit}>
-                <Grid container spacing={3}>
-                    <Grid item xs={12} sm={6}>
-                        <TextField
-                            fullWidth
-                            label="Nombre Completo"
-                            name="name"
-                            value={formData.name}
-                            onChange={handleChange}
-                            error={!!errors.name}
-                            helperText={errors.name}
-                            required
-                        />
+                <Paper variant="outlined" sx={{ p: 3, mb: 3 }}>
+                    <Typography variant="overline" sx={{ color: 'text.secondary' }}>Datos básicos</Typography>
+                    <Grid container spacing={2} sx={{ mt: 1 }}>
+                        <Grid item xs={12} sm={6}>
+                            <TextField
+                                fullWidth
+                                size="small"
+                                label="Nombre Completo"
+                                name="name"
+                                value={formData.name}
+                                onChange={handleChange}
+                                error={!!errors.name}
+                                helperText={errors.name}
+                                required
+                            />
+                        </Grid>
+                        <Grid item xs={12} sm={6}>
+                            <TextField
+                                fullWidth
+                                size="small"
+                                label="Correo Electrónico"
+                                name="email"
+                                type="email"
+                                value={formData.email}
+                                onChange={handleChange}
+                                error={!!errors.email}
+                                helperText={errors.email}
+                                required
+                            />
+                        </Grid>
                     </Grid>
-                    <Grid item xs={12} sm={6}>
-                        <TextField
-                            fullWidth
-                            label="Correo Electrónico"
-                            name="email"
-                            type="email"
-                            value={formData.email}
-                            onChange={handleChange}
-                            error={!!errors.email}
-                            helperText={errors.email}
-                            required
-                        />
-                    </Grid>
-                    <Grid item xs={12} sm={6}>
-                        <TextField
-                            fullWidth
-                            label="Profesión"
-                            name="profession"
-                            value={formData.profession}
-                            onChange={handleChange}
-                            error={!!errors.profession}
-                            helperText={errors.profession}
-                        />
-                    </Grid>
-                    <Grid item xs={12} sm={6}>
-                        <TextField
-                            fullWidth
-                            label="Teléfono"
-                            name="phone"
-                            value={formData.phone}
-                            onChange={handleChange}
-                            error={!!errors.phone}
-                            helperText={errors.phone}
-                        />
-                    </Grid>
-                    <Grid item xs={12} sm={6}>
-                        <TextField
-                            fullWidth
-                            label="Ubicación"
-                            name="location"
-                            value={formData.location}
-                            onChange={handleChange}
-                            error={!!errors.location}
-                            helperText={errors.location}
-                        />
-                    </Grid>
-                    <Grid item xs={12} sm={6}>
-                        <TextField
-                            fullWidth
-                            label="Sitio Web"
-                            name="website"
-                            value={formData.website}
-                            onChange={handleChange}
-                            error={!!errors.website}
-                            helperText={errors.website}
-                            placeholder="https://ejemplo.com"
-                        />
-                    </Grid>
-                    <Grid item xs={12}>
-                        <TextField
-                            fullWidth
-                            label="Biografía"
-                            name="bio"
-                            value={formData.bio}
-                            onChange={handleChange}
-                            error={!!errors.bio}
-                            helperText={errors.bio || `${formData.bio.length}/500 caracteres`}
-                            multiline
-                            rows={4}
-                            inputProps={{ maxLength: 500 }}
-                        />
-                    </Grid>
-                </Grid>
+                </Paper>
 
-                <Box sx={{ mt: 4, display: 'flex', justifyContent: 'flex-end' }}>
+                <Paper variant="outlined" sx={{ p: 3, mb: 3 }}>
+                    <Typography variant="overline" sx={{ color: 'text.secondary' }}>Contacto y perfil</Typography>
+                    <Grid container spacing={2} sx={{ mt: 1 }}>
+                        <Grid item xs={12} sm={6}>
+                            <TextField
+                                fullWidth
+                                size="small"
+                                label="Profesión"
+                                name="profession"
+                                value={formData.profession}
+                                onChange={handleChange}
+                                error={!!errors.profession}
+                                helperText={errors.profession}
+                            />
+                        </Grid>
+                        <Grid item xs={12} sm={6}>
+                            <TextField
+                                fullWidth
+                                size="small"
+                                label="Teléfono"
+                                name="phone"
+                                value={formData.phone}
+                                onChange={handleChange}
+                                error={!!errors.phone}
+                                helperText={errors.phone}
+                            />
+                        </Grid>
+                        <Grid item xs={12} sm={6}>
+                            <TextField
+                                fullWidth
+                                size="small"
+                                label="Ubicación"
+                                name="location"
+                                value={formData.location}
+                                onChange={handleChange}
+                                error={!!errors.location}
+                                helperText={errors.location}
+                            />
+                        </Grid>
+                        <Grid item xs={12} sm={6}>
+                            <TextField
+                                fullWidth
+                                size="small"
+                                label="Sitio Web"
+                                name="website"
+                                value={formData.website}
+                                onChange={handleChange}
+                                error={!!errors.website}
+                                helperText={errors.website}
+                                placeholder="https://ejemplo.com"
+                            />
+                        </Grid>
+                    </Grid>
+                </Paper>
+
+                <Paper variant="outlined" sx={{ p: 3, mb: 3 }}>
+                    <Typography variant="overline" sx={{ color: 'text.secondary' }}>Biografía</Typography>
+                    <TextField
+                        fullWidth
+                        size="small"
+                        label="Biografía"
+                        name="bio"
+                        value={formData.bio}
+                        onChange={handleChange}
+                        error={!!errors.bio}
+                        helperText={errors.bio || `${formData.bio.length}/500 caracteres`}
+                        multiline
+                        rows={4}
+                        inputProps={{ maxLength: 500 }}
+                        sx={{ mt: 2 }}
+                    />
+                </Paper>
+
+                <Box sx={{ mt: 3, display: 'flex', justifyContent: 'flex-end' }}>
                     <Button
                         type="submit"
                         variant="contained"

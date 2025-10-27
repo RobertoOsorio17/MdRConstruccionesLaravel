@@ -17,7 +17,12 @@ use Illuminate\Support\Facades\Validator;
 
 /**
  * Powers the authenticated user's profile area by aggregating posts, reactions, statistics, and personalization data.
- * Connects storage, validation, and Inertia responses so members can curate their public presence seamlessly.
+ *
+ * Features:
+ * - Dashboard: authored posts, liked/saved posts, comment interactions, and quick stats.
+ * - Public profile: visibility checks, interaction flags, N+1 safeguards, and summarized metrics.
+ * - Media management: avatar upload/delete, with basic storage hygiene.
+ * - API endpoints: fetch paginated comments, follow suggestions, and lightweight JSON payloads.
  */
 class UserProfileController extends Controller
 {
@@ -34,13 +39,13 @@ class UserProfileController extends Controller
             return redirect()->route('login')->with('error', 'Session expired. Please log in again.');
         }
 
-        // Load the user's favorite services.
+        // 1) Load the user's favorite services for quick access tiles.
         $user->loadCount('favoriteServices');
         $user->load(['favoriteServices' => function($query) {
             $query->latest('user_service_favorites.created_at')->limit(12);
         }]);
 
-        // 1. Load the user's own posts with engagement metadata.
+        // 2) Load the user's own posts with engagement metadata (author/categories/tags and counts).
         $userPosts = $user->posts()
             ->published()
             ->with([
@@ -52,7 +57,7 @@ class UserProfileController extends Controller
             ->orderBy('published_at', 'desc')
             ->get();
 
-        // 2. Load posts liked by the user (including own posts).
+        // 3) Load posts liked by the user (including own posts).
         $likedPosts = \App\Models\Post::whereHas('likes', function($query) use ($user) {
             $query->where('user_id', $user->id);
         })
@@ -66,7 +71,7 @@ class UserProfileController extends Controller
         ->orderBy('published_at', 'desc')
         ->get();
 
-        // 3. Load posts the user has bookmarked.
+        // 4) Load posts the user has bookmarked.
         $savedPosts = \App\Models\Post::whereHas('bookmarks', function($query) use ($user) {
             $query->where('user_id', $user->id);
         })
@@ -80,8 +85,8 @@ class UserProfileController extends Controller
         ->orderBy('published_at', 'desc')
         ->get();
 
-        // 4. Load approved comments made by the user with post details.
-        // ✅ FIX: Eager load interaction counts to prevent N+1 queries
+        // 5) Load approved comments made by the user with post details.
+        //    Optimization: Eager load interaction counts to prevent N+1 queries.
         $userComments = $user->comments()
             ->approved()
             ->with([
@@ -100,7 +105,7 @@ class UserProfileController extends Controller
             ->orderBy('created_at', 'desc')
             ->get();
 
-        // Decorate each post with like and bookmark status for the authenticated user.
+        // 6) Decorate each post with like and bookmark status for the authenticated user.
         $allPosts = collect([$userPosts, $likedPosts, $savedPosts])->flatten();
 
         foreach ($allPosts as $post) {
@@ -108,17 +113,17 @@ class UserProfileController extends Controller
             $post->user_bookmarked = $post->isBookmarkedBy($user);
         }
 
-        // Decorate each comment with user interaction metadata.
+        // 7) Decorate each comment with user interaction metadata.
         foreach ($userComments as $comment) {
             $comment->user_liked = $comment->isLikedBy($user);
             $comment->user_disliked = $comment->isDislikedBy($user);
-            // ✅ FIX: Use pre-loaded counts instead of querying in loop
-            // likes_count and dislikes_count are already loaded via withCount()
+            // Use pre-loaded counts instead of querying in loop.
+            // likes_count and dislikes_count are already loaded via withCount().
         }
 
-        // Compile augmented statistics for quick display in the dashboard.
+        // 8) Compile augmented statistics for quick display in the dashboard.
         $stats = [
-            // ✅ FIX: Use pre-loaded count instead of redundant query
+            // Use pre-loaded count instead of redundant query.
             'favoriteServicesCount' => $user->favorite_services_count ?? 0,
             'postsCount' => $userPosts->count(),
             'likedPostsCount' => $likedPosts->count(),
@@ -133,6 +138,7 @@ class UserProfileController extends Controller
             'followingCount' => $user->following()->count(),
         ];
 
+        // 9) Render dashboard with assembled data.
         return Inertia::render('User/Profile', [
             'profileUser' => $user,
             'userPosts' => $userPosts,
@@ -157,6 +163,7 @@ class UserProfileController extends Controller
      */
     public function show(User $user): Response
     {
+        // 1) Early visibility guard: if profile is private and not owner, 404.
         \Log::info('UserProfileController::show called for user ' . $user->id);
 
         // Ensure the profile is visible or belongs to the authenticated user.
@@ -167,12 +174,12 @@ class UserProfileController extends Controller
         $currentUser = Auth::user();
         $isOwnProfile = $currentUser && $currentUser->id === $user->id;
 
-        // Load the user's favorite services.
+        // 2) Load the user's favorite services for quick tiles.
         $user->load(['favoriteServices' => function($query) {
             $query->latest('user_service_favorites.created_at')->limit(12);
         }]);
 
-        // 1. Load the user's published posts.
+        // 3) Load the user's published posts with author/categories/tags and counts.
         $userPosts = $user->posts()
             ->published()
             ->with([
@@ -184,7 +191,7 @@ class UserProfileController extends Controller
             ->orderBy('published_at', 'desc')
             ->get();
 
-        // 2. Load posts liked by the user (including own posts).
+        // 4) Optionally load posts liked by the profile owner (only for authenticated viewers).
         $likedPosts = collect();
         if ($currentUser) {
             $likedPosts = \App\Models\Post::whereHas('likes', function($query) use ($user) {
@@ -201,7 +208,7 @@ class UserProfileController extends Controller
             ->get();
         }
 
-        // 3. Load posts the user has bookmarked.
+        // 5) Optionally load posts saved by the profile owner (only for authenticated viewers).
         $savedPosts = collect();
         if ($currentUser) {
             $savedPosts = \App\Models\Post::whereHas('bookmarks', function($query) use ($user) {
@@ -218,7 +225,7 @@ class UserProfileController extends Controller
             ->get();
         }
 
-        // 4. Load approved comments with post information (limited to the first ten).
+        // 6) Load approved comments with post information (limited to the first ten).
         $userComments = Comment::where('user_id', $user->id)
             ->where('status', 'approved')
             ->with(['post' => function ($query) {
@@ -228,11 +235,11 @@ class UserProfileController extends Controller
             ->limit(10)
             ->get();
 
-        // Decorate each post with interaction flags for the current user.
+        // 7) Decorate each post with interaction flags for the current user (bulk prefetch to avoid N+1).
         $allPosts = collect([$userPosts, $likedPosts, $savedPosts])->flatten();
 
         if ($currentUser) {
-            // ✅ FIXED N+1: Load all user interactions in bulk before loop
+            // Optimization: Load all user interactions in bulk before loop.
             $postIds = $allPosts->pluck('id')->filter();
             $userPostInteractions = [];
 
@@ -255,7 +262,7 @@ class UserProfileController extends Controller
                 $post->user_bookmarked = isset($userPostInteractions[$post->id . '_bookmark']);
             }
 
-            // ✅ FIXED N+1: Load all comment interactions in bulk
+            // Optimization: Load all comment interactions in bulk.
             $commentIds = $userComments->pluck('id')->filter();
             $userCommentInteractions = [];
 
@@ -277,9 +284,9 @@ class UserProfileController extends Controller
                 $comment->user_liked = isset($userCommentInteractions[$comment->id . '_like']);
                 $comment->user_disliked = isset($userCommentInteractions[$comment->id . '_dislike']);
 
-                // ✅ FIXED N+1: Use withCount instead of counting in loop
-                // Note: These counts should be loaded with withCount() in the original query
-                // For now, keeping the existing logic but this could be optimized further
+                // Optimization: Prefer withCount() instead of counting in loop.
+                // Note: These counts should be loaded with withCount() in the original query.
+                // Keeping the existing logic for now but this can be optimized.
                 $comment->likes_count = $comment->interactions()
                     ->where('type', 'like')
                     ->count();
@@ -290,7 +297,7 @@ class UserProfileController extends Controller
             }
         }
 
-        // Compile enhanced profile statistics for the public view.
+        // 8) Compile enhanced profile statistics for the public view.
         $stats = [
             'favoriteServicesCount' => $user->favoriteServices()->count(),
             'postsCount' => $userPosts->count(),
@@ -304,15 +311,16 @@ class UserProfileController extends Controller
             'lastActivity' => $user->updated_at->format('Y-m-d'),
         ];
 
-        // Determine whether the logged-in user follows the profile owner.
+        // 9) Determine follow state relative to viewer.
         $isFollowing = $currentUser ? $currentUser->isFollowing($user) : false;
 
-        // Add follower and following counters.
+        // 10) Add follower and following counters.
         $stats['followersCount'] = $user->followers()->count();
         $stats['followingCount'] = $user->following()->count();
 
         \Log::info('About to render profile with userComments count: ' . $userComments->count());
 
+        // 11) Render public profile with assembled datasets.
         return Inertia::render('User/Profile', [
             'profileUser' => $user,
             'userPosts' => $userPosts,
@@ -429,14 +437,31 @@ class UserProfileController extends Controller
         
         $data = $validator->validated();
         $data['profile_updated_at'] = now();
-        
+
+        // ✅ SECURITY: Sanitize user input to prevent XSS
+        if (isset($data['name'])) {
+            $data['name'] = strip_tags($data['name']);
+        }
+        if (isset($data['bio'])) {
+            $data['bio'] = strip_tags($data['bio']);
+        }
+        if (isset($data['website'])) {
+            $data['website'] = filter_var($data['website'], FILTER_SANITIZE_URL);
+        }
+        if (isset($data['location'])) {
+            $data['location'] = strip_tags($data['location']);
+        }
+        if (isset($data['profession'])) {
+            $data['profession'] = strip_tags($data['profession']);
+        }
+
         // Strip out empty social link values.
         if (isset($data['social_links'])) {
             $data['social_links'] = array_filter($data['social_links'], function($value) {
                 return !empty($value);
             });
         }
-        
+
         $user->update($data);
         
         return back()->with('success', 'Profile updated successfully.');

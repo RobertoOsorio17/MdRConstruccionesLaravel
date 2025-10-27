@@ -133,6 +133,33 @@ class RateLimitServiceProvider extends ServiceProvider
         RateLimiter::for('post-interactions', function (Request $request) {
             return Limit::perMinute(30)->by($request->user()?->id ?: $request->ip());
         });
+
+        // ✅ Admin heartbeat (inactivity detection)
+        RateLimiter::for('admin-heartbeat', function (Request $request) {
+            return Limit::perMinute(40)
+                ->by($request->user()?->id ?: $request->ip())
+                ->response(function (Request $request, array $headers) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Demasiados heartbeats. Posible intento de abuso.',
+                        'error' => 'RATE_LIMIT_EXCEEDED',
+                        'force_logout' => true
+                    ], 429, $headers);
+                });
+        });
+
+        // ✅ User impersonation (critical security feature)
+        RateLimiter::for('impersonation', function (Request $request) {
+            return Limit::perMinute(3)
+                ->by($request->user()?->id ?: $request->ip())
+                ->response(function (Request $request, array $headers) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Too many impersonation attempts. Please wait before trying again.',
+                        'error' => 'RATE_LIMIT_EXCEEDED'
+                    ], 429, $headers);
+                });
+        });
     }
 }
 

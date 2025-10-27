@@ -4,42 +4,71 @@ namespace App\Http\Controllers;
 
 use App\Models\Notification;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Schema;
 use Inertia\Inertia;
 
 /**
  * Delivers notification feeds for authenticated users, handling filtering, presentation, and read state toggles.
- * Bridges database notifications with Inertia views so users stay aware of activity that affects them.
+ *
+ * Features:
+ * - Filterable index (all/unread/read) with optional type filter and stats.
+ * - Lightweight dropdown feed for quick previews.
+ * - Read/mark-all and deletion endpoints with per-user authorization.
+ * - Helper to create notifications for event handlers.
  */
 class NotificationController extends Controller
 {
     /**
      * Display a listing of notifications.
+     *
+     * @param Request $request The current HTTP request instance with optional filters.
+     * @return \Inertia\Response Inertia response with paginated notifications and stats.
      */
     public function index(Request $request)
     {
-        // ✅ Validate input
+        // 1) Validate optional filters.
         $validated = $request->validate([
             'filter' => 'nullable|in:all,unread,read',
             'type' => 'nullable|string|max:50',
         ]);
 
+        if (!$this->notificationsTableExists()) {
+            $empty = new LengthAwarePaginator([], 0, 20, 1, [
+                'path' => $request->url(),
+                'query' => $request->query(),
+            ]);
+
+            return Inertia::render('Notifications/Index', [
+                'notifications' => $empty,
+                'stats' => [
+                    'total' => 0,
+                    'unread' => 0,
+                    'read' => 0,
+                ],
+                'filter' => $request->filter ?? 'all',
+            ]);
+        }
+
+        // 2) Compose base query for current user with polymorphic relation eager loaded.
         $query = Notification::where('user_id', Auth::id())
             ->with('notifiable')
             ->latest();
 
-        // Filter by read status
+        // 3) Filter by read status when requested.
         if ($request->filter === 'unread') {
             $query->unread();
         } elseif ($request->filter === 'read') {
             $query->read();
         }
 
-        // Filter by type
+        // 4) Filter by logical notification type.
         if ($request->filled('type')) {
             $query->ofType($request->type);
         }
 
+        // 5) Shape items for the view layer.
         $notifications = $query->paginate(20)->through(function ($notification) {
             return [
                 'id' => $notification->id,
@@ -54,7 +83,7 @@ class NotificationController extends Controller
             ];
         });
 
-        // Get statistics
+        // 6) Aggregate quick stats for the sidebar/header widgets.
         $stats = [
             'total' => Notification::where('user_id', Auth::id())->count(),
             'unread' => Notification::where('user_id', Auth::id())->unread()->count(),
@@ -70,9 +99,15 @@ class NotificationController extends Controller
 
     /**
      * Get unread notifications count.
+     *
+     * @return \Illuminate\Http\JsonResponse JSON response containing the unread count.
      */
     public function getUnreadCount()
     {
+        if (!$this->notificationsTableExists()) {
+            return response()->json(['count' => 0]);
+        }
+
         $count = Notification::where('user_id', Auth::id())
             ->unread()
             ->count();
@@ -82,12 +117,18 @@ class NotificationController extends Controller
 
     /**
      * Get recent notifications for dropdown.
+     *
+     * @return \Illuminate\Http\JsonResponse JSON response with recent notifications for dropdown display.
      */
     public function getRecent()
     {
+        if (!$this->notificationsTableExists()) {
+            return response()->json(['notifications' => []]);
+        }
+
         $notifications = Notification::where('user_id', Auth::id())
             ->latest()
-            ->limit(10)
+            ->limit(15) // Show last 15 notifications in dropdown
             ->get()
             ->map(function ($notification) {
                 return [
@@ -107,10 +148,17 @@ class NotificationController extends Controller
 
     /**
      * Mark notification as read.
+     *
+     * @param Notification $notification The notification to mark as read.
+     * @return \Illuminate\Http\JsonResponse JSON response indicating success.
      */
     public function markAsRead(Notification $notification)
     {
-        // ✅ Authorize: user can only mark their own notifications
+        if (!$this->notificationsTableExists()) {
+            abort(404);
+        }
+
+        // Authorize: user can only mark their own notifications.
         if ($notification->user_id !== Auth::id()) {
             abort(403, 'Unauthorized action.');
         }
@@ -125,9 +173,18 @@ class NotificationController extends Controller
 
     /**
      * Mark all notifications as read.
+     *
+     * @return \Illuminate\Http\JsonResponse JSON response indicating success.
      */
     public function markAllAsRead()
     {
+        if (!$this->notificationsTableExists()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'All notifications marked as read.',
+            ]);
+        }
+
         Notification::where('user_id', Auth::id())
             ->unread()
             ->update(['read_at' => now()]);
@@ -140,10 +197,17 @@ class NotificationController extends Controller
 
     /**
      * Delete notification.
+     *
+     * @param Notification $notification The notification to delete.
+     * @return \Illuminate\Http\JsonResponse JSON response indicating success.
      */
     public function destroy(Notification $notification)
     {
-        // ✅ Authorize: user can only delete their own notifications
+        if (!$this->notificationsTableExists()) {
+            abort(404);
+        }
+
+        // Authorize: user can only delete their own notifications.
         if ($notification->user_id !== Auth::id()) {
             abort(403, 'Unauthorized action.');
         }
@@ -158,9 +222,18 @@ class NotificationController extends Controller
 
     /**
      * Delete all read notifications.
+     *
+     * @return \Illuminate\Http\JsonResponse JSON response including the number of deleted notifications.
      */
     public function deleteAllRead()
     {
+        if (!$this->notificationsTableExists()) {
+            return response()->json([
+                'success' => true,
+                'message' => '0 notification(s) deleted successfully.',
+            ]);
+        }
+
         $count = Notification::where('user_id', Auth::id())
             ->read()
             ->delete();
@@ -172,7 +245,13 @@ class NotificationController extends Controller
     }
 
     /**
-     * Create notification (helper method for events).
+     * Create a notification (helper for events).
+     *
+     * @param int $userId Recipient user ID.
+     * @param string $type Notification type identifier.
+     * @param mixed $notifiable The related model instance.
+     * @param array $data Arbitrary payload to display.
+     * @return void
      */
     public static function create(int $userId, string $type, $notifiable, array $data): void
     {
@@ -185,7 +264,7 @@ class NotificationController extends Controller
                 'data' => $data,
             ]);
 
-            // ✅ TODO: Broadcast notification via Laravel Echo/Pusher
+            // TODO: Broadcast notification via Laravel Echo/Pusher.
             // broadcast(new NotificationSent($notification))->toOthers();
         } catch (\Exception $e) {
             \Log::error('Failed to create notification', [
@@ -195,5 +274,15 @@ class NotificationController extends Controller
             ]);
         }
     }
-}
 
+    private function notificationsTableExists(): bool
+    {
+        static $cached;
+
+        if ($cached === null) {
+            $cached = Schema::hasTable((new Notification())->getTable());
+        }
+
+        return $cached;
+    }
+}

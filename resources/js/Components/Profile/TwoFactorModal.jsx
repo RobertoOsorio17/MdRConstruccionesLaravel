@@ -27,11 +27,12 @@ import {
     Key as KeyIcon,
     Security as SecurityIcon,
     Download as DownloadIcon,
+    Logout as LogoutIcon,
 } from '@mui/icons-material';
 
 const steps = ['Comenzar', 'Escanear QR', 'Guardar Códigos', 'Verificar'];
 
-export default function TwoFactorModal({ open, onClose, twoFactorEnabled }) {
+export default function TwoFactorModal({ open, onClose, twoFactorEnabled, isMandatory = false }) {
     const [activeStep, setActiveStep] = useState(0);
     const [qrCode, setQrCode] = useState('');
     const [secret, setSecret] = useState('');
@@ -41,6 +42,8 @@ export default function TwoFactorModal({ open, onClose, twoFactorEnabled }) {
     const [error, setError] = useState('');
     const [copiedCode, setCopiedCode] = useState(false);
     const [copiedSecret, setCopiedSecret] = useState(false);
+    const [success, setSuccess] = useState(false);
+    const [loggingOut, setLoggingOut] = useState(false);
 
     const enable2FA = () => {
         setLoading(true);
@@ -52,6 +55,20 @@ export default function TwoFactorModal({ open, onClose, twoFactorEnabled }) {
                     // Fetch QR code
                     const qrResponse = await fetch('/user/two-factor-authentication/qr-code');
                     const qrData = await qrResponse.json();
+
+                    // Check if 2FA was reset due to corruption
+                    if (qrData.reset) {
+                        setError(qrData.error || 'Tu configuración de 2FA fue reiniciada. Por favor, intenta nuevamente.');
+                        setLoading(false);
+                        setActiveStep(0); // Go back to step 0
+                        return;
+                    }
+
+                    if (qrData.error) {
+                        setError(qrData.error);
+                        setLoading(false);
+                        return;
+                    }
 
                     if (qrData.svg) {
                         setQrCode(qrData.svg);
@@ -66,11 +83,21 @@ export default function TwoFactorModal({ open, onClose, twoFactorEnabled }) {
                         }
                     }
 
-                    // Fetch recovery codes
-                    const codesResponse = await fetch('/user/two-factor-authentication/recovery-codes');
+                    // Fetch recovery codes using the initial endpoint (no password required during setup)
+                    const codesResponse = await fetch('/user/two-factor-authentication/initial-recovery-codes');
                     const codesData = await codesResponse.json();
 
-                    if (codesData.recoveryCodes) {
+                    if (codesData.reset) {
+                        setError(codesData.error || 'Tu configuración de 2FA fue reiniciada. Por favor, intenta nuevamente.');
+                        setLoading(false);
+                        setActiveStep(0);
+                        return;
+                    }
+
+                    if (codesData.error) {
+                        console.error('Error fetching recovery codes:', codesData.error);
+                        // Continue anyway, codes can be viewed later
+                    } else if (codesData.recoveryCodes) {
                         setRecoveryCodes(codesData.recoveryCodes);
                     }
 
@@ -78,8 +105,9 @@ export default function TwoFactorModal({ open, onClose, twoFactorEnabled }) {
                     setActiveStep(1); // Move to QR code step
                 } catch (error) {
                     console.error('Error fetching 2FA data:', error);
-                    setError('Error al cargar los datos de 2FA');
+                    setError('Error al cargar los datos de 2FA. Por favor, intenta nuevamente.');
                     setLoading(false);
+                    setActiveStep(0); // Go back to step 0
                 }
             },
             onError: () => {
@@ -104,12 +132,25 @@ export default function TwoFactorModal({ open, onClose, twoFactorEnabled }) {
             router.post('/user/two-factor-authentication/confirm', {
                 code: verificationCode
             }, {
-                preserveScroll: true,
-                onSuccess: () => {
+                preserveScroll: !isMandatory, // Allow redirect for mandatory setup
+                onSuccess: (page) => {
                     setLoading(false);
-                    handleClose();
-                    // Reload page to update 2FA status
-                    window.location.reload();
+                    setSuccess(true);
+
+                    if (isMandatory) {
+                        // Show success message briefly, then backend will redirect
+                        // The redirect happens automatically via Inertia
+                        setTimeout(() => {
+                            // If redirect hasn't happened, force reload
+                            window.location.reload();
+                        }, 2000);
+                    } else {
+                        // For optional setup, close modal and reload
+                        setTimeout(() => {
+                            handleClose();
+                            window.location.reload();
+                        }, 1500);
+                    }
                 },
                 onError: (errors) => {
                     setLoading(false);
@@ -128,6 +169,12 @@ export default function TwoFactorModal({ open, onClose, twoFactorEnabled }) {
     };
 
     const handleClose = () => {
+        // Prevent closing if mandatory and not completed
+        if (isMandatory && !twoFactorEnabled) {
+            setError('Debes completar la configuración de 2FA para continuar. Es obligatorio para administradores.');
+            return;
+        }
+
         setActiveStep(0);
         setQrCode('');
         setSecret('');
@@ -136,6 +183,7 @@ export default function TwoFactorModal({ open, onClose, twoFactorEnabled }) {
         setError('');
         setCopiedCode(false);
         setCopiedSecret(false);
+        setSuccess(false);
         onClose();
     };
 
@@ -172,6 +220,15 @@ export default function TwoFactorModal({ open, onClose, twoFactorEnabled }) {
             }
             document.body.removeChild(textArea);
         }
+    };
+
+    const handleLogout = () => {
+        setLoggingOut(true);
+        router.post('/logout', {}, {
+            onFinish: () => {
+                window.location.href = '/login';
+            }
+        });
     };
 
     const downloadRecoveryCodes = () => {
@@ -369,27 +426,50 @@ ${recoveryCodes.map((code, index) => `   ${(index + 1).toString().padStart(2, '0
             case 3:
                 return (
                     <Box sx={{ py: 3, textAlign: 'center' }}>
-                        <SecurityIcon sx={{ fontSize: 48, color: 'success.main', mb: 2 }} />
-                        <Typography variant="h6" gutterBottom>
-                            Verifica tu Configuración
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                            Ingresa el código de 6 dígitos de tu aplicación de autenticación
-                        </Typography>
+                        {success ? (
+                            // Success state
+                            <>
+                                <CheckCircleIcon sx={{ fontSize: 64, color: 'success.main', mb: 2 }} />
+                                <Typography variant="h5" gutterBottom sx={{ color: 'success.main', fontWeight: 600 }}>
+                                    ¡2FA Configurado Exitosamente!
+                                </Typography>
+                                <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
+                                    Tu cuenta ahora está protegida con autenticación de dos factores
+                                </Typography>
+                                {isMandatory && (
+                                    <Typography variant="body2" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
+                                        <CircularProgress size={16} />
+                                        Redirigiendo al panel de administración...
+                                    </Typography>
+                                )}
+                            </>
+                        ) : (
+                            // Verification form
+                            <>
+                                <SecurityIcon sx={{ fontSize: 48, color: 'success.main', mb: 2 }} />
+                                <Typography variant="h6" gutterBottom>
+                                    Verifica tu Configuración
+                                </Typography>
+                                <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                                    Ingresa el código de 6 dígitos de tu aplicación de autenticación
+                                </Typography>
 
-                        <TextField
-                            fullWidth
-                            label="Código de Verificación"
-                            value={verificationCode}
-                            onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                            placeholder="000000"
-                            inputProps={{
-                                maxLength: 6,
-                                style: { textAlign: 'center', fontSize: '1.5rem', letterSpacing: '0.5rem', fontFamily: 'monospace' }
-                            }}
-                            error={!!error}
-                            helperText={error}
-                        />
+                                <TextField
+                                    fullWidth
+                                    label="Código de Verificación"
+                                    value={verificationCode}
+                                    onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                                    placeholder="000000"
+                                    inputProps={{
+                                        maxLength: 6,
+                                        style: { textAlign: 'center', fontSize: '1.5rem', letterSpacing: '0.5rem', fontFamily: 'monospace' }
+                                    }}
+                                    error={!!error}
+                                    helperText={error}
+                                    disabled={loading}
+                                />
+                            </>
+                        )}
                     </Box>
                 );
 
@@ -399,24 +479,69 @@ ${recoveryCodes.map((code, index) => `   ${(index + 1).toString().padStart(2, '0
     };
 
     return (
-        <Dialog 
-            open={open} 
-            onClose={handleClose}
+        <Dialog
+            open={open}
+            onClose={isMandatory ? undefined : handleClose} // Disable backdrop click if mandatory
             maxWidth="sm"
             fullWidth
+            disableEscapeKeyDown={isMandatory} // Disable ESC key if mandatory
         >
             <DialogTitle>
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <Typography variant="h6" fontWeight="600">
-                        Configurar Autenticación de Dos Factores
-                    </Typography>
-                    <IconButton onClick={handleClose} size="small">
-                        <CloseIcon />
-                    </IconButton>
+                    <Box>
+                        <Typography variant="h6" fontWeight="600">
+                            Configurar Autenticación de Dos Factores
+                        </Typography>
+                        {isMandatory && (
+                            <Chip
+                                label="OBLIGATORIO"
+                                color="error"
+                                size="small"
+                                sx={{ mt: 0.5 }}
+                            />
+                        )}
+                    </Box>
+                    {!isMandatory && (
+                        <IconButton onClick={handleClose} size="small">
+                            <CloseIcon />
+                        </IconButton>
+                    )}
                 </Box>
             </DialogTitle>
-            
+
             <DialogContent>
+                {isMandatory && (
+                    <Alert
+                        severity="warning"
+                        sx={{ mb: 3 }}
+                        action={
+                            <Button
+                                color="inherit"
+                                size="small"
+                                startIcon={<LogoutIcon />}
+                                onClick={handleLogout}
+                                disabled={loggingOut}
+                                sx={{
+                                    whiteSpace: 'nowrap',
+                                    minWidth: 'auto'
+                                }}
+                            >
+                                {loggingOut ? 'Cerrando...' : 'Cerrar Sesión'}
+                            </Button>
+                        }
+                    >
+                        <Typography variant="body2" fontWeight="600">
+                            La autenticación de dos factores es obligatoria para administradores y editores.
+                        </Typography>
+                        <Typography variant="body2" sx={{ mt: 0.5 }}>
+                            Debes completar esta configuración para poder acceder al sistema.
+                        </Typography>
+                        <Typography variant="body2" sx={{ mt: 1, fontSize: '0.875rem', opacity: 0.9 }}>
+                            Si no puedes configurarlo ahora, puedes cerrar sesión y volver más tarde.
+                        </Typography>
+                    </Alert>
+                )}
+
                 <Stepper activeStep={activeStep} sx={{ mb: 4 }}>
                     {steps.map((label) => (
                         <Step key={label}>
@@ -428,22 +553,24 @@ ${recoveryCodes.map((code, index) => `   ${(index + 1).toString().padStart(2, '0
                 {getStepContent(activeStep)}
             </DialogContent>
 
-            <DialogActions sx={{ px: 3, pb: 3 }}>
-                <Button
-                    disabled={activeStep === 0 || loading}
-                    onClick={handleBack}
-                >
-                    Atrás
-                </Button>
-                <Box sx={{ flex: '1 1 auto' }} />
-                <Button
-                    variant="contained"
-                    onClick={handleNext}
-                    disabled={loading || (activeStep === 1 && !qrCode)}
-                >
-                    {loading ? <CircularProgress size={24} /> : activeStep === 0 ? 'Comenzar' : activeStep === steps.length - 1 ? 'Finalizar' : 'Siguiente'}
-                </Button>
-            </DialogActions>
+            {!success && (
+                <DialogActions sx={{ px: 3, pb: 3 }}>
+                    <Button
+                        disabled={activeStep === 0 || loading}
+                        onClick={handleBack}
+                    >
+                        Atrás
+                    </Button>
+                    <Box sx={{ flex: '1 1 auto' }} />
+                    <Button
+                        variant="contained"
+                        onClick={handleNext}
+                        disabled={loading || (activeStep === 1 && !qrCode)}
+                    >
+                        {loading ? <CircularProgress size={24} /> : activeStep === 0 ? 'Comenzar' : activeStep === steps.length - 1 ? 'Verificar' : 'Siguiente'}
+                    </Button>
+                </DialogActions>
+            )}
         </Dialog>
     );
 }

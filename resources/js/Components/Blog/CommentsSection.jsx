@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from '@inertiajs/react';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
     Box,
     Typography,
@@ -21,7 +22,13 @@ import {
     DialogActions,
     Card,
     CardContent,
-    Chip
+    Chip,
+    FormControl,
+    RadioGroup,
+    FormControlLabel,
+    Radio,
+    Snackbar,
+    Backdrop
 } from '@mui/material';
 import {
     Send as SendIcon,
@@ -44,9 +51,12 @@ import {
     ThumbUp as ThumbUpIcon,
     ThumbUpOutlined as ThumbUpOutlinedIcon,
     ThumbDown as ThumbDownIcon,
-    ThumbDownOutlined as ThumbDownOutlinedIcon
+    ThumbDownOutlined as ThumbDownOutlinedIcon,
+    Flag as ReportIcon,
+    RocketLaunch as RocketIcon,
+    Forum as ForumIcon,
+    EmojiEvents as TrophyIcon
 } from '@mui/icons-material';
-import { motion, AnimatePresence } from 'framer-motion';
 import { router, usePage } from '@inertiajs/react';
 import axios from 'axios';
 import { useAuth, AuthGuard, AuthSwitch } from '@/Components/AuthGuard';
@@ -228,12 +238,20 @@ const CommentItem = ({ comment, onReply, onDelete, onEdit, onMention, level = 0,
     const [isLikeLoading, setIsLikeLoading] = useState(false);
     const [showAuthModal, setShowAuthModal] = useState(false);
 
+    // Report state
+    const [userHasReported, setUserHasReported] = useState(comment.user_has_reported || false);
+    const [reportDialogOpen, setReportDialogOpen] = useState(false);
+    const [selectedReportType, setSelectedReportType] = useState('');
+    const [customReason, setCustomReason] = useState('');
+    const [reportNotification, setReportNotification] = useState({ open: false, message: '', severity: 'info' });
+
     React.useEffect(() => {
         setCurrentComment(comment);
         setLikesCount(comment.likes_count || 0);
         setDislikesCount(comment.dislikes_count || 0);
         setUserHasLiked(comment.user_has_liked || false);
         setUserHasDisliked(comment.user_has_disliked || false);
+        setUserHasReported(comment.user_has_reported || false);
     }, [comment]);
 
     const handleReply = () => {
@@ -331,6 +349,60 @@ const CommentItem = ({ comment, onReply, onDelete, onEdit, onMention, level = 0,
         } finally {
             setIsLikeLoading(false);
         }
+    };
+
+    // Report options
+    const reportOptions = [
+        { value: 'spam', label: 'Spam o contenido comercial no deseado', description: 'Publicidad no solicitada, enlaces sospechosos o contenido repetitivo' },
+        { value: 'harassment', label: 'Acoso o intimidación', description: 'Ataques personales, amenazas o comportamiento intimidatorio' },
+        { value: 'hate_speech', label: 'Discurso de odio', description: 'Contenido que promueve odio basado en raza, religión, género, etc.' },
+        { value: 'inappropriate', label: 'Contenido inapropiado', description: 'Material sexual, violento o no apto para todos los públicos' },
+        { value: 'misinformation', label: 'Información falsa o engañosa', description: 'Noticias falsas, rumores no verificados o información incorrecta' },
+        { value: 'off_topic', label: 'Fuera de tema', description: 'Comentario no relacionado con el contenido del artículo' },
+        { value: 'other', label: 'Otro motivo', description: 'Especifica otro motivo de reporte' }
+    ];
+
+    const handleReportClick = () => {
+        if (!auth?.user) {
+            setShowAuthModal(true);
+            return;
+        }
+        setReportDialogOpen(true);
+    };
+
+    const handleReportSubmit = async () => {
+        if (!selectedReportType) {
+            setReportNotification({ open: true, message: 'Por favor selecciona un motivo de reporte', severity: 'warning' });
+            return;
+        }
+
+        if (selectedReportType === 'other' && !customReason.trim()) {
+            setReportNotification({ open: true, message: 'Por favor especifica el motivo del reporte', severity: 'warning' });
+            return;
+        }
+
+        try {
+            const response = await axios.post(`/comments/${comment.id}/report`, {
+                category: selectedReportType,
+                reason: selectedReportType === 'other' ? customReason : reportOptions.find(opt => opt.value === selectedReportType)?.label
+            });
+
+            if (response.data.success) {
+                setUserHasReported(true);
+                setReportDialogOpen(false);
+                setSelectedReportType('');
+                setCustomReason('');
+                setReportNotification({ open: true, message: response.data.message || 'Reporte enviado correctamente', severity: 'success' });
+            }
+        } catch (error) {
+            setReportNotification({ open: true, message: error.response?.data?.message || 'Error al reportar el comentario', severity: 'error' });
+        }
+    };
+
+    const handleReportCancel = () => {
+        setReportDialogOpen(false);
+        setSelectedReportType('');
+        setCustomReason('');
     };
 
     // Verificar si el usuario es administrador
@@ -680,6 +752,35 @@ const CommentItem = ({ comment, onReply, onDelete, onEdit, onMention, level = 0,
                                         Responder
                                     </Button>
 
+                                    {/* Report button - Only show if not deleted and not own comment */}
+                                    {!currentComment.is_deleted && !isOwnComment && (
+                                        <Button
+                                            onClick={handleReportClick}
+                                            size="small"
+                                            disabled={userHasReported}
+                                            startIcon={<ReportIcon sx={{ fontSize: '0.875rem' }} />}
+                                            sx={{
+                                                textTransform: 'none',
+                                                fontSize: '0.75rem',
+                                                fontWeight: 600,
+                                                color: userHasReported ? 'warning.main' : 'text.secondary',
+                                                minWidth: 'auto',
+                                                px: 1,
+                                                py: 0.25,
+                                                '&:hover': {
+                                                    color: 'warning.main',
+                                                    backgroundColor: alpha(theme.palette.warning.main, 0.08)
+                                                },
+                                                '&.Mui-disabled': {
+                                                    color: 'warning.main',
+                                                    opacity: 0.6
+                                                }
+                                            }}
+                                        >
+                                            {userHasReported ? 'Reportado' : 'Reportar'}
+                                        </Button>
+                                    )}
+
                                     {canEdit && !showEditForm && (
                                         <Button
                                             onClick={handleEditClick}
@@ -925,104 +1026,390 @@ const CommentItem = ({ comment, onReply, onDelete, onEdit, onMention, level = 0,
                 </DialogActions>
             </Dialog>
 
-            {/* Modal de autenticación para likes/dislikes */}
+            {/* Modal de autenticación para likes/dislikes - Mejorado */}
             <Dialog
                 open={showAuthModal}
                 onClose={() => setShowAuthModal(false)}
                 maxWidth="sm"
                 fullWidth
+                BackdropComponent={Backdrop}
+                BackdropProps={{
+                    sx: {
+                        backdropFilter: 'blur(8px)',
+                        backgroundColor: 'rgba(0, 0, 0, 0.6)',
+                    }
+                }}
                 PaperProps={{
                     sx: {
-                        borderRadius: 3,
-                        background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.05)} 0%, ${alpha(theme.palette.secondary.main, 0.05)} 100%)`
+                        borderRadius: 5,
+                        overflow: 'hidden',
+                        background: theme.palette.mode === 'dark'
+                            ? 'linear-gradient(135deg, rgba(30,35,50,0.98) 0%, rgba(20,25,40,0.98) 100%)'
+                            : 'linear-gradient(135deg, rgba(255,255,255,0.98) 0%, rgba(248,250,252,0.98) 100%)',
+                        backdropFilter: 'blur(20px)',
+                        border: '1px solid',
+                        borderColor: theme.palette.mode === 'dark'
+                            ? 'rgba(255,255,255,0.1)'
+                            : 'rgba(0,0,0,0.08)',
+                        boxShadow: theme.palette.mode === 'dark'
+                            ? '0 24px 60px rgba(0,0,0,0.8), 0 0 0 1px rgba(255,255,255,0.05) inset'
+                            : '0 24px 60px rgba(0,0,0,0.2), 0 0 0 1px rgba(255,255,255,0.8) inset',
                     }
                 }}
             >
-                <DialogContent sx={{ p: 4, textAlign: 'center' }}>
+                {/* Header decorativo con gradiente */}
+                <Box
+                    sx={{
+                        height: 120,
+                        background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`,
+                        position: 'relative',
+                        overflow: 'hidden',
+                        '&::before': {
+                            content: '""',
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            background: 'radial-gradient(circle at 30% 50%, rgba(255,255,255,0.2) 0%, transparent 60%)',
+                        }
+                    }}
+                >
                     <IconButton
                         onClick={() => setShowAuthModal(false)}
                         sx={{
                             position: 'absolute',
-                            right: 8,
-                            top: 8,
-                            color: 'text.secondary'
+                            right: 12,
+                            top: 12,
+                            color: 'white',
+                            bgcolor: 'rgba(255,255,255,0.15)',
+                            backdropFilter: 'blur(10px)',
+                            '&:hover': {
+                                bgcolor: 'rgba(255,255,255,0.25)',
+                                transform: 'rotate(90deg)',
+                            },
+                            transition: 'all 0.3s ease',
                         }}
                     >
                         <CloseIcon />
                     </IconButton>
+                </Box>
 
-                    <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
-                        <Avatar
-                            sx={{
-                                width: 60,
-                                height: 60,
-                                background: `linear-gradient(45deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`
-                            }}
-                        >
-                            <ThumbUpIcon sx={{ fontSize: 30 }} />
-                        </Avatar>
-                    </Box>
-
-                    <Typography
-                        variant="h5"
-                        fontWeight="bold"
-                        sx={{
-                            mb: 2,
-                            background: `linear-gradient(45deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
-                            backgroundClip: 'text',
-                            WebkitBackgroundClip: 'text',
-                            WebkitTextFillColor: 'transparent'
+                <DialogContent sx={{ p: 4, pt: 0, textAlign: 'center', position: 'relative' }}>
+                    {/* Avatar flotante */}
+                    <motion.div
+                        initial={{ scale: 0, rotate: -180 }}
+                        animate={{ scale: 1, rotate: 0 }}
+                        transition={{
+                            type: 'spring',
+                            stiffness: 200,
+                            damping: 15,
+                            delay: 0.1
                         }}
                     >
-                        ¡Únete para interactuar!
-                    </Typography>
-
-                    <Typography variant="body1" color="text.secondary" sx={{ mb: 3, maxWidth: 400, mx: 'auto' }}>
-                        Crea una cuenta gratuita para dar like, dislike y participar en la comunidad.
-                    </Typography>
-
-                    <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', flexWrap: 'wrap' }}>
-                        <Button
-                            variant="contained"
-                            startIcon={<RegisterIcon />}
-                            component={Link}
-                            href={route('register')}
+                        <Avatar
                             sx={{
-                                background: `linear-gradient(45deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
-                                px: 3,
-                                py: 1,
-                                borderRadius: 3,
-                                '&:hover': {
-                                    transform: 'translateY(-2px)',
-                                    boxShadow: theme.shadows[8]
-                                }
+                                width: 100,
+                                height: 100,
+                                background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+                                margin: '-50px auto 0',
+                                border: '5px solid',
+                                borderColor: theme.palette.mode === 'dark' ? 'rgba(30,35,50,1)' : 'rgba(255,255,255,1)',
+                                boxShadow: '0 12px 32px rgba(0,0,0,0.3)',
+                                position: 'relative',
+                                zIndex: 1,
                             }}
                         >
-                            Crear cuenta gratis
-                        </Button>
+                            <RocketIcon sx={{ fontSize: 50 }} />
+                        </Avatar>
+                    </motion.div>
 
-                        <Button
-                            variant="outlined"
-                            startIcon={<LoginIcon />}
-                            component={Link}
-                            href={route('login')}
+                    {/* Título animado */}
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.2 }}
+                    >
+                        <Typography
+                            variant="h4"
+                            fontWeight="bold"
                             sx={{
-                                borderColor: theme.palette.primary.main,
-                                color: theme.palette.primary.main,
-                                px: 3,
-                                py: 1,
-                                borderRadius: 3,
-                                '&:hover': {
-                                    backgroundColor: alpha(theme.palette.primary.main, 0.1),
-                                    borderColor: theme.palette.primary.dark
-                                }
+                                mt: 3,
+                                mb: 1.5,
+                                background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+                                backgroundClip: 'text',
+                                WebkitBackgroundClip: 'text',
+                                WebkitTextFillColor: 'transparent',
+                                fontSize: { xs: '1.75rem', md: '2.125rem' }
                             }}
                         >
-                            Ya tengo cuenta
-                        </Button>
-                    </Box>
+                            ¡Únete a la Comunidad!
+                        </Typography>
+                    </motion.div>
+
+                    {/* Subtítulo */}
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ delay: 0.3 }}
+                    >
+                        <Typography
+                            variant="body1"
+                            color="text.secondary"
+                            sx={{
+                                mb: 4,
+                                maxWidth: 420,
+                                mx: 'auto',
+                                lineHeight: 1.6,
+                                fontSize: '1.05rem'
+                            }}
+                        >
+                            Crea una cuenta gratuita y disfruta de todas las funciones de nuestra plataforma
+                        </Typography>
+                    </motion.div>
+
+                    {/* Beneficios con iconos */}
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.4 }}
+                    >
+                        <Stack
+                            direction={{ xs: 'column', sm: 'row' }}
+                            spacing={2}
+                            sx={{ mb: 4, justifyContent: 'center' }}
+                        >
+                            <Chip
+                                icon={<ThumbUpIcon sx={{ fontSize: '1.1rem !important' }} />}
+                                label="Dar Me Gusta"
+                                variant="outlined"
+                                sx={{
+                                    py: 2.5,
+                                    px: 1,
+                                    fontSize: '0.9rem',
+                                    fontWeight: 600,
+                                    borderColor: theme.palette.primary.main,
+                                    color: theme.palette.primary.main,
+                                    bgcolor: alpha(theme.palette.primary.main, 0.05),
+                                    '&:hover': {
+                                        bgcolor: alpha(theme.palette.primary.main, 0.1),
+                                        transform: 'translateY(-2px)',
+                                    },
+                                    transition: 'all 0.3s ease',
+                                }}
+                            />
+                            <Chip
+                                icon={<ForumIcon sx={{ fontSize: '1.1rem !important' }} />}
+                                label="Comentar"
+                                variant="outlined"
+                                sx={{
+                                    py: 2.5,
+                                    px: 1,
+                                    fontSize: '0.9rem',
+                                    fontWeight: 600,
+                                    borderColor: theme.palette.secondary.main,
+                                    color: theme.palette.secondary.main,
+                                    bgcolor: alpha(theme.palette.secondary.main, 0.05),
+                                    '&:hover': {
+                                        bgcolor: alpha(theme.palette.secondary.main, 0.1),
+                                        transform: 'translateY(-2px)',
+                                    },
+                                    transition: 'all 0.3s ease',
+                                }}
+                            />
+                            <Chip
+                                icon={<TrophyIcon sx={{ fontSize: '1.1rem !important' }} />}
+                                label="Participar"
+                                variant="outlined"
+                                sx={{
+                                    py: 2.5,
+                                    px: 1,
+                                    fontSize: '0.9rem',
+                                    fontWeight: 600,
+                                    borderColor: theme.palette.success.main,
+                                    color: theme.palette.success.main,
+                                    bgcolor: alpha(theme.palette.success.main, 0.05),
+                                    '&:hover': {
+                                        bgcolor: alpha(theme.palette.success.main, 0.1),
+                                        transform: 'translateY(-2px)',
+                                    },
+                                    transition: 'all 0.3s ease',
+                                }}
+                            />
+                        </Stack>
+                    </motion.div>
+
+                    {/* Botones de acción */}
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.5 }}
+                    >
+                        <Stack spacing={2} sx={{ maxWidth: 400, mx: 'auto' }}>
+                            <Button
+                                variant="contained"
+                                size="large"
+                                startIcon={<RegisterIcon />}
+                                component={Link}
+                                href={route('register')}
+                                sx={{
+                                    background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+                                    py: 1.75,
+                                    px: 4,
+                                    borderRadius: 3,
+                                    fontSize: '1.05rem',
+                                    fontWeight: 700,
+                                    textTransform: 'none',
+                                    boxShadow: `0 8px 24px ${alpha(theme.palette.primary.main, 0.4)}`,
+                                    '&:hover': {
+                                        transform: 'translateY(-3px)',
+                                        boxShadow: `0 12px 32px ${alpha(theme.palette.primary.main, 0.5)}`,
+                                    },
+                                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                                }}
+                            >
+                                Crear Cuenta Gratis
+                            </Button>
+
+                            <Button
+                                variant="outlined"
+                                size="large"
+                                startIcon={<LoginIcon />}
+                                component={Link}
+                                href={route('login')}
+                                sx={{
+                                    borderWidth: 2,
+                                    borderColor: theme.palette.primary.main,
+                                    color: theme.palette.primary.main,
+                                    py: 1.75,
+                                    px: 4,
+                                    borderRadius: 3,
+                                    fontSize: '1.05rem',
+                                    fontWeight: 700,
+                                    textTransform: 'none',
+                                    '&:hover': {
+                                        borderWidth: 2,
+                                        backgroundColor: alpha(theme.palette.primary.main, 0.08),
+                                        borderColor: theme.palette.primary.dark,
+                                        transform: 'translateY(-2px)',
+                                    },
+                                    transition: 'all 0.3s ease',
+                                }}
+                            >
+                                Ya Tengo Cuenta
+                            </Button>
+                        </Stack>
+                    </motion.div>
+
+                    {/* Texto adicional */}
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ delay: 0.6 }}
+                    >
+                        <Typography
+                            variant="caption"
+                            color="text.secondary"
+                            sx={{
+                                display: 'block',
+                                mt: 3,
+                                fontSize: '0.85rem'
+                            }}
+                        >
+                            Es rápido, gratis y sin compromisos ✨
+                        </Typography>
+                    </motion.div>
                 </DialogContent>
             </Dialog>
+
+            {/* Report Dialog */}
+            <Dialog
+                open={reportDialogOpen}
+                onClose={handleReportCancel}
+                maxWidth="sm"
+                fullWidth
+                PaperProps={{
+                    sx: {
+                        borderRadius: 3,
+                        background: alpha(theme.palette.background.paper, 0.95),
+                        backdropFilter: 'blur(10px)'
+                    }
+                }}
+            >
+                <DialogTitle sx={{ pb: 1 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <ReportIcon color="warning" />
+                        <Typography variant="h6" component="span">Reportar comentario</Typography>
+                    </Box>
+                </DialogTitle>
+                <DialogContent>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                        Selecciona el motivo por el cual estás reportando este comentario. Tu reporte será revisado por nuestro equipo de moderación.
+                    </Typography>
+
+                    <FormControl component="fieldset" fullWidth>
+                        <RadioGroup value={selectedReportType} onChange={(e) => setSelectedReportType(e.target.value)}>
+                            {reportOptions.map((option) => (
+                                <Box key={option.value} sx={{ mb: 1 }}>
+                                    <FormControlLabel
+                                        value={option.value}
+                                        control={<Radio />}
+                                        label={
+                                            <Box>
+                                                <Typography variant="body2" fontWeight={600}>{option.label}</Typography>
+                                                <Typography variant="caption" color="text.secondary">{option.description}</Typography>
+                                            </Box>
+                                        }
+                                        sx={{
+                                            alignItems: 'flex-start',
+                                            p: 1.5,
+                                            borderRadius: 2,
+                                            border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+                                            '&:hover': {
+                                                backgroundColor: alpha(theme.palette.primary.main, 0.05)
+                                            }
+                                        }}
+                                    />
+                                </Box>
+                            ))}
+                        </RadioGroup>
+                    </FormControl>
+
+                    {selectedReportType === 'other' && (
+                        <TextField
+                            fullWidth
+                            multiline
+                            rows={3}
+                            placeholder="Describe el motivo del reporte..."
+                            value={customReason}
+                            onChange={(e) => setCustomReason(e.target.value)}
+                            sx={{ mt: 2 }}
+                        />
+                    )}
+                </DialogContent>
+                <DialogActions sx={{ px: 3, pb: 3 }}>
+                    <Button onClick={handleReportCancel} color="inherit">Cancelar</Button>
+                    <Button onClick={handleReportSubmit} variant="contained" color="warning" startIcon={<ReportIcon />}>
+                        Enviar reporte
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* Report Notification */}
+            <Snackbar
+                open={reportNotification.open}
+                autoHideDuration={6000}
+                onClose={() => setReportNotification({ ...reportNotification, open: false })}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+            >
+                <Alert
+                    onClose={() => setReportNotification({ ...reportNotification, open: false })}
+                    severity={reportNotification.severity}
+                    sx={{ width: '100%' }}
+                >
+                    {reportNotification.message}
+                </Alert>
+            </Snackbar>
         </Box>
     );
 };

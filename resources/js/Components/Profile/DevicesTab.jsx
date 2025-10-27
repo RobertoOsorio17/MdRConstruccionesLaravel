@@ -213,6 +213,8 @@ export default function DevicesTab({ initialDevices = [], initialStats = {} }) {
                 Gestiona los dispositivos y sesiones activas desde los que has iniciado sesión en tu cuenta
             </Typography>
 
+            <Typography variant="overline" sx={{ color: 'text.secondary', mb: 1 }}>Resumen</Typography>
+
             {/* Stats Cards */}
             <Box sx={{
                 display: 'grid',
@@ -220,7 +222,7 @@ export default function DevicesTab({ initialDevices = [], initialStats = {} }) {
                 gap: 3,
                 mb: 4
             }}>
-                <Paper elevation={0} sx={{ p: 3, border: '1px solid', borderColor: 'divider', textAlign: 'center' }}>
+                <Paper variant="outlined" sx={{ p: 3, textAlign: 'center' }}>
                     <Typography variant="h3" color="primary" fontWeight="700">
                         {stats.total || 0}
                     </Typography>
@@ -228,7 +230,7 @@ export default function DevicesTab({ initialDevices = [], initialStats = {} }) {
                         Total Dispositivos
                     </Typography>
                 </Paper>
-                <Paper elevation={0} sx={{ p: 3, border: '1px solid', borderColor: 'divider', textAlign: 'center' }}>
+                <Paper variant="outlined" sx={{ p: 3, textAlign: 'center' }}>
                     <Typography variant="h3" color="success.main" fontWeight="700">
                         {stats.active || 0}
                     </Typography>
@@ -236,7 +238,7 @@ export default function DevicesTab({ initialDevices = [], initialStats = {} }) {
                         Activos (30 días)
                     </Typography>
                 </Paper>
-                <Paper elevation={0} sx={{ p: 3, border: '1px solid', borderColor: 'divider', textAlign: 'center' }}>
+                <Paper variant="outlined" sx={{ p: 3, textAlign: 'center' }}>
                     <Typography variant="h3" color="info.main" fontWeight="700">
                         {stats.trusted || 0}
                     </Typography>
@@ -262,8 +264,10 @@ export default function DevicesTab({ initialDevices = [], initialStats = {} }) {
             )}
 
             {/* Devices List */}
+            <Typography variant="overline" sx={{ color: 'text.secondary', mb: 1 }}>Sesiones activas</Typography>
+
             {devices.length === 0 ? (
-                <Paper elevation={0} sx={{ p: 6, textAlign: 'center', border: '1px solid', borderColor: 'divider' }}>
+                <Paper variant="outlined" sx={{ p: 6, textAlign: 'center' }}>
                     <ComputerIcon sx={{ fontSize: 64, color: 'text.disabled', mb: 2 }} />
                     <Typography variant="h6" gutterBottom>
                         No hay dispositivos registrados
@@ -535,6 +539,7 @@ export default function DevicesTab({ initialDevices = [], initialStats = {} }) {
                         label="Nombre personalizado"
                         placeholder="Ej: Mi Laptop del Trabajo, iPhone Personal, etc."
                         fullWidth
+                        size="small"
                         value={customName}
                         onChange={(e) => setCustomName(e.target.value)}
                         disabled={processing}

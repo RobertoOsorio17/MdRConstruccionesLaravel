@@ -4,7 +4,9 @@ import { Box, Snackbar, Alert } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import MainLayout from '@/Layouts/MainLayout';
 import designSystem from '@/theme/designSystem';
-import { trackEvent } from '@/Utils/trackEvent';
+
+// Import analytics (renombrado de trackEvent para evitar bloqueos de ad-blockers)
+import { trackEvent } from '@/Utils/analytics';
 
 // ServicesV2 Components
 import ServiceHero from '@/Components/ServicesV2/Hero/ServiceHero';

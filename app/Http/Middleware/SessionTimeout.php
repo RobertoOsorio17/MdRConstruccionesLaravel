@@ -134,21 +134,23 @@ class SessionTimeout
     /**
      * Determine the role-based session timeout in seconds.
      * Admin users get shorter timeout for enhanced security.
-     * Uses session_timeout setting from admin settings.
+     * ✅ SECURITY FIX: Stricter timeouts following industry best practices
      */
     private function getRoleBasedTimeout($user): int
     {
-        // Get session timeout from admin settings (in minutes, default: 120)
-        $sessionTimeoutMinutes = AdminSetting::getCachedValue('session_timeout', 120, 300);
-        $defaultTimeout = $sessionTimeoutMinutes * 60; // Convert minutes to seconds
-
-        // Admin and editor roles get shorter timeout (20 minutes) for security.
+        // ✅ SECURITY FIX: Admin and editor roles get 15 minutes timeout (was 20)
+        // Industry standard: 15-30 minutes for privileged accounts
         if ($user->hasRole('admin') || $user->hasRole('editor')) {
-            return 20 * 60; // 20 minutes for admin users
+            return 15 * 60; // 15 minutes for admin/editor users
         }
 
-        // Regular users use the configured session timeout from settings.
-        return $defaultTimeout;
+        // ✅ SECURITY FIX: Regular users get 60 minutes timeout (was 120)
+        // Industry standard: 30-60 minutes for regular users
+        $sessionTimeoutMinutes = AdminSetting::getCachedValue('session_timeout', 60, 300);
+        $maxTimeout = 60; // Maximum 60 minutes for regular users
+        $actualTimeout = min($sessionTimeoutMinutes, $maxTimeout);
+
+        return $actualTimeout * 60; // Convert minutes to seconds
     }
 
     /**
@@ -174,19 +176,21 @@ class SessionTimeout
     /**
      * Get absolute session timeout (maximum session duration regardless of activity)
      *
-     * ✅ NEW: Prevents sessions from living forever
+     * ✅ SECURITY FIX: Stricter absolute timeouts to prevent session hijacking
      *
      * @param $user
      * @return int Timeout in seconds
      */
     private function getAbsoluteTimeout($user): int
     {
-        // Admin and editor roles get shorter absolute timeout (4 hours)
+        // ✅ SECURITY FIX: Admin and editor roles get 2 hours absolute timeout (was 4)
+        // Even with activity, admin sessions should not last more than 2 hours
         if ($user->hasRole('admin') || $user->hasRole('editor')) {
-            return 4 * 3600; // 4 hours
+            return 2 * 3600; // 2 hours maximum
         }
 
-        // Regular users get 8 hours maximum session duration
-        return 8 * 3600; // 8 hours
+        // ✅ SECURITY FIX: Regular users get 4 hours maximum session duration (was 8)
+        // Reduces window for session hijacking attacks
+        return 4 * 3600; // 4 hours maximum
     }
 }

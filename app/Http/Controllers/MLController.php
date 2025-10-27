@@ -30,9 +30,14 @@ use Illuminate\Support\Facades\Cache;
 
 /**
  * Exposes machine learning powered personalization endpoints that drive recommendations and insight logging.
- * Connects content analysis services with user sessions to deliver contextual suggestions and telemetry.
  *
- * V2.0: Integrated with AnomalyDetectionService and MLHealthMonitorService
+ * Features:
+ * - Recommendations: hybrid algorithm with optional explanations and metadata.
+ * - Interaction logging: rich telemetry, engagement scoring, and anomaly detection.
+ * - Insights: summarized reading and cluster information per user/session.
+ * - Training: batch/incremental modes with optional notifications and cache management.
+ *
+ * V2.0: Integrated with AnomalyDetectionService and MLHealthMonitorService.
  */
 class MLController extends Controller
 {
@@ -67,6 +72,9 @@ class MLController extends Controller
 
     /**
      * Retrieve ML recommendations for a user.
+     *
+     * @param GetRecommendationsRequest $request The validated request with context.
+     * @return JsonResponse JSON response with recommendations and metadata.
      */
     public function getRecommendations(GetRecommendationsRequest $request): JsonResponse
     {
@@ -130,7 +138,11 @@ class MLController extends Controller
 
     /**
      * Register a user interaction for the ML system.
-     * V2.0: Now includes anomaly detection
+     *
+     * V2.0: Includes anomaly detection and optional auto-blocking.
+     *
+     * @param LogInteractionRequest $request The validated interaction payload.
+     * @return JsonResponse JSON response with persisted interaction metrics.
      */
     public function logInteraction(LogInteractionRequest $request): JsonResponse
     {
@@ -176,7 +188,7 @@ class MLController extends Controller
                 )
             ];
 
-            // ✅ FIXED: Calculate engagement score before anomaly detection
+            // Fix: Calculate engagement score before anomaly detection.
             $engagementScore = $this->calculateEngagementScore($interactionData);
             // Clamp score between 0-100 to prevent invalid values
             $interactionData['engagement_score'] = max(0, min(100, $engagementScore));
@@ -290,6 +302,9 @@ class MLController extends Controller
 
     /**
      * Retrieve ML insights for a user.
+     *
+     * @param Request $request The current HTTP request instance.
+     * @return JsonResponse JSON response with summarized insights.
      */
     public function getUserInsights(Request $request): JsonResponse
     {
@@ -342,6 +357,9 @@ class MLController extends Controller
 
     /**
      * Trigger ML model training with advanced options.
+     *
+     * @param TrainModelsRequest $request The validated training configuration.
+     * @return JsonResponse JSON response with training stats.
      */
     public function trainModels(TrainModelsRequest $request): JsonResponse
     {

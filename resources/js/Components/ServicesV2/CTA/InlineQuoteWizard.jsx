@@ -53,7 +53,7 @@ import { useFormik } from 'formik';
 import * as Yup from 'yup';
 import axios from 'axios';
 import designSystem from '@/theme/designSystem';
-import { trackWizard, trackFormError } from '@/Utils/trackEvent';
+import { trackWizard, trackFormError } from '@/Utils/analytics';
 import { formatCurrency } from '@/Utils/formatMetric';
 
 const steps = ['Datos Básicos', 'Tipo de Proyecto', 'Ubicación y Presupuesto'];

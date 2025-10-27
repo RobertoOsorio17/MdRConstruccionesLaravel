@@ -152,7 +152,7 @@ return [
         Features::twoFactorAuthentication([
             'confirm' => true,
             'confirmPassword' => true,
-            // 'window' => 0,
+            'window' => 1, // ✅ Allow ±1 time window (±30 seconds) for time drift tolerance
         ]),
     ],
 

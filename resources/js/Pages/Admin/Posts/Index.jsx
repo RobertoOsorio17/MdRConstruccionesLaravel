@@ -343,229 +343,213 @@ const PostsIndex = ({ posts, categories, tags, filters, stats }) => {
                     </Box>
                 </Box>
 
-                {/* Stats Cards */}
-                <Grid container spacing={3} sx={{ mb: 4 }}>
-                    <Grid item xs={12} sm={6} md={3}>
-                        <Paper
-                            component={motion.div}
-                            variants={itemVariants}
-                            sx={{
-                                ...glassStatCard,
-                                p: 3,
-                                textAlign: 'center',
-                            }}
-                        >
-                            <Box sx={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                mb: 2,
-                                color: '#667eea'
-                            }}>
-                                <ArticleIcon sx={{ fontSize: 40 }} />
-                            </Box>
-                            <Typography variant="h3" fontWeight="bold" sx={{ color: '#2D3748', mb: 1 }}>
-                                {stats.total}
-                            </Typography>
-                            <Typography variant="body1" sx={{ color: '#718096', fontWeight: 500 }}>
-                                Total Posts
-                            </Typography>
-                        </Paper>
-                    </Grid>
-                    <Grid item xs={12} sm={6} md={3}>
-                        <Paper
-                            component={motion.div}
-                            variants={itemVariants}
-                            sx={{
-                                ...glassStatCard,
-                                p: 3,
-                                textAlign: 'center',
-                            }}
-                        >
-                            <Box sx={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                mb: 2,
-                                color: '#48BB78'
-                            }}>
-                                <TrendingUpIcon sx={{ fontSize: 40 }} />
-                            </Box>
-                            <Typography variant="h3" fontWeight="bold" sx={{ color: '#2D3748', mb: 1 }}>
-                                {stats.published}
-                            </Typography>
-                            <Typography variant="body1" sx={{ color: '#718096', fontWeight: 500 }}>
-                                Publicados
-                            </Typography>
-                        </Paper>
-                    </Grid>
-                    <Grid item xs={12} sm={6} md={3}>
-                        <Paper
-                            component={motion.div}
-                            variants={itemVariants}
-                            sx={{
-                                ...glassStatCard,
-                                p: 3,
-                                textAlign: 'center',
-                            }}
-                        >
-                            <Box sx={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                mb: 2,
-                                color: '#F6AD55'
-                            }}>
-                                <EditIcon sx={{ fontSize: 40 }} />
-                            </Box>
-                            <Typography variant="h3" fontWeight="bold" sx={{ color: '#2D3748', mb: 1 }}>
-                                {stats.draft}
-                            </Typography>
-                            <Typography variant="body1" sx={{ color: '#718096', fontWeight: 500 }}>
-                                Borradores
-                            </Typography>
-                        </Paper>
-                    </Grid>
-                    <Grid item xs={12} sm={6} md={3}>
-                        <Paper
-                            component={motion.div}
-                            variants={itemVariants}
-                            sx={{
-                                ...glassStatCard,
-                                p: 3,
-                                textAlign: 'center',
-                            }}
-                        >
-                            <Box sx={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                mb: 2,
-                                color: '#4299E1'
-                            }}>
-                                <ScheduledIcon sx={{ fontSize: 40 }} />
-                            </Box>
-                            <Typography variant="h3" fontWeight="bold" sx={{ color: '#2D3748', mb: 1 }}>
-                                {stats.scheduled}
-                            </Typography>
-                            <Typography variant="body1" sx={{ color: '#718096', fontWeight: 500 }}>
-                                Programados
-                            </Typography>
-                        </Paper>
-                    </Grid>
-                </Grid>
+                {/* Stats Cards - CSS Grid */}
+                <Box sx={{ display: 'grid', gap: 3, gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)' }, mb: 4 }}>
+                    <Paper
+                        component={motion.div}
+                        variants={itemVariants}
+                        sx={{
+                            ...glassStatCard,
+                            p: 3,
+                            textAlign: 'center',
+                        }}
+                    >
+                        <Box sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            mb: 2,
+                            color: '#667eea'
+                        }}>
+                            <ArticleIcon sx={{ fontSize: 40 }} />
+                        </Box>
+                        <Typography variant="h3" fontWeight="bold" sx={{ color: '#2D3748', mb: 1 }}>
+                            {stats.total}
+                        </Typography>
+                        <Typography variant="body1" sx={{ color: '#718096', fontWeight: 500 }}>
+                            Total Posts
+                        </Typography>
+                    </Paper>
+                    <Paper
+                        component={motion.div}
+                        variants={itemVariants}
+                        sx={{
+                            ...glassStatCard,
+                            p: 3,
+                            textAlign: 'center',
+                        }}
+                    >
+                        <Box sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            mb: 2,
+                            color: '#48BB78'
+                        }}>
+                            <TrendingUpIcon sx={{ fontSize: 40 }} />
+                        </Box>
+                        <Typography variant="h3" fontWeight="bold" sx={{ color: '#2D3748', mb: 1 }}>
+                            {stats.published}
+                        </Typography>
+                        <Typography variant="body1" sx={{ color: '#718096', fontWeight: 500 }}>
+                            Publicados
+                        </Typography>
+                    </Paper>
+                    <Paper
+                        component={motion.div}
+                        variants={itemVariants}
+                        sx={{
+                            ...glassStatCard,
+                            p: 3,
+                            textAlign: 'center',
+                        }}
+                    >
+                        <Box sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            mb: 2,
+                            color: '#F6AD55'
+                        }}>
+                            <EditIcon sx={{ fontSize: 40 }} />
+                        </Box>
+                        <Typography variant="h3" fontWeight="bold" sx={{ color: '#2D3748', mb: 1 }}>
+                            {stats.draft}
+                        </Typography>
+                        <Typography variant="body1" sx={{ color: '#718096', fontWeight: 500 }}>
+                            Borradores
+                        </Typography>
+                    </Paper>
+                    <Paper
+                        component={motion.div}
+                        variants={itemVariants}
+                        sx={{
+                            ...glassStatCard,
+                            p: 3,
+                            textAlign: 'center',
+                        }}
+                    >
+                        <Box sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            mb: 2,
+                            color: '#4299E1'
+                        }}>
+                            <ScheduledIcon sx={{ fontSize: 40 }} />
+                        </Box>
+                        <Typography variant="h3" fontWeight="bold" sx={{ color: '#2D3748', mb: 1 }}>
+                            {stats.scheduled}
+                        </Typography>
+                        <Typography variant="body1" sx={{ color: '#718096', fontWeight: 500 }}>
+                            Programados
+                        </Typography>
+                    </Paper>
+                </Box>
 
-                {/* Engagement Stats - Segunda Fila */}
-                <Grid container spacing={3} sx={{ mb: 4 }}>
-                    <Grid item xs={12} sm={6} md={3}>
-                        <Paper
-                            component={motion.div}
-                            variants={itemVariants}
-                            sx={{
-                                ...glassStatCard,
-                                p: 2.5,
-                                textAlign: 'center',
-                            }}
-                        >
-                            <Box sx={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                mb: 1.5,
-                                color: '#E53E3E'
-                            }}>
-                                <FavoriteIcon sx={{ fontSize: 32 }} />
-                            </Box>
-                            <Typography variant="h4" fontWeight="bold" sx={{ color: '#2D3748', mb: 0.5 }}>
-                                {posts?.data?.reduce((sum, post) => sum + (post.likes_count || 0), 0) || 0}
-                            </Typography>
-                            <Typography variant="body2" sx={{ color: '#718096', fontWeight: 500 }}>
-                                Total Likes
-                            </Typography>
-                        </Paper>
-                    </Grid>
-                    <Grid item xs={12} sm={6} md={3}>
-                        <Paper
-                            component={motion.div}
-                            variants={itemVariants}
-                            sx={{
-                                ...glassStatCard,
-                                p: 2.5,
-                                textAlign: 'center',
-                            }}
-                        >
-                            <Box sx={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                mb: 1.5,
-                                color: '#38B2AC'
-                            }}>
-                                <CommentIcon sx={{ fontSize: 32 }} />
-                            </Box>
-                            <Typography variant="h4" fontWeight="bold" sx={{ color: '#2D3748', mb: 0.5 }}>
-                                {posts?.data?.reduce((sum, post) => sum + (post.comments_count || 0), 0) || 0}
-                            </Typography>
-                            <Typography variant="body2" sx={{ color: '#718096', fontWeight: 500 }}>
-                                Total Comentarios
-                            </Typography>
-                        </Paper>
-                    </Grid>
-                    <Grid item xs={12} sm={6} md={3}>
-                        <Paper
-                            component={motion.div}
-                            variants={itemVariants}
-                            sx={{
-                                ...glassStatCard,
-                                p: 2.5,
-                                textAlign: 'center',
-                            }}
-                        >
-                            <Box sx={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                mb: 1.5,
-                                color: '#D69E2E'
-                            }}>
-                                <StarIcon sx={{ fontSize: 32 }} />
-                            </Box>
-                            <Typography variant="h4" fontWeight="bold" sx={{ color: '#2D3748', mb: 0.5 }}>
-                                {posts?.data?.filter(post => post.is_featured).length || 0}
-                            </Typography>
-                            <Typography variant="body2" sx={{ color: '#718096', fontWeight: 500 }}>
-                                Posts Destacados
-                            </Typography>
-                        </Paper>
-                    </Grid>
-                    <Grid item xs={12} sm={6} md={3}>
-                        <Paper
-                            component={motion.div}
-                            variants={itemVariants}
-                            sx={{
-                                ...glassStatCard,
-                                p: 2.5,
-                                textAlign: 'center',
-                            }}
-                        >
-                            <Box sx={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                mb: 1.5,
-                                color: '#805AD5'
-                            }}>
-                                <VisibilityIcon sx={{ fontSize: 32 }} />
-                            </Box>
-                            <Typography variant="h4" fontWeight="bold" sx={{ color: '#2D3748', mb: 0.5 }}>
-                                {posts?.data?.reduce((sum, post) => sum + (post.views_count || 0), 0) || 0}
-                            </Typography>
-                            <Typography variant="body2" sx={{ color: '#718096', fontWeight: 500 }}>
-                                Total Vistas
-                            </Typography>
-                        </Paper>
-                    </Grid>
-                </Grid>
+                {/* Engagement Stats - CSS Grid */}
+                <Box sx={{ display: 'grid', gap: 3, gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)' }, mb: 4 }}>
+                    <Paper
+                        component={motion.div}
+                        variants={itemVariants}
+                        sx={{
+                            ...glassStatCard,
+                            p: 2.5,
+                            textAlign: 'center',
+                        }}
+                    >
+                        <Box sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            mb: 1.5,
+                            color: '#E53E3E'
+                        }}>
+                            <FavoriteIcon sx={{ fontSize: 32 }} />
+                        </Box>
+                        <Typography variant="h4" fontWeight="bold" sx={{ color: '#2D3748', mb: 0.5 }}>
+                            {posts?.data?.reduce((sum, post) => sum + (post.likes_count || 0), 0) || 0}
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: '#718096', fontWeight: 500 }}>
+                            Total Likes
+                        </Typography>
+                    </Paper>
+                    <Paper
+                        component={motion.div}
+                        variants={itemVariants}
+                        sx={{
+                            ...glassStatCard,
+                            p: 2.5,
+                            textAlign: 'center',
+                        }}
+                    >
+                        <Box sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            mb: 1.5,
+                            color: '#38B2AC'
+                        }}>
+                            <CommentIcon sx={{ fontSize: 32 }} />
+                        </Box>
+                        <Typography variant="h4" fontWeight="bold" sx={{ color: '#2D3748', mb: 0.5 }}>
+                            {posts?.data?.reduce((sum, post) => sum + (post.comments_count || 0), 0) || 0}
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: '#718096', fontWeight: 500 }}>
+                            Total Comentarios
+                        </Typography>
+                    </Paper>
+                    <Paper
+                        component={motion.div}
+                        variants={itemVariants}
+                        sx={{
+                            ...glassStatCard,
+                            p: 2.5,
+                            textAlign: 'center',
+                        }}
+                    >
+                        <Box sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            mb: 1.5,
+                            color: '#D69E2E'
+                        }}>
+                            <StarIcon sx={{ fontSize: 32 }} />
+                        </Box>
+                        <Typography variant="h4" fontWeight="bold" sx={{ color: '#2D3748', mb: 0.5 }}>
+                            {posts?.data?.filter(post => post.is_featured).length || 0}
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: '#718096', fontWeight: 500 }}>
+                            Posts Destacados
+                        </Typography>
+                    </Paper>
+                    <Paper
+                        component={motion.div}
+                        variants={itemVariants}
+                        sx={{
+                            ...glassStatCard,
+                            p: 2.5,
+                            textAlign: 'center',
+                        }}
+                    >
+                        <Box sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            mb: 1.5,
+                            color: '#805AD5'
+                        }}>
+                            <VisibilityIcon sx={{ fontSize: 32 }} />
+                        </Box>
+                        <Typography variant="h4" fontWeight="bold" sx={{ color: '#2D3748', mb: 0.5 }}>
+                            {posts?.data?.reduce((sum, post) => sum + (post.views_count || 0), 0) || 0}
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: '#718096', fontWeight: 500 }}>
+                            Total Vistas
+                        </Typography>
+                    </Paper>
+                </Box>
 
                 {/* Filters */}
                 <Paper
@@ -699,10 +683,10 @@ const PostsIndex = ({ posts, categories, tags, filters, stats }) => {
                     </Grid>
                 </Paper>
 
-                {/* Posts Grid */}
-                <Grid container spacing={3}>
+                {/* Posts Grid - CSS Grid */}
+                <Box sx={{ display: 'grid', gap: 3, gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)', lg: 'repeat(3, 1fr)' } }}>
                     {posts.data.map((post) => (
-                        <Grid item xs={12} md={6} lg={4} key={post.id}>
+                        <Box key={post.id}>
                             <Card
                                 component={motion.div}
                                 variants={itemVariants}
@@ -765,7 +749,7 @@ const PostsIndex = ({ posts, categories, tags, filters, stats }) => {
                                 <CardContent sx={{ flexGrow: 1, p: 3 }}>
                                     {/* Status and Date */}
                                     <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-                                        <Chip 
+                                        <Chip
                                             label={post.status}
                                             color={getStatusColor(post.status)}
                                             size="small"
@@ -776,10 +760,10 @@ const PostsIndex = ({ posts, categories, tags, filters, stats }) => {
                                     </Box>
 
                                     {/* Title */}
-                                    <Typography 
-                                        variant="h6" 
+                                    <Typography
+                                        variant="h6"
                                         gutterBottom
-                                        sx={{ 
+                                        sx={{
                                             fontWeight: 600,
                                             lineHeight: 1.3,
                                             display: '-webkit-box',
@@ -792,10 +776,10 @@ const PostsIndex = ({ posts, categories, tags, filters, stats }) => {
                                     </Typography>
 
                                     {/* Excerpt */}
-                                    <Typography 
-                                        variant="body2" 
+                                    <Typography
+                                        variant="body2"
                                         color="text.secondary"
-                                        sx={{ 
+                                        sx={{
                                             mb: 2,
                                             display: '-webkit-box',
                                             WebkitLineClamp: 3,
@@ -831,7 +815,7 @@ const PostsIndex = ({ posts, categories, tags, filters, stats }) => {
                                                     label={category.name}
                                                     size="small"
                                                     variant="outlined"
-                                                    sx={{ 
+                                                    sx={{
                                                         mr: 1,
                                                         borderColor: category.color,
                                                         color: category.color
@@ -874,9 +858,9 @@ const PostsIndex = ({ posts, categories, tags, filters, stats }) => {
                                     </Box>
                                 </CardActions>
                             </Card>
-                        </Grid>
+                        </Box>
                     ))}
-                </Grid>
+                </Box>
 
                 {/* Pagination */}
                 {posts.last_page > 1 && (

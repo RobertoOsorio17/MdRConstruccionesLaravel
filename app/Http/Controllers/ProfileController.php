@@ -13,12 +13,20 @@ use Inertia\Response;
 
 /**
  * Manages authenticated user profile settings, routing visitors to tailored configuration experiences.
- * Bridges legacy profile endpoints with the tabbed settings UI while coordinating security device insights.
+ *
+ * Features:
+ * - Redirects legacy profile route to new tabbed settings.
+ * - Aggregates device/trusted device info for the security tab.
+ * - Surfaces recovery codes when 2FA is enabled.
+ * - Presents notification/privacy settings with user defaults.
  */
 class ProfileController extends Controller
 {
     /**
      * Display the user's profile form.
+     *
+     * @param Request $request The current HTTP request instance.
+     * @return RedirectResponse Redirect to the new settings page.
      */
     public function edit(Request $request): RedirectResponse
     {
@@ -28,6 +36,9 @@ class ProfileController extends Controller
 
     /**
      * Display the user's settings page with tabs.
+     *
+     * @param Request $request The current HTTP request instance.
+     * @return Response Inertia response for the settings page with device and security info.
      */
     public function settings(Request $request): Response
     {
@@ -90,6 +101,10 @@ class ProfileController extends Controller
             'show_email' => $user->show_email ?? false,
         ];
 
+        // Check if 2FA setup is mandatory (for admins/editors)
+        // Use persistent session flag, not flash (flash gets consumed on first read)
+        $force2FASetup = session('2fa_setup_mandatory', false);
+
         return Inertia::render('Profile/Settings', [
             'user' => $user,
             'mustVerifyEmail' => $user instanceof MustVerifyEmail,
@@ -100,6 +115,7 @@ class ProfileController extends Controller
             'hasPassword' => !empty($user->password),
             'twoFactorEnabled' => $twoFactorEnabled,
             'recoveryCodes' => $recoveryCodes,
+            'force2FASetup' => $force2FASetup, // Flag to show mandatory 2FA modal
             'notificationSettings' => $notificationSettings,
             'privacySettings' => $privacySettings,
         ]);
@@ -107,6 +123,9 @@ class ProfileController extends Controller
 
     /**
      * Update the user's profile information.
+     *
+     * @param ProfileUpdateRequest $request The validated profile update request.
+     * @return RedirectResponse Redirect to profile edit screen.
      */
     public function update(ProfileUpdateRequest $request): RedirectResponse
     {
@@ -123,6 +142,9 @@ class ProfileController extends Controller
 
     /**
      * Delete the user's account.
+     *
+     * @param Request $request The current HTTP request instance.
+     * @return RedirectResponse Redirect to home after logout.
      */
     public function destroy(Request $request): RedirectResponse
     {

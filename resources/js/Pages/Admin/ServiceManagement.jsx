@@ -31,6 +31,7 @@ import {
     DialogActions,
     Grid,
     alpha,
+    useTheme,
 } from '@mui/material';
 import {
     Search as SearchIcon,
@@ -45,11 +46,16 @@ import {
     Cancel as InactiveIcon,
     Star as FeaturedIcon,
     Visibility as ViewsIcon,
+    ViewComfy as ComfortableIcon,
+    ViewCompact as CompactIcon,
+    ViewStream as StandardIcon,
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 import AdminLayoutNew from '../../Layouts/AdminLayoutNew';
 
 const ServiceManagement = ({ services, categories, stats, filters, flash }) => {
+    const theme = useTheme();
+
     // State management
     const [searchTerm, setSearchTerm] = useState(filters.search || '');
     const [categoryFilter, setCategoryFilter] = useState(filters.category || '');
@@ -62,6 +68,7 @@ const ServiceManagement = ({ services, categories, stats, filters, flash }) => {
     const [serviceToDelete, setServiceToDelete] = useState(null);
     const [bulkActionDialog, setBulkActionDialog] = useState(false);
     const [bulkAction, setBulkAction] = useState('');
+    const [tableDensity, setTableDensity] = useState('standard'); // 'compact', 'standard', 'comfortable'
 
     // Glassmorphism styles
     const glassmorphismCard = {
@@ -72,16 +79,24 @@ const ServiceManagement = ({ services, categories, stats, filters, flash }) => {
         boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)',
     };
 
-    const glassmorphismStatCard = {
-        background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05))',
-        backdropFilter: 'blur(20px)',
-        border: '1px solid rgba(255, 255, 255, 0.2)',
-        borderRadius: '20px',
-        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)',
+    // Neutral stat card with brand accent bar
+    const neutralStatCard = {
+        background: theme.palette.mode === 'dark' ? '#1e293b' : '#ffffff',
+        border: theme.palette.mode === 'dark'
+            ? '1px solid rgba(255, 255, 255, 0.1)'
+            : '1px solid rgba(0, 0, 0, 0.1)',
+        borderRadius: '12px',
+        boxShadow: theme.palette.mode === 'dark'
+            ? '0 4px 20px rgba(0, 0, 0, 0.5)'
+            : '0 4px 20px rgba(0, 0, 0, 0.08)',
         transition: 'all 0.3s ease',
+        position: 'relative',
+        overflow: 'hidden',
         '&:hover': {
             transform: 'translateY(-4px)',
-            boxShadow: '0 12px 40px rgba(0, 0, 0, 0.15)',
+            boxShadow: theme.palette.mode === 'dark'
+                ? '0 8px 30px rgba(0, 0, 0, 0.7)'
+                : '0 8px 30px rgba(0, 0, 0, 0.12)',
         },
     };
 
@@ -224,12 +239,30 @@ const ServiceManagement = ({ services, categories, stats, filters, flash }) => {
             style: 'currency',
             currency: 'EUR'
         }).format(price);
-        
+
         switch (priceType) {
             case 'hourly': return `${formattedPrice}/hora`;
             case 'project': return `${formattedPrice}/proyecto`;
             case 'quote': return 'Presupuesto';
             default: return formattedPrice;
+        }
+    };
+
+    // Get table cell padding based on density
+    const getCellPadding = () => {
+        switch (tableDensity) {
+            case 'compact': return '6px 16px';
+            case 'comfortable': return '20px 16px';
+            default: return '16px'; // standard
+        }
+    };
+
+    // Get avatar size based on density
+    const getAvatarSize = () => {
+        switch (tableDensity) {
+            case 'compact': return 40;
+            case 'comfortable': return 60;
+            default: return 50; // standard
         }
     };
 
@@ -281,12 +314,24 @@ const ServiceManagement = ({ services, categories, stats, filters, flash }) => {
                 <motion.div variants={itemVariants}>
                     <Grid container spacing={3} sx={{ mb: 4 }}>
                         <Grid item xs={12} sm={6} md={3}>
-                            <Card sx={glassmorphismStatCard}>
+                            <Card sx={neutralStatCard}>
+                                {/* Brand accent bar */}
+                                <Box sx={{
+                                    position: 'absolute',
+                                    top: 0,
+                                    left: 0,
+                                    right: 0,
+                                    height: 4,
+                                    background: 'linear-gradient(90deg, #667eea 0%, #764ba2 100%)',
+                                }} />
                                 <CardContent sx={{ p: 3 }}>
                                     <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                                         <TrendingUpIcon sx={{ fontSize: 32, color: '#667eea', mr: 2 }} />
                                         <Box>
-                                            <Typography variant="h4" sx={{ fontWeight: 700, color: '#2D3748' }}>
+                                            <Typography variant="h4" sx={{
+                                                fontWeight: 700,
+                                                color: theme.palette.mode === 'dark' ? '#fff' : '#2D3748'
+                                            }}>
                                                 {stats.total_services}
                                             </Typography>
                                             <Typography variant="body2" sx={{ color: '#718096', fontWeight: 500 }}>
@@ -302,12 +347,24 @@ const ServiceManagement = ({ services, categories, stats, filters, flash }) => {
                         </Grid>
 
                         <Grid item xs={12} sm={6} md={3}>
-                            <Card sx={glassmorphismStatCard}>
+                            <Card sx={neutralStatCard}>
+                                {/* Brand accent bar */}
+                                <Box sx={{
+                                    position: 'absolute',
+                                    top: 0,
+                                    left: 0,
+                                    right: 0,
+                                    height: 4,
+                                    background: 'linear-gradient(90deg, #F56565 0%, #E53E3E 100%)',
+                                }} />
                                 <CardContent sx={{ p: 3 }}>
                                     <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                                         <InactiveIcon sx={{ fontSize: 32, color: '#F56565', mr: 2 }} />
                                         <Box>
-                                            <Typography variant="h4" sx={{ fontWeight: 700, color: '#2D3748' }}>
+                                            <Typography variant="h4" sx={{
+                                                fontWeight: 700,
+                                                color: theme.palette.mode === 'dark' ? '#fff' : '#2D3748'
+                                            }}>
                                                 {stats.inactive_services}
                                             </Typography>
                                             <Typography variant="body2" sx={{ color: '#718096', fontWeight: 500 }}>
@@ -323,12 +380,24 @@ const ServiceManagement = ({ services, categories, stats, filters, flash }) => {
                         </Grid>
 
                         <Grid item xs={12} sm={6} md={3}>
-                            <Card sx={glassmorphismStatCard}>
+                            <Card sx={neutralStatCard}>
+                                {/* Brand accent bar */}
+                                <Box sx={{
+                                    position: 'absolute',
+                                    top: 0,
+                                    left: 0,
+                                    right: 0,
+                                    height: 4,
+                                    background: 'linear-gradient(90deg, #ED8936 0%, #DD6B20 100%)',
+                                }} />
                                 <CardContent sx={{ p: 3 }}>
                                     <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                                         <FeaturedIcon sx={{ fontSize: 32, color: '#ED8936', mr: 2 }} />
                                         <Box>
-                                            <Typography variant="h4" sx={{ fontWeight: 700, color: '#2D3748' }}>
+                                            <Typography variant="h4" sx={{
+                                                fontWeight: 700,
+                                                color: theme.palette.mode === 'dark' ? '#fff' : '#2D3748'
+                                            }}>
                                                 {stats.featured_services}
                                             </Typography>
                                             <Typography variant="body2" sx={{ color: '#718096', fontWeight: 500 }}>
@@ -429,7 +498,55 @@ const ServiceManagement = ({ services, categories, stats, filters, flash }) => {
                                     </FormControl>
                                 </Grid>
                                 <Grid item xs={12} md={3}>
-                                    <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
+                                    <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end', alignItems: 'center' }}>
+                                        {/* Density Toggle */}
+                                        <Box sx={{ display: 'flex', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '12px', overflow: 'hidden' }}>
+                                            <IconButton
+                                                size="small"
+                                                onClick={() => setTableDensity('compact')}
+                                                sx={{
+                                                    borderRadius: 0,
+                                                    backgroundColor: tableDensity === 'compact' ? 'rgba(102, 126, 234, 0.2)' : 'transparent',
+                                                    color: tableDensity === 'compact' ? '#667eea' : '#718096',
+                                                    '&:hover': {
+                                                        backgroundColor: tableDensity === 'compact' ? 'rgba(102, 126, 234, 0.3)' : 'rgba(255,255,255,0.1)',
+                                                    }
+                                                }}
+                                                title="Compacto"
+                                            >
+                                                <CompactIcon fontSize="small" />
+                                            </IconButton>
+                                            <IconButton
+                                                size="small"
+                                                onClick={() => setTableDensity('standard')}
+                                                sx={{
+                                                    borderRadius: 0,
+                                                    backgroundColor: tableDensity === 'standard' ? 'rgba(102, 126, 234, 0.2)' : 'transparent',
+                                                    color: tableDensity === 'standard' ? '#667eea' : '#718096',
+                                                    '&:hover': {
+                                                        backgroundColor: tableDensity === 'standard' ? 'rgba(102, 126, 234, 0.3)' : 'rgba(255,255,255,0.1)',
+                                                    }
+                                                }}
+                                                title="Estándar"
+                                            >
+                                                <StandardIcon fontSize="small" />
+                                            </IconButton>
+                                            <IconButton
+                                                size="small"
+                                                onClick={() => setTableDensity('comfortable')}
+                                                sx={{
+                                                    borderRadius: 0,
+                                                    backgroundColor: tableDensity === 'comfortable' ? 'rgba(102, 126, 234, 0.2)' : 'transparent',
+                                                    color: tableDensity === 'comfortable' ? '#667eea' : '#718096',
+                                                    '&:hover': {
+                                                        backgroundColor: tableDensity === 'comfortable' ? 'rgba(102, 126, 234, 0.3)' : 'rgba(255,255,255,0.1)',
+                                                    }
+                                                }}
+                                                title="Cómodo"
+                                            >
+                                                <ComfortableIcon fontSize="small" />
+                                            </IconButton>
+                                        </Box>
                                         {selectedServices.length > 0 && (
                                             <Button
                                                 variant="outlined"
@@ -467,24 +584,66 @@ const ServiceManagement = ({ services, categories, stats, filters, flash }) => {
                 {/* Services Table */}
                 <motion.div variants={itemVariants}>
                     <Card sx={glassmorphismCard}>
-                        <TableContainer>
-                            <Table>
+                        <TableContainer sx={{ maxHeight: 600 }}>
+                            <Table stickyHeader>
                                 <TableHead>
                                     <TableRow>
-                                        <TableCell padding="checkbox">
+                                        <TableCell
+                                            padding="checkbox"
+                                            sx={{
+                                                backgroundColor: theme.palette.mode === 'dark' ? '#1e293b' : '#f8fafc',
+                                                borderBottom: theme.palette.mode === 'dark'
+                                                    ? '2px solid rgba(255,255,255,0.1)'
+                                                    : '2px solid rgba(0,0,0,0.1)',
+                                                boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                                            }}
+                                        >
                                             <Checkbox
                                                 indeterminate={selectedServices.length > 0 && selectedServices.length < services.data.length}
                                                 checked={services.data.length > 0 && selectedServices.length === services.data.length}
                                                 onChange={handleSelectAll}
                                             />
                                         </TableCell>
-                                        <TableCell>Servicio</TableCell>
-                                        <TableCell>Categoría</TableCell>
-                                        <TableCell>Precio</TableCell>
-                                        <TableCell>Estado</TableCell>
-                                        <TableCell>Destacado</TableCell>
-                                        <TableCell>Vistas</TableCell>
-                                        <TableCell align="center">Acciones</TableCell>
+                                        <TableCell sx={{
+                                            backgroundColor: theme.palette.mode === 'dark' ? '#1e293b' : '#f8fafc',
+                                            borderBottom: theme.palette.mode === 'dark'
+                                                ? '2px solid rgba(255,255,255,0.1)'
+                                                : '2px solid rgba(0,0,0,0.1)',
+                                            boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                                            fontWeight: 600,
+                                        }}>Servicio</TableCell>
+                                        <TableCell sx={{
+                                            backgroundColor: theme.palette.mode === 'dark' ? '#1e293b' : '#f8fafc',
+                                            borderBottom: theme.palette.mode === 'dark'
+                                                ? '2px solid rgba(255,255,255,0.1)'
+                                                : '2px solid rgba(0,0,0,0.1)',
+                                            boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                                            fontWeight: 600,
+                                        }}>Categoría</TableCell>
+                                        <TableCell sx={{
+                                            backgroundColor: theme.palette.mode === 'dark' ? '#1e293b' : '#f8fafc',
+                                            borderBottom: theme.palette.mode === 'dark'
+                                                ? '2px solid rgba(255,255,255,0.1)'
+                                                : '2px solid rgba(0,0,0,0.1)',
+                                            boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                                            fontWeight: 600,
+                                        }}>Precio</TableCell>
+                                        <TableCell sx={{
+                                            backgroundColor: theme.palette.mode === 'dark' ? '#1e293b' : '#f8fafc',
+                                            borderBottom: theme.palette.mode === 'dark'
+                                                ? '2px solid rgba(255,255,255,0.1)'
+                                                : '2px solid rgba(0,0,0,0.1)',
+                                            boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                                            fontWeight: 600,
+                                        }}>Vistas</TableCell>
+                                        <TableCell align="center" sx={{
+                                            backgroundColor: theme.palette.mode === 'dark' ? '#1e293b' : '#f8fafc',
+                                            borderBottom: theme.palette.mode === 'dark'
+                                                ? '2px solid rgba(255,255,255,0.1)'
+                                                : '2px solid rgba(0,0,0,0.1)',
+                                            boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                                            fontWeight: 600,
+                                        }}>Acciones</TableCell>
                                     </TableRow>
                                 </TableHead>
                                 <TableBody>
@@ -499,32 +658,70 @@ const ServiceManagement = ({ services, categories, stats, filters, flash }) => {
                                                 }
                                             }}
                                         >
-                                            <TableCell padding="checkbox">
+                                            <TableCell padding="checkbox" sx={{ padding: getCellPadding() }}>
                                                 <Checkbox
                                                     checked={selectedServices.includes(service.id)}
                                                     onChange={() => handleSelectService(service.id)}
                                                 />
                                             </TableCell>
-                                            <TableCell>
+                                            <TableCell sx={{ padding: getCellPadding() }}>
                                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                                                     <Avatar
                                                         src={service.image_url}
-                                                        sx={{ width: 50, height: 50, borderRadius: '12px' }}
+                                                        sx={{ width: getAvatarSize(), height: getAvatarSize(), borderRadius: '12px' }}
                                                         variant="rounded"
                                                     >
                                                         {service.title.charAt(0).toUpperCase()}
                                                     </Avatar>
-                                                    <Box>
-                                                        <Typography variant="body2" sx={{ fontWeight: 500, color: '#2D3748' }}>
-                                                            {service.title}
-                                                        </Typography>
+                                                    <Box sx={{ flex: 1 }}>
+                                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                                                            <Typography variant="body2" sx={{ fontWeight: 500, color: '#2D3748' }}>
+                                                                {service.title}
+                                                            </Typography>
+                                                            {/* Inline Status Badge */}
+                                                            <Chip
+                                                                label={service.is_active ? 'Activo' : 'Inactivo'}
+                                                                size="small"
+                                                                icon={getStatusIcon(service.is_active)}
+                                                                sx={{
+                                                                    height: 20,
+                                                                    fontSize: '0.7rem',
+                                                                    backgroundColor: alpha(getStatusColor(service.is_active), 0.1),
+                                                                    color: getStatusColor(service.is_active),
+                                                                    fontWeight: 600,
+                                                                    '& .MuiChip-icon': {
+                                                                        fontSize: 14,
+                                                                        marginLeft: '4px',
+                                                                    }
+                                                                }}
+                                                            />
+                                                            {/* Inline Featured Badge */}
+                                                            {service.featured && (
+                                                                <Chip
+                                                                    label="Destacado"
+                                                                    size="small"
+                                                                    icon={<FeaturedIcon sx={{ fontSize: 14 }} />}
+                                                                    sx={{
+                                                                        height: 20,
+                                                                        fontSize: '0.7rem',
+                                                                        backgroundColor: alpha('#ED8936', 0.1),
+                                                                        color: '#ED8936',
+                                                                        fontWeight: 600,
+                                                                        '& .MuiChip-icon': {
+                                                                            fontSize: 14,
+                                                                            marginLeft: '4px',
+                                                                        }
+                                                                    }}
+                                                                />
+                                                            )}
+                                                        </Box>
                                                         <Typography variant="caption" sx={{ color: '#718096' }}>
                                                             {service.excerpt?.substring(0, 50)}...
                                                         </Typography>
                                                     </Box>
                                                 </Box>
                                             </TableCell>
-                                            <TableCell>
+                                            <TableCell sx={{ padding: getCellPadding() }}>
                                                 <Chip
                                                     label={service.category?.name || 'Sin categoría'}
                                                     size="small"
@@ -535,42 +732,12 @@ const ServiceManagement = ({ services, categories, stats, filters, flash }) => {
                                                     }}
                                                 />
                                             </TableCell>
-                                            <TableCell>
+                                            <TableCell sx={{ padding: getCellPadding() }}>
                                                 <Typography variant="body2" sx={{ color: '#4A5568', fontWeight: 500 }}>
                                                     {service.price ? `€${service.price}` : 'Consultar'}
                                                 </Typography>
                                             </TableCell>
-                                            <TableCell>
-                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                    {getStatusIcon(service.is_active)}
-                                                    <Chip
-                                                        label={service.is_active ? 'Activo' : 'Inactivo'}
-                                                        size="small"
-                                                        sx={{
-                                                            backgroundColor: alpha(getStatusColor(service.is_active), 0.1),
-                                                            color: getStatusColor(service.is_active),
-                                                            fontWeight: 600,
-                                                        }}
-                                                    />
-                                                </Box>
-                                            </TableCell>
-                                            <TableCell>
-                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                    {service.featured && <FeaturedIcon sx={{ fontSize: 16, color: '#ED8936' }} />}
-                                                    <Chip
-                                                        label={service.featured ? 'Sí' : 'No'}
-                                                        size="small"
-                                                        sx={{
-                                                            backgroundColor: service.featured
-                                                                ? alpha('#ED8936', 0.1)
-                                                                : alpha('#718096', 0.1),
-                                                            color: service.featured ? '#ED8936' : '#718096',
-                                                            fontWeight: 500,
-                                                        }}
-                                                    />
-                                                </Box>
-                                            </TableCell>
-                                            <TableCell>
+                                            <TableCell sx={{ padding: getCellPadding() }}>
                                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                                     <ViewsIcon sx={{ fontSize: 16, color: '#718096' }} />
                                                     <Typography variant="body2" sx={{ color: '#4A5568' }}>
@@ -578,7 +745,7 @@ const ServiceManagement = ({ services, categories, stats, filters, flash }) => {
                                                     </Typography>
                                                 </Box>
                                             </TableCell>
-                                            <TableCell align="center">
+                                            <TableCell align="center" sx={{ padding: getCellPadding() }}>
                                                 <IconButton
                                                     onClick={(e) => handleMenuClick(e, service)}
                                                     sx={{ color: '#718096' }}

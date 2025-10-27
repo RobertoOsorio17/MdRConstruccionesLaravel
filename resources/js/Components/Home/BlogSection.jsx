@@ -12,9 +12,30 @@ import {
 import { motion } from 'framer-motion';
 import { Link } from '@inertiajs/react';
 
+// Fallback image from external CDN
+const FALLBACK_IMAGE = 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=800&h=450&fit=crop&q=80';
+
+// Normalize post shape to ensure fallbacks and consistent UI
+const normalizePost = (p = {}) => {
+  const firstCategory = p.category || p?.categories?.[0]?.name || null;
+  return {
+    id: p.id,
+    slug: p.slug,
+    title: p.title,
+    excerpt: p.excerpt,
+    image: p.image || p.cover_image || FALLBACK_IMAGE,
+    category: firstCategory,
+    publishedAt: p.publishedAt || p.published_at,
+    author: p.author || { name: 'Equipo MDR', avatar: null, id: null },
+    readTime: p.readTime || Math.max(1, Math.round(((p.excerpt || '').split(' ').length) / 180)),
+    featured: p.featured || false,
+  };
+};
+
 const BlogCard = ({ post, index, prefersReducedMotion }) => {
   const theme = useTheme();
-  
+  const norm = normalizePost(post);
+
   return (
     <motion.div
       initial={prefersReducedMotion ? {} : { opacity: 0, y: 30 }}
@@ -29,7 +50,7 @@ const BlogCard = ({ post, index, prefersReducedMotion }) => {
     >
       <Card
         component={Link}
-        href={`/blog/${post.slug}`}
+        href={`/blog/${norm.slug}`}
         sx={{
           height: '100%',
           minHeight: { xs: 'auto', sm: 480, md: 500 }, // ✅ Fixed minimum height for consistency
@@ -57,22 +78,25 @@ const BlogCard = ({ post, index, prefersReducedMotion }) => {
         {/* Imagen del post */}
         <Box sx={{
           position: 'relative',
-          height: 220, // ✅ Fixed height for image
-          flexShrink: 0, // ✅ Prevent image from shrinking
+          aspectRatio: '16 / 9',
+          flexShrink: 0,
           overflow: 'hidden'
         }}>
           <CardMedia
             component="img"
-            image={post.image}
-            alt={post.title}
+            image={norm.image}
+            alt={norm.title}
+            loading="lazy"
+            onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = FALLBACK_IMAGE; }}
             className="blog-image"
             sx={{
+              width: '100%',
               height: '100%',
               objectFit: 'cover',
               transition: 'transform 0.6s cubic-bezier(0.4, 0, 0.2, 1)',
             }}
           />
-          
+
           {/* Overlay con categoría */}
           <Box
             sx={{
@@ -87,7 +111,7 @@ const BlogCard = ({ post, index, prefersReducedMotion }) => {
           
           {/* Categoría */}
           <Chip
-            label={post.category}
+            label={norm.category || 'General'}
             color="warning"
             size="small"
             sx={{
@@ -106,7 +130,7 @@ const BlogCard = ({ post, index, prefersReducedMotion }) => {
           {/* Tiempo de lectura */}
           <Chip
             icon={<ScheduleIcon sx={{ fontSize: '0.9rem !important' }} />}
-            label={`${post.readTime} min`}
+            label={`${norm.readTime} min`}
             size="small"
             variant="outlined"
             sx={{
@@ -143,7 +167,7 @@ const BlogCard = ({ post, index, prefersReducedMotion }) => {
                 flexShrink: 0 // ✅ Prevent date from shrinking
               }}
             >
-              {new Date(post.publishedAt).toLocaleDateString('es-ES', {
+              {new Date(norm.publishedAt).toLocaleDateString('es-ES', {
                 day: 'numeric',
                 month: 'long',
                 year: 'numeric'
@@ -169,7 +193,7 @@ const BlogCard = ({ post, index, prefersReducedMotion }) => {
                 flexShrink: 0 // ✅ Prevent title from shrinking
               }}
             >
-              {post.title}
+              {norm.title}
             </Typography>
 
             {/* Excerpt */}
@@ -186,7 +210,7 @@ const BlogCard = ({ post, index, prefersReducedMotion }) => {
                 flexShrink: 0 // ✅ Prevent excerpt from shrinking
               }}
             >
-              {post.excerpt}
+              {norm.excerpt}
             </Typography>
 
             {/* Footer del post */}
@@ -203,14 +227,14 @@ const BlogCard = ({ post, index, prefersReducedMotion }) => {
             >
               {/* Autor */}
               <Stack direction="row" alignItems="center" spacing={1}>
-                <Avatar 
-                  src={post.author.avatar}
-                  alt={post.author.name}
+                <Avatar
+                  src={norm.author?.avatar || undefined}
+                  alt={norm.author?.name || 'Autor'}
                   sx={{ width: 32, height: 32 }}
                 />
                 <Typography
-                  component={post.author?.id ? Link : 'span'}
-                  href={post.author?.id ? `/user/${post.author.id}` : undefined}
+                  component={norm.author?.id ? Link : 'span'}
+                  href={norm.author?.id ? `/user/${norm.author.id}` : undefined}
                   variant="caption"
                   color="text.secondary"
                   sx={{

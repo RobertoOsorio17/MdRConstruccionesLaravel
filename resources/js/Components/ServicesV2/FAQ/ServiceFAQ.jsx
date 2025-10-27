@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import { ExpandMore, Search, HelpOutline } from '@mui/icons-material';
 import designSystem from '@/theme/designSystem';
 import { useIntersectionReveal } from '@/Hooks/useIntersectionReveal';
-import { trackSectionView, trackFAQExpand } from '@/Utils/trackEvent';
+import { trackSectionView, trackFAQExpand } from '@/Utils/analytics';
 
 /**
  * ServiceFAQ Component

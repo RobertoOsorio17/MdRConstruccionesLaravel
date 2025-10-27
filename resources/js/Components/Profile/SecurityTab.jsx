@@ -3,7 +3,6 @@ import { router } from '@inertiajs/react';
 import axios from 'axios';
 import {
     Box,
-    Grid,
     TextField,
     Button,
     Typography,
@@ -21,6 +20,7 @@ import {
     DialogContent,
     DialogActions
 } from '@mui/material';
+import Grid from '@mui/material/Grid';
 import {
     Lock as LockIcon,
     Security as SecurityIcon,
@@ -31,7 +31,7 @@ import {
 } from '@mui/icons-material';
 import TwoFactorModal from './TwoFactorModal';
 
-const SecurityTab = ({ user, twoFactorEnabled, recoveryCodes: initialRecoveryCodes }) => {
+const SecurityTab = ({ user, twoFactorEnabled, recoveryCodes: initialRecoveryCodes, force2FASetup = false }) => {
     const [passwordData, setPasswordData] = useState({
         current_password: '',
         password: '',
@@ -40,7 +40,7 @@ const SecurityTab = ({ user, twoFactorEnabled, recoveryCodes: initialRecoveryCod
     const [loading, setLoading] = useState(false);
     const [errors, setErrors] = useState({});
     const [successMessage, setSuccessMessage] = useState('');
-    const [twoFactorModalOpen, setTwoFactorModalOpen] = useState(false);
+    const [twoFactorModalOpen, setTwoFactorModalOpen] = useState(force2FASetup); // Auto-open if mandatory
     const [showRecoveryCodes, setShowRecoveryCodes] = useState(false);
     const [disableModalOpen, setDisableModalOpen] = useState(false);
     const [disablePassword, setDisablePassword] = useState('');
@@ -50,6 +50,7 @@ const SecurityTab = ({ user, twoFactorEnabled, recoveryCodes: initialRecoveryCod
     const [verifyPasswordError, setVerifyPasswordError] = useState('');
     const [recoveryCodes, setRecoveryCodes] = useState(null);
     const [loadingRecoveryCodes, setLoadingRecoveryCodes] = useState(false);
+    const [showMandatoryWarning, setShowMandatoryWarning] = useState(force2FASetup);
 
     const handlePasswordChange = (e) => {
         const { name, value } = e.target;
@@ -155,7 +156,7 @@ const SecurityTab = ({ user, twoFactorEnabled, recoveryCodes: initialRecoveryCod
 
     const passwordStrength = (password) => {
         if (!password) return { strength: 0, label: '', color: 'default' };
-        
+
         let strength = 0;
         if (password.length >= 8) strength++;
         if (password.length >= 12) strength++;
@@ -179,6 +180,30 @@ const SecurityTab = ({ user, twoFactorEnabled, recoveryCodes: initialRecoveryCod
                 Gestiona tu contraseña y configuración de seguridad
             </Typography>
 
+            {force2FASetup && showMandatoryWarning && (
+                <Alert
+                    severity="error"
+                    sx={{ mb: 3 }}
+                    action={
+                        <Button
+                            color="inherit"
+                            size="small"
+                            onClick={handleEnable2FA}
+                            variant="outlined"
+                        >
+                            Configurar Ahora
+                        </Button>
+                    }
+                >
+                    <Typography variant="body2" fontWeight="600">
+                        ⚠️ Configuración de 2FA Obligatoria
+                    </Typography>
+                    <Typography variant="body2">
+                        Como administrador/editor, debes activar la autenticación de dos factores para acceder al sistema.
+                    </Typography>
+                </Alert>
+            )}
+
             {successMessage && (
                 <Alert severity="success" sx={{ mb: 3 }} onClose={() => setSuccessMessage('')}>
                     {successMessage}
@@ -186,7 +211,9 @@ const SecurityTab = ({ user, twoFactorEnabled, recoveryCodes: initialRecoveryCod
             )}
 
             {/* Change Password Section */}
-            <Paper elevation={0} sx={{ p: 3, mb: 3, border: '1px solid', borderColor: 'divider' }}>
+            <Paper variant="outlined" sx={{ p: 3, mb: 3 }}>
+                <Typography variant="overline" sx={{ color: 'text.secondary' }}>Cambiar Contraseña</Typography>
+
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
                     <LockIcon color="primary" />
                     <Box>
@@ -204,6 +231,7 @@ const SecurityTab = ({ user, twoFactorEnabled, recoveryCodes: initialRecoveryCod
                         <Grid item xs={12}>
                             <TextField
                                 fullWidth
+                                size="small"
                                 label="Contraseña Actual"
                                 name="current_password"
                                 type="password"
@@ -217,6 +245,7 @@ const SecurityTab = ({ user, twoFactorEnabled, recoveryCodes: initialRecoveryCod
                         <Grid item xs={12}>
                             <TextField
                                 fullWidth
+                                size="small"
                                 label="Nueva Contraseña"
                                 name="password"
                                 type="password"
@@ -239,6 +268,7 @@ const SecurityTab = ({ user, twoFactorEnabled, recoveryCodes: initialRecoveryCod
                         <Grid item xs={12}>
                             <TextField
                                 fullWidth
+                                size="small"
                                 label="Confirmar Nueva Contraseña"
                                 name="password_confirmation"
                                 type="password"
@@ -264,8 +294,10 @@ const SecurityTab = ({ user, twoFactorEnabled, recoveryCodes: initialRecoveryCod
                 </form>
             </Paper>
 
+                <Typography variant="overline" sx={{ color: 'text.secondary' }}>Autenticación de Dos Factores (2FA)</Typography>
+
             {/* Two-Factor Authentication Section */}
-            <Paper elevation={0} sx={{ p: 3, border: '1px solid', borderColor: 'divider' }}>
+            <Paper variant="outlined" sx={{ p: 3 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
                     <ShieldIcon color="primary" />
                     <Box sx={{ flex: 1 }}>
@@ -362,6 +394,7 @@ const SecurityTab = ({ user, twoFactorEnabled, recoveryCodes: initialRecoveryCod
                     </Alert>
                     <TextField
                         fullWidth
+                        size="small"
                         type="password"
                         label="Contraseña"
                         value={verifyPassword}
@@ -435,6 +468,7 @@ const SecurityTab = ({ user, twoFactorEnabled, recoveryCodes: initialRecoveryCod
                 open={twoFactorModalOpen}
                 onClose={() => setTwoFactorModalOpen(false)}
                 twoFactorEnabled={twoFactorEnabled}
+                isMandatory={force2FASetup}
             />
 
             {/* Disable 2FA Modal */}
@@ -451,6 +485,7 @@ const SecurityTab = ({ user, twoFactorEnabled, recoveryCodes: initialRecoveryCod
                     </Alert>
                     <TextField
                         fullWidth
+                        size="small"
                         type="password"
                         label="Contraseña"
                         value={disablePassword}

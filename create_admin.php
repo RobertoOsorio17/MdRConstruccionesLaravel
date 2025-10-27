@@ -14,13 +14,19 @@ use App\Models\User;
 use App\Models\Role;
 use Illuminate\Support\Facades\Hash;
 
+if (!app()->environment(['local', 'development', 'testing'])) {
+    fwrite(STDERR, "❌ Este script solo puede ejecutarse en entornos locales.\n");
+    exit(1);
+}
+
 echo "=== Creating Admin User ===\n\n";
 
 // Admin user data
+$generatedPassword = bin2hex(random_bytes(10));
 $adminData = [
     'name' => 'Admin Test',
     'email' => 'admin@test.com',
-    'password' => Hash::make('password'),
+    'password' => Hash::make($generatedPassword),
     'role' => 'admin',
     'email_verified_at' => now(),
 ];
@@ -31,7 +37,7 @@ $existingUser = User::where('email', $adminData['email'])->first();
 if ($existingUser) {
     echo "User already exists. Updating password...\n";
     $existingUser->update([
-        'password' => Hash::make('password'),
+        'password' => Hash::make($generatedPassword),
         'role' => 'admin',
         'email_verified_at' => now(),
     ]);
@@ -55,8 +61,7 @@ if ($adminRole && !$user->roles()->where('role_id', $adminRole->id)->exists()) {
 
 echo "\n=== Admin User Details ===\n";
 echo "Email: {$user->email}\n";
-echo "Password: password\n";
+echo "Password: {$generatedPassword}\n";
 echo "Role: {$user->role}\n";
 echo "ID: {$user->id}\n";
 echo "\n✅ You can now login at: http://localhost:8000/login\n";
-

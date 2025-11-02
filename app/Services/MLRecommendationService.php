@@ -25,6 +25,95 @@ class MLRecommendationService
     private MatrixFactorizationService $matrixFactorization;
     private ExplainableAIService $explainableAI;
 
+
+    
+
+
+    
+
+    
+
+    
+
+    /**
+
+
+    
+
+    
+
+    
+
+     * Handle __construct.
+
+
+    
+
+    
+
+    
+
+     *
+
+
+    
+
+    
+
+    
+
+     * @param ContentAnalysisService $contentAnalysis The contentAnalysis.
+
+
+    
+
+    
+
+    
+
+     * @param MatrixFactorizationService $matrixFactorization The matrixFactorization.
+
+
+    
+
+    
+
+    
+
+     * @param ExplainableAIService $explainableAI The explainableAI.
+
+
+    
+
+    
+
+    
+
+     * @return void
+
+
+    
+
+    
+
+    
+
+     */
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
     public function __construct(
         ContentAnalysisService $contentAnalysis,
         MatrixFactorizationService $matrixFactorization,
@@ -35,9 +124,58 @@ class MLRecommendationService
         $this->explainableAI = $explainableAI;
     }
 
+    
+    
+    
+    
     /**
-     * Retrieve recommendations for a user or anonymous session.
+
+    
+    
+    
+     * Get recommendations.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param string $sessionId The sessionId.
+
+    
+    
+    
+     * @param int $userId The userId.
+
+    
+    
+    
+     * @param int $currentPostId The currentPostId.
+
+    
+    
+    
+     * @param int $limit The limit.
+
+    
+    
+    
+     * @return array
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function getRecommendations(
         string $sessionId = null,
         int $userId = null,
@@ -77,9 +215,58 @@ class MLRecommendationService
         }
     }
 
+    
+    
+    
+    
     /**
-     * Generate recommendations (extracted for cache control)
+
+    
+    
+    
+     * Handle generate recommendations.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param string $sessionId The sessionId.
+
+    
+    
+    
+     * @param int $userId The userId.
+
+    
+    
+    
+     * @param int $currentPostId The currentPostId.
+
+    
+    
+    
+     * @param int $limit The limit.
+
+    
+    
+    
+     * @return array
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function generateRecommendations(
         string $sessionId = null,
         int $userId = null,
@@ -132,11 +319,43 @@ class MLRecommendationService
         return $finalRecs;
     }
 
+    
+    
+    
+    
     /**
-     * Retrieve candidate posts for recommendation.
+
+    
+    
+    
+     * Get candidate posts.
+
+    
+    
+    
      *
-     * ✅ FIXED: Make candidate limit configurable
+
+    
+    
+    
+     * @param int $currentPostId The currentPostId.
+
+    
+    
+    
+     * @return Collection
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function getCandidatePosts(int $currentPostId = null): Collection
     {
         // ✅ Get limit from config instead of hardcoding
@@ -156,9 +375,53 @@ class MLRecommendationService
             ->get();
     }
 
+    
+    
+    
+    
     /**
-     * Generate content-based recommendations.
+
+    
+    
+    
+     * Get content based recommendations.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param int $currentPostId The currentPostId.
+
+    
+    
+    
+     * @param Collection $candidates The candidates.
+
+    
+    
+    
+     * @param int $limit The limit.
+
+    
+    
+    
+     * @return array
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function getContentBasedRecommendations(int $currentPostId = null, Collection $candidates, int $limit): array
     {
         if (!$currentPostId) {
@@ -226,11 +489,53 @@ class MLRecommendationService
         return array_slice($recommendations, 0, $limit);
     }
 
+    
+    
+    
+    
     /**
-     * Collaborative filtering recommendations using Matrix Factorization.
+
+    
+    
+    
+     * Get collaborative recommendations.
+
+    
+    
+    
      *
-     * V2.0: Now uses MatrixFactorizationService with ALS algorithm
+
+    
+    
+    
+     * @param MLUserProfile $userProfile The userProfile.
+
+    
+    
+    
+     * @param Collection $candidates The candidates.
+
+    
+    
+    
+     * @param int $limit The limit.
+
+    
+    
+    
+     * @return array
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function getCollaborativeRecommendations(MLUserProfile $userProfile, Collection $candidates, int $limit): array
     {
         try {
@@ -284,9 +589,53 @@ class MLRecommendationService
         }
     }
 
+    
+    
+    
+    
     /**
-     * Fallback basic collaborative filtering
+
+    
+    
+    
+     * Get basic collaborative recommendations.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param MLUserProfile $userProfile The userProfile.
+
+    
+    
+    
+     * @param Collection $candidates The candidates.
+
+    
+    
+    
+     * @param int $limit The limit.
+
+    
+    
+    
+     * @return array
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function getBasicCollaborativeRecommendations(MLUserProfile $userProfile, Collection $candidates, int $limit): array
     {
         // Find similar user profiles.
@@ -332,9 +681,53 @@ class MLRecommendationService
         return array_slice($recommendations, 0, $limit);
     }
 
+    
+    
+    
+    
     /**
-     * Personalized recommendations tailored to a user profile.
+
+    
+    
+    
+     * Get personalized recommendations.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param MLUserProfile $userProfile The userProfile.
+
+    
+    
+    
+     * @param Collection $candidates The candidates.
+
+    
+    
+    
+     * @param int $limit The limit.
+
+    
+    
+    
+     * @return array
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function getPersonalizedRecommendations(MLUserProfile $userProfile, Collection $candidates, int $limit): array
     {
         $recommendations = [];
@@ -389,9 +782,48 @@ class MLRecommendationService
         return array_slice($recommendations, 0, $limit);
     }
 
+    
+    
+    
+    
     /**
-     * Trending/popular recommendations.
+
+    
+    
+    
+     * Get trending recommendations.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Collection $candidates The candidates.
+
+    
+    
+    
+     * @param int $limit The limit.
+
+    
+    
+    
+     * @return array
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function getTrendingRecommendations(Collection $candidates, int $limit): array
     {
         $recommendations = [];
@@ -433,10 +865,53 @@ class MLRecommendationService
         return array_slice($recommendations, 0, $limit);
     }
 
+    
+    
+    
+    
     /**
-     * Combine and rank the aggregated recommendations.
-     * V2.0: Now includes ExplainableAI explanations
+
+    
+    
+    
+     * Handle combine and rank recommendations.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param array $allRecommendations The allRecommendations.
+
+    
+    
+    
+     * @param MLUserProfile $userProfile The userProfile.
+
+    
+    
+    
+     * @param int $limit The limit.
+
+    
+    
+    
+     * @return array
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function combineAndRankRecommendations(array $allRecommendations, MLUserProfile $userProfile = null, int $limit = 10): array
     {
         // ✅ FIX: Cache algorithm weights outside loop to avoid repeated config pulls
@@ -526,9 +1001,43 @@ class MLRecommendationService
         return $final;
     }
 
+    
+    
+    
+    
     /**
-     * Apply diversity boost to avoid overly similar recommendations.
+
+    
+    
+    
+     * Apply diversity boost.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param array $recommendations The recommendations.
+
+    
+    
+    
+     * @return array
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function applyDiversityBoost(array $recommendations): array
     {
         // Get diversity boost from settings
@@ -554,9 +1063,48 @@ class MLRecommendationService
         return $recommendations;
     }
 
+    
+    
+    
+    
     /**
-     * Find users similar to the current profile.
+
+    
+    
+    
+     * Handle find similar users.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param MLUserProfile $userProfile The userProfile.
+
+    
+    
+    
+     * @param int $limit The limit.
+
+    
+    
+    
+     * @return array
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function findSimilarUsers(MLUserProfile $userProfile, int $limit): array
     {
         $similarUsers = [];
@@ -579,9 +1127,48 @@ class MLRecommendationService
         return array_slice($similarUsers, 0, $limit, true);
     }
 
+    
+    
+    
+    
     /**
-     * Calculate a score based on preferred categories.
+
+    
+    
+    
+     * Calculate category score.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Post $post The post.
+
+    
+    
+    
+     * @param array $categoryPreferences The categoryPreferences.
+
+    
+    
+    
+     * @return float
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function calculateCategoryScore(Post $post, array $categoryPreferences): float
     {
         $score = 0;
@@ -601,9 +1188,48 @@ class MLRecommendationService
         return $count > 0 ? min($score / $count, 1.0) : 0;
     }
 
+    
+    
+    
+    
     /**
-     * Calculate a score based on interesting tags.
+
+    
+    
+    
+     * Calculate tag score.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Post $post The post.
+
+    
+    
+    
+     * @param array $tagInterests The tagInterests.
+
+    
+    
+    
+     * @return float
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function calculateTagScore(Post $post, array $tagInterests): float
     {
         $score = 0;
@@ -623,9 +1249,48 @@ class MLRecommendationService
         return $count > 0 ? min($score / $count, 1.0) : 0;
     }
 
+    
+    
+    
+    
     /**
-     * Calculate a score based on reading patterns.
+
+    
+    
+    
+     * Calculate pattern score.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Post $post The post.
+
+    
+    
+    
+     * @param array $readingPatterns The readingPatterns.
+
+    
+    
+    
+     * @return float
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function calculatePatternScore(Post $post, array $readingPatterns): float
     {
         $score = 0.5; // Neutral base score.
@@ -675,9 +1340,43 @@ class MLRecommendationService
         return min($score, 1.0);
     }
     
+    
+    
+    
+    
     /**
-     * Categorize content by approximate length.
+
+    
+    
+    
+     * Handle categorize content length.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param int $length The length.
+
+    
+    
+    
+     * @return string
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function categorizeContentLength(int $length): string
     {
         if ($length < 1000) return 'short';
@@ -686,9 +1385,48 @@ class MLRecommendationService
         return 'very_long';
     }
 
+    
+    
+    
+    
     /**
-     * Calculate a score based on preferred length.
+
+    
+    
+    
+     * Calculate length score.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Post $post The post.
+
+    
+    
+    
+     * @param MLUserProfile $userProfile The userProfile.
+
+    
+    
+    
+     * @return float
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function calculateLengthScore(Post $post, MLUserProfile $userProfile): float
     {
         $contentLength = strlen(strip_tags($post->content ?? ''));
@@ -700,9 +1438,53 @@ class MLRecommendationService
         return max(0, 1 - ($lengthDiff / $maxDiff));
     }
 
+    
+    
+    
+    
     /**
-     * Generate a reason for a content-based recommendation
+
+    
+    
+    
+     * Handle generate content based reason.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param float $contentSim The contentSim.
+
+    
+    
+    
+     * @param float $categorySim The categorySim.
+
+    
+    
+    
+     * @param float $tagSim The tagSim.
+
+    
+    
+    
+     * @return string
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function generateContentBasedReason(float $contentSim, float $categorySim, float $tagSim): string
     {
         $reasons = [];
@@ -714,9 +1496,53 @@ class MLRecommendationService
         return "Recommended because: " . (implode(', ', $reasons) ?: "content similarity");
     }
 
+    
+    
+    
+    
     /**
-     * Enhanced: intelligent precomputation of recommendations
+
+    
+    
+    
+     * Handle precompute recommendations.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param int $userId The userId.
+
+    
+    
+    
+     * @param string $sessionId The sessionId.
+
+    
+    
+    
+     * @param int $limit The limit.
+
+    
+    
+    
+     * @return array
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function precomputeRecommendations(
         int $userId = null,
         string $sessionId = null,
@@ -768,9 +1594,53 @@ class MLRecommendationService
         return $finalRecs;
     }
     
+    
+    
+    
+    
     /**
-     * Enhanced: personalized recommendations with engagement insights
+
+    
+    
+    
+     * Get enhanced personalized recommendations.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param MLUserProfile $userProfile The userProfile.
+
+    
+    
+    
+     * @param Collection $candidates The candidates.
+
+    
+    
+    
+     * @param int $limit The limit.
+
+    
+    
+    
+     * @return array
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function getEnhancedPersonalizedRecommendations(
         MLUserProfile $userProfile, 
         Collection $candidates, 
@@ -841,9 +1711,48 @@ class MLRecommendationService
         return array_slice($recommendations, 0, $limit);
     }
     
+    
+    
+    
+    
     /**
-     * NUEVA MEJORA: Trending con boost temporal
+
+    
+    
+    
+     * Get temporal trending recommendations.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Collection $candidates The candidates.
+
+    
+    
+    
+     * @param int $limit The limit.
+
+    
+    
+    
+     * @return array
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function getTemporalTrendingRecommendations(Collection $candidates, int $limit): array
     {
         $recommendations = [];
@@ -893,9 +1802,48 @@ class MLRecommendationService
         return array_slice($recommendations, 0, $limit);
     }
     
+    
+    
+    
+    
     /**
-     * ML improvements: helper methods for new capabilities
+
+    
+    
+    
+     * Get recent views.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param int $postId The postId.
+
+    
+    
+    
+     * @param int $days The days.
+
+    
+    
+    
+     * @return int
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function getRecentViews(int $postId, int $days): int
     {
         // ✅ Use static cache to prevent repeated queries for same post
@@ -911,6 +1859,86 @@ class MLRecommendationService
 
         return $cache[$key];
     }
+
+
+    
+
+
+    
+
+    
+
+    
+
+    /**
+
+
+    
+
+    
+
+    
+
+     * Get recent likes.
+
+
+    
+
+    
+
+    
+
+     *
+
+
+    
+
+    
+
+    
+
+     * @param int $postId The postId.
+
+
+    
+
+    
+
+    
+
+     * @param int $days The days.
+
+
+    
+
+    
+
+    
+
+     * @return int
+
+
+    
+
+    
+
+    
+
+     */
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
 
     private function getRecentLikes(int $postId, int $days): int
     {
@@ -928,6 +1956,86 @@ class MLRecommendationService
         return $cache[$key];
     }
 
+
+    
+
+
+    
+
+    
+
+    
+
+    /**
+
+
+    
+
+    
+
+    
+
+     * Get recent shares.
+
+
+    
+
+    
+
+    
+
+     *
+
+
+    
+
+    
+
+    
+
+     * @param int $postId The postId.
+
+
+    
+
+    
+
+    
+
+     * @param int $days The days.
+
+
+    
+
+    
+
+    
+
+     * @return int
+
+
+    
+
+    
+
+    
+
+     */
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
     private function getRecentShares(int $postId, int $days): int
     {
         // ✅ Use static cache to prevent repeated queries for same post
@@ -944,9 +2052,53 @@ class MLRecommendationService
         return $cache[$key];
     }
     
+    
+    
+    
+    
     /**
-     * Log recommendations for later analysis
+
+    
+    
+    
+     * Handle log recommendations.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param string $sessionId The sessionId.
+
+    
+    
+    
+     * @param int $userId The userId.
+
+    
+    
+    
+     * @param array $recommendations The recommendations.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function logRecommendations(string $sessionId = null, int $userId = null, array $recommendations): void
     {
         // ✅ FIXED: Batch insert to prevent N queries
@@ -976,9 +2128,53 @@ class MLRecommendationService
         }
     }
 
+    
+    
+    
+    
     /**
-     * Obtiene recomendaciones basadas en contenido mejoradas
+
+    
+    
+    
+     * Get enhanced content based recommendations.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param int $currentPostId The currentPostId.
+
+    
+    
+    
+     * @param Collection $candidates The candidates.
+
+    
+    
+    
+     * @param int $limit The limit.
+
+    
+    
+    
+     * @return array
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function getEnhancedContentBasedRecommendations(int $currentPostId, Collection $candidates, int $limit): array
     {
         $currentPost = Post::find($currentPostId);
@@ -1051,9 +2247,48 @@ class MLRecommendationService
         return array_slice($recommendations, 0, $limit);
     }
 
+    
+    
+    
+    
     /**
-     * Obtiene recomendaciones trending en tiempo real
+
+    
+    
+    
+     * Get real time trending recommendations.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Collection $candidates The candidates.
+
+    
+    
+    
+     * @param int $limit The limit.
+
+    
+    
+    
+     * @return array
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function getRealTimeTrendingRecommendations(Collection $candidates, int $limit): array
     {
         $recommendations = [];
@@ -1103,9 +2338,58 @@ class MLRecommendationService
         return array_slice($recommendations, 0, $limit);
     }
 
+    
+    
+    
+    
     /**
-     * Generate an enhanced reason for content recommendations
+
+    
+    
+    
+     * Handle generate enhanced content reason.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param float $content The content.
+
+    
+    
+    
+     * @param float $category The category.
+
+    
+    
+    
+     * @param float $tag The tag.
+
+    
+    
+    
+     * @param float $author The author.
+
+    
+    
+    
+     * @return string
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function generateEnhancedContentReason(float $content, float $category, float $tag, float $author): string
     {
         $reasons = [];

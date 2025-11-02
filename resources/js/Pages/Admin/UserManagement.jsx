@@ -893,7 +893,9 @@ const UserManagement = () => {
                         <EditIcon sx={{ mr: 1, fontSize: 18 }} />
                         Editar
                     </MenuItem>
-                    {selectedUser && !selectedUser.roles?.some(role => {
+                    {selectedUser &&
+                     !selectedUser.is_banned &&
+                     !selectedUser.roles?.some(role => {
                         // Handle both string array and object array formats
                         const roleName = typeof role === 'string' ? role : role.name;
                         return ['admin', 'super-admin'].includes(roleName);

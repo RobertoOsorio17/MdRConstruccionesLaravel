@@ -1,16 +1,23 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Head } from '@inertiajs/react';
 import { Box, Container, Typography, Divider } from '@mui/material';
 import GuestLayout from '@/Layouts/GuestLayout';
 import InteractionTracker from '@/Components/ML/InteractionTracker';
 import RecommendationsWidget from '@/Components/ML/RecommendationsWidget';
 import MLInsights from '@/Components/ML/MLInsights';
+import { sanitizeHtml } from '@/utils/sanitize';
 
 /**
  * Ejemplo de página de blog con integración completa de ML
  * Este componente muestra cómo integrar todos los componentes ML en una página
  */
 const ShowWithML = ({ post, auth }) => {
+    // Sanitizar el contenido del post para prevenir XSS
+    const sanitizedContent = useMemo(
+        () => sanitizeHtml(post?.content ?? ''),
+        [post?.content]
+    );
+
     return (
         <GuestLayout user={auth.user}>
             <Head title={post.title} />
@@ -115,7 +122,7 @@ const ShowWithML = ({ post, auth }) => {
                                 fontSize: '0.875rem'
                             }
                         }}
-                        dangerouslySetInnerHTML={{ __html: post.content }}
+                        dangerouslySetInnerHTML={{ __html: sanitizedContent }}
                     />
                 </Box>
                 

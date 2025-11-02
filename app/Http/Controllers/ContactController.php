@@ -19,12 +19,43 @@ use App\Models\Setting;
  */
 class ContactController extends Controller
 {
+    
+    
+    
+    
     /**
-     * Validate file using magic bytes (file signature).
+
+    
+    
+    
+     * Validate file magic bytes.
+
+    
+    
+    
      *
-     * @param mixed $file The uploaded file instance.
-     * @return bool True when the file header matches allowed signatures.
+
+    
+    
+    
+     * @param mixed $file The file.
+
+    
+    
+    
+     * @return bool
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function validateFileMagicBytes($file): bool
     {
         $handle = fopen($file->getRealPath(), 'rb');
@@ -57,12 +88,43 @@ class ContactController extends Controller
         return false;
     }
 
+    
+    
+    
+    
     /**
-     * Sanitize filename to prevent directory traversal and other attacks.
+
+    
+    
+    
+     * Handle sanitize filename.
+
+    
+    
+    
      *
-     * @param string $filename The original client filename.
-     * @return string A sanitized, length-limited filename.
+
+    
+    
+    
+     * @param string $filename The filename.
+
+    
+    
+    
+     * @return string
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function sanitizeFilename(string $filename): string
     {
         // Remove path separators.
@@ -81,16 +143,48 @@ class ContactController extends Controller
         return $filename;
     }
 
+    
+    
+    
+    
     /**
-     * Handle contact form submission.
+
+    
+    
+    
+     * Handle submit.
+
+    
+    
+    
      *
-     * Applies rate limiting, strict validation, reCAPTCHA verification, secure
-     * attachment processing, and sends email notifications.
-     *
-     * @param Request $request The inbound HTTP request.
-     * @param RecaptchaService $recaptcha reCAPTCHA verification service.
-     * @return \Illuminate\Http\RedirectResponse Redirects back with status or errors.
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @param RecaptchaService $recaptcha The recaptcha.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function submit(Request $request, RecaptchaService $recaptcha)
     {
         // 1) Throttle: 3 submissions/hour/IP to curb abuse.
@@ -354,14 +448,14 @@ class ContactController extends Controller
                 'user_agent' => $request->userAgent(),
             ]);
 
-            // 11) Send email notification to admin.
+            // 11) Send email notification to admin (OPTIMIZED: queued for immediate response).
             $adminEmail = config('mail.admin_email', config('mail.from.address'));
             $adminNotifiable = new \App\Models\AnonymousNotifiable($adminEmail, 'Admin');
-            $adminNotifiable->notify(new \App\Notifications\NewContactRequestNotification($contactRequest));
+            $adminNotifiable->notify((new \App\Notifications\NewContactRequestNotification($contactRequest))->onQueue('emails'));
 
-            // 12) Send confirmation email to user.
+            // 12) Send confirmation email to user (OPTIMIZED: queued for immediate response).
             $userNotifiable = new \App\Models\AnonymousNotifiable($contactRequest->email, $contactRequest->name);
-            $userNotifiable->notify(new \App\Notifications\ContactRequestConfirmation($contactRequest));
+            $userNotifiable->notify((new \App\Notifications\ContactRequestConfirmation($contactRequest))->onQueue('emails'));
 
             session()->flash('success', '¡Gracias por tu mensaje! Te contactaremos en las próximas 24 horas.');
             return redirect()->back();
@@ -389,15 +483,48 @@ class ContactController extends Controller
         }
     }
 
+    
+    
+    
+    
     /**
-     * Handle budget request form submission.
+
+    
+    
+    
+     * Handle budget request.
+
+    
+    
+    
      *
-     * Applies strict validation and reCAPTCHA verification and stores the request for follow-up, then notifies admin and user.
-     *
-     * @param Request $request The current HTTP request instance.
-     * @param RecaptchaService $recaptcha reCAPTCHA verification service.
-     * @return \Illuminate\Http\RedirectResponse Redirect back with status.
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @param RecaptchaService $recaptcha The recaptcha.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function budgetRequest(Request $request, RecaptchaService $recaptcha)
     {
         // reCAPTCHA validation to prevent spam.
@@ -478,14 +605,14 @@ class ContactController extends Controller
                 'ip' => $request->ip(),
             ]);
 
-            // Send email notification to admin
+            // Send email notification to admin (OPTIMIZED: queued for immediate response)
             $adminEmail = config('mail.admin_email', config('mail.from.address'));
             $adminNotifiable = new \App\Models\AnonymousNotifiable($adminEmail, 'Admin');
-            $adminNotifiable->notify(new \App\Notifications\NewContactRequestNotification($contactRequest));
+            $adminNotifiable->notify((new \App\Notifications\NewContactRequestNotification($contactRequest))->onQueue('emails'));
 
-            // Send confirmation email to user
+            // Send confirmation email to user (OPTIMIZED: queued for immediate response)
             $userNotifiable = new \App\Models\AnonymousNotifiable($contactRequest->email, $contactRequest->name);
-            $userNotifiable->notify(new \App\Notifications\ContactRequestConfirmation($contactRequest));
+            $userNotifiable->notify((new \App\Notifications\ContactRequestConfirmation($contactRequest))->onQueue('emails'));
 
             session()->flash('success', 'Budget request received! Our team will contact you in the next few hours to schedule a free visit.');
             return redirect()->back();

@@ -4,6 +4,10 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\AdminSetting;
+use App\Notifications\RecoveryCodeUsedNotification;
+use App\Notifications\RecoveryCodesRegeneratedNotification;
+use App\Notifications\TwoFactorDisabledNotification;
+use App\Notifications\TwoFactorEnabledNotification;
 use App\Services\SecurityLogger;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
@@ -11,6 +15,7 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\RateLimiter;
 use Inertia\Inertia;
 use Inertia\Response;
 use Laravel\Fortify\Actions\DisableTwoFactorAuthentication;
@@ -31,12 +36,43 @@ use Laravel\Fortify\Contracts\TwoFactorAuthenticationProvider;
  */
 class TwoFactorController extends Controller
 {
+    
+    
+    
+    
     /**
-     * Show the two factor authentication setup page.
+
+    
+    
+    
+     * Display the specified resource.
+
+    
+    
+    
      *
-     * @param Request $request The current HTTP request instance.
-     * @return Response Inertia response with 2FA status flags.
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return Response
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function show(Request $request): Response
     {
         $user = $request->user();
@@ -47,16 +83,48 @@ class TwoFactorController extends Controller
         ]);
     }
 
+    
+    
+    
+    
     /**
-     * Enable two factor authentication for the user.
+
+    
+    
+    
+     * Store a newly created resource.
+
+    
+    
+    
      *
-     * Uses Fortify's EnableTwoFactorAuthentication action to generate a secret
-     * and initial recovery codes for the authenticated user.
-     *
-     * @param Request $request The current HTTP request instance.
-     * @param EnableTwoFactorAuthentication $enable Fortify action to enable 2FA.
-     * @return RedirectResponse Redirect back with status.
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @param EnableTwoFactorAuthentication $enable The enable.
+
+    
+    
+    
+     * @return RedirectResponse
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function store(Request $request, EnableTwoFactorAuthentication $enable): RedirectResponse
     {
         $user = $request->user();
@@ -67,19 +135,51 @@ class TwoFactorController extends Controller
             'method' => 'totp',
         ]);
 
+        // ✅ SECURITY FIX: Send notification
+        $user->notify(new TwoFactorEnabledNotification([
+            'ip' => $request->ip(),
+        ]));
+
         return back()->with('status', 'two-factor-authentication-enabled');
     }
 
+    
+    
+    
+    
     /**
-     * Get the two factor authentication QR code.
+
+    
+    
+    
+     * Handle qr code.
+
+    
+    
+    
      *
-     * Returns an SVG and URL representation for authenticator app enrollment.
-     * If the stored secret cannot be decrypted (e.g., APP_KEY rotated), the
-     * corrupted 2FA configuration is reset and a client hint is returned.
-     *
-     * @param Request $request The current HTTP request instance.
-     * @return \Illuminate\Http\JsonResponse JSON payload with SVG and URL, or error details.
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function qrCode(Request $request)
     {
         $user = $request->user();
@@ -121,17 +221,43 @@ class TwoFactorController extends Controller
         }
     }
 
+    
+    
+    
+    
     /**
-     * Get the two factor authentication recovery codes during initial setup.
+
+    
+    
+    
+     * Handle initial recovery codes.
+
+    
+    
+    
      *
-     * This endpoint is ONLY for the initial setup flow (before confirmation).
-     * After 2FA is confirmed, use the recoveryCodes endpoint which requires password.
-     *
-     * Security: Only works if 2FA is enabled but NOT confirmed yet.
-     *
-     * @param Request $request The current HTTP request instance.
-     * @return \Illuminate\Http\JsonResponse JSON response with recovery codes.
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function initialRecoveryCodes(Request $request)
     {
         $user = $request->user();
@@ -180,15 +306,43 @@ class TwoFactorController extends Controller
         }
     }
 
+    
+    
+    
+    
     /**
-     * Get the two factor authentication recovery codes.
+
+    
+    
+    
+     * Handle recovery codes.
+
+    
+    
+    
      *
-     * Requires password verification for security.
-     * This is for viewing codes AFTER 2FA has been confirmed.
-     *
-     * @param Request $request The current HTTP request instance.
-     * @return \Illuminate\Http\JsonResponse JSON response with recovery codes, or validation errors.
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function recoveryCodes(Request $request)
     {
         $request->validate([
@@ -244,15 +398,43 @@ class TwoFactorController extends Controller
         }
     }
 
+    
+    
+    
+    
     /**
-     * Confirm two factor authentication for the user.
+
+    
+    
+    
+     * Handle confirm.
+
+    
+    
+    
      *
-     * Verifies the 6-digit code from the authenticator app and marks the 2FA
-     * secret as confirmed. Includes a small rate limit to deter brute force.
-     *
-     * @param Request $request The current HTTP request instance.
-     * @return RedirectResponse Redirect back with status or errors.
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return RedirectResponse
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function confirm(Request $request): RedirectResponse
     {
         $request->validate([
@@ -354,29 +536,121 @@ class TwoFactorController extends Controller
         return back()->with('status', 'two-factor-authentication-confirmed');
     }
 
+    
+    
+    
+    
     /**
-     * Regenerate the two factor authentication recovery codes.
+
+    
+    
+    
+     * Handle regenerate.
+
+    
+    
+    
      *
-     * @param Request $request The current HTTP request instance.
-     * @param GenerateNewRecoveryCodes $generate Fortify action to regenerate codes.
-     * @return RedirectResponse Redirect back with status.
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @param GenerateNewRecoveryCodes $generate The generate.
+
+    
+    
+    
+     * @return RedirectResponse
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function regenerate(Request $request, GenerateNewRecoveryCodes $generate): RedirectResponse
     {
+        // ✅ SECURITY FIX: Require password confirmation
+        $request->validate([
+            'password' => 'required|current_password',
+        ]);
+
+        // ✅ SECURITY FIX: Rate limiting - max 3 regenerations per hour
+        $key = "recovery_codes_regen:{$request->user()->id}";
+        if (RateLimiter::tooManyAttempts($key, 3)) {
+            return back()->withErrors([
+                'password' => 'Demasiadas regeneraciones de códigos. Intenta en 1 hora.'
+            ]);
+        }
+
+        RateLimiter::hit($key, 3600); // 1 hour
+
         $generate($request->user());
+
+        // ✅ SECURITY FIX: Log and notify
+        SecurityLogger::log2FAEvent('recovery_codes_regenerated', $request->user(), [
+            'ip' => $request->ip(),
+        ]);
+
+        $request->user()->notify(new RecoveryCodesRegeneratedNotification([
+            'ip' => $request->ip(),
+        ]));
 
         return back()->with('status', 'recovery-codes-generated');
     }
 
+    
+    
+    
+    
     /**
-     * Disable two factor authentication for the user.
+
+    
+    
+    
+     * Remove the specified resource.
+
+    
+    
+    
      *
-     * Requires password confirmation prior to disabling for safety.
-     *
-     * @param Request $request The current HTTP request instance.
-     * @param DisableTwoFactorAuthentication $disable Fortify action to disable 2FA.
-     * @return RedirectResponse Redirect back with status.
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @param DisableTwoFactorAuthentication $disable The disable.
+
+    
+    
+    
+     * @return RedirectResponse
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function destroy(Request $request, DisableTwoFactorAuthentication $disable): RedirectResponse
     {
         $request->validate([
@@ -410,17 +684,46 @@ class TwoFactorController extends Controller
             'trusted_devices_removed' => true,
         ]);
 
+        // ✅ SECURITY FIX: Send notification
+        $user->notify(new TwoFactorDisabledNotification([
+            'ip' => $request->ip(),
+        ]));
+
         return back()->with('status', 'two-factor-authentication-disabled');
     }
 
+    
+    
+    
+    
     /**
-     * Show the two factor challenge page.
+
+    
+    
+    
+     * Handle challenge.
+
+    
+    
+    
      *
-     * Validates the temporary login session data and ensures the challenge has
-     * not expired before rendering the challenge view.
-     *
-     * @return Response Inertia response for the 2FA challenge page, or redirect on error.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function challenge()
     {
         // Verify session has required data
@@ -468,19 +771,54 @@ class TwoFactorController extends Controller
         return Inertia::render('Auth/TwoFactorChallenge');
     }
 
+    
+    
+    
+    
     /**
-     * Verify the two factor authentication code.
+
+    
+    
+    
+     * Handle verify.
+
+    
+    
+    
      *
-     * Accepts either a 6-digit authenticator code or a recovery code. Applies
-     * rate limiting per IP, verifies session integrity, authenticates the user
-     * on success, optionally registers a trusted device, and responds with JSON
-     * for AJAX requests or redirects otherwise.
-     *
-     * @param Request $request The current HTTP request instance.
-     * @return \Illuminate\Http\JsonResponse|\Illuminate\Http\RedirectResponse JSON success payload or redirect.
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function verify(Request $request)
     {
+        // 🔍 DEBUG LOG - Entry point
+        \Log::debug('2FA verify() method called', [
+            'has_code' => $request->filled('code'),
+            'has_recovery_code' => $request->filled('recovery_code'),
+            'expects_json' => $request->expectsJson(),
+            'wants_json' => $request->wantsJson(),
+            'ip' => $request->ip(),
+        ]);
+
         $request->validate([
             'code' => 'nullable|string|size:6',
             'recovery_code' => 'nullable|string',
@@ -530,8 +868,22 @@ class TwoFactorController extends Controller
         $legacyPasswordHash = session('login.password_hash');
         $attemptTime = session('login.attempt_time');
 
+        // 🔍 DEBUG LOG - Session data check
+        \Log::debug('2FA verify() - Session data retrieved', [
+            'has_user_id' => !empty($userId),
+            'user_id' => $userId,
+            'has_challenge_nonce' => !empty($challengeNonce),
+            'has_challenge_signature' => !empty($challengeSignature),
+            'has_legacy_password_signature' => !empty($legacyPasswordSignature),
+            'has_legacy_password_hash' => !empty($legacyPasswordHash),
+            'has_attempt_time' => !empty($attemptTime),
+            'attempt_time' => $attemptTime,
+            'time_elapsed' => $attemptTime ? (now()->timestamp - $attemptTime) : null,
+        ]);
+
         // Verify session data exists
         if (!$userId || (!$challengeSignature && !$legacyPasswordSignature && !$legacyPasswordHash) || !$attemptTime) {
+            \Log::warning('2FA verify() - Session data missing or invalid');
             session()->forget([
                 'login.id',
                 'login.remember',
@@ -567,7 +919,17 @@ class TwoFactorController extends Controller
         }
 
         $user = \App\Models\User::find($userId);
+
+        // 🔍 DEBUG LOG - User lookup
+        \Log::debug('2FA verify() - User lookup', [
+            'user_id' => $userId,
+            'user_found' => !empty($user),
+            'has_2fa_secret' => $user ? !empty($user->two_factor_secret) : false,
+            'has_2fa_confirmed' => $user ? !empty($user->two_factor_confirmed_at) : false,
+        ]);
+
         if (!$user) {
+            \Log::error('2FA verify() - User not found in database', ['user_id' => $userId]);
             session()->forget([
                 'login.id',
                 'login.remember',
@@ -590,14 +952,44 @@ class TwoFactorController extends Controller
         if ($challengeSignature && $challengeNonce) {
             $expected = hash_hmac('sha256', $challengeNonce . '|' . $user->password, config('app.key', 'app-key') . '|2fa');
             $signatureValid = hash_equals($expected, $challengeSignature);
+
+            // 🔍 DEBUG LOG
+            \Log::debug('2FA Signature Verification (Challenge)', [
+                'user_id' => $user->id,
+                'has_nonce' => !empty($challengeNonce),
+                'has_signature' => !empty($challengeSignature),
+                'signature_valid' => $signatureValid,
+            ]);
         } elseif ($legacyPasswordSignature) {
             $expectedLegacy = hash_hmac('sha256', $user->password, config('app.key', 'app-key') . '|2fa');
             $signatureValid = hash_equals($expectedLegacy, $legacyPasswordSignature);
+
+            // 🔍 DEBUG LOG
+            \Log::debug('2FA Signature Verification (Legacy Password)', [
+                'user_id' => $user->id,
+                'has_signature' => !empty($legacyPasswordSignature),
+                'signature_valid' => $signatureValid,
+            ]);
         } elseif ($legacyPasswordHash) {
             $signatureValid = hash_equals($user->password, $legacyPasswordHash);
+
+            // 🔍 DEBUG LOG
+            \Log::debug('2FA Signature Verification (Legacy Hash)', [
+                'user_id' => $user->id,
+                'has_hash' => !empty($legacyPasswordHash),
+                'signature_valid' => $signatureValid,
+            ]);
         }
 
         if (!$signatureValid) {
+            // 🔍 DEBUG LOG
+            \Log::warning('2FA Signature Validation Failed', [
+                'user_id' => $user->id,
+                'has_challenge_signature' => !empty($challengeSignature),
+                'has_challenge_nonce' => !empty($challengeNonce),
+                'has_legacy_password_signature' => !empty($legacyPasswordSignature),
+                'has_legacy_password_hash' => !empty($legacyPasswordHash),
+            ]);
             session()->forget([
                 'login.id',
                 'login.remember',
@@ -638,6 +1030,13 @@ class TwoFactorController extends Controller
 
         // Try authentication code first
         if ($request->filled('code')) {
+            // 🔍 DEBUG LOG - Code verification starting
+            \Log::debug('2FA verify() - Starting code verification', [
+                'user_id' => $user->id,
+                'code_length' => strlen($request->code),
+                'ip' => $request->ip(),
+            ]);
+
             try {
                 \Log::info('2FA verification attempt', [
                     'user_id' => $user->id,
@@ -646,6 +1045,12 @@ class TwoFactorController extends Controller
                 ]);
 
                 $valid = $provider->verify(decrypt($user->two_factor_secret), $request->code);
+
+                // 🔍 DEBUG LOG - Verification result
+                \Log::debug('2FA verify() - Code verification result', [
+                    'user_id' => $user->id,
+                    'valid' => $valid,
+                ]);
 
                 \Log::info('2FA verification result', [
                     'user_id' => $user->id,
@@ -736,12 +1141,34 @@ class TwoFactorController extends Controller
 
                 foreach ($recoveryCodes as $index => $recoveryCode) {
                     if (hash_equals($recoveryCode, $request->recovery_code)) {
+                        // ✅ SECURITY FIX: Log recovery code usage
+                        DB::table('recovery_code_usage')->insert([
+                            'user_id' => $lockedUser->id,
+                            'code_hash' => hash('sha256', $recoveryCode),
+                            'ip_address' => request()->ip(),
+                            'user_agent' => request()->userAgent(),
+                            'used_at' => now(),
+                        ]);
+
                         unset($recoveryCodes[$index]);
                         $lockedUser->forceFill([
                             'two_factor_recovery_codes' => encrypt(json_encode(array_values($recoveryCodes))),
                         ])->save();
                         $validRecovery = true;
                         $remaining = count($recoveryCodes);
+
+                        // ✅ SECURITY FIX: Log security event
+                        SecurityLogger::log2FAEvent('recovery_code_used', $lockedUser, [
+                            'ip' => request()->ip(),
+                            'remaining_codes' => $remaining,
+                        ]);
+
+                        // ✅ SECURITY FIX: Send notification
+                        $lockedUser->notify(new RecoveryCodeUsedNotification([
+                            'ip' => request()->ip(),
+                            'remaining_codes' => $remaining,
+                        ]));
+
                         break;
                     }
                 }
@@ -801,11 +1228,27 @@ class TwoFactorController extends Controller
         // Clear rate limit counter on success
         cache()->forget($key);
 
+        // 🔍 DEBUG LOG - About to authenticate user
+        \Log::debug('2FA verify() - About to authenticate user', [
+            'user_id' => $user->id,
+            'remember' => session('login.remember', false),
+            'current_auth_check' => Auth::check(),
+            'current_auth_id' => Auth::id(),
+        ]);
+
         // Authenticate the user NOW (after successful 2FA verification)
         // User was NOT authenticated before - only credentials were verified
         Auth::login($user, session('login.remember', false));
         $request->session()->regenerate();
         $request->session()->regenerateToken();
+
+        // 🔍 DEBUG LOG - User authenticated
+        \Log::debug('2FA verify() - User authenticated', [
+            'user_id' => $user->id,
+            'auth_check' => Auth::check(),
+            'auth_id' => Auth::id(),
+            'session_id' => session()->getId(),
+        ]);
 
         // Update last login
         $user->forceFill([
@@ -820,6 +1263,20 @@ class TwoFactorController extends Controller
             'ip' => $request->ip(),
             'method' => $request->filled('code') ? 'code' : 'recovery_code'
         ]);
+
+        // ✅ SECURITY FIX: Detect new device login after 2FA
+        if (method_exists($this, 'detectNewDevice')) {
+            try {
+                $this->detectNewDevice($request, $user);
+            } catch (\Exception $e) {
+                // Log error but don't block login
+                \Log::error('Failed to detect new device after 2FA', [
+                    'user_id' => $user->id,
+                    'error' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString(),
+                ]);
+            }
+        }
 
         // Handle trusted device if requested
         $lowRecoveryCodes = false;
@@ -911,8 +1368,21 @@ class TwoFactorController extends Controller
                 $response['remaining_codes'] = $remainingCodes;
             }
 
+            // 🔍 DEBUG LOG - Returning JSON response
+            \Log::debug('2FA verify() returning JSON response', [
+                'user_id' => $user->id,
+                'redirect' => $intended,
+                'low_recovery_codes' => $lowRecoveryCodes ?? false,
+            ]);
+
             return response()->json($response);
         }
+
+        // 🔍 DEBUG LOG - Returning redirect response
+        \Log::debug('2FA verify() returning redirect', [
+            'user_id' => $user->id,
+            'redirect' => $intended,
+        ]);
 
         return redirect($intended);
     }

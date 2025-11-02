@@ -30,95 +30,367 @@ class CacheService
     const PREFIX_ANALYTICS = 'analytics:';
     const PREFIX_SETTINGS = 'settings:';
 
+    
+    
+    
+    
     /**
-     * Remember a value in cache with automatic key generation.
+
+    
+    
+    
+     * Handle remember.
+
+    
+    
+    
      *
-     * @param string $key
-     * @param int $ttl
-     * @param callable $callback
+
+    
+    
+    
+     * @param string $key The key.
+
+    
+    
+    
+     * @param int $ttl The ttl.
+
+    
+    
+    
+     * @param callable $callback The callback.
+
+    
+    
+    
      * @return mixed
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function remember(string $key, int $ttl, callable $callback): mixed
     {
         return Cache::remember($key, $ttl, $callback);
     }
 
+    
+    
+    
+    
     /**
-     * Remember a value forever (until manually cleared).
+
+    
+    
+    
+     * Handle remember forever.
+
+    
+    
+    
      *
-     * @param string $key
-     * @param callable $callback
+
+    
+    
+    
+     * @param string $key The key.
+
+    
+    
+    
+     * @param callable $callback The callback.
+
+    
+    
+    
      * @return mixed
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function rememberForever(string $key, callable $callback): mixed
     {
         return Cache::rememberForever($key, $callback);
     }
 
+    
+    
+    
+    
     /**
-     * Get a value from cache.
+
+    
+    
+    
+     * Handle get.
+
+    
+    
+    
      *
-     * @param string $key
-     * @param mixed $default
+
+    
+    
+    
+     * @param string $key The key.
+
+    
+    
+    
+     * @param mixed $default The default.
+
+    
+    
+    
      * @return mixed
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function get(string $key, mixed $default = null): mixed
     {
         return Cache::get($key, $default);
     }
 
+    
+    
+    
+    
     /**
-     * Put a value in cache.
+
+    
+    
+    
+     * Handle put.
+
+    
+    
+    
      *
-     * @param string $key
-     * @param mixed $value
-     * @param int $ttl
+
+    
+    
+    
+     * @param string $key The key.
+
+    
+    
+    
+     * @param mixed $value The value.
+
+    
+    
+    
+     * @param int $ttl The ttl.
+
+    
+    
+    
      * @return bool
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function put(string $key, mixed $value, int $ttl = self::TTL_MEDIUM): bool
     {
         return Cache::put($key, $value, $ttl);
     }
 
+    
+    
+    
+    
     /**
-     * Put a value in cache forever.
+
+    
+    
+    
+     * Handle forever.
+
+    
+    
+    
      *
-     * @param string $key
-     * @param mixed $value
+
+    
+    
+    
+     * @param string $key The key.
+
+    
+    
+    
+     * @param mixed $value The value.
+
+    
+    
+    
      * @return bool
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function forever(string $key, mixed $value): bool
     {
         return Cache::forever($key, $value);
     }
 
+    
+    
+    
+    
     /**
-     * Forget a value from cache.
+
+    
+    
+    
+     * Handle forget.
+
+    
+    
+    
      *
-     * @param string $key
+
+    
+    
+    
+     * @param string $key The key.
+
+    
+    
+    
      * @return bool
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function forget(string $key): bool
     {
         return Cache::forget($key);
     }
 
+    
+    
+    
+    
     /**
-     * Flush all cache.
+
+    
+    
+    
+     * Handle flush.
+
+    
+    
+    
      *
+
+    
+    
+    
      * @return bool
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function flush(): bool
     {
         return Cache::flush();
     }
 
+    
+    
+    
+    
     /**
-     * Flush cache by prefix/tag.
+
+    
+    
+    
+     * Handle flush by prefix.
+
+    
+    
+    
      *
-     * @param string $prefix
+
+    
+    
+    
+     * @param string $prefix The prefix.
+
+    
+    
+    
      * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function flushByPrefix(string $prefix): void
     {
         $keys = $this->getKeysByPrefix($prefix);
@@ -128,12 +400,43 @@ class CacheService
         }
     }
 
+    
+    
+    
+    
     /**
-     * Get all keys matching a prefix.
+
+    
+    
+    
+     * Get keys by prefix.
+
+    
+    
+    
      *
-     * @param string $prefix
+
+    
+    
+    
+     * @param string $prefix The prefix.
+
+    
+    
+    
      * @return array
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     protected function getKeysByPrefix(string $prefix): array
     {
         try {
@@ -149,13 +452,48 @@ class CacheService
         return [];
     }
 
+    
+    
+    
+    
     /**
-     * Cache user data.
+
+    
+    
+    
+     * Handle cache user.
+
+    
+    
+    
      *
-     * @param int $userId
-     * @param callable $callback
+
+    
+    
+    
+     * @param int $userId The userId.
+
+    
+    
+    
+     * @param callable $callback The callback.
+
+    
+    
+    
      * @return mixed
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function cacheUser(int $userId, callable $callback): mixed
     {
         return $this->remember(
@@ -165,13 +503,48 @@ class CacheService
         );
     }
 
+    
+    
+    
+    
     /**
-     * Cache post data.
+
+    
+    
+    
+     * Handle cache post.
+
+    
+    
+    
      *
-     * @param int $postId
-     * @param callable $callback
+
+    
+    
+    
+     * @param int $postId The postId.
+
+    
+    
+    
+     * @param callable $callback The callback.
+
+    
+    
+    
      * @return mixed
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function cachePost(int $postId, callable $callback): mixed
     {
         return $this->remember(
@@ -181,13 +554,48 @@ class CacheService
         );
     }
 
+    
+    
+    
+    
     /**
-     * Cache analytics data.
+
+    
+    
+    
+     * Handle cache analytics.
+
+    
+    
+    
      *
-     * @param string $key
-     * @param callable $callback
+
+    
+    
+    
+     * @param string $key The key.
+
+    
+    
+    
+     * @param callable $callback The callback.
+
+    
+    
+    
      * @return mixed
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function cacheAnalytics(string $key, callable $callback): mixed
     {
         return $this->remember(
@@ -197,13 +605,48 @@ class CacheService
         );
     }
 
+    
+    
+    
+    
     /**
-     * Cache settings.
+
+    
+    
+    
+     * Handle cache settings.
+
+    
+    
+    
      *
-     * @param string $key
-     * @param callable $callback
+
+    
+    
+    
+     * @param string $key The key.
+
+    
+    
+    
+     * @param callable $callback The callback.
+
+    
+    
+    
      * @return mixed
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function cacheSettings(string $key, callable $callback): mixed
     {
         return $this->remember(
@@ -213,53 +656,196 @@ class CacheService
         );
     }
 
+    
+    
+    
+    
     /**
-     * Invalidate user cache.
+
+    
+    
+    
+     * Handle invalidate user.
+
+    
+    
+    
      *
-     * @param int $userId
+
+    
+    
+    
+     * @param int $userId The userId.
+
+    
+    
+    
      * @return bool
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function invalidateUser(int $userId): bool
     {
         return $this->forget(self::PREFIX_USER . $userId);
     }
 
+    
+    
+    
+    
     /**
-     * Invalidate post cache.
+
+    
+    
+    
+     * Handle invalidate post.
+
+    
+    
+    
      *
-     * @param int $postId
+
+    
+    
+    
+     * @param int $postId The postId.
+
+    
+    
+    
      * @return bool
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function invalidatePost(int $postId): bool
     {
         return $this->forget(self::PREFIX_POST . $postId);
     }
 
+    
+    
+    
+    
     /**
-     * Invalidate all analytics cache.
+
+    
+    
+    
+     * Handle invalidate analytics.
+
+    
+    
+    
      *
+
+    
+    
+    
      * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function invalidateAnalytics(): void
     {
         $this->flushByPrefix(self::PREFIX_ANALYTICS);
     }
 
+    
+    
+    
+    
     /**
-     * Invalidate all settings cache.
+
+    
+    
+    
+     * Handle invalidate settings.
+
+    
+    
+    
      *
+
+    
+    
+    
      * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function invalidateSettings(): void
     {
         $this->flushByPrefix(self::PREFIX_SETTINGS);
     }
 
+    
+    
+    
+    
     /**
-     * Invalidate dashboard statistics cache.
+
+    
+    
+    
+     * Handle invalidate dashboard stats.
+
+    
+    
+    
      *
+
+    
+    
+    
      * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function invalidateDashboardStats(): void
     {
         $keys = [
@@ -268,6 +854,8 @@ class CacheService
             'dashboard:recent_comments',
             'dashboard:analytics',
             'admin:dashboard:stats',
+            'admin_dashboard_stats', // OPTIMIZED: Added for DashboardController cache
+            'editor_dashboard_stats', // OPTIMIZED: Added for DashboardController cache
         ];
 
         foreach ($keys as $key) {
@@ -275,12 +863,43 @@ class CacheService
         }
     }
 
+    
+    
+    
+    
     /**
-     * Invalidate user statistics cache.
+
+    
+    
+    
+     * Handle invalidate user stats.
+
+    
+    
+    
      *
-     * @param int $userId
+
+    
+    
+    
+     * @param int $userId The userId.
+
+    
+    
+    
      * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function invalidateUserStats(int $userId): void
     {
         $keys = [
@@ -296,11 +915,38 @@ class CacheService
         }
     }
 
+    
+    
+    
+    
     /**
-     * Get cache statistics.
+
+    
+    
+    
+     * Get stats.
+
+    
+    
+    
      *
+
+    
+    
+    
      * @return array
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function getStats(): array
     {
         try {
@@ -326,25 +972,95 @@ class CacheService
         ];
     }
 
+    
+    
+    
+    
     /**
-     * Increment a counter in cache.
+
+    
+    
+    
+     * Handle increment.
+
+    
+    
+    
      *
-     * @param string $key
-     * @param int $value
+
+    
+    
+    
+     * @param string $key The key.
+
+    
+    
+    
+     * @param int $value The value.
+
+    
+    
+    
      * @return int
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function increment(string $key, int $value = 1): int
     {
         return Cache::increment($key, $value);
     }
 
+    
+    
+    
+    
     /**
-     * Decrement a counter in cache.
+
+    
+    
+    
+     * Handle decrement.
+
+    
+    
+    
      *
-     * @param string $key
-     * @param int $value
+
+    
+    
+    
+     * @param string $key The key.
+
+    
+    
+    
+     * @param int $value The value.
+
+    
+    
+    
      * @return int
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function decrement(string $key, int $value = 1): int
     {
         return Cache::decrement($key, $value);

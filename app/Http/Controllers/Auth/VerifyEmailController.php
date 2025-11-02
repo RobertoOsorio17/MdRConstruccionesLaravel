@@ -13,9 +13,43 @@ use Illuminate\Http\RedirectResponse;
  */
 class VerifyEmailController extends Controller
 {
+    
+    
+    
+    
     /**
-     * Mark the authenticated user's email address as verified.
+
+    
+    
+    
+     * Handle __invoke.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param EmailVerificationRequest $request The request.
+
+    
+    
+    
+     * @return RedirectResponse
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function __invoke(EmailVerificationRequest $request): RedirectResponse
     {
         if ($request->user()->hasVerifiedEmail()) {

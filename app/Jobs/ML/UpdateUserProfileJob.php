@@ -26,9 +26,48 @@ class UpdateUserProfileJob implements ShouldQueue
     private string $sessionId;
     private ?int $userId;
 
+    
+    
+    
+    
     /**
-     * Create a new job instance.
+
+    
+    
+    
+     * Handle __construct.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param string $sessionId The sessionId.
+
+    
+    
+    
+     * @param ?int $userId The userId.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function __construct(string $sessionId, ?int $userId = null)
     {
         $this->sessionId = $sessionId;
@@ -36,9 +75,43 @@ class UpdateUserProfileJob implements ShouldQueue
         $this->onQueue('ml-profiles');
     }
 
+    
+    
+    
+    
     /**
-     * Execute the job.
+
+    
+    
+    
+     * Handle handle.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param MLUserProfileService $profileService The profileService.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function handle(MLUserProfileService $profileService): void
     {
         try {
@@ -64,9 +137,43 @@ class UpdateUserProfileJob implements ShouldQueue
         }
     }
 
+    
+    
+    
+    
     /**
-     * Handle a job failure.
+
+    
+    
+    
+     * Handle failed.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param \Throwable $exception The exception.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function failed(\Throwable $exception): void
     {
         Log::error("User profile update job failed permanently", [
@@ -76,9 +183,38 @@ class UpdateUserProfileJob implements ShouldQueue
         ]);
     }
 
+    
+    
+    
+    
     /**
-     * Get the tags that should be assigned to the job.
+
+    
+    
+    
+     * Handle tags.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return array
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function tags(): array
     {
         return ['ml-profiles', "session:{$this->sessionId}"];

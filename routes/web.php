@@ -35,16 +35,8 @@ Route::get('/servicios/{service:slug}', [ServiceController::class, 'show'])->nam
 // ✅ ServicesV2 Route - Nueva landing con componentes modulares
 Route::get('/servicios-v2/{service:slug}', [ServiceController::class, 'showV2'])->name('services.show.v2');
 
-// ✅ TEST ROUTE - ServicesV2 Components Testing (REMOVE IN PRODUCTION)
-Route::get('/test/services-v2', function () {
-    return Inertia::render('Services/Show.test', [
-        'service' => [
-            'slug' => 'construccion-viviendas',
-            'title' => 'Construcción de Viviendas Premium',
-            'excerpt' => 'Transformamos tus ideas en espacios únicos'
-        ]
-    ]);
-})->name('test.services.v2');
+// ⚡ PERFORMANCE: Test routes removed for production
+// Use local development environment for testing instead
 
 // Projects Routes
 Route::get('/proyectos', [ProjectController::class, 'index'])->name('projects.index');
@@ -98,8 +90,9 @@ Route::post('/api/guest-recommendations', [PostController::class, 'getGuestRecom
     ->name('guest.recommendations');
 
 // Debug routes (only available in development environment)
+// ✅ OPTIMIZED: Removed 'auth.enhanced' - now global middleware
 if (config('app.debug')) {
-    Route::middleware(['auth', 'auth.enhanced'])->prefix('debug')->name('debug.')->group(function () {
+    Route::middleware(['auth'])->prefix('debug')->name('debug.')->group(function () {
         Route::get('/', [App\Http\Controllers\DebugController::class, 'index'])->name('index');
         Route::get('/system-info', [App\Http\Controllers\DebugController::class, 'systemInfo'])->name('system-info');
         Route::post('/clear-logs', [App\Http\Controllers\DebugController::class, 'clearLogs'])->name('clear-logs');
@@ -115,8 +108,9 @@ Route::prefix('api/ml')->name('ml.')->group(function () {
         Route::get('/recommendations', [MLController::class, 'getRecommendations'])->name('recommendations');
     });
 
-    // User routes (require authentication and ban check)
-    Route::middleware(['auth', 'auth.enhanced'])->group(function () {
+    // User routes (require authentication)
+    // ✅ OPTIMIZED: Removed 'auth.enhanced' - now global middleware
+    Route::middleware(['auth'])->group(function () {
         Route::post('/interaction', [MLController::class, 'logInteraction'])->name('interaction');
         Route::get('/insights', [MLController::class, 'getUserInsights'])->name('insights');
         Route::get('/metrics', [MLController::class, 'getMetrics'])->name('metrics');
@@ -124,7 +118,8 @@ Route::prefix('api/ml')->name('ml.')->group(function () {
     });
 
     // Admin only routes
-    Route::middleware(['auth', 'auth.enhanced', 'role:admin'])->group(function () {
+    // ✅ OPTIMIZED: Removed 'auth.enhanced' - now global middleware
+    Route::middleware(['auth', 'role:admin'])->group(function () {
         Route::post('/train', [MLController::class, 'trainModels'])->name('train');
         Route::get('/metrics/report', [MLController::class, 'getMetricsReport'])->name('metrics.report');
         Route::post('/ab-test', [MLController::class, 'runABTest'])->name('ab-test');
@@ -167,7 +162,8 @@ Route::prefix('auth')->name('auth.social.')->group(function () {
     Route::get('/{provider}/redirect', [SocialAuthController::class, 'redirect'])->name('redirect');
     Route::get('/{provider}/callback', [SocialAuthController::class, 'callback'])->name('callback');
 
-    Route::middleware(['auth', 'auth.enhanced'])->group(function () {
+    // ✅ OPTIMIZED: Removed 'auth.enhanced' - now global middleware
+    Route::middleware(['auth'])->group(function () {
         Route::delete('/{provider}/unlink', [SocialAuthController::class, 'unlink'])->name('unlink');
     });
 });
@@ -200,8 +196,28 @@ Route::middleware(['auth'])->group(function () {
         ->name('impersonation.heartbeat');
 });
 
+// Ban Appeal Routes (uses signed URLs instead of auth for banned users)
+Route::prefix('ban-appeal')->name('ban-appeal.')->group(function () {
+    Route::get('/create', [App\Http\Controllers\BanAppealController::class, 'create'])
+        ->middleware(['signed', 'ban.appeal.public']) // ✅ Requires signed URL + security validation
+        ->name('create');
+    Route::post('/', [App\Http\Controllers\BanAppealController::class, 'store'])
+        ->middleware(['throttle:3,60', 'ban.appeal.public']) // ✅ Rate limiting + security validation (token validated in controller)
+        ->name('store');
+    Route::get('/status/{token}', [App\Http\Controllers\BanAppealController::class, 'status'])
+        ->middleware(['throttle:10,1', 'ban.appeal.public']) // ✅ Rate limiting + security validation to prevent brute force
+        ->name('status');
+    Route::get('/evidence/{appeal}', [App\Http\Controllers\BanAppealController::class, 'evidence'])
+        ->middleware(['throttle:20,1', 'ban.appeal.public']) // ✅ Rate limiting + security validation (IP, user-agent checks)
+        ->name('evidence');
+    Route::get('/history', [App\Http\Controllers\BanAppealController::class, 'index'])
+        ->middleware('auth') // ✅ History requires auth
+        ->name('index');
+});
+
 // Profile Routes (protected)
-Route::middleware(['auth', 'auth.enhanced', 'track.device'])->group(function () {
+// ✅ OPTIMIZED: Removed 'auth.enhanced' - now global middleware
+Route::middleware(['auth', 'track.device'])->group(function () {
     // Dashboard Route (protected) - User Dashboard Only
     // ✅ FIX: Removed 'check.permission' middleware - admins are redirected to admin.dashboard
     // This dashboard is for regular users only. Admins/editors are automatically redirected.
@@ -225,31 +241,8 @@ Route::middleware(['auth', 'auth.enhanced', 'track.device'])->group(function () 
         Route::delete('/', [App\Http\Controllers\DeviceSessionController::class, 'destroyInactive'])->name('destroy-inactive');
     });
 
-    // ✅ Two Factor Authentication Routes (with rate limiting to prevent brute force)
-    Route::prefix('user/two-factor-authentication')->name('two-factor.')->group(function () {
-        Route::get('/', [App\Http\Controllers\Auth\TwoFactorController::class, 'show'])->name('show');
-        Route::post('/', [App\Http\Controllers\Auth\TwoFactorController::class, 'store'])
-            ->middleware('throttle:5,1') // Max 5 enable attempts per minute
-            ->name('enable');
-        Route::post('/confirm', [App\Http\Controllers\Auth\TwoFactorController::class, 'confirm'])
-            ->middleware('throttle:5,1') // Max 5 verification attempts per minute (critical!)
-            ->name('confirm');
-        Route::delete('/', [App\Http\Controllers\Auth\TwoFactorController::class, 'destroy'])
-            ->middleware('throttle:3,1') // Max 3 disable attempts per minute
-            ->name('disable');
-        Route::get('/qr-code', [App\Http\Controllers\Auth\TwoFactorController::class, 'qrCode'])
-            ->middleware('throttle:10,1') // Max 10 QR code generations per minute
-            ->name('qr-code');
-        Route::get('/initial-recovery-codes', [App\Http\Controllers\Auth\TwoFactorController::class, 'initialRecoveryCodes'])
-            ->middleware('throttle:10,1') // Max 10 requests per minute (only during setup)
-            ->name('initial-recovery-codes');
-        Route::post('/recovery-codes', [App\Http\Controllers\Auth\TwoFactorController::class, 'recoveryCodes'])
-            ->middleware('throttle:5,1') // Max 5 recovery code requests per minute
-            ->name('recovery-codes');
-        Route::post('/recovery-codes/regenerate', [App\Http\Controllers\Auth\TwoFactorController::class, 'regenerate'])
-            ->middleware('throttle:3,1') // Max 3 regenerations per minute
-            ->name('recovery-codes.regenerate');
-    });
+    // ⚡ PERFORMANCE: Two Factor Authentication Routes moved to routes/auth.php to avoid duplication
+    // These routes are now defined in routes/auth.php with proper rate limiting
 
     // User Profile Management
     Route::get('/profile/edit', [App\Http\Controllers\UserProfileController::class, 'edit'])->name('user.profile.edit');

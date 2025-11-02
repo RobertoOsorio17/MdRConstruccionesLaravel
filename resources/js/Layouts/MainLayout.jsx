@@ -25,33 +25,35 @@ import {
     Backdrop,
     Badge
 } from '@mui/material';
+// ⚡ PERFORMANCE: Using inline SVG icons instead of @mui/icons-material
+// This saves 6.3 MB from the initial bundle
 import {
-    Menu as MenuIcon,
-    Phone as PhoneIcon,
-    WhatsApp as WhatsAppIcon,
-    Build as BuildIcon,
-    Email as EmailIcon,
-    Person as PersonIcon,
-    Login as LoginIcon,
-    PersonAdd as RegisterIcon,
-    Settings as SettingsIcon,
-    Logout as LogoutIcon,
-    Dashboard as DashboardIcon,
-    Home as HomeIcon,
-    BusinessCenter as ServicesIcon,
-    Work as ProjectsIcon,
-    Article as BlogIcon,
-    Info as CompanyIcon,
-    ContactMail as ContactIcon,
-    Close as CloseIcon,
-    Search as SearchIcon,
-    Notifications as NotificationsIcon,
-    ExpandMore as ExpandMoreIcon,
-    ExpandLess as ExpandLessIcon,
-    Apartment as ApartmentIcon,
-    Kitchen as KitchenIcon,
-    Bathroom as BathroomIcon
-} from '@mui/icons-material';
+    MenuIcon,
+    PhoneIcon,
+    WhatsAppIcon,
+    BuildIcon,
+    EmailIcon,
+    PersonIcon,
+    LoginIcon,
+    RegisterIcon,
+    SettingsIcon,
+    LogoutIcon,
+    DashboardIcon,
+    HomeIcon,
+    ServicesIcon,
+    ProjectsIcon,
+    BlogIcon,
+    CompanyIcon,
+    ContactIcon,
+    CloseIcon,
+    SearchIcon,
+    NotificationsIcon,
+    ExpandMoreIcon,
+    ExpandLessIcon,
+    ApartmentIcon,
+    KitchenIcon,
+    BathroomIcon
+} from '@/Components/Icons/InlineIcons';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link, usePage, router } from '@inertiajs/react';
 import { AuthProvider, useAuth } from '@/Components/AuthGuard';
@@ -66,6 +68,8 @@ import Breadcrumbs from '@/Components/Navigation/Breadcrumbs';
 import KeyboardShortcuts from '@/Components/Navigation/KeyboardShortcuts';
 import useScrollTrigger from '@/Hooks/useScrollTrigger';
 import NotificationDropdown from '@/Components/Notifications/NotificationDropdown';
+import NotificationSystem from '@/Components/Admin/NotificationSystem';
+import useAdminNotificationsRealtime from '@/Hooks/useAdminNotificationsRealtime';
 import { InactivityProvider } from '@/Contexts/InactivityContext';
 import InactivityDetector from '@/Components/Admin/InactivityDetector';
 import InactivityTimer from '@/Components/Admin/InactivityTimer';
@@ -245,30 +249,29 @@ const UserMenu = () => {
 
                 {/* Admin Panel Access - Only for admin/editor roles */}
                 {(auth.user?.role === 'admin' || auth.user?.role === 'editor' ||
-                  auth.user?.roles?.some(r => r.name === 'admin' || r.name === 'editor')) && (
-                    <>
-                        <Divider sx={{ my: 1 }} />
-                        <MenuItem
-                            onClick={() => { handleClose(); router.visit('/admin/dashboard'); }}
-                            sx={{
-                                background: 'linear-gradient(135deg, rgba(11, 107, 203, 0.1), rgba(11, 107, 203, 0.05))',
-                                '&:hover': {
-                                    background: 'linear-gradient(135deg, rgba(11, 107, 203, 0.2), rgba(11, 107, 203, 0.1))',
-                                }
-                            }}
-                        >
-                            <DashboardIcon sx={{ mr: 2, color: 'primary.main' }} />
-                            <Box>
-                                <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                                    Panel de Administración
-                                </Typography>
-                                <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                                    Gestionar contenido
-                                </Typography>
-                            </Box>
-                        </MenuItem>
-                    </>
-                )}
+                  auth.user?.roles?.some(r => r.name === 'admin' || r.name === 'editor')) && [
+                    <Divider key="admin-divider" sx={{ my: 1 }} />,
+                    <MenuItem
+                        key="admin-panel"
+                        onClick={() => { handleClose(); router.visit('/admin/dashboard'); }}
+                        sx={{
+                            background: 'linear-gradient(135deg, rgba(11, 107, 203, 0.1), rgba(11, 107, 203, 0.05))',
+                            '&:hover': {
+                                background: 'linear-gradient(135deg, rgba(11, 107, 203, 0.2), rgba(11, 107, 203, 0.1))',
+                            }
+                        }}
+                    >
+                        <DashboardIcon sx={{ mr: 2, color: 'primary.main' }} />
+                        <Box>
+                            <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                Panel de Administración
+                            </Typography>
+                            <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                                Gestionar contenido
+                            </Typography>
+                        </Box>
+                    </MenuItem>
+                ]}
 
                 <Divider sx={{ my: 1 }} />
 
@@ -307,6 +310,20 @@ const MainLayoutContent = ({ children }) => {
 
     // Ref para controlar el timeout del megamenu
     const megaMenuTimeoutRef = useRef(null);
+
+    // Check if user is admin
+    const isAdmin = !auth.isGuest && (auth.user?.role === 'admin' || auth.user?.roles?.some(r => r.name === 'admin'));
+
+    // Admin notifications hook (only enabled for admins)
+    const {
+        notifications: adminNotifications,
+        markAsRead: adminMarkAsRead,
+        markAllAsRead: adminMarkAllAsRead,
+        deleteNotification: adminDeleteNotification,
+        deleteAllRead: adminDeleteAllRead,
+        dndEnabled,
+        toggleDnd: adminToggleDnd
+    } = useAdminNotificationsRealtime(isAdmin);
 
     const handleSearchOpen = () => {
         setSearchOpen(true);
@@ -949,9 +966,22 @@ const MainLayoutContent = ({ children }) => {
 
                                 {!auth.isGuest && (
                                     <>
-                                        <NotificationDropdown
-                                            unreadCount={auth.user?.unread_notifications || 0}
-                                        />
+                                        {/* Show NotificationSystem for admins, NotificationDropdown for regular users */}
+                                        {isAdmin ? (
+                                            <NotificationSystem
+                                                notifications={adminNotifications}
+                                                onMarkAsRead={adminMarkAsRead}
+                                                onMarkAllAsRead={adminMarkAllAsRead}
+                                                onDeleteNotification={adminDeleteNotification}
+                                                onDeleteAllRead={adminDeleteAllRead}
+                                                dndEnabled={dndEnabled}
+                                                onToggleDnd={adminToggleDnd}
+                                            />
+                                        ) : (
+                                            <NotificationDropdown
+                                                unreadCount={auth.user?.unread_notifications || 0}
+                                            />
+                                        )}
 
                                         {/* Inactivity Timer - Muestra tiempo restante antes de logout */}
                                         <InactivityTimer />

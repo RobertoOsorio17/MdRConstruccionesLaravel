@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\SearchController;
 use App\Http\Controllers\Api\ErrorLogController;
+use App\Http\Controllers\Api\CspReportController;
 use App\Http\Controllers\UserProfileController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -74,6 +75,17 @@ Route::middleware(['throttle:60,1'])->group(function () {
 // Error statistics (admin only)
 Route::middleware(['auth:sanctum', 'deny.banned', 'role:admin'])->group(function () {
     Route::get('/error-stats', [ErrorLogController::class, 'getErrorStats'])->name('api.error-stats');
+});
+
+/*
+|--------------------------------------------------------------------------
+| CSP Report API Routes
+|--------------------------------------------------------------------------
+*/
+
+// CSP violation report endpoint (no auth required, but rate limited)
+Route::middleware(['throttle:60,1'])->group(function () {
+    Route::post('/csp-report', [CspReportController::class, 'report'])->name('api.csp-report');
 });
 
 /*

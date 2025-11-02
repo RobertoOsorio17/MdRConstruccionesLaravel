@@ -60,21 +60,9 @@ Route::middleware('guest.redirect')->group(function () {
 });
 
 Route::middleware(['auth', 'auth.enhanced'])->group(function () {
-    Route::get('verify-email', EmailVerificationPromptController::class)
-        ->name('verification.notice');
-
-    Route::get('verify-email/{id}/{hash}', VerifyEmailController::class)
-        ->middleware(['signed', 'throttle:6,1'])
-        ->name('verification.verify');
-
-    Route::post('email/verification-notification', [EmailVerificationNotificationController::class, 'store'])
-        ->middleware('throttle:6,1')
-        ->name('verification.send');
-
-    Route::get('confirm-password', [ConfirmablePasswordController::class, 'show'])
-        ->name('password.confirm');
-
-    Route::post('confirm-password', [ConfirmablePasswordController::class, 'store']);
+    // ⚡ PERFORMANCE: Email verification and password confirmation routes are registered by Laravel Fortify
+    // See config/fortify.php - Features::emailVerification() and password confirmation
+    // Removed duplicate routes to fix route caching error
 
     Route::put('password', [PasswordController::class, 'update'])->name('password.update');
 
@@ -100,4 +88,9 @@ Route::middleware(['auth', 'auth.enhanced'])->group(function () {
 
     Route::post('recovery-codes/regenerate', [TrustedDeviceController::class, 'regenerateRecoveryCodes'])
         ->name('recovery-codes.regenerate');
+
+    // ⚡ PERFORMANCE: Two Factor Authentication routes are registered by Laravel Fortify
+    // See config/fortify.php - Features::twoFactorAuthentication()
+    // Custom 2FA routes with additional features (QR code, initial recovery codes, etc.)
+    // are registered in app/Providers/FortifyServiceProvider.php
 });

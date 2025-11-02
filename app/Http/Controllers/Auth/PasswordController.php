@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\AdminSetting;
+use App\Notifications\PasswordChangedNotification;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -17,10 +18,43 @@ use Illuminate\Validation\Rules\Password;
  */
 class PasswordController extends Controller
 {
+    
+    
+    
+    
     /**
-     * Update the user's password.
-     * ✅ SECURITY FIX: Stronger password requirements and prevent password reuse
+
+    
+    
+    
+     * Update the specified resource.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return RedirectResponse
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function update(Request $request): RedirectResponse
     {
         // ✅ SECURITY FIX: Minimum 12 characters (increased from 8)
@@ -68,6 +102,12 @@ class PasswordController extends Controller
             'method' => 'user_initiated',
             'sessions_invalidated' => true,
         ]);
+
+        // ✅ SECURITY FIX: Send notification
+        $user->notify(new PasswordChangedNotification([
+            'ip' => $request->ip(),
+            'method' => 'user_initiated',
+        ]));
 
         return back();
     }

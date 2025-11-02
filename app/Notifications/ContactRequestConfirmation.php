@@ -17,27 +17,127 @@ class ContactRequestConfirmation extends Notification implements ShouldQueue
 
     protected ContactRequest $contactRequest;
 
+    
+    
+    
+    
     /**
-     * Create a new notification instance.
+
+    
+    
+    
+     * Handle __construct.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param ContactRequest $contactRequest The contactRequest.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function __construct(ContactRequest $contactRequest)
     {
         $this->contactRequest = $contactRequest;
     }
 
+    
+    
+    
+    
     /**
-     * Get the notification's delivery channels.
+
+    
+    
+    
+     * Handle via.
+
+    
+    
+    
      *
-     * @return array<int, string>
+
+    
+    
+    
+     * @param object $notifiable The notifiable.
+
+    
+    
+    
+     * @return array
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function via(object $notifiable): array
     {
         return ['mail'];
     }
 
+    
+    
+    
+    
     /**
-     * Get the mail representation of the notification.
+
+    
+    
+    
+     * Handle to mail.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param object $notifiable The notifiable.
+
+    
+    
+    
+     * @return MailMessage
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function toMail(object $notifiable): MailMessage
     {
         return (new MailMessage)
@@ -54,11 +154,43 @@ class ContactRequestConfirmation extends Notification implements ShouldQueue
             ->salutation('Saludos cordiales, ' . config('app.name'));
     }
 
+    
+    
+    
+    
     /**
-     * Get the array representation of the notification.
+
+    
+    
+    
+     * Handle to array.
+
+    
+    
+    
      *
-     * @return array<string, mixed>
+
+    
+    
+    
+     * @param object $notifiable The notifiable.
+
+    
+    
+    
+     * @return array
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function toArray(object $notifiable): array
     {
         return [

@@ -11,12 +11,38 @@ use Illuminate\Validation\Rules\Password;
  */
 trait PasswordValidationRules
 {
+    
+    
+    
+    
     /**
-     * Get the validation rules used to validate passwords.
-     * Uses password_min_length setting from admin settings.
+
+    
+    
+    
+     * Handle password rules.
+
+    
+    
+    
      *
-     * @return array<int, \Illuminate\Contracts\Validation\Rule|array<mixed>|string>
+
+    
+    
+    
+     * @return array
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     protected function passwordRules(): array
     {
         // ✅ SECURITY FIX: Increased minimum password length from 8 to 12 characters
@@ -36,12 +62,43 @@ trait PasswordValidationRules
         ];
     }
 
+    
+    
+    
+    
     /**
-     * Get password rules for password updates (includes previous password check)
+
+    
+    
+    
+     * Handle password update rules.
+
+    
+    
+    
      *
-     * @param \App\Models\User|null $user
-     * @return array<int, \Illuminate\Contracts\Validation\Rule|array<mixed>|string>
+
+    
+    
+    
+     * @param mixed $user The user.
+
+    
+    
+    
+     * @return array
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     protected function passwordUpdateRules($user = null): array
     {
         $minLength = max(12, AdminSetting::getCachedValue('password_min_length', 12, 300));

@@ -28,9 +28,38 @@ class TestEncryptedAttachments extends Command
      */
     protected $description = 'Test encrypted attachments system by creating a contact request with encrypted files';
 
+    
+    
+    
+    
     /**
-     * Execute the console command.
+
+    
+    
+    
+     * Handle handle.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function handle()
     {
         $count = (int) $this->option('count');

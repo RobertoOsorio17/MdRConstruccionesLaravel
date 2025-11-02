@@ -50,6 +50,140 @@ class MLController extends Controller
     private AnomalyDetectionService $anomalyDetection;
     private MLHealthMonitorService $healthMonitor;
 
+
+    
+
+
+    
+
+    
+
+    
+
+    /**
+
+
+    
+
+    
+
+    
+
+     * Handle __construct.
+
+
+    
+
+    
+
+    
+
+     *
+
+
+    
+
+    
+
+    
+
+     * @param ContentAnalysisService $contentAnalysis The contentAnalysis.
+
+
+    
+
+    
+
+    
+
+     * @param ContentAnalysisServiceV2 $contentAnalysisV2 The contentAnalysisV2.
+
+
+    
+
+    
+
+    
+
+     * @param MLRecommendationService $mlRecommendation The mlRecommendation.
+
+
+    
+
+    
+
+    
+
+     * @param MLUserProfileService $userProfileService The userProfileService.
+
+
+    
+
+    
+
+    
+
+     * @param MLMetricsService $metricsService The metricsService.
+
+
+    
+
+    
+
+    
+
+     * @param KMeansClusteringService $clusteringService The clusteringService.
+
+
+    
+
+    
+
+    
+
+     * @param AnomalyDetectionService $anomalyDetection The anomalyDetection.
+
+
+    
+
+    
+
+    
+
+     * @param MLHealthMonitorService $healthMonitor The healthMonitor.
+
+
+    
+
+    
+
+    
+
+     * @return void
+
+
+    
+
+    
+
+    
+
+     */
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
     public function __construct(
         ContentAnalysisService $contentAnalysis,
         ContentAnalysisServiceV2 $contentAnalysisV2,
@@ -70,12 +204,43 @@ class MLController extends Controller
         $this->healthMonitor = $healthMonitor;
     }
 
+    
+    
+    
+    
     /**
-     * Retrieve ML recommendations for a user.
+
+    
+    
+    
+     * Get recommendations.
+
+    
+    
+    
      *
-     * @param GetRecommendationsRequest $request The validated request with context.
-     * @return JsonResponse JSON response with recommendations and metadata.
+
+    
+    
+    
+     * @param GetRecommendationsRequest $request The request.
+
+    
+    
+    
+     * @return JsonResponse
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function getRecommendations(GetRecommendationsRequest $request): JsonResponse
     {
         try {
@@ -136,14 +301,43 @@ class MLController extends Controller
         }
     }
 
+    
+    
+    
+    
     /**
-     * Register a user interaction for the ML system.
+
+    
+    
+    
+     * Handle log interaction.
+
+    
+    
+    
      *
-     * V2.0: Includes anomaly detection and optional auto-blocking.
-     *
-     * @param LogInteractionRequest $request The validated interaction payload.
-     * @return JsonResponse JSON response with persisted interaction metrics.
+
+    
+    
+    
+     * @param LogInteractionRequest $request The request.
+
+    
+    
+    
+     * @return JsonResponse
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function logInteraction(LogInteractionRequest $request): JsonResponse
     {
         try {
@@ -300,12 +494,43 @@ class MLController extends Controller
         }
     }
 
+    
+    
+    
+    
     /**
-     * Retrieve ML insights for a user.
+
+    
+    
+    
+     * Get user insights.
+
+    
+    
+    
      *
-     * @param Request $request The current HTTP request instance.
-     * @return JsonResponse JSON response with summarized insights.
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return JsonResponse
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function getUserInsights(Request $request): JsonResponse
     {
         try {
@@ -355,12 +580,43 @@ class MLController extends Controller
         }
     }
 
+    
+    
+    
+    
     /**
-     * Trigger ML model training with advanced options.
+
+    
+    
+    
+     * Handle train models.
+
+    
+    
+    
      *
-     * @param TrainModelsRequest $request The validated training configuration.
-     * @return JsonResponse JSON response with training stats.
+
+    
+    
+    
+     * @param TrainModelsRequest $request The request.
+
+    
+    
+    
+     * @return JsonResponse
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function trainModels(TrainModelsRequest $request): JsonResponse
     {
         try {
@@ -453,9 +709,43 @@ class MLController extends Controller
         }
     }
 
+    
+    
+    
+    
     /**
-     * Train post vectors in batches.
+
+    
+    
+    
+     * Handle train post vectors.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param int $batchSize The batchSize.
+
+    
+    
+    
+     * @return int
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function trainPostVectors(int $batchSize): int
     {
         $count = 0;
@@ -482,9 +772,43 @@ class MLController extends Controller
         return $count;
     }
 
+    
+    
+    
+    
     /**
-     * Train user profiles in batches.
+
+    
+    
+    
+     * Handle train user profiles.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param int $batchSize The batchSize.
+
+    
+    
+    
+     * @return int
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function trainUserProfiles(int $batchSize): int
     {
         $count = 0;
@@ -511,9 +835,43 @@ class MLController extends Controller
         return $count;
     }
 
+    
+    
+    
+    
     /**
-     * Perform incremental training (only new/updated data).
+
+    
+    
+    
+     * Handle perform incremental training.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param int $batchSize The batchSize.
+
+    
+    
+    
+     * @return array
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function performIncrementalTraining(int $batchSize): array
     {
         $stats = [
@@ -546,9 +904,48 @@ class MLController extends Controller
         return $stats;
     }
 
+    
+    
+    
+    
     /**
-     * Send training completion notification.
+
+    
+    
+    
+     * Send training notification.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param string $email The email.
+
+    
+    
+    
+     * @param array $stats The stats.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function sendTrainingNotification(string $email, array $stats): void
     {
         // Implementation would use Laravel Mail
@@ -559,9 +956,43 @@ class MLController extends Controller
         ]);
     }
 
+    
+    
+    
+    
     /**
-     * Retrieve ML system performance metrics.
+
+    
+    
+    
+     * Get metrics.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return JsonResponse
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function getMetrics(Request $request): JsonResponse
     {
         try {
@@ -598,9 +1029,43 @@ class MLController extends Controller
         }
     }
 
+    
+    
+    
+    
     /**
-     * Format recommendation payloads for the frontend.
+
+    
+    
+    
+     * Handle format recommendations.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param array $recommendations The recommendations.
+
+    
+    
+    
+     * @return array
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function formatRecommendations(array $recommendations): array
     {
         return array_map(function($rec) {
@@ -641,9 +1106,53 @@ class MLController extends Controller
         }, $recommendations);
     }
 
+    
+    
+    
+    
     /**
-     * Update the user profile based on interactions.
+
+    
+    
+    
+     * Handle update user profile.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param string $sessionId The sessionId.
+
+    
+    
+    
+     * @param int $userId The userId.
+
+    
+    
+    
+     * @param MLInteractionLog $interaction The interaction.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function updateUserProfile(string $sessionId, int $userId = null, MLInteractionLog $interaction): void
     {
         $profile = MLUserProfile::findByIdentifier($sessionId, $userId);
@@ -699,9 +1208,43 @@ class MLController extends Controller
         $profile->save();
     }
 
+    
+    
+    
+    
     /**
-     * Calculate interaction weight to update preferences.
+
+    
+    
+    
+     * Calculate interaction weight.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param MLInteractionLog $interaction The interaction.
+
+    
+    
+    
+     * @return float
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function calculateInteractionWeight(MLInteractionLog $interaction): float
     {
         $weights = [
@@ -729,9 +1272,43 @@ class MLController extends Controller
         return min($baseWeight, 2.0);
     }
 
+    
+    
+    
+    
     /**
-     * Retrieve the user top categories.
+
+    
+    
+    
+     * Get top categories.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param MLUserProfile $profile The profile.
+
+    
+    
+    
+     * @return array
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function getTopCategories(MLUserProfile $profile): array
     {
         if (empty($profile->category_preferences)) {
@@ -752,9 +1329,43 @@ class MLController extends Controller
         })->toArray();
     }
 
+    
+    
+    
+    
     /**
-     * Retrieve reading patterns.
+
+    
+    
+    
+     * Get reading patterns.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param MLUserProfile $profile The profile.
+
+    
+    
+    
+     * @return array
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function getReadingPatterns(MLUserProfile $profile): array
     {
         $patterns = $profile->reading_patterns ?? [];
@@ -766,9 +1377,43 @@ class MLController extends Controller
         ];
     }
 
+    
+    
+    
+    
     /**
-     * Retrieve the user cluster description.
+
+    
+    
+    
+     * Get cluster description.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param int $cluster The cluster.
+
+    
+    
+    
+     * @return string
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function getClusterDescription(int $cluster = null): string
     {
         $descriptions = [
@@ -782,9 +1427,48 @@ class MLController extends Controller
         return $descriptions[$cluster] ?? 'Profile in progress.';
     }
 
+    
+    
+    
+    
     /**
-     * Calculate recommendation accuracy.
+
+    
+    
+    
+     * Get recommendation accuracy.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param string $sessionId The sessionId.
+
+    
+    
+    
+     * @param int $userId The userId.
+
+    
+    
+    
+     * @return float
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function getRecommendationAccuracy(string $sessionId, int $userId = null): float
     {
         $recommended = MLInteractionLog::where(function($query) use ($sessionId, $userId) {
@@ -813,9 +1497,38 @@ class MLController extends Controller
         return $recommended > 0 ? round(($interacted / $recommended) * 100, 1) : 0;
     }
 
+    
+    
+    
+    
     /**
-     * Train user clustering (simplified).
+
+    
+    
+    
+     * Handle train user clustering.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function trainUserClustering(): void
     {
         // Simplified K-means implementation.
@@ -837,9 +1550,43 @@ class MLController extends Controller
         }
     }
 
+    
+    
+    
+    
     /**
-     * Assign a user cluster based on preferences.
+
+    
+    
+    
+     * Handle assign user cluster.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param MLUserProfile $profile The profile.
+
+    
+    
+    
+     * @return int
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function assignUserCluster(MLUserProfile $profile): int
     {
         $preferences = $profile->category_preferences ?? [];
@@ -863,9 +1610,43 @@ class MLController extends Controller
         return $categoryToCluster[$dominantCategory] ?? 0;
     }
 
+    
+    
+    
+    
     /**
-     * Retrieve overall system metrics.
+
+    
+    
+    
+     * Get overall metrics.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param \DateTime $from The from.
+
+    
+    
+    
+     * @return array
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function getOverallMetrics(\DateTime $from): array
     {
         $totalInteractions = MLInteractionLog::where('created_at', '>=', $from)->count();
@@ -884,9 +1665,43 @@ class MLController extends Controller
         ];
     }
 
+    
+    
+    
+    
     /**
-     * Get comprehensive ML metrics report.
+
+    
+    
+    
+     * Get metrics report.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return JsonResponse
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function getMetricsReport(Request $request): JsonResponse
     {
         try {
@@ -919,9 +1734,43 @@ class MLController extends Controller
         }
     }
 
+    
+    
+    
+    
     /**
-     * Run A/B test comparison between algorithm variants.
+
+    
+    
+    
+     * Handle run abtest.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return JsonResponse
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function runABTest(Request $request): JsonResponse
     {
         try {
@@ -956,9 +1805,43 @@ class MLController extends Controller
         }
     }
 
+    
+    
+    
+    
     /**
-     * Update user profile manually.
+
+    
+    
+    
+     * Handle update profile.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return JsonResponse
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function updateProfile(Request $request): JsonResponse
     {
         try {
@@ -990,9 +1873,43 @@ class MLController extends Controller
         }
     }
 
+    
+    
+    
+    
     /**
-     * Clear ML caches.
+
+    
+    
+    
+     * Handle clear caches.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return JsonResponse
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function clearCaches(Request $request): JsonResponse
     {
         try {
@@ -1034,9 +1951,43 @@ class MLController extends Controller
         }
     }
 
+    
+    
+    
+    
     /**
+
+    
+    
+    
      * Get clustering analysis.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return JsonResponse
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function getClusteringAnalysis(Request $request): JsonResponse
     {
         try {
@@ -1100,9 +2051,43 @@ class MLController extends Controller
         }
     }
 
+    
+    
+    
+    
     /**
-     * Retrain clustering with K-Means.
+
+    
+    
+    
+     * Handle retrain clustering.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function retrainClustering(Request $request = null)
     {
         try {
@@ -1183,9 +2168,43 @@ class MLController extends Controller
         }
     }
 
+    
+    
+    
+    
     /**
-     * Generate explanations for recommendations.
+
+    
+    
+    
+     * Handle generate explanations.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param array $recommendations The recommendations.
+
+    
+    
+    
+     * @return array
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function generateExplanations(array $recommendations): array
     {
         $explanations = [];
@@ -1216,11 +2235,43 @@ class MLController extends Controller
         return $explanations;
     }
 
+    
+    
+    
+    
     /**
-     * Get ML system health status
+
+    
+    
+    
+     * Get health status.
+
+    
+    
+    
      *
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
      * @return JsonResponse
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function getHealthStatus(Request $request): JsonResponse
     {
         try {
@@ -1247,11 +2298,43 @@ class MLController extends Controller
         }
     }
 
+    
+    
+    
+    
     /**
-     * Detect anomalies in recent interactions
+
+    
+    
+    
+     * Handle detect anomalies.
+
+    
+    
+    
      *
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
      * @return JsonResponse
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function detectAnomalies(Request $request): JsonResponse
     {
         try {
@@ -1309,9 +2392,43 @@ class MLController extends Controller
         }
     }
 
+    
+    
+    
+    
     /**
-     * Calculate engagement score for interaction data.
+
+    
+    
+    
+     * Calculate engagement score.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param array $data The data.
+
+    
+    
+    
+     * @return float
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function calculateEngagementScore(array $data): float
     {
         $score = 0;
@@ -1355,9 +2472,38 @@ class MLController extends Controller
         return min(100, max(0, $score));
     }
 
+    
+    
+    
+    
     /**
-     * Clear ML cache keys (fallback when tags not supported).
+
+    
+    
+    
+     * Handle clear mlcache keys.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function clearMLCacheKeys(): void
     {
         $keysToForget = [

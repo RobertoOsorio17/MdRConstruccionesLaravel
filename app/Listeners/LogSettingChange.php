@@ -18,12 +18,43 @@ class LogSettingChange implements ShouldQueue
 {
     use InteractsWithQueue;
 
+    
+    
+    
+    
     /**
-     * Handle the event.
+
+    
+    
+    
+     * Handle handle.
+
+    
+    
+    
      *
-     * @param \App\Events\SettingChanged $event
+
+    
+    
+    
+     * @param SettingChanged $event The event.
+
+    
+    
+    
      * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function handle(SettingChanged $event): void
     {
         try {
@@ -75,13 +106,48 @@ class LogSettingChange implements ShouldQueue
         }
     }
 
+    
+    
+    
+    
     /**
-     * Prepare value for storage in history table.
+
+    
+    
+    
+     * Handle prepare value for storage.
+
+    
+    
+    
      *
-     * @param mixed $value
-     * @param string $type
-     * @return string|null
+
+    
+    
+    
+     * @param mixed $value The value.
+
+    
+    
+    
+     * @param string $type The type.
+
+    
+    
+    
+     * @return ?string
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function prepareValueForStorage($value, string $type): ?string
     {
         if (is_null($value)) {

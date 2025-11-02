@@ -24,11 +24,38 @@ class AdminAuthController extends Controller
 {
     use HandlesTwoFactorLogin;
 
+    
+    
+    
+    
     /**
-     * Display the admin login view.
+
+    
+    
+    
+     * Show the form for creating a new resource.
+
+    
+    
+    
      *
-     * @return Response Inertia response rendering the admin login form.
+
+    
+    
+    
+     * @return Response
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function create(): Response
     {
         return Inertia::render('Admin/Auth/Login', [
@@ -37,15 +64,48 @@ class AdminAuthController extends Controller
         ]);
     }
 
+    
+    
+    
+    
     /**
-     * Handle an incoming admin authentication request.
+
+    
+    
+    
+     * Store a newly created resource.
+
+    
+    
+    
      *
-     * @param LoginRequest $request The validated login request instance.
-     * @return RedirectResponse Redirect response targeting the intended admin area.
+
+    
+    
+    
+     * @param LoginRequest $request The request.
+
+    
+    
+    
+     * @return RedirectResponse
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function store(LoginRequest $request): RedirectResponse
     {
-        // Enhanced rate limiting for admin login (IP + email hash).
+        /**
+         * Enhanced rate limiting for admin login (IP + email hash).
+         */
         $emailHash = hash('sha256', strtolower($request->email));
         $ipKey = 'admin-login:' . $request->ip() . ':' . $emailHash;
         $emailKey = 'admin-login-email:' . $emailHash;
@@ -57,9 +117,11 @@ class AdminAuthController extends Controller
             'timestamp' => now()->toISOString()
         ]);
 
-        // ✅ SECURITY FIX: Stricter rate limiting for admin login
-        // IP-based: 5 attempts per 15 minutes (was 5 per minute)
-        // Email-based: 10 attempts per 15 minutes with progressive lockout (was 12 per minute)
+        /**
+         * SECURITY FIX: Stricter rate limiting for admin login.
+         * IP-based: 5 attempts per 15 minutes (was 5 per minute).
+         * Email-based: 10 attempts per 15 minutes with progressive lockout (was 12 per minute).
+         */
         $ipExceeded = RateLimiter::tooManyAttempts($ipKey, 5);
         $emailAttempts = RateLimiter::attempts($emailKey);
         $emailMaxAttempts = $this->getEmailMaxAttempts($emailAttempts);
@@ -86,7 +148,9 @@ class AdminAuthController extends Controller
             ]);
         }
 
-        // ✅ SECURITY: Check if account is locked
+        /**
+         * SECURITY: Check if account is locked.
+         */
         $lockoutService = app(\App\Services\AccountLockoutService::class);
         if ($lockoutService->isAccountLocked($request->email)) {
             $remainingSeconds = $lockoutService->getRemainingLockoutTime($request->email);
@@ -99,20 +163,26 @@ class AdminAuthController extends Controller
             ]);
 
             throw ValidationException::withMessages([
-                'email' => "Tu cuenta ha sido bloqueada temporalmente debido a múltiples intentos fallidos. Intenta de nuevo en {$remainingMinutes} minutos.",
+                'email' => "Tu cuenta ha sido bloqueada temporalmente debido a mÃºltiples intentos fallidos. Intenta de nuevo en {$remainingMinutes} minutos.",
             ]);
         }
 
         $credentials = $request->only('email', 'password');
 
         if (!Auth::validate($credentials)) {
-            // ✅ SECURITY FIX: IP-based 15 minutes decay (increased from 1 minute)
+            /**
+             * SECURITY FIX: IP-based 15 minutes decay (increased from 1 minute).
+             */
             RateLimiter::hit($ipKey, 900);
 
-            // ✅ SECURITY FIX: Email-based progressive decay
+            /**
+             * SECURITY FIX: Email-based progressive decay.
+             */
             RateLimiter::hit($emailKey, $this->emailDecaySeconds());
 
-            // ✅ SECURITY: Record failed attempt for account lockout
+            /**
+             * SECURITY: Record failed attempt for account lockout.
+             */
             $lockoutService->recordFailedAttempt($request->email, $request->ip());
 
             Log::warning('Failed admin login attempt', [
@@ -145,11 +215,13 @@ class AdminAuthController extends Controller
             ]);
             
             throw ValidationException::withMessages([
-                'email' => 'No tienes permisos para acceder al panel de administración.',
+                'email' => 'No tienes permisos para acceder al panel de administraciÃ³n.',
             ]);
         }
 
-        // Check if the user is banned from the platform.
+        /**
+         * Check if the user is banned from the platform.
+         */
         if ($user->isBanned()) {
             $banStatus = $user->getBanStatus();
 
@@ -166,11 +238,15 @@ class AdminAuthController extends Controller
             ]);
         }
 
-        // Clear rate limiting on successful credential check.
+        /**
+         * Clear rate limiting on successful credential check.
+         */
         RateLimiter::clear($ipKey);
         RateLimiter::clear($emailKey);
 
-        // ✅ SECURITY: Clear failed attempts and unlock account on successful login
+        /**
+         * SECURITY: Clear failed attempts and unlock account on successful login.
+         */
         $lockoutService = app(\App\Services\AccountLockoutService::class);
         $lockoutService->clearFailedAttempts($request->email);
 
@@ -218,17 +294,50 @@ class AdminAuthController extends Controller
         return $response;
     }
 
+    
+    
+    
+    
     /**
-     * Destroy an authenticated admin session.
+
+    
+    
+    
+     * Remove the specified resource.
+
+    
+    
+    
      *
-     * @param Request $request The current HTTP request instance.
-     * @return RedirectResponse Redirect response back to the admin login screen.
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return RedirectResponse
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function destroy(Request $request): RedirectResponse
     {
         $user = Auth::user();
 
-        // Log the administrator's logout action.
+        /**
+         * Log the administrator's logout action.
+         */
         if ($user) {
             Log::info('Admin logout', [
                 'user_id' => $user->id,
@@ -237,7 +346,9 @@ class AdminAuthController extends Controller
                 'timestamp' => now()
             ]);
 
-            // Create the matching audit log entry when the model exists.
+            /**
+             * Create the matching audit log entry when the model exists.
+             */
             if (class_exists(\App\Models\AuditLog::class)) {
                 \App\Models\AuditLog::create([
                     'user_id' => $user->id,
@@ -257,6 +368,77 @@ class AdminAuthController extends Controller
         return redirect('/admin/login');
     }
 
+
+    
+
+
+    
+
+    
+
+    
+
+    /**
+
+
+    
+
+    
+
+    
+
+     * Handle admin email decay seconds.
+
+
+    
+
+    
+
+    
+
+     *
+
+
+    
+
+    
+
+    
+
+     * @param string $emailKey The emailKey.
+
+
+    
+
+    
+
+    
+
+     * @return int
+
+
+    
+
+    
+
+    
+
+     */
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
     private function adminEmailDecaySeconds(string $emailKey): int
     {
         $attempts = RateLimiter::attempts($emailKey);
@@ -270,12 +452,43 @@ class AdminAuthController extends Controller
         };
     }
 
+    
+    
+    
+    
     /**
-     * Check the current admin session status.
+
+    
+    
+    
+     * Handle status.
+
+    
+    
+    
      *
-     * @param Request $request The current HTTP request instance.
-     * @return \Illuminate\Http\JsonResponse JSON response describing session and user data.
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function status(Request $request)
     {
         $user = Auth::user();
@@ -305,12 +518,43 @@ class AdminAuthController extends Controller
         ]);
     }
 
+    
+    
+    
+    
     /**
-     * Extend the admin session lifetime by regenerating the session.
+
+    
+    
+    
+     * Handle extend session.
+
+    
+    
+    
      *
-     * @param Request $request The current HTTP request instance.
-     * @return \Illuminate\Http\JsonResponse JSON response containing the new expiry timestamp.
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function extendSession(Request $request)
     {
         $user = Auth::user();
@@ -322,7 +566,9 @@ class AdminAuthController extends Controller
             ], 401);
         }
 
-        // Regenerate the session to extend its lifetime.
+        /**
+         * Regenerate the session to extend its lifetime.
+         */
         $request->session()->regenerate();
         
         Log::info('Admin session extended', [
@@ -337,12 +583,43 @@ class AdminAuthController extends Controller
         ]);
     }
 
+    
+    
+    
+    
     /**
-     * Provide recent admin login statistics and security context.
+
+    
+    
+    
+     * Handle login stats.
+
+    
+    
+    
      *
-     * @param Request $request The current HTTP request instance.
-     * @return \Illuminate\Http\JsonResponse JSON response with session and security insights.
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function loginStats(Request $request)
     {
         $user = Auth::user();
@@ -351,7 +628,9 @@ class AdminAuthController extends Controller
             return response()->json(['error' => 'Unauthorized'], 401);
         }
 
-        // Gather recent login attempts within the last 24 hours.
+        /**
+         * Gather recent login attempts within the last 24 hours.
+         */
         $recentAttempts = collect();
         
         if (class_exists(\App\Models\AuditLog::class)) {
@@ -380,15 +659,43 @@ class AdminAuthController extends Controller
             'security_info' => [
                 'session_timeout' => config('session.lifetime'),
                 'rate_limit' => 5,
-                'rate_limit_window' => 900 // ✅ Updated to 15 minutes (was 60 seconds)
+                'rate_limit_window' => 900 // âœ… Updated to 15 minutes (was 60 seconds)
             ]
         ]);
     }
 
+    
+    
+    
+    
     /**
-     * Get progressive decay time based on number of failed attempts.
-     * ✅ SECURITY: Progressive lockout with increasing delays
+
+    
+    
+    
+     * Handle email decay seconds.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return int
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     protected function emailDecaySeconds(): int
     {
         $emailKey = 'admin_login:email:' . hash('sha256', strtolower(request()->email ?? ''));
@@ -402,10 +709,43 @@ class AdminAuthController extends Controller
         };
     }
 
+    
+    
+    
+    
     /**
-     * Get maximum allowed attempts based on current attempt count.
-     * ✅ SECURITY: Progressive reduction of allowed attempts
+
+    
+    
+    
+     * Get email max attempts.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param int $currentAttempts The currentAttempts.
+
+    
+    
+    
+     * @return int
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     protected function getEmailMaxAttempts(int $currentAttempts): int
     {
         return match (true) {

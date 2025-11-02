@@ -14,20 +14,55 @@ use Inertia\Inertia;
  */
 class TestimonialController extends Controller
 {
+    
+    
+    
+    
     /**
-     * Display testimonials management.
+
+    
+    
+    
+     * Display a listing of the resource.
+
+    
+    
+    
      *
-     * @param Request $request The current HTTP request instance.
-     * @return \Inertia\Response Inertia response with testimonials, stats, and filters.
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function index(Request $request)
     {
-        // Authorize.
+        /**
+         * Authorize.
+         */
         if (!auth()->user()->hasPermission('reviews.view')) {
             abort(403, 'Unauthorized action.');
         }
 
-        // Validate filters.
+        /**
+         * Validate filters.
+         */
         $validated = $request->validate([
             'status' => 'nullable|in:pending,approved,rejected',
             'search' => 'nullable|string|max:255',
@@ -36,7 +71,9 @@ class TestimonialController extends Controller
 
         $query = Testimonial::with(['user', 'approvedBy']);
 
-        // Apply filters
+        /**
+         * Apply filters.
+         */
         if ($request->filled('status')) {
             $query->where('status', $validated['status']);
         }
@@ -50,7 +87,9 @@ class TestimonialController extends Controller
             });
         }
 
-        // Apply sorting
+        /**
+         * Apply sorting.
+         */
         $sort = $validated['sort'] ?? 'recent';
         switch ($sort) {
             case 'rating':
@@ -67,7 +106,9 @@ class TestimonialController extends Controller
 
         $testimonials = $query->paginate(20);
 
-        // Get stats
+        /**
+         * Get stats.
+         */
         $stats = [
             'total' => Testimonial::count(),
             'pending' => Testimonial::pending()->count(),
@@ -83,14 +124,43 @@ class TestimonialController extends Controller
         ]);
     }
 
+    
+    
+    
+    
     /**
-     * Show the create form.
+
+    
+    
+    
+     * Show the form for creating a new resource.
+
+    
+    
+    
      *
-     * @return \Inertia\Response Inertia response for the create view.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function create()
     {
-        // Authorize.
+        /**
+         * Authorize.
+         */
         if (!auth()->user()->hasPermission('reviews.create')) {
             abort(403, 'Unauthorized action.');
         }
@@ -98,22 +168,57 @@ class TestimonialController extends Controller
         return Inertia::render('Admin/Testimonials/Create');
     }
 
+    
+    
+    
+    
     /**
-     * Store a new testimonial.
+
+    
+    
+    
+     * Store a newly created resource.
+
+    
+    
+    
      *
-     * @param Request $request The current HTTP request instance.
-     * @return \Illuminate\Http\RedirectResponse Redirect to index with status.
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function store(Request $request)
     {
-        // Authorize.
+        /**
+         * Authorize.
+         */
         if (!auth()->user()->hasPermission('reviews.create')) {
             abort(403, 'Unauthorized action.');
         }
 
-        // Validate.
+        /**
+         * Validate.
+         */
         $validated = $request->validate([
-            'client_name' => 'required|string|max:255|regex:/^[a-zA-Z\s\-\.áéíóúñÁÉÍÓÚÑ]+$/',
+            'client_name' => 'required|string|max:255|regex:/^[a-zA-Z\s\-\.Ã¡Ã©Ã­Ã³ÃºÃ±ÃÃ‰ÃÃ“ÃšÃ‘]+$/',
             'client_position' => 'nullable|string|max:255|regex:/^[^<>]*$/',
             'client_company' => 'nullable|string|max:255|regex:/^[^<>]*$/',
             'client_photo' => 'nullable|image|mimes:jpeg,jpg,png,webp|max:2048',
@@ -130,7 +235,9 @@ class TestimonialController extends Controller
             'sort_order' => 'nullable|integer|min:0',
         ]);
 
-        // Handle uploads
+        /**
+         * Handle uploads.
+         */
         if ($request->hasFile('client_photo')) {
             $validated['client_photo'] = $request->file('client_photo')
                 ->store('testimonials/photos', 'public');
@@ -144,7 +251,9 @@ class TestimonialController extends Controller
             $validated['images'] = $images;
         }
 
-        // Auto-approve if admin creates it
+        /**
+         * Auto-approve if admin creates it.
+         */
         if ($validated['status'] === 'approved') {
             $validated['approved_at'] = now();
             $validated['approved_by'] = auth()->id();
@@ -152,7 +261,9 @@ class TestimonialController extends Controller
 
         $testimonial = Testimonial::create($validated);
 
-        // Log action.
+        /**
+         * Log action.
+         */
         \Log::info('Testimonial created by admin', [
             'testimonial_id' => $testimonial->id,
             'admin_id' => auth()->id(),
@@ -162,15 +273,48 @@ class TestimonialController extends Controller
         return redirect()->route('admin.testimonials.index');
     }
 
+    
+    
+    
+    
     /**
-     * Show the edit form.
+
+    
+    
+    
+     * Show the form for editing the specified resource.
+
+    
+    
+    
      *
-     * @param Testimonial $testimonial The testimonial model.
-     * @return \Inertia\Response Inertia response for the edit view.
+
+    
+    
+    
+     * @param Testimonial $testimonial The testimonial.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function edit(Testimonial $testimonial)
     {
-        // Authorize.
+        /**
+         * Authorize.
+         */
         if (!auth()->user()->hasPermission('reviews.edit')) {
             abort(403, 'Unauthorized action.');
         }
@@ -182,23 +326,62 @@ class TestimonialController extends Controller
         ]);
     }
 
+    
+    
+    
+    
     /**
-     * Update a testimonial.
+
+    
+    
+    
+     * Update the specified resource.
+
+    
+    
+    
      *
-     * @param Request $request The current HTTP request instance.
-     * @param Testimonial $testimonial The testimonial being updated.
-     * @return \Illuminate\Http\RedirectResponse Redirect to index with status.
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @param Testimonial $testimonial The testimonial.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function update(Request $request, Testimonial $testimonial)
     {
-        // Authorize.
+        /**
+         * Authorize.
+         */
         if (!auth()->user()->hasPermission('reviews.edit')) {
             abort(403, 'Unauthorized action.');
         }
 
-        // Validate.
+        /**
+         * Validate.
+         */
         $validated = $request->validate([
-            'client_name' => 'required|string|max:255|regex:/^[a-zA-Z\s\-\.áéíóúñÁÉÍÓÚÑ]+$/',
+            'client_name' => 'required|string|max:255|regex:/^[a-zA-Z\s\-\.Ã¡Ã©Ã­Ã³ÃºÃ±ÃÃ‰ÃÃ“ÃšÃ‘]+$/',
             'client_position' => 'nullable|string|max:255|regex:/^[^<>]*$/',
             'client_company' => 'nullable|string|max:255|regex:/^[^<>]*$/',
             'client_photo' => 'nullable|image|mimes:jpeg,jpg,png,webp|max:2048',
@@ -215,9 +398,13 @@ class TestimonialController extends Controller
             'sort_order' => 'nullable|integer|min:0',
         ]);
 
-        // Handle photo upload
+        /**
+         * Handle photo upload.
+         */
         if ($request->hasFile('client_photo')) {
-            // Delete old photo
+            /**
+             * Delete old photo.
+             */
             if ($testimonial->client_photo) {
                 Storage::disk('public')->delete($testimonial->client_photo);
             }
@@ -225,9 +412,13 @@ class TestimonialController extends Controller
                 ->store('testimonials/photos', 'public');
         }
 
-        // Handle project images
+        /**
+         * Handle project images.
+         */
         if ($request->hasFile('images')) {
-            // Delete old images
+            /**
+             * Delete old images.
+             */
             if ($testimonial->images) {
                 foreach ($testimonial->images as $image) {
                     Storage::disk('public')->delete($image);
@@ -240,7 +431,9 @@ class TestimonialController extends Controller
             $validated['images'] = $images;
         }
 
-        // Update approval info if status changed to approved
+        /**
+         * Update approval info if status changed to approved.
+         */
         if ($validated['status'] === 'approved' && $testimonial->status !== 'approved') {
             $validated['approved_at'] = now();
             $validated['approved_by'] = auth()->id();
@@ -248,7 +441,9 @@ class TestimonialController extends Controller
 
         $testimonial->update($validated);
 
-        // Log action.
+        /**
+         * Log action.
+         */
         \Log::info('Testimonial updated', [
             'testimonial_id' => $testimonial->id,
             'admin_id' => auth()->id(),
@@ -258,20 +453,55 @@ class TestimonialController extends Controller
             ->with('success', 'Testimonial updated successfully.');
     }
 
+    
+    
+    
+    
     /**
-     * Delete a testimonial.
+
+    
+    
+    
+     * Remove the specified resource.
+
+    
+    
+    
      *
-     * @param Testimonial $testimonial The testimonial to delete.
-     * @return \Illuminate\Http\RedirectResponse Redirect back with status.
+
+    
+    
+    
+     * @param Testimonial $testimonial The testimonial.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function destroy(Testimonial $testimonial)
     {
-        // Authorize.
+        /**
+         * Authorize.
+         */
         if (!auth()->user()->hasPermission('reviews.delete')) {
             abort(403, 'Unauthorized action.');
         }
 
-        // Delete associated files
+        /**
+         * Delete associated files.
+         */
         if ($testimonial->client_photo) {
             Storage::disk('public')->delete($testimonial->client_photo);
         }
@@ -284,7 +514,9 @@ class TestimonialController extends Controller
 
         $testimonial->delete();
 
-        // Log action.
+        /**
+         * Log action.
+         */
         \Log::info('Testimonial deleted', [
             'testimonial_id' => $testimonial->id,
             'admin_id' => auth()->id(),
@@ -294,22 +526,57 @@ class TestimonialController extends Controller
             ->with('success', 'Testimonial deleted successfully.');
     }
 
+    
+    
+    
+    
     /**
-     * Approve a testimonial.
+
+    
+    
+    
+     * Handle approve.
+
+    
+    
+    
      *
-     * @param Testimonial $testimonial The testimonial to approve.
-     * @return \Illuminate\Http\RedirectResponse Redirect back with status.
+
+    
+    
+    
+     * @param Testimonial $testimonial The testimonial.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function approve(Testimonial $testimonial)
     {
-        // Authorize.
+        /**
+         * Authorize.
+         */
         if (!auth()->user()->hasPermission('reviews.moderate')) {
             abort(403, 'Unauthorized action.');
         }
 
         $testimonial->approve(auth()->user());
 
-        // Log action.
+        /**
+         * Log action.
+         */
         \Log::info('Testimonial approved', [
             'testimonial_id' => $testimonial->id,
             'admin_id' => auth()->id(),
@@ -318,22 +585,57 @@ class TestimonialController extends Controller
         return back()->with('success', 'Testimonial approved successfully.');
     }
 
+    
+    
+    
+    
     /**
-     * Reject a testimonial.
+
+    
+    
+    
+     * Handle reject.
+
+    
+    
+    
      *
-     * @param Testimonial $testimonial The testimonial to reject.
-     * @return \Illuminate\Http\RedirectResponse Redirect back with status.
+
+    
+    
+    
+     * @param Testimonial $testimonial The testimonial.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function reject(Testimonial $testimonial)
     {
-        // Authorize.
+        /**
+         * Authorize.
+         */
         if (!auth()->user()->hasPermission('reviews.moderate')) {
             abort(403, 'Unauthorized action.');
         }
 
         $testimonial->reject();
 
-        // Log action.
+        /**
+         * Log action.
+         */
         \Log::info('Testimonial rejected', [
             'testimonial_id' => $testimonial->id,
             'admin_id' => auth()->id(),

@@ -20,14 +20,50 @@ use Inertia\Inertia;
 class ServiceManagementController extends Controller
 {
     use GeneratesUniqueSlug;
+    
+    
+    
+    
     /**
-     * Display a listing of services.
+
+    
+    
+    
+     * Display a listing of the resource.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function index(Request $request)
     {
         $query = Service::with(['category']);
 
-        // Apply keyword filtering across title and descriptions.
+        /**
+         * Apply keyword filtering across title and descriptions.
+         */
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
@@ -37,12 +73,16 @@ class ServiceManagementController extends Controller
             });
         }
 
-        // Filter by the selected category.
+        /**
+         * Filter by the selected category.
+         */
         if ($request->filled('category')) {
             $query->where('category_id', $request->category);
         }
 
-        // Filter by active/inactive status.
+        /**
+         * Filter by active/inactive status.
+         */
         if ($request->filled('status')) {
             if ($request->status === 'active') {
                 $query->where('is_active', true);
@@ -51,7 +91,9 @@ class ServiceManagementController extends Controller
             }
         }
 
-        // Filter by featured flag (correct column name is 'featured', not 'is_featured')
+        /**
+         * Filter by featured flag (correct column name is 'featured', not 'is_featured').
+         */
         if ($request->filled('featured')) {
             if ($request->featured === 'yes') {
                 $query->where('featured', true);
@@ -60,11 +102,15 @@ class ServiceManagementController extends Controller
             }
         }
 
-        // Sorting preferences with whitelist validation
+        /**
+         * Sorting preferences with whitelist validation.
+         */
         $sortBy = $request->get('sort_by', 'created_at');
         $sortOrder = $request->get('sort_order', 'desc');
 
-        // Security: Whitelist allowed sort fields and directions.
+        /**
+         * Security: Whitelist allowed sort fields and directions.
+         */
         $allowedSorts = ['title', 'status', 'featured', 'is_active', 'sort_order', 'created_at', 'views_count', 'price'];
         $allowedDirections = ['asc', 'desc'];
 
@@ -74,11 +120,15 @@ class ServiceManagementController extends Controller
             $query->orderBy('created_at', 'desc');
         }
 
-        // Paginate the results.
+        /**
+         * Paginate the results.
+         */
         $perPage = $request->get('per_page', 15);
         $services = $query->paginate($perPage);
 
-        // Transform services data for the frontend.
+        /**
+         * Transform services data for the frontend.
+         */
         $services->getCollection()->transform(function ($service) {
             return [
                 'id' => $service->id,
@@ -101,7 +151,9 @@ class ServiceManagementController extends Controller
             ];
         });
 
-        // Aggregate simple dashboard statistics.
+        /**
+         * Aggregate simple dashboard statistics.
+         */
         $stats = [
             'total_services' => Service::count(),
             'active_services' => Service::where('is_active', true)->count(),
@@ -110,7 +162,9 @@ class ServiceManagementController extends Controller
             'total_views' => Service::sum('views_count') ?? 0,
         ];
 
-        // Retrieve categories for filtering.
+        /**
+         * Retrieve categories for filtering.
+         */
         $categories = Category::select('id', 'name', 'slug')->get();
 
         return Inertia::render('Admin/ServiceManagement', [
@@ -121,9 +175,38 @@ class ServiceManagementController extends Controller
         ]);
     }
 
+    
+    
+    
+    
     /**
-     * Show the form for creating a new service.
+
+    
+    
+    
+     * Show the form for creating a new resource.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function create()
     {
         $categories = Category::select('id', 'name', 'slug')->get();
@@ -135,9 +218,43 @@ class ServiceManagementController extends Controller
         ]);
     }
 
+    
+    
+    
+    
     /**
-     * Store a newly created service.
+
+    
+    
+    
+     * Store a newly created resource.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -148,7 +265,7 @@ class ServiceManagementController extends Controller
             'price' => 'nullable|numeric|min:0',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             'is_active' => 'boolean',
-            'featured' => 'boolean', // ✅ Correct column name
+            'featured' => 'boolean', // âœ… Correct column name
         ]);
 
         if ($validator->fails()) {
@@ -157,10 +274,14 @@ class ServiceManagementController extends Controller
 
         $data = $validator->validated();
 
-        // Security: Ensure slug uniqueness using trait.
+        /**
+         * Security: Ensure slug uniqueness using trait.
+         */
         $data['slug'] = $this->generateUniqueSlug($data['title'], Service::class);
 
-        // Handle image upload.
+        /**
+         * Handle image upload.
+         */
         if ($request->hasFile('image')) {
             $data['image'] = $request->file('image')->store('services', 'public');
         }
@@ -171,20 +292,58 @@ class ServiceManagementController extends Controller
         return redirect()->route('admin.services.index'); // Fixed route name.
     }
 
+    
+    
+    
+    
     /**
-     * Display the specified service.
+
+    
+    
+    
+     * Display the specified resource.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Service $service The service.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function show(Service $service)
     {
         $service->load(['category']);
 
-        // Collect simple service analytics (last 30 days).
+        /**
+         * Collect simple service analytics (last 30 days).
+         */
         $analytics = [
             'monthly_views' => $service->views_count ?? 0, // In a real app, this would be calculated from analytics data
             'monthly_favorites' => $service->favorites()->where('created_at', '>=', now()->subDays(30))->count(),
         ];
 
-        // Load favorites count
+        /**
+         * Load favorites count.
+         */
         $service->loadCount('favorites');
 
         return Inertia::render('Admin/Services/Show', [
@@ -212,9 +371,43 @@ class ServiceManagementController extends Controller
         ]);
     }
 
+    
+    
+    
+    
     /**
-     * Show the form for editing the specified service.
+
+    
+    
+    
+     * Show the form for editing the specified resource.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Service $service The service.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function edit(Service $service)
     {
         $service->load(['category']);
@@ -238,9 +431,48 @@ class ServiceManagementController extends Controller
         ]);
     }
 
+    
+    
+    
+    
     /**
-     * Update the specified service.
+
+    
+    
+    
+     * Update the specified resource.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @param Service $service The service.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function update(Request $request, Service $service)
     {
         $validator = Validator::make($request->all(), [
@@ -266,14 +498,20 @@ class ServiceManagementController extends Controller
 
         $data = $validator->validated();
 
-        // Update the slug when the title changes with uniqueness check using trait
+        /**
+         * Update the slug when the title changes with uniqueness check using trait.
+         */
         if ($data['title'] !== $service->title) {
             $data['slug'] = $this->generateUniqueSlug($data['title'], Service::class, $service->id);
         }
 
-        // Handle image upload.
+        /**
+         * Handle image upload.
+         */
         if ($request->hasFile('image')) {
-            // Delete old image
+            /**
+             * Delete old image.
+             */
             if ($service->image) {
                 Storage::disk('public')->delete($service->image);
             }
@@ -286,12 +524,48 @@ class ServiceManagementController extends Controller
             ->with('success', 'Service updated successfully.');
     }
 
+    
+    
+    
+    
     /**
-     * Remove the specified service.
+
+    
+    
+    
+     * Remove the specified resource.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Service $service The service.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function destroy(Service $service)
     {
-        // Delete associated image.
+        /**
+         * Delete associated image.
+         */
         if ($service->image) {
             Storage::disk('public')->delete($service->image);
         }
@@ -302,9 +576,43 @@ class ServiceManagementController extends Controller
             ->with('success', 'Service deleted successfully.');
     }
 
+    
+    
+    
+    
     /**
-     * Handle bulk actions on services.
+
+    
+    
+    
+     * Handle bulk action.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function bulkAction(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -339,7 +647,9 @@ class ServiceManagementController extends Controller
                 $message = 'Services unmarked as featured successfully.';
                 break;
             case 'delete':
-                // Delete associated images
+                /**
+                 * Delete associated images.
+                 */
                 $servicesToDelete = $services->get();
                 foreach ($servicesToDelete as $service) {
                     if ($service->image) {
@@ -355,9 +665,43 @@ class ServiceManagementController extends Controller
             ->with('success', $message);
     }
 
+    
+    
+    
+    
     /**
-     * Export services to Excel/CSV using Laravel Excel.
+
+    
+    
+    
+     * Handle export.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function export(Request $request)
     {
         $filters = [
@@ -384,15 +728,51 @@ class ServiceManagementController extends Controller
         }
     }
 
+    
+    
+    
+    
     /**
-     * Show service analytics.
+
+    
+    
+    
+     * Handle analytics.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function analytics(Request $request)
     {
         $period = $request->get('period', 30);
         $startDate = now()->subDays($period);
 
-        // Get analytics data
+        /**
+         * Get analytics data.
+         */
         $analyticsData = [
             'performance' => [
                 'total_views' => Service::sum('views_count'),

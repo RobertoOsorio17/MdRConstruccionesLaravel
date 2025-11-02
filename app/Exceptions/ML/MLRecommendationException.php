@@ -1,5 +1,8 @@
 <?php
 namespace App\Exceptions\ML;
+/**
+ * Class MLRecommendationException.
+ */
 class MLRecommendationException extends MLException
 {
     protected string $errorCode = "ML_RECOMMENDATION_ERROR";

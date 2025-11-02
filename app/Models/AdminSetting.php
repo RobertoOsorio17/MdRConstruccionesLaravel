@@ -119,7 +119,7 @@ class AdminSetting extends Model
     public static function setValue(string $key, $value): bool
     {
         $setting = static::where('key', $key)->first();
-        
+
         if ($setting) {
             $setting->value = $value;
             return $setting->save();
@@ -134,7 +134,7 @@ class AdminSetting extends Model
     public static function getAllSettings(bool $publicOnly = false): array
     {
         $query = static::query();
-        
+
         if ($publicOnly) {
             $query->public();
         }
@@ -272,8 +272,45 @@ class AdminSetting extends Model
         return $saved;
     }
 
+
     /**
-     * Get setting value with caching.
+     * ⚡ PERFORMANCE: Get all settings at once with caching.
+     * This is much faster than calling getCachedValue() multiple times.
+     *
+     * @param int $ttl Cache TTL in seconds (default: 3600)
+     * @return array
+     */
+    public static function getAllCached(int $ttl = 3600): array
+    {
+        try {
+            return Cache::remember('settings.all', $ttl, function () {
+                try {
+                    return static::pluck('value', 'key')->toArray();
+                } catch (\Exception $e) {
+                    \Log::warning("AdminSetting::getAllCached failed", [
+                        'error' => $e->getMessage()
+                    ]);
+                    return [];
+                }
+            });
+        } catch (\Exception $e) {
+            \Log::warning("Cache::remember failed for all settings", [
+                'error' => $e->getMessage()
+            ]);
+
+            try {
+                return static::pluck('value', 'key')->toArray();
+            } catch (\Exception $dbError) {
+                return [];
+            }
+        }
+    }
+
+    /**
+     * Get setting value with caching and graceful fallback.
+     *
+     * ⚡ PERFORMANCE: Added error handling to prevent cascading failures
+     * when cache or database is unavailable
      *
      * @param string $key
      * @param mixed $default
@@ -282,9 +319,37 @@ class AdminSetting extends Model
      */
     public static function getCachedValue(string $key, $default = null, int $ttl = 3600)
     {
-        return Cache::remember("setting.{$key}", $ttl, function () use ($key, $default) {
-            return static::getValue($key, $default);
-        });
+        try {
+            return Cache::remember("setting.{$key}", $ttl, function () use ($key, $default) {
+                try {
+                    return static::getValue($key, $default);
+                } catch (\Exception $e) {
+                    // Database connection failed, return default
+                    \Log::warning("AdminSetting::getValue failed for key '{$key}'", [
+                        'error' => $e->getMessage(),
+                        'using_default' => $default
+                    ]);
+                    return $default;
+                }
+            });
+        } catch (\Exception $e) {
+            // Cache system failed, try direct database access
+            \Log::warning("Cache::remember failed for setting '{$key}', trying direct DB", [
+                'error' => $e->getMessage()
+            ]);
+
+            try {
+                return static::getValue($key, $default);
+            } catch (\Exception $dbError) {
+                // Both cache and DB failed, return default
+                \Log::error("AdminSetting::getCachedValue complete failure for key '{$key}'", [
+                    'cache_error' => $e->getMessage(),
+                    'db_error' => $dbError->getMessage(),
+                    'using_default' => $default
+                ]);
+                return $default;
+            }
+        }
     }
 
     /**

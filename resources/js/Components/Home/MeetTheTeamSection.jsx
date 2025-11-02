@@ -387,7 +387,7 @@ const MeetTheTeamSection = ({ prefersReducedMotion = false }) => {
         {/* Grid del equipo */}
         <Grid container spacing={{ xs: 3, md: 4 }}>
           {teamMembers.map((member, index) => (
-            <Grid size={{ xs: 12, sm: 6, lg: 4 }} key={member.id}>
+            <Grid item xs={12} sm={6} lg={4} key={member.id}>
               <TeamMemberCard 
                 member={member} 
                 index={index}

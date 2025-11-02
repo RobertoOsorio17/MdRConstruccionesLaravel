@@ -20,19 +20,80 @@ use Inertia\Response;
  */
 class RegisteredUserController extends Controller
 {
+    
+    
+    
+    
     /**
-     * Display the registration view.
+
+    
+    
+    
+     * Show the form for creating a new resource.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return Response
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function create(): Response
     {
         return Inertia::render('Auth/RegisterNew');
     }
 
+    
+    
+    
+    
     /**
-     * Handle an incoming registration request.
+
+    
+    
+    
+     * Store a newly created resource.
+
+    
+    
+    
      *
-     * @throws \Illuminate\Validation\ValidationException
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return RedirectResponse
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function store(Request $request): RedirectResponse
     {
         // Check if registration is enabled

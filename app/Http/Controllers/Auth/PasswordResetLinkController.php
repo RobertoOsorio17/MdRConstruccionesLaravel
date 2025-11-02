@@ -17,9 +17,38 @@ use Inertia\Response;
  */
 class PasswordResetLinkController extends Controller
 {
+    
+    
+    
+    
     /**
-     * Display the password reset link request view.
+
+    
+    
+    
+     * Show the form for creating a new resource.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return Response
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function create(): Response
     {
         return Inertia::render('Auth/ForgotPasswordNew', [
@@ -27,11 +56,43 @@ class PasswordResetLinkController extends Controller
         ]);
     }
 
+    
+    
+    
+    
     /**
-     * Handle an incoming password reset link request.
+
+    
+    
+    
+     * Store a newly created resource.
+
+    
+    
+    
      *
-     * @throws \Illuminate\Validation\ValidationException
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return RedirectResponse
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function store(Request $request): RedirectResponse
     {
         $request->validate([

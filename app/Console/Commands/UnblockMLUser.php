@@ -4,6 +4,9 @@ namespace App\Console\Commands;
 
 use App\Models\User;
 use Illuminate\Console\Command;
+/**
+ * Class UnblockMLUser.
+ */
 
 class UnblockMLUser extends Command
 {
@@ -21,9 +24,38 @@ class UnblockMLUser extends Command
      */
     protected $description = 'Unblock a user that was blocked by the ML system';
 
+    
+    
+    
+    
     /**
-     * Execute the console command.
+
+    
+    
+    
+     * Handle handle.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function handle()
     {
         $email = $this->argument('email');

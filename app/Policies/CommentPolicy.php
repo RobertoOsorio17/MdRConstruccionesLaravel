@@ -12,18 +12,91 @@ use Illuminate\Auth\Access\Response;
  */
 class CommentPolicy
 {
+    
+    
+    
+    
     /**
-     * Determine whether the user can view any models.
+
+    
+    
+    
+     * Handle view any.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param ?User $user The user.
+
+    
+    
+    
+     * @return bool
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function viewAny(?User $user): bool
     {
         // Anyone can view approved comments
         return true;
     }
 
+    
+    
+    
+    
     /**
-     * Determine whether the user can view the model.
+
+    
+    
+    
+     * Handle view.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param ?User $user The user.
+
+    
+    
+    
+     * @param Comment $comment The comment.
+
+    
+    
+    
+     * @return bool
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function view(?User $user, Comment $comment): bool
     {
         // Approved comments can be viewed by anyone
@@ -41,18 +114,91 @@ class CommentPolicy
         return false;
     }
 
+    
+    
+    
+    
     /**
-     * Determine whether the user can create models.
+
+    
+    
+    
+     * Show the form for creating a new resource.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param ?User $user The user.
+
+    
+    
+    
+     * @return bool
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function create(?User $user): bool
     {
         // Anyone can create comments (including guests)
         return true;
     }
 
+    
+    
+    
+    
     /**
-     * Determine whether the user can update the model.
+
+    
+    
+    
+     * Update the specified resource.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param User $user The user.
+
+    
+    
+    
+     * @param Comment $comment The comment.
+
+    
+    
+    
+     * @return bool
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function update(User $user, Comment $comment): bool
     {
         // Users can only update their own comments within 24 hours
@@ -64,9 +210,48 @@ class CommentPolicy
         return $user->hasRole('admin') || $user->hasRole('moderator');
     }
 
+    
+    
+    
+    
     /**
-     * Determine whether the user can delete the model.
+
+    
+    
+    
+     * Remove the specified resource.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param User $user The user.
+
+    
+    
+    
+     * @param Comment $comment The comment.
+
+    
+    
+    
+     * @return bool
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function delete(User $user, Comment $comment): bool
     {
         // Users can delete their own comments
@@ -78,36 +263,192 @@ class CommentPolicy
         return $user->hasRole('admin') || $user->hasRole('moderator');
     }
 
+    
+    
+    
+    
     /**
-     * Determine whether the user can restore the model.
+
+    
+    
+    
+     * Handle restore.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param User $user The user.
+
+    
+    
+    
+     * @param Comment $comment The comment.
+
+    
+    
+    
+     * @return bool
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function restore(User $user, Comment $comment): bool
     {
         // Only admins and moderators can restore comments
         return $user->hasRole('admin') || $user->hasRole('moderator');
     }
 
+    
+    
+    
+    
     /**
-     * Determine whether the user can permanently delete the model.
+
+    
+    
+    
+     * Handle force delete.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param User $user The user.
+
+    
+    
+    
+     * @param Comment $comment The comment.
+
+    
+    
+    
+     * @return bool
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function forceDelete(User $user, Comment $comment): bool
     {
         // Only admins can permanently delete comments
         return $user->hasRole('admin');
     }
 
+    
+    
+    
+    
     /**
-     * Determine whether the user can moderate the model.
+
+    
+    
+    
+     * Handle moderate.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param User $user The user.
+
+    
+    
+    
+     * @param Comment $comment The comment.
+
+    
+    
+    
+     * @return bool
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function moderate(User $user, Comment $comment): bool
     {
         // Only admins and moderators can moderate comments
         return $user->hasRole('admin') || $user->hasRole('moderator');
     }
 
+    
+    
+    
+    
     /**
-     * Determine whether the user can reply to the model.
+
+    
+    
+    
+     * Handle reply.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param ?User $user The user.
+
+    
+    
+    
+     * @param Comment $comment The comment.
+
+    
+    
+    
+     * @return bool
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function reply(?User $user, Comment $comment): bool
     {
         // Can only reply to approved comments
@@ -119,36 +460,177 @@ class CommentPolicy
         return true;
     }
 
+    
+    
+    
+    
     /**
-     * Determine whether the user can approve comments.
+
+    
+    
+    
+     * Handle approve.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param User $user The user.
+
+    
+    
+    
+     * @return bool
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function approve(User $user): bool
     {
         // Only admins and moderators can approve comments
         return $user->hasRole('admin') || $user->hasRole('moderator') || $user->hasRole('editor');
     }
 
+    
+    
+    
+    
     /**
-     * Determine whether the user can reject comments.
+
+    
+    
+    
+     * Handle reject.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param User $user The user.
+
+    
+    
+    
+     * @return bool
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function reject(User $user): bool
     {
         // Only admins and moderators can reject comments
         return $user->hasRole('admin') || $user->hasRole('moderator') || $user->hasRole('editor');
     }
 
+    
+    
+    
+    
     /**
-     * Determine whether the user can mark comments as spam.
+
+    
+    
+    
+     * Handle mark as spam.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param User $user The user.
+
+    
+    
+    
+     * @return bool
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function markAsSpam(User $user): bool
     {
         // Only admins and moderators can mark as spam
         return $user->hasRole('admin') || $user->hasRole('moderator') || $user->hasRole('editor');
     }
 
+    
+    
+    
+    
     /**
-     * Determine whether the user can like a comment.
+
+    
+    
+    
+     * Handle like.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param User $user The user.
+
+    
+    
+    
+     * @param Comment $comment The comment.
+
+    
+    
+    
+     * @return bool
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function like(User $user, Comment $comment): bool
     {
         // Cannot like deleted comments
@@ -160,9 +642,48 @@ class CommentPolicy
         return $comment->status === 'approved';
     }
 
+    
+    
+    
+    
     /**
-     * Determine whether the user can unlike a comment.
+
+    
+    
+    
+     * Handle unlike.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param User $user The user.
+
+    
+    
+    
+     * @param Comment $comment The comment.
+
+    
+    
+    
+     * @return bool
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function unlike(User $user, Comment $comment): bool
     {
         // Same rules as like

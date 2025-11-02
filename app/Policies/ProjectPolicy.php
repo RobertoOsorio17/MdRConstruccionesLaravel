@@ -11,18 +11,91 @@ use App\Models\User;
  */
 class ProjectPolicy
 {
+    
+    
+    
+    
     /**
-     * Determine whether the user can view any models.
+
+    
+    
+    
+     * Handle view any.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param ?User $user The user.
+
+    
+    
+    
+     * @return bool
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function viewAny(?User $user): bool
     {
         // Anyone can view projects
         return true;
     }
 
+    
+    
+    
+    
     /**
-     * Determine whether the user can view the model.
+
+    
+    
+    
+     * Handle view.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param ?User $user The user.
+
+    
+    
+    
+     * @param Project $project The project.
+
+    
+    
+    
+     * @return bool
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function view(?User $user, Project $project): bool
     {
         // Anyone can view active projects
@@ -34,63 +107,326 @@ class ProjectPolicy
         return $user && ($user->hasRole('admin') || $user->hasRole('editor'));
     }
 
+    
+    
+    
+    
     /**
-     * Determine whether the user can create models.
+
+    
+    
+    
+     * Show the form for creating a new resource.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param User $user The user.
+
+    
+    
+    
+     * @return bool
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function create(User $user): bool
     {
         // Only admins and editors can create projects
         return $user->hasRole('admin') || $user->hasRole('editor');
     }
 
+    
+    
+    
+    
     /**
-     * Determine whether the user can update the model.
+
+    
+    
+    
+     * Update the specified resource.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param User $user The user.
+
+    
+    
+    
+     * @param Project $project The project.
+
+    
+    
+    
+     * @return bool
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function update(User $user, Project $project): bool
     {
         // Only admins and editors can update projects
         return $user->hasRole('admin') || $user->hasRole('editor');
     }
 
+    
+    
+    
+    
     /**
-     * Determine whether the user can delete the model.
+
+    
+    
+    
+     * Remove the specified resource.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param User $user The user.
+
+    
+    
+    
+     * @param Project $project The project.
+
+    
+    
+    
+     * @return bool
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function delete(User $user, Project $project): bool
     {
         // Only admins can delete projects
         return $user->hasRole('admin');
     }
 
+    
+    
+    
+    
     /**
-     * Determine whether the user can restore the model.
+
+    
+    
+    
+     * Handle restore.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param User $user The user.
+
+    
+    
+    
+     * @param Project $project The project.
+
+    
+    
+    
+     * @return bool
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function restore(User $user, Project $project): bool
     {
         // Only admins can restore projects
         return $user->hasRole('admin');
     }
 
+    
+    
+    
+    
     /**
-     * Determine whether the user can permanently delete the model.
+
+    
+    
+    
+     * Handle force delete.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param User $user The user.
+
+    
+    
+    
+     * @param Project $project The project.
+
+    
+    
+    
+     * @return bool
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function forceDelete(User $user, Project $project): bool
     {
         // Only admins can permanently delete projects
         return $user->hasRole('admin');
     }
 
+    
+    
+    
+    
     /**
-     * Determine whether the user can toggle project status.
+
+    
+    
+    
+     * Handle toggle status.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param User $user The user.
+
+    
+    
+    
+     * @param Project $project The project.
+
+    
+    
+    
+     * @return bool
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function toggleStatus(User $user, Project $project): bool
     {
         // Only admins and editors can toggle status
         return $user->hasRole('admin') || $user->hasRole('editor');
     }
 
+    
+    
+    
+    
     /**
-     * Determine whether the user can perform bulk actions.
+
+    
+    
+    
+     * Handle bulk action.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param User $user The user.
+
+    
+    
+    
+     * @return bool
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function bulkAction(User $user): bool
     {
         // Only admins and editors can perform bulk actions

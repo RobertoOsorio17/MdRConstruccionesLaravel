@@ -12,9 +12,43 @@ use Illuminate\Auth\Access\Response;
  */
 class ContactRequestPolicy
 {
+    
+    
+    
+    
     /**
-     * Determine whether the user can view any models.
+
+    
+    
+    
+     * Handle view any.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param User $user The user.
+
+    
+    
+    
+     * @return bool
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function viewAny(User $user): bool
     {
         // Only admins and editors can view contact requests
@@ -23,9 +57,48 @@ class ContactRequestPolicy
                $user->hasRole('editor');
     }
 
+    
+    
+    
+    
     /**
-     * Determine whether the user can view the model.
+
+    
+    
+    
+     * Handle view.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param User $user The user.
+
+    
+    
+    
+     * @param ContactRequest $contactRequest The contactRequest.
+
+    
+    
+    
+     * @return bool
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function view(User $user, ContactRequest $contactRequest): bool
     {
         // Only admins and editors can view contact requests
@@ -34,18 +107,91 @@ class ContactRequestPolicy
                $user->hasRole('editor');
     }
 
+    
+    
+    
+    
     /**
-     * Determine whether the user can create models.
+
+    
+    
+    
+     * Show the form for creating a new resource.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param ?User $user The user.
+
+    
+    
+    
+     * @return bool
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function create(?User $user): bool
     {
         // Anyone can create contact requests (including guests)
         return true;
     }
 
+    
+    
+    
+    
     /**
-     * Determine whether the user can update the model.
+
+    
+    
+    
+     * Update the specified resource.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param User $user The user.
+
+    
+    
+    
+     * @param ContactRequest $contactRequest The contactRequest.
+
+    
+    
+    
+     * @return bool
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function update(User $user, ContactRequest $contactRequest): bool
     {
         // Only admins and editors can update contact requests
@@ -54,9 +200,48 @@ class ContactRequestPolicy
                $user->hasRole('editor');
     }
 
+    
+    
+    
+    
     /**
-     * Determine whether the user can delete the model.
+
+    
+    
+    
+     * Remove the specified resource.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param User $user The user.
+
+    
+    
+    
+     * @param ContactRequest $contactRequest The contactRequest.
+
+    
+    
+    
+     * @return bool
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function delete(User $user, ContactRequest $contactRequest): bool
     {
         // Only admins can delete contact requests
@@ -64,27 +249,144 @@ class ContactRequestPolicy
                $user->hasRole('admin');
     }
 
+    
+    
+    
+    
     /**
-     * Determine whether the user can restore the model.
+
+    
+    
+    
+     * Handle restore.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param User $user The user.
+
+    
+    
+    
+     * @param ContactRequest $contactRequest The contactRequest.
+
+    
+    
+    
+     * @return bool
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function restore(User $user, ContactRequest $contactRequest): bool
     {
         // Only admins can restore deleted contact requests
         return $user->hasRole('admin');
     }
 
+    
+    
+    
+    
     /**
-     * Determine whether the user can permanently delete the model.
+
+    
+    
+    
+     * Handle force delete.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param User $user The user.
+
+    
+    
+    
+     * @param ContactRequest $contactRequest The contactRequest.
+
+    
+    
+    
+     * @return bool
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function forceDelete(User $user, ContactRequest $contactRequest): bool
     {
         // Only admins can permanently delete contact requests
         return $user->hasRole('admin');
     }
 
+    
+    
+    
+    
     /**
-     * Determine whether the user can mark the request as read.
+
+    
+    
+    
+     * Handle mark as read.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param User $user The user.
+
+    
+    
+    
+     * @param ContactRequest $contactRequest The contactRequest.
+
+    
+    
+    
+     * @return bool
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function markAsRead(User $user, ContactRequest $contactRequest): bool
     {
         return $user->hasPermission('contact.manage') || 
@@ -92,9 +394,48 @@ class ContactRequestPolicy
                $user->hasRole('editor');
     }
 
+    
+    
+    
+    
     /**
-     * Determine whether the user can mark the request as responded.
+
+    
+    
+    
+     * Handle mark as responded.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param User $user The user.
+
+    
+    
+    
+     * @param ContactRequest $contactRequest The contactRequest.
+
+    
+    
+    
+     * @return bool
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function markAsResponded(User $user, ContactRequest $contactRequest): bool
     {
         return $user->hasPermission('contact.manage') || 
@@ -102,9 +443,48 @@ class ContactRequestPolicy
                $user->hasRole('editor');
     }
 
+    
+    
+    
+    
     /**
-     * Determine whether the user can archive the request.
+
+    
+    
+    
+     * Handle archive.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param User $user The user.
+
+    
+    
+    
+     * @param ContactRequest $contactRequest The contactRequest.
+
+    
+    
+    
+     * @return bool
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function archive(User $user, ContactRequest $contactRequest): bool
     {
         return $user->hasPermission('contact.manage') || 
@@ -112,9 +492,48 @@ class ContactRequestPolicy
                $user->hasRole('editor');
     }
 
+    
+    
+    
+    
     /**
-     * Determine whether the user can add notes to the request.
+
+    
+    
+    
+     * Handle add notes.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param User $user The user.
+
+    
+    
+    
+     * @param ContactRequest $contactRequest The contactRequest.
+
+    
+    
+    
+     * @return bool
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function addNotes(User $user, ContactRequest $contactRequest): bool
     {
         return $user->hasPermission('contact.manage') || 
@@ -122,9 +541,48 @@ class ContactRequestPolicy
                $user->hasRole('editor');
     }
 
+    
+    
+    
+    
     /**
-     * Determine whether the user can download attachments.
+
+    
+    
+    
+     * Handle download attachment.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param User $user The user.
+
+    
+    
+    
+     * @param ContactRequest $contactRequest The contactRequest.
+
+    
+    
+    
+     * @return bool
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function downloadAttachment(User $user, ContactRequest $contactRequest): bool
     {
         return $user->hasPermission('contact.view') || 
@@ -132,9 +590,43 @@ class ContactRequestPolicy
                $user->hasRole('editor');
     }
 
+    
+    
+    
+    
     /**
-     * Determine whether the user can perform bulk actions.
+
+    
+    
+    
+     * Handle bulk action.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param User $user The user.
+
+    
+    
+    
+     * @return bool
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function bulkAction(User $user): bool
     {
         return $user->hasPermission('contact.manage') || 

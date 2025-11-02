@@ -18,17 +18,80 @@ use Inertia\Response;
  */
 class ConfirmablePasswordController extends Controller
 {
+    
+    
+    
+    
     /**
-     * Show the confirm password view.
+
+    
+    
+    
+     * Display the specified resource.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return Response
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function show(): Response
     {
         return Inertia::render('Auth/ConfirmPassword');
     }
 
+    
+    
+    
+    
     /**
-     * Confirm the user's password.
+
+    
+    
+    
+     * Store a newly created resource.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return RedirectResponse
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function store(Request $request): RedirectResponse
     {
         $user = $request->user();
@@ -107,9 +170,48 @@ class ConfirmablePasswordController extends Controller
         }
     }
 
+    
+    
+    
+    
     /**
-     * Check if the intended URL is safe for the user's role
+
+    
+    
+    
+     * Determine whether url safe for user.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param string $url The url.
+
+    
+    
+    
+     * @param mixed $user The user.
+
+    
+    
+    
+     * @return bool
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function isUrlSafeForUser(string $url, $user): bool
     {
         // Admin/editor URLs should only be accessible to admin/editor users
@@ -126,9 +228,43 @@ class ConfirmablePasswordController extends Controller
         return true;
     }
 
+    
+    
+    
+    
     /**
-     * Get user roles for logging
+
+    
+    
+    
+     * Get user roles.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param mixed $user The user.
+
+    
+    
+    
+     * @return array
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function getUserRoles($user): array
     {
         $userRoles = [];

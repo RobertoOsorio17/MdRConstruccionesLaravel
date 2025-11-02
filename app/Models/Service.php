@@ -55,9 +55,43 @@ class Service extends Model
         'gallery' => 'array',
     ];
 
+    
+    
+    
+    
     /**
-     * Get the faq attribute and handle double-encoded JSON.
+
+    
+    
+    
+     * Get faq attribute.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param mixed $value The value.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function getFaqAttribute($value)
     {
         if (is_null($value) || $value === '') {
@@ -91,41 +125,201 @@ class Service extends Model
         return [];
     }
 
+    
+    
+    
+    
     /**
-     * Scope a query to only include active services.
+
+    
+    
+    
+     * Handle scope active.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param mixed $query The query.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function scopeActive($query)
     {
         return $query->where('is_active', true);
     }
 
+    
+    
+    
+    
     /**
-     * Scope a query to only include featured services.
+
+    
+    
+    
+     * Handle scope featured.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param mixed $query The query.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function scopeFeatured($query)
     {
         return $query->where('featured', true);
     }
 
+    
+    
+    
+    
     /**
-     * Scope a query to order services by sort_order.
+
+    
+    
+    
+     * Handle scope ordered.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param mixed $query The query.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function scopeOrdered($query)
     {
         return $query->orderBy('sort_order');
     }
 
+    
+    
+    
+    
     /**
-     * Get the route key for the model.
+
+    
+    
+    
+     * Get route key name.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function getRouteKeyName()
     {
         return 'slug';
     }
 
+    
+    
+    
+    
     /**
-     * Get FAQ count.
+
+    
+    
+    
+     * Get faq count attribute.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function getFaqCountAttribute()
     {
         try {
@@ -144,9 +338,38 @@ class Service extends Model
         }
     }
 
+    
+    
+    
+    
     /**
-     * Get users who have favorited this service.
+
+    
+    
+    
+     * Handle favorited by users.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function favoritedByUsers()
     {
         return $this->belongsToMany(User::class, 'user_service_favorites')
@@ -154,57 +377,265 @@ class Service extends Model
                     ->orderBy('user_service_favorites.created_at', 'desc');
     }
 
+    
+    
+    
+    
     /**
-     * Get the service favorites (pivot model).
+
+    
+    
+    
+     * Handle service favorites.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function serviceFavorites()
     {
         return $this->hasMany(ServiceFavorite::class);
     }
 
+    
+    
+    
+    
     /**
-     * Alias for serviceFavorites for easier access.
+
+    
+    
+    
+     * Handle favorites.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function favorites()
     {
         return $this->hasMany(ServiceFavorite::class);
     }
 
+    
+    
+    
+    
     /**
-     * Get the count of users who have favorited this service.
+
+    
+    
+    
+     * Get favorites count attribute.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function getFavoritesCountAttribute()
     {
         return $this->serviceFavorites()->count();
     }
 
+    
+    
+    
+    
     /**
-     * Check if a specific user has favorited this service.
+
+    
+    
+    
+     * Determine whether favorited by.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param User $user The user.
+
+    
+    
+    
+     * @return bool
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function isFavoritedBy(User $user): bool
     {
         return $this->favoritedByUsers()->where('user_id', $user->id)->exists();
     }
 
+    
+    
+    
+    
     /**
-     * Get the category that owns the service.
+
+    
+    
+    
+     * Handle category.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function category()
     {
         return $this->belongsTo(Category::class);
     }
 
+    
+    
+    
+    
     /**
-     * Get all reviews for the service.
+
+    
+    
+    
+     * Handle reviews.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function reviews()
     {
         return $this->morphMany(Review::class, 'reviewable');
     }
 
+    
+    
+    
+    
     /**
-     * Get approved reviews only.
+
+    
+    
+    
+     * Handle approved reviews.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function approvedReviews()
     {
         return $this->morphMany(Review::class, 'reviewable')
@@ -212,25 +643,112 @@ class Service extends Model
             ->latest();
     }
 
+    
+    
+    
+    
     /**
-     * Get average rating.
+
+    
+    
+    
+     * Get average rating attribute.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function getAverageRatingAttribute()
     {
         return $this->approvedReviews()->avg('rating') ?? 0;
     }
 
+    
+    
+    
+    
     /**
-     * Get total reviews count.
+
+    
+    
+    
+     * Get reviews count attribute.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function getReviewsCountAttribute()
     {
         return $this->approvedReviews()->count();
     }
 
+    
+    
+    
+    
     /**
-     * Get rating distribution (count per star).
+
+    
+    
+    
+     * Get rating distribution attribute.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function getRatingDistributionAttribute()
     {
         $distribution = [];

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import axios from 'axios';
 
 // Small utility to play a short beep using Web Audio API
+// ⚡ PERFORMANCE: Optimized notification system
 function playBeep(volume = 0.2, duration = 120, frequency = 880) {
     try {
         const ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -22,7 +23,7 @@ function playBeep(volume = 0.2, duration = 120, frequency = 880) {
     }
 }
 
-export default function useAdminNotificationsRealtime() {
+export default function useAdminNotificationsRealtime(enabled = true) {
     const [notifications, setNotifications] = useState([]);
     const [unreadCount, setUnreadCount] = useState(0);
     const [loading, setLoading] = useState(true);
@@ -38,6 +39,11 @@ export default function useAdminNotificationsRealtime() {
     const cancelledRef = useRef(false);
 
     const fetchRecent = useCallback(async () => {
+        if (!enabled) {
+            setLoading(false);
+            return;
+        }
+
         try {
             const recentUrl = typeof route === 'function' ? route('admin.api.notifications.recent') : '/admin/api/notifications/recent';
             const { data } = await axios.get(recentUrl);
@@ -50,17 +56,18 @@ export default function useAdminNotificationsRealtime() {
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [enabled]);
 
     const poll = useCallback(async () => {
-        if (pollingRef.current || cancelledRef.current) return;
+        if (!enabled || pollingRef.current || cancelledRef.current) return;
         pollingRef.current = true;
         try {
-            // Long poll wait for up to 25s
+            // ⚡ PERFORMANCE: Changed from long-polling (25s) to short-polling (instant response)
+            // This prevents blocking page loads with 25-second requests
             const waitUrl = typeof route === 'function' ? route('admin.api.notifications.wait-updates') : '/admin/api/notifications/wait-updates';
             const { data } = await axios.get(waitUrl, {
-                params: { last_id: lastIdRef.current, timeout: 25 },
-                timeout: 30000,
+                params: { last_id: lastIdRef.current, timeout: 0 }, // ⚡ timeout: 0 = instant response
+                timeout: 5000, // ⚡ 5 second max wait instead of 30 seconds
             });
 
             if (cancelledRef.current) return;
@@ -98,11 +105,12 @@ export default function useAdminNotificationsRealtime() {
         } finally {
             pollingRef.current = false;
             if (!cancelledRef.current) {
-                // Immediately start next long poll for near real-time
-                poll();
+                // ⚡ PERFORMANCE: Wait 10 seconds before next poll instead of immediate
+                // This reduces server load and prevents blocking page navigation
+                setTimeout(() => poll(), 10000);
             }
         }
-    }, [dndEnabled, unreadCount]);
+    }, [enabled, dndEnabled, unreadCount]);
 
     const markAsRead = useCallback(async (id) => {
         try {
@@ -130,6 +138,16 @@ export default function useAdminNotificationsRealtime() {
         } catch (_) {}
     }, []);
 
+    const deleteAllRead = useCallback(async () => {
+        try {
+            const deleteAllReadUrl = typeof route === 'function' ? route('admin.api.notifications.delete-all-read') : '/admin/api/notifications/delete-all-read';
+            await axios.delete(deleteAllReadUrl);
+            setNotifications(prev => prev.filter(n => !n.read));
+            // Recalculate unread count (should remain the same)
+            setUnreadCount(prev => prev);
+        } catch (_) {}
+    }, []);
+
     const toggleDnd = useCallback(() => {
         setDndEnabled(prev => {
             const next = !prev;
@@ -154,6 +172,7 @@ export default function useAdminNotificationsRealtime() {
         markAsRead,
         markAllAsRead,
         deleteNotification,
+        deleteAllRead,
         dndEnabled,
         toggleDnd,
     };

@@ -43,73 +43,359 @@ class Review extends Model
         'approved_at' => 'datetime',
     ];
 
+    
+    
+    
+    
     /**
-     * Get the user who wrote the review.
+
+    
+    
+    
+     * Handle user.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return BelongsTo
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
+    
+    
+    
+    
     /**
-     * Get the reviewable model (Service, Project, etc.)
+
+    
+    
+    
+     * Handle reviewable.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return MorphTo
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function reviewable(): MorphTo
     {
         return $this->morphTo();
     }
 
+    
+    
+    
+    
     /**
-     * Get the admin who approved the review.
+
+    
+    
+    
+     * Handle approved by.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return BelongsTo
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function approvedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'approved_by');
     }
 
+    
+    
+    
+    
     /**
-     * Scope to get only approved reviews.
+
+    
+    
+    
+     * Handle scope approved.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param mixed $query The query.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function scopeApproved($query)
     {
         return $query->where('status', 'approved');
     }
 
+    
+    
+    
+    
     /**
-     * Scope to get only pending reviews.
+
+    
+    
+    
+     * Handle scope pending.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param mixed $query The query.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function scopePending($query)
     {
         return $query->where('status', 'pending');
     }
 
+    
+    
+    
+    
     /**
-     * Scope to filter by rating.
+
+    
+    
+    
+     * Handle scope by rating.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param mixed $query The query.
+
+    
+    
+    
+     * @param int $rating The rating.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function scopeByRating($query, int $rating)
     {
         return $query->where('rating', $rating);
     }
 
+    
+    
+    
+    
     /**
-     * Check if review is approved.
+
+    
+    
+    
+     * Determine whether approved.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return bool
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function isApproved(): bool
     {
         return $this->status === 'approved';
     }
 
+    
+    
+    
+    
     /**
-     * Check if review is pending.
+
+    
+    
+    
+     * Determine whether pending.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return bool
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function isPending(): bool
     {
         return $this->status === 'pending';
     }
 
+    
+    
+    
+    
     /**
-     * Approve the review.
+
+    
+    
+    
+     * Handle approve.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param int $approvedBy The approvedBy.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function approve(int $approvedBy): void
     {
         $this->update([
@@ -119,9 +405,38 @@ class Review extends Model
         ]);
     }
 
+    
+    
+    
+    
     /**
-     * Reject the review.
+
+    
+    
+    
+     * Handle reject.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function reject(): void
     {
         $this->update(['status' => 'rejected']);

@@ -53,7 +53,9 @@ import {
     Tag as TagIcon,
     ContactMail as ContactMailIcon,
     Close as CloseIcon,
-    Flag as FlagIcon
+    Flag as FlagIcon,
+    PhotoLibrary as PhotoLibraryIcon,
+    Gavel as GavelIcon
 } from '@mui/icons-material';
 import NotificationCenter from '@/Components/Admin/NotificationCenter';
 import BreadcrumbsWithFilters from '@/Components/Admin/BreadcrumbsWithFilters';
@@ -215,105 +217,179 @@ const AdminLayoutNew = ({
         }
     }, [isMedium, isMobile]);
 
-    // Navigation menu items
-    const menuItems = [
+    // ========================================
+    // ROLE-BASED ACCESS CONTROL
+    // ========================================
+    // Check if user is admin (has full access)
+    // Support both role column and roles relationship
+    const isAdmin = auth.user?.role === 'admin' ||
+                    (auth.user?.roles && Array.isArray(auth.user.roles) && auth.user.roles.some(r => r.name === 'admin'));
+
+    // Check if user is editor (restricted access)
+    const isEditor = auth.user?.role === 'editor' ||
+                     (auth.user?.roles && Array.isArray(auth.user.roles) && auth.user.roles.some(r => r.name === 'editor'));
+
+    // Navigation menu items with role-based access control
+    const allMenuItems = [
         {
             key: 'dashboard',
             label: 'Dashboard',
             icon: <DashboardIcon />,
             href: '/admin/dashboard',
-            active: route().current('admin.dashboard')
+            active: route().current('admin.dashboard'),
+            adminOnly: false // Both admin and editor can access
         },
         {
             key: 'content',
             label: 'Contenido',
             icon: <ArticleIcon />,
             expandable: true,
+            adminOnly: false, // Both admin and editor can access
             children: [
                 {
                     key: 'posts',
                     label: 'Posts',
                     icon: <ArticleIcon />,
                     href: '/admin/posts',
-                    active: route().current('admin.posts.*')
+                    active: route().current('admin.posts.*'),
+                    adminOnly: false
                 },
                 {
                     key: 'categories',
                     label: 'Categorías',
                     icon: <CategoryIcon />,
                     href: '/admin/categories',
-                    active: route().current('admin.categories.*')
+                    active: route().current('admin.categories.*'),
+                    adminOnly: false
                 },
                 {
                     key: 'tags',
                     label: 'Tags',
                     icon: <TagIcon />,
                     href: '/admin/tags',
-                    active: route().current('admin.tags.*')
+                    active: route().current('admin.tags.*'),
+                    adminOnly: false
                 },
                 {
                     key: 'comments',
                     label: 'Comentarios',
                     icon: <CommentIcon />,
                     href: '/admin/comment-management',
-                    active: route().current('admin.comment-management.*')
+                    active: route().current('admin.comment-management.*'),
+                    adminOnly: false
                 },
                 {
                     key: 'comment-reports',
                     label: 'Reportes de comentarios',
                     icon: <FlagIcon />,
                     href: '/admin/comment-reports',
-                    active: route().current('admin.comment-reports.*')
+                    active: route().current('admin.comment-reports.*'),
+                    adminOnly: false
                 }
             ]
+        },
+        {
+            key: 'media',
+            label: 'Media',
+            icon: <PhotoLibraryIcon />,
+            href: '/admin/media',
+            active: route().current('admin.media.*'),
+            adminOnly: false // Editors need media library
         },
         {
             key: 'services',
             label: 'Servicios',
             icon: <BuildIcon />,
             href: route('admin.services.index'),
-            active: route().current('admin.services.*')
+            active: route().current('admin.services.*'),
+            adminOnly: true // Admin only
         },
         {
             key: 'projects',
             label: 'Proyectos',
             icon: <WorkIcon />,
             href: route('admin.projects.index'),
-            active: route().current('admin.projects.*')
+            active: route().current('admin.projects.*'),
+            adminOnly: true // Admin only
         },
         {
             key: 'users',
             label: 'Usuarios',
             icon: <PeopleIcon />,
-            href: route('admin.users.index'),
-            active: route().current('admin.users.*')
+            expandable: true,
+            adminOnly: true, // Admin only - CRITICAL
+            children: [
+                {
+                    key: 'user-management',
+                    label: 'Gestión de Usuarios',
+                    icon: <PeopleIcon />,
+                    href: route('admin.users.index'),
+                    active: route().current('admin.users.*'),
+                    adminOnly: true
+                },
+                {
+                    key: 'ban-appeals',
+                    label: 'Apelaciones de Baneo',
+                    icon: <GavelIcon />,
+                    href: route('admin.ban-appeals.index'),
+                    active: route().current('admin.ban-appeals.*'),
+                    adminOnly: true
+                }
+            ]
+        },
+        {
+            key: 'user-notifications',
+            label: 'Notificaciones de Usuarios',
+            icon: <NotificationsIcon />,
+            expandable: true,
+            adminOnly: true, // Admin only
+            children: [
+                {
+                    key: 'send-notification',
+                    label: 'Enviar Notificación',
+                    href: route('admin.user-notifications.send'),
+                    active: route().current('admin.user-notifications.send'),
+                    adminOnly: true
+                },
+                {
+                    key: 'notification-history',
+                    label: 'Historial',
+                    href: route('admin.user-notifications.history'),
+                    active: route().current('admin.user-notifications.history'),
+                    adminOnly: true
+                }
+            ]
         },
         {
             key: 'contact-requests',
             label: 'Solicitudes de Contacto',
             icon: <ContactMailIcon />,
             href: route('admin.contact-requests.index'),
-            active: route().current('admin.contact-requests.*')
+            active: route().current('admin.contact-requests.*'),
+            adminOnly: true // Admin only
         },
         {
             key: 'analytics',
             label: 'Analytics',
             icon: <AnalyticsIcon />,
             href: '/admin/analytics',
-            active: route().current('admin.analytics.*')
+            active: route().current('admin.analytics.*'),
+            adminOnly: true // Admin only
         },
         {
             key: 'security',
             label: 'Seguridad',
             icon: <SecurityIcon />,
             expandable: true,
+            adminOnly: true, // Admin only - CRITICAL
             children: [
                 {
                     key: 'audit-logs',
                     label: 'Logs de Auditoría',
                     icon: <ShieldIcon />,
                     href: '/admin/audit-logs',
-                    active: route().current('admin.audit-logs.*')
+                    active: route().current('admin.audit-logs.*'),
+                    adminOnly: true
                 }
             ]
         },
@@ -322,9 +398,32 @@ const AdminLayoutNew = ({
             label: 'Configuración',
             icon: <SettingsIcon />,
             href: '/admin/settings',
-            active: route().current('admin.settings.*')
+            active: route().current('admin.settings.*'),
+            adminOnly: true // Admin only - CRITICAL
         }
     ];
+
+    // Filter menu items based on user role
+    const menuItems = allMenuItems.filter(item => {
+        // If item is admin-only and user is not admin, hide it
+        if (item.adminOnly && !isAdmin) {
+            return false;
+        }
+
+        // If item has children, filter them too
+        if (item.children) {
+            item.children = item.children.filter(child => {
+                return !child.adminOnly || isAdmin;
+            });
+
+            // If all children are filtered out, hide parent too
+            if (item.children.length === 0) {
+                return false;
+            }
+        }
+
+        return true;
+    });
 
     const renderMenuItem = (item, depth = 0) => {
         const isExpanded = expandedMenus[item.key];

@@ -16,37 +16,83 @@ use App\Models\User;
  */
 class CommentManagementController extends Controller
 {
+    
+    
+    
+    
     /**
-     * Display a listing of comments.
+
+    
+    
+    
+     * Display a listing of the resource.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function index(Request $request)
     {
-        // Include soft-deleted comments if filter is set to 'deleted'.
+        /**
+         * Include soft-deleted comments if filter is set to 'deleted'.
+         */
         $query = Comment::with(['user', 'post:id,title,slug', 'parent:id,body,author_name', 'replies'])
                         ->withCount(['reports', 'interactions']);
 
-        // Filter by deletion status.
+        /**
+         * Filter by deletion status.
+         */
         if ($request->has('deleted_status')) {
             if ($request->deleted_status === 'deleted') {
                 $query->onlyTrashed();
             } elseif ($request->deleted_status === 'active') {
-                // Default: only non-deleted
+                /**
+                 * Default: only non-deleted.
+                 */
             } elseif ($request->deleted_status === 'all') {
                 $query->withTrashed();
             }
         }
 
-        // Apply status-based filtering.
+        /**
+         * Apply status-based filtering.
+         */
         if ($request->has('status')) {
             $query->where('status', $request->status);
         }
 
-        // Restrict results to a specific post when requested.
+        /**
+         * Restrict results to a specific post when requested.
+         */
         if ($request->has('post_id') && $request->post_id !== '') {
             $query->where('post_id', $request->post_id);
         }
 
-        // Filter by reporter type (registered user vs. guest).
+        /**
+         * Filter by reporter type (registered user vs. guest).
+         */
         if ($request->has('user_type')) {
             if ($request->user_type === 'registered') {
                 $query->whereNotNull('user_id');
@@ -55,7 +101,9 @@ class CommentManagementController extends Controller
             }
         }
 
-        // Filter by creation date range.
+        /**
+         * Filter by creation date range.
+         */
         if ($request->has('date_from')) {
             $query->whereDate('created_at', '>=', $request->date_from);
         }
@@ -79,11 +127,15 @@ class CommentManagementController extends Controller
             });
         }
         
-        // Sorting configuration with full validation.
+        /**
+         * Sorting configuration with full validation.
+         */
         $sortBy = $request->get('sort_by', 'created_at');
         $sortDirection = $request->get('sort_direction', 'desc');
 
-        // Security: Validate both sort field and direction.
+        /**
+         * Security: Validate both sort field and direction.
+         */
         $allowedSortFields = ['created_at', 'status', 'reports_count', 'interactions_count'];
         $allowedDirections = ['asc', 'desc'];
 
@@ -99,14 +151,18 @@ class CommentManagementController extends Controller
         
         $comments = $query->paginate(20);
         
-        // Retrieve posts with comments for the filter dropdown.
+        /**
+         * Retrieve posts with comments for the filter dropdown.
+         */
         $posts = \App\Models\Post::select('id', 'title', 'slug')
                                   ->withCount('comments')
                                   ->having('comments_count', '>', 0)
                                   ->orderBy('title')
                                   ->get();
 
-        // Compile high-level comment statistics.
+        /**
+         * Compile high-level comment statistics.
+         */
         $stats = [
             'total' => Comment::count(),
             'pending' => Comment::where('status', 'pending')->count(),
@@ -126,40 +182,77 @@ class CommentManagementController extends Controller
         ]);
     }
     
+    
+    
+    
+    
     /**
-     * Display a listing of reports.
+
+    
+    
+    
+     * Handle reports.
+
+    
+    
+    
      *
-     * Enhanced with additional filters:
-     * - Category filtering
-     * - Priority filtering
-     * - Date range filtering
-     * - Reporter type filtering (user vs guest)
-     * - Cached statistics
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function reports(Request $request)
     {
         $query = CommentReport::with(['user', 'comment.user', 'comment.post']);
 
-        // Filter: Status filter.
+        /**
+         * Filter: Status filter.
+         */
         if ($request->has('status') && $request->status !== '') {
             $query->where('status', $request->status);
         }
 
-        // Filter: Category filter.
+        /**
+         * Filter: Category filter.
+         */
         if ($request->has('category') && $request->category !== '') {
             $query->where('category', $request->category);
         }
 
-        // Filter: Priority filter (only if column exists).
+        /**
+         * Filter: Priority filter (only if column exists).
+         */
         if ($request->has('priority') && $request->priority !== '') {
             try {
                 $query->where('priority', $request->priority);
             } catch (\Exception $e) {
-                // Ignore if priority column doesn't exist yet
+                /**
+                 * Ignore if priority column doesn't exist yet.
+                 */
             }
         }
 
-        // Filter: Reporter type filter (user vs guest).
+        /**
+         * Filter: Reporter type filter (user vs guest).
+         */
         if ($request->has('reporter_type')) {
             if ($request->reporter_type === 'user') {
                 $query->where('is_guest_report', false);
@@ -168,7 +261,9 @@ class CommentManagementController extends Controller
             }
         }
 
-        // Filter: Date range filter.
+        /**
+         * Filter: Date range filter.
+         */
         if ($request->has('date_from') && $request->date_from !== '') {
             $query->whereDate('created_at', '>=', $request->date_from);
         }
@@ -176,7 +271,9 @@ class CommentManagementController extends Controller
             $query->whereDate('created_at', '<=', $request->date_to);
         }
 
-        // Filter: Search filter.
+        /**
+         * Filter: Search filter.
+         */
         if ($request->has('search') && $request->search !== '') {
             $search = $request->search;
             $query->where(function($q) use ($search) {
@@ -195,11 +292,15 @@ class CommentManagementController extends Controller
             });
         }
 
-        // Sorting: Configuration for reports with validation.
+        /**
+         * Sorting: Configuration for reports with validation.
+         */
         $sortBy = $request->get('sort_by', 'created_at');
         $sortDirection = $request->get('sort_direction', 'desc');
 
-        // Security: Validate both sort field and direction.
+        /**
+         * Security: Validate both sort field and direction.
+         */
         $allowedSortFields = ['created_at', 'status', 'category', 'priority'];
         $allowedDirections = ['asc', 'desc'];
 
@@ -211,14 +312,20 @@ class CommentManagementController extends Controller
             $sortDirection = 'desc';
         }
 
-        // Optimization: Sort by priority first for pending reports, then by created_at.
-        // Only if priority column exists
+        /**
+         * Optimization: Sort by priority first for pending reports, then by created_at.
+         * Only if priority column exists.
+         */
         if ($request->get('status') === 'pending') {
             try {
-                // Try to order by priority if column exists
+                /**
+                 * Try to order by priority if column exists.
+                 */
                 $query->orderBy('priority', 'desc')->orderBy('created_at', 'desc');
             } catch (\Exception $e) {
-                // Fallback to created_at only if priority column doesn't exist
+                /**
+                 * Fallback to created_at only if priority column doesn't exist.
+                 */
                 $query->orderBy('created_at', 'desc');
             }
         } else {
@@ -227,7 +334,9 @@ class CommentManagementController extends Controller
 
         $reports = $query->paginate(20);
 
-        // Optimization: Get cached statistics.
+        /**
+         * Optimization: Get cached statistics.
+         */
         $stats = $this->getCachedReportStats();
 
         return inertia('Admin/Comments/Reports', [
@@ -247,11 +356,38 @@ class CommentManagementController extends Controller
         ]);
     }
 
+    
+    
+    
+    
     /**
-     * Get cached report statistics.
+
+    
+    
+    
+     * Get cached report stats.
+
+    
+    
+    
      *
+
+    
+    
+    
      * @return array
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function getCachedReportStats(): array
     {
         return Cache::remember('comment_reports_stats', 300, function () {
@@ -275,13 +411,17 @@ class CommentManagementController extends Controller
                 ]
             ];
 
-            // ✅ COMPATIBILITY: Only query priority if column exists
+            /**
+             * COMPATIBILITY: Only query priority if column exists.
+             */
             try {
                 $stats['high_priority'] = CommentReport::where('priority', 'high')
                     ->where('status', 'pending')
                     ->count();
             } catch (\Exception $e) {
-                // Column doesn't exist yet, set to 0
+                /**
+                 * Column doesn't exist yet, set to 0.
+                 */
                 $stats['high_priority'] = 0;
             }
 
@@ -289,12 +429,53 @@ class CommentManagementController extends Controller
         });
     }
     
+    
+    
+    
+    
     /**
-     * Update the status of a comment.
+
+    
+    
+    
+     * Handle update status.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @param Comment $comment The comment.
+
+    
+    
+    
+     * @return JsonResponse
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function updateStatus(Request $request, Comment $comment): JsonResponse
     {
-        // Security: Authorize action.
+        /**
+         * Security: Authorize action.
+         */
         $this->authorize('moderate', $comment);
 
         $request->validate([
@@ -309,26 +490,66 @@ class CommentManagementController extends Controller
         ]);
     }
 
+    
+    
+    
+    
     /**
-     * Resolve a comment report.
+
+    
+    
+    
+     * Handle resolve report.
+
+    
+    
+    
      *
-     * Enhanced with:
-     * - Input sanitization
-     * - Audit logging
-     * - Cache invalidation
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @param CommentReport $report The report.
+
+    
+    
+    
+     * @return JsonResponse
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function resolveReport(Request $request, CommentReport $report): JsonResponse
     {
-        // ✅ FIXED IDOR: Authorize action (only admins/moderators can resolve reports)
+        /**
+         * FIXED IDOR: Authorize action (only admins/moderators can resolve reports).
+         */
         $this->authorize('moderate', Comment::class);
 
-        // Security: Validate and sanitize inputs.
+        /**
+         * Security: Validate and sanitize inputs.
+         */
         $validated = $request->validate([
             'status' => 'required|in:resolved,dismissed',
             'notes' => 'nullable|string|max:500'
         ]);
 
-        // Security: Sanitize notes to prevent XSS.
+        /**
+         * Security: Sanitize notes to prevent XSS.
+         */
         $sanitizedNotes = $validated['notes'] ? strip_tags($validated['notes']) : null;
 
         $oldStatus = $report->status;
@@ -338,7 +559,9 @@ class CommentManagementController extends Controller
             'notes' => $sanitizedNotes
         ]);
 
-        // Audit: Log report resolution.
+        /**
+         * Audit: Log report resolution.
+         */
         \App\Models\AdminAuditLog::logAction([
             'action' => 'resolve_report',
             'model_type' => CommentReport::class,
@@ -357,7 +580,9 @@ class CommentManagementController extends Controller
             ]
         ]);
 
-        // Optimization: Invalidate reports cache.
+        /**
+         * Optimization: Invalidate reports cache.
+         */
         Cache::forget('comment_reports_stats');
 
         return response()->json([
@@ -368,17 +593,53 @@ class CommentManagementController extends Controller
         ]);
     }
 
+    
+    
+    
+    
     /**
-     * Delete a comment.
+
+    
+    
+    
+     * Remove the specified resource.
+
+    
+    
+    
      *
-     * Uses soft delete to preserve conversation structure.
+
+    
+    
+    
+     * @param Comment $comment The comment.
+
+    
+    
+    
+     * @return JsonResponse
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function destroy(Comment $comment): JsonResponse
     {
-        // Security: Authorize action.
+        /**
+         * Security: Authorize action.
+         */
         $this->authorize('delete', $comment);
 
-        // Use soft delete
+        /**
+         * Use soft delete.
+         */
         $comment->delete();
 
         return response()->json([
@@ -387,9 +648,38 @@ class CommentManagementController extends Controller
         ]);
     }
     
+    
+    
+    
+    
     /**
-     * Get comment statistics.
+
+    
+    
+    
+     * Handle statistics.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function statistics()
     {
         $totalComments = Comment::count();
@@ -425,12 +715,48 @@ class CommentManagementController extends Controller
         ]);
     }
     
+    
+    
+    
+    
     /**
-     * Bulk approve comments
+
+    
+    
+    
+     * Handle bulk approve.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return JsonResponse
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function bulkApprove(Request $request): JsonResponse
     {
-        // Security: Authorize bulk action capability.
+        /**
+         * Security: Authorize bulk action capability.
+         */
         $this->authorize('moderate', Comment::class);
 
         $request->validate([
@@ -438,7 +764,9 @@ class CommentManagementController extends Controller
             'comment_ids.*' => 'exists:comments,id',
         ]);
 
-        // Verify authorization for each comment.
+        /**
+         * Verify authorization for each comment.
+         */
         $comments = Comment::whereIn('id', $request->comment_ids)->get();
         foreach ($comments as $comment) {
             $this->authorize('moderate', $comment);
@@ -454,12 +782,48 @@ class CommentManagementController extends Controller
         ]);
     }
 
+    
+    
+    
+    
     /**
-     * Bulk reject comments
+
+    
+    
+    
+     * Handle bulk reject.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return JsonResponse
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function bulkReject(Request $request): JsonResponse
     {
-        // Security: Authorize bulk action capability.
+        /**
+         * Security: Authorize bulk action capability.
+         */
         $this->authorize('moderate', Comment::class);
 
         $request->validate([
@@ -467,7 +831,9 @@ class CommentManagementController extends Controller
             'comment_ids.*' => 'exists:comments,id',
         ]);
 
-        // Verify authorization for each comment.
+        /**
+         * Verify authorization for each comment.
+         */
         $comments = Comment::whereIn('id', $request->comment_ids)->get();
         foreach ($comments as $comment) {
             $this->authorize('moderate', $comment);
@@ -483,14 +849,48 @@ class CommentManagementController extends Controller
         ]);
     }
 
+    
+    
+    
+    
     /**
-     * Bulk delete comments
+
+    
+    
+    
+     * Handle bulk delete.
+
+    
+    
+    
      *
-     * Uses soft delete to preserve conversation structure.
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return JsonResponse
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function bulkDelete(Request $request): JsonResponse
     {
-        // Security: Authorize bulk action capability.
+        /**
+         * Security: Authorize bulk action capability.
+         */
         $this->authorize('delete', Comment::class);
 
         $request->validate([
@@ -498,7 +898,9 @@ class CommentManagementController extends Controller
             'comment_ids.*' => 'exists:comments,id',
         ]);
 
-        // Verify authorization for each comment.
+        /**
+         * Verify authorization for each comment.
+         */
         $comments = Comment::whereIn('id', $request->comment_ids)->get();
         foreach ($comments as $comment) {
             $this->authorize('delete', $comment);
@@ -506,8 +908,10 @@ class CommentManagementController extends Controller
 
         $count = $comments->count();
 
-        // Use soft delete to preserve conversation structure
-        // Each comment is soft-deleted individually to trigger model events
+        /**
+         * Use soft delete to preserve conversation structure.
+         * Each comment is soft-deleted individually to trigger model events.
+         */
         foreach ($comments as $comment) {
             $comment->delete();
         }
@@ -519,12 +923,48 @@ class CommentManagementController extends Controller
         ]);
     }
 
+    
+    
+    
+    
     /**
-     * Mark comment as spam
+
+    
+    
+    
+     * Handle mark as spam.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Comment $comment The comment.
+
+    
+    
+    
+     * @return JsonResponse
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function markAsSpam(Comment $comment): JsonResponse
     {
-        // ✅ FIXED IDOR: Authorize action
+        /**
+         * FIXED IDOR: Authorize action.
+         */
         $this->authorize('moderate', $comment);
 
         $comment->update(['status' => 'spam']);
@@ -535,54 +975,92 @@ class CommentManagementController extends Controller
         ]);
     }
 
+    
+    
+    
+    
     /**
-     * Restore a soft-deleted comment.
+
+    
+    
+    
+     * Handle restore.
+
+    
+    
+    
      *
-     * Security validations:
-     * - Verifies comment exists and is actually deleted
-     * - Checks parent post integrity (not deleted)
-     * - Validates author ban status
-     * - Logs restoration action for audit trail
-     * - Rate limited to prevent abuse
-     *
-     * @param int $id The comment ID to restore
-     * @return \Illuminate\Http\JsonResponse
+
+    
+    
+    
+     * @param mixed $id The id.
+
+    
+    
+    
+     * @return JsonResponse
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function restore($id): JsonResponse
     {
-        // Find comment including soft-deleted ones
+        /**
+         * Find comment including soft-deleted ones.
+         */
         $comment = Comment::withTrashed()->findOrFail($id);
 
-        // ✅ SECURITY: Authorize restore action
+        /**
+         * SECURITY: Authorize restore action.
+         */
         $this->authorize('restore', $comment);
 
-        // ✅ VALIDATION: Verify comment is actually deleted
+        /**
+         * VALIDATION: Verify comment is actually deleted.
+         */
         if (!$comment->trashed()) {
             return response()->json([
                 'success' => false,
-                'message' => 'El comentario no está eliminado y no puede ser restaurado.'
+                'message' => 'El comentario no estÃ¡ eliminado y no puede ser restaurado.'
             ], 400);
         }
 
-        // ✅ VALIDATION: Check parent post integrity
+        /**
+         * VALIDATION: Check parent post integrity.
+         */
         if ($comment->post->trashed()) {
             return response()->json([
                 'success' => false,
-                'message' => 'No se puede restaurar el comentario porque el post padre está eliminado.'
+                'message' => 'No se puede restaurar el comentario porque el post padre estÃ¡ eliminado.'
             ], 422);
         }
 
-        // ✅ VALIDATION: Check if author is banned (warning, not blocking)
+        /**
+         * VALIDATION: Check if author is banned (warning, not blocking).
+         */
         $authorWarning = null;
         if ($comment->user && $comment->user->isBanned()) {
             $banStatus = $comment->user->getBanStatus();
-            $authorWarning = "Advertencia: El autor de este comentario está actualmente baneado. Motivo: {$banStatus['reason']}";
+            $authorWarning = "Advertencia: El autor de este comentario estÃ¡ actualmente baneado. Motivo: {$banStatus['reason']}";
         }
 
-        // Restore the comment
+        /**
+         * Restore the comment.
+         */
         $comment->restore();
 
-        // ✅ AUDIT: Log restoration action with detailed metadata
+        /**
+         * AUDIT: Log restoration action with detailed metadata.
+         */
         \App\Models\AdminAuditLog::logAction([
             'action' => 'restore',
             'model_type' => Comment::class,
@@ -616,9 +1094,43 @@ class CommentManagementController extends Controller
         ]);
     }
     
+    
+    
+    
+    
     /**
-     * Get pending comments for quick moderation
+
+    
+    
+    
+     * Get pending comments.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return JsonResponse
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function getPendingComments(Request $request): JsonResponse
     {
         $comments = Comment::with(['user:id,name', 'post:id,title,slug'])
@@ -633,9 +1145,43 @@ class CommentManagementController extends Controller
         ]);
     }
 
+    
+    
+    
+    
     /**
-     * Export comments to Excel/CSV using Laravel Excel.
+
+    
+    
+    
+     * Handle export.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function export(Request $request)
     {
         $filters = [

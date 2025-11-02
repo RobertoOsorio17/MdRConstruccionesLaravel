@@ -1,5 +1,8 @@
 <?php
 namespace App\Exceptions\ML;
+/**
+ * Class MLTrainingException.
+ */
 class MLTrainingException extends MLException
 {
     protected string $errorCode = "ML_TRAINING_ERROR";

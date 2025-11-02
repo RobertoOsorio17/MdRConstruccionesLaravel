@@ -1,5 +1,8 @@
 <?php
 namespace App\Exceptions\ML;
+/**
+ * Class MLProfileUpdateException.
+ */
 class MLProfileUpdateException extends MLException
 {
     protected string $errorCode = "ML_PROFILE_UPDATE_ERROR";

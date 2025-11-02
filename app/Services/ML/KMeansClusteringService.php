@@ -18,14 +18,48 @@ class KMeansClusteringService
     private float $tolerance = 0.0001;
     private int $kMeansPlusPlusTrials = 10;
 
+    
+    
+    
+    
     /**
-     * Perform K-Means clustering on user profiles.
+
+    
+    
+    
+     * Handle cluster.
+
+    
+    
+    
      *
-     * @param Collection $profiles Collection of MLUserProfile models
-     * @param int $k Number of clusters
-     * @return array Clustering results with assignments and metrics
-     * @throws MLTrainingException
+
+    
+    
+    
+     * @param Collection $profiles The profiles.
+
+    
+    
+    
+     * @param int $k The k.
+
+    
+    
+    
+     * @return array
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function cluster(Collection $profiles, int $k = 5): array
     {
         if ($profiles->count() < $k) {
@@ -82,9 +116,43 @@ class KMeansClusteringService
         }
     }
 
+    
+    
+    
+    
     /**
-     * Extract normalized feature vectors from user profiles.
+
+    
+    
+    
+     * Handle extract feature vectors.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Collection $profiles The profiles.
+
+    
+    
+    
+     * @return array
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function extractFeatureVectors(Collection $profiles): array
     {
         $features = [];
@@ -108,9 +176,43 @@ class KMeansClusteringService
         ];
     }
 
+    
+    
+    
+    
     /**
-     * Convert user profile to feature vector.
+
+    
+    
+    
+     * Handle profile to vector.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param MLUserProfile $profile The profile.
+
+    
+    
+    
+     * @return array
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function profileToVector(MLUserProfile $profile): array
     {
         $vector = [];
@@ -144,9 +246,43 @@ class KMeansClusteringService
         return $vector;
     }
 
+    
+    
+    
+    
     /**
-     * Extract reading speed feature from patterns.
+
+    
+    
+    
+     * Handle extract reading speed feature.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param array $patterns The patterns.
+
+    
+    
+    
+     * @return float
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function extractReadingSpeedFeature(array $patterns): float
     {
         $speed = $patterns['reading_speed'] ?? 'medium';
@@ -159,9 +295,43 @@ class KMeansClusteringService
         };
     }
 
+    
+    
+    
+    
     /**
-     * Extract time preference feature.
+
+    
+    
+    
+     * Handle extract time preference feature.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param array $patterns The patterns.
+
+    
+    
+    
+     * @return float
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function extractTimePreferenceFeature(array $patterns): float
     {
         $preferredHours = $patterns['preferred_hours'] ?? [];
@@ -175,18 +345,86 @@ class KMeansClusteringService
         return $avgHour / 24;
     }
 
+    
+    
+    
+    
     /**
-     * Extract reading consistency feature.
+
+    
+    
+    
+     * Handle extract consistency feature.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param array $patterns The patterns.
+
+    
+    
+    
+     * @return float
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function extractConsistencyFeature(array $patterns): float
     {
         $sessionDuration = $patterns['avg_session_duration'] ?? 0;
         return min($sessionDuration / 1800, 1.0); // Normalized to 30 min
     }
 
+    
+    
+    
+    
     /**
-     * Extract length preference.
+
+    
+    
+    
+     * Handle extract length preference.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param array $contentPrefs The contentPrefs.
+
+    
+    
+    
+     * @return float
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function extractLengthPreference(array $contentPrefs): float
     {
         $length = $contentPrefs['preferred_length'] ?? 'medium';
@@ -199,9 +437,43 @@ class KMeansClusteringService
         };
     }
 
+    
+    
+    
+    
     /**
-     * Extract complexity preference.
+
+    
+    
+    
+     * Handle extract complexity preference.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param array $contentPrefs The contentPrefs.
+
+    
+    
+    
+     * @return float
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function extractComplexityPreference(array $contentPrefs): float
     {
         $complexity = $contentPrefs['preferred_complexity'] ?? 'medium';
@@ -214,9 +486,43 @@ class KMeansClusteringService
         };
     }
 
+    
+    
+    
+    
     /**
-     * Normalize feature vectors using min-max normalization.
+
+    
+    
+    
+     * Handle normalize features.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param array $features The features.
+
+    
+    
+    
+     * @return array
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function normalizeFeatures(array $features): array
     {
         if (empty($features)) {
@@ -244,10 +550,48 @@ class KMeansClusteringService
         return $normalized;
     }
 
+    
+    
+    
+    
     /**
-     * Initialize centroids using K-Means++ algorithm.
-     * Provides better initial centroids than random selection.
+
+    
+    
+    
+     * Handle initialize centroids kmeans plus plus.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param array $features The features.
+
+    
+    
+    
+     * @param int $k The k.
+
+    
+    
+    
+     * @return array
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function initializeCentroidsKMeansPlusPlus(array $features, int $k): array
     {
         $vectors = $features['vectors'];
@@ -295,9 +639,53 @@ class KMeansClusteringService
         return $centroids;
     }
 
+    
+    
+    
+    
     /**
-     * Perform iterative K-Means clustering until convergence.
+
+    
+    
+    
+     * Handle perform iterative clustering.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param array $features The features.
+
+    
+    
+    
+     * @param array $centroids The centroids.
+
+    
+    
+    
+     * @param int $k The k.
+
+    
+    
+    
+     * @return array
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function performIterativeClustering(array $features, array $centroids, int $k): array
     {
         $vectors = $features['vectors'];
@@ -337,9 +725,48 @@ class KMeansClusteringService
         ];
     }
 
+    
+    
+    
+    
     /**
-     * Assign each vector to the nearest centroid.
+
+    
+    
+    
+     * Handle assign to clusters.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param array $vectors The vectors.
+
+    
+    
+    
+     * @param array $centroids The centroids.
+
+    
+    
+    
+     * @return array
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function assignToClusters(array $vectors, array $centroids): array
     {
         $assignments = [];
@@ -363,9 +790,53 @@ class KMeansClusteringService
         return $assignments;
     }
 
+    
+    
+    
+    
     /**
-     * Update centroids based on current assignments.
+
+    
+    
+    
+     * Handle update centroids.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param array $vectors The vectors.
+
+    
+    
+    
+     * @param array $assignments The assignments.
+
+    
+    
+    
+     * @param int $k The k.
+
+    
+    
+    
+     * @return array
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function updateCentroids(array $vectors, array $assignments, int $k): array
     {
         $centroids = [];
@@ -406,9 +877,48 @@ class KMeansClusteringService
         return $centroids;
     }
 
+    
+    
+    
+    
     /**
-     * Check if assignments have converged.
+
+    
+    
+    
+     * Determine whether converged.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param array $oldAssignments The oldAssignments.
+
+    
+    
+    
+     * @param array $newAssignments The newAssignments.
+
+    
+    
+    
+     * @return bool
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function hasConverged(array $oldAssignments, array $newAssignments): bool
     {
         if (empty($oldAssignments)) {
@@ -425,9 +935,48 @@ class KMeansClusteringService
         return $changes === 0;
     }
 
+    
+    
+    
+    
     /**
-     * Check if centroids have converged.
+
+    
+    
+    
+     * Handle centroids converged.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param array $oldCentroids The oldCentroids.
+
+    
+    
+    
+     * @param array $newCentroids The newCentroids.
+
+    
+    
+    
+     * @return bool
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function centroidsConverged(array $oldCentroids, array $newCentroids): bool
     {
         $maxShift = 0;
@@ -440,9 +989,48 @@ class KMeansClusteringService
         return $maxShift < $this->tolerance;
     }
 
+    
+    
+    
+    
     /**
-     * Calculate Euclidean distance between two vectors.
+
+    
+    
+    
+     * Handle euclidean distance.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param array $a The a.
+
+    
+    
+    
+     * @param array $b The b.
+
+    
+    
+    
+     * @return float
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function euclideanDistance(array $a, array $b): float
     {
         $sum = 0;
@@ -456,9 +1044,53 @@ class KMeansClusteringService
         return sqrt($sum);
     }
 
+    
+    
+    
+    
     /**
-     * Calculate cluster quality metrics.
+
+    
+    
+    
+     * Calculate cluster metrics.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param array $features The features.
+
+    
+    
+    
+     * @param array $assignments The assignments.
+
+    
+    
+    
+     * @param array $centroids The centroids.
+
+    
+    
+    
+     * @return array
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function calculateClusterMetrics(array $features, array $assignments, array $centroids): array
     {
         $vectors = $features['vectors'];
@@ -470,10 +1102,53 @@ class KMeansClusteringService
         ];
     }
 
+    
+    
+    
+    
     /**
-     * Calculate Silhouette Score for clustering quality.
-     * Range: [-1, 1], higher is better.
+
+    
+    
+    
+     * Calculate silhouette score.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param array $vectors The vectors.
+
+    
+    
+    
+     * @param array $assignments The assignments.
+
+    
+    
+    
+     * @param array $centroids The centroids.
+
+    
+    
+    
+     * @return float
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function calculateSilhouetteScore(array $vectors, array $assignments, array $centroids): float
     {
         $n = count($vectors);
@@ -525,10 +1200,53 @@ class KMeansClusteringService
         return !empty($silhouetteScores) ? array_sum($silhouetteScores) / count($silhouetteScores) : 0;
     }
 
+    
+    
+    
+    
     /**
-     * Calculate inertia (within-cluster sum of squares).
-     * Lower is better.
+
+    
+    
+    
+     * Calculate inertia.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param array $vectors The vectors.
+
+    
+    
+    
+     * @param array $assignments The assignments.
+
+    
+    
+    
+     * @param array $centroids The centroids.
+
+    
+    
+    
+     * @return float
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function calculateInertia(array $vectors, array $assignments, array $centroids): float
     {
         $inertia = 0;
@@ -543,10 +1261,53 @@ class KMeansClusteringService
         return $inertia;
     }
 
+    
+    
+    
+    
     /**
-     * Calculate Davies-Bouldin Index.
-     * Lower is better (0 is perfect).
+
+    
+    
+    
+     * Calculate davies bouldin index.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param array $vectors The vectors.
+
+    
+    
+    
+     * @param array $assignments The assignments.
+
+    
+    
+    
+     * @param array $centroids The centroids.
+
+    
+    
+    
+     * @return float
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function calculateDaviesBouldinIndex(array $vectors, array $assignments, array $centroids): float
     {
         $k = count($centroids);
@@ -591,9 +1352,48 @@ class KMeansClusteringService
         return $k > 0 ? $dbSum / $k : 0;
     }
 
+    
+    
+    
+    
     /**
+
+    
+    
+    
      * Calculate cluster sizes.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param array $assignments The assignments.
+
+    
+    
+    
+     * @param int $k The k.
+
+    
+    
+    
+     * @return array
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function calculateClusterSizes(array $assignments, int $k): array
     {
         $sizes = array_fill(0, $k, 0);
@@ -605,9 +1405,48 @@ class KMeansClusteringService
         return $sizes;
     }
 
+    
+    
+    
+    
     /**
-     * Get cluster confidence score for a profile.
+
+    
+    
+    
+     * Get cluster confidence.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param MLUserProfile $profile The profile.
+
+    
+    
+    
+     * @param array $centroids The centroids.
+
+    
+    
+    
+     * @return float
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function getClusterConfidence(MLUserProfile $profile, array $centroids): float
     {
         $vector = $this->profileToVector($profile);
@@ -643,9 +1482,53 @@ class KMeansClusteringService
         return 0.5;
     }
 
+    
+    
+    
+    
     /**
-     * Find optimal number of clusters using elbow method.
+
+    
+    
+    
+     * Handle find optimal k.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Collection $profiles The profiles.
+
+    
+    
+    
+     * @param int $minK The minK.
+
+    
+    
+    
+     * @param int $maxK The maxK.
+
+    
+    
+    
+     * @return array
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function findOptimalK(Collection $profiles, int $minK = 2, int $maxK = 10): array
     {
         $inertias = [];
@@ -673,9 +1556,43 @@ class KMeansClusteringService
         ];
     }
 
+    
+    
+    
+    
     /**
-     * Find elbow point in inertia curve.
+
+    
+    
+    
+     * Handle find elbow point.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param array $inertias The inertias.
+
+    
+    
+    
+     * @return int
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function findElbowPoint(array $inertias): int
     {
         if (count($inertias) < 3) {
@@ -707,9 +1624,53 @@ class KMeansClusteringService
         return $elbowK;
     }
 
+    
+    
+    
+    
     /**
-     * Calculate angle at a point in the curve.
+
+    
+    
+    
+     * Calculate angle.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param array $p1 The p1.
+
+    
+    
+    
+     * @param array $p2 The p2.
+
+    
+    
+    
+     * @param array $p3 The p3.
+
+    
+    
+    
+     * @return float
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function calculateAngle(array $p1, array $p2, array $p3): float
     {
         $v1 = [$p1[0] - $p2[0], $p1[1] - $p2[1]];
@@ -727,9 +1688,48 @@ class KMeansClusteringService
         return acos(max(-1, min(1, $cosAngle)));
     }
 
+    
+    
+    
+    
     /**
-     * Get recommendation for K value.
+
+    
+    
+    
+     * Get krecommendation.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param int $optimalK The optimalK.
+
+    
+    
+    
+     * @param array $silhouetteScores The silhouetteScores.
+
+    
+    
+    
+     * @return string
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function getKRecommendation(int $optimalK, array $silhouetteScores): string
     {
         $score = $silhouetteScores[$optimalK] ?? 0;

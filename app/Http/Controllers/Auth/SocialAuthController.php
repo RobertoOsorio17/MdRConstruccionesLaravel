@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Auth\Concerns\HandlesTwoFactorLogin;
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Services\SecurityLogger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Auth;
@@ -26,9 +27,43 @@ class SocialAuthController extends Controller
      */
     private const SUPPORTED_PROVIDERS = ['google', 'facebook', 'github'];
 
+    
+    
+    
+    
     /**
-     * Redirect the user to the OAuth provider authentication page.
+
+    
+    
+    
+     * Handle redirect.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param string $provider The provider.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function redirect(string $provider)
     {
         if (!in_array($provider, self::SUPPORTED_PROVIDERS)) {
@@ -39,7 +74,13 @@ class SocialAuthController extends Controller
 
         try {
             $state = Str::random(40);
-            session()->put("oauth_state:{$provider}", $state);
+            // ✅ SECURITY FIX: Store state with timestamp and session ID
+            $stateData = [
+                'value' => $state,
+                'created_at' => now()->timestamp,
+                'session_id' => session()->getId(),
+            ];
+            session()->put("oauth_state:{$provider}", $stateData);
 
             return Socialite::driver($provider)
                 ->with(['state' => $state])
@@ -51,9 +92,48 @@ class SocialAuthController extends Controller
         }
     }
 
+    
+    
+    
+    
     /**
-     * Obtain the user information from OAuth provider.
+
+    
+    
+    
+     * Handle callback.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @param string $provider The provider.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function callback(Request $request, string $provider)
     {
         if (!in_array($provider, self::SUPPORTED_PROVIDERS)) {
@@ -61,9 +141,41 @@ class SocialAuthController extends Controller
             return redirect()->route('login');
         }
 
-        $expectedState = session()->pull("oauth_state:{$provider}");
+        $stateData = session()->pull("oauth_state:{$provider}");
 
-        if (empty($expectedState) || !hash_equals($expectedState, (string) $request->input('state'))) {
+        // ✅ SECURITY FIX: Validate state timeout (5 minutes)
+        if (!$stateData || !is_array($stateData)) {
+            Log::warning('OAuth state missing or invalid', [
+                'provider' => $provider,
+                'ip' => $request->ip(),
+            ]);
+            session()->flash('error', 'La sesión de autenticación expiró. Intenta nuevamente.');
+            return redirect()->route('login');
+        }
+
+        $stateAge = now()->timestamp - ($stateData['created_at'] ?? 0);
+        if ($stateAge > 300) { // 5 minutes
+            Log::warning('OAuth state expired', [
+                'provider' => $provider,
+                'age_seconds' => $stateAge,
+                'ip' => $request->ip(),
+            ]);
+            session()->flash('error', 'La sesión de autenticación expiró. Intenta nuevamente.');
+            return redirect()->route('login');
+        }
+
+        // ✅ SECURITY FIX: Validate session ID
+        if (($stateData['session_id'] ?? null) !== session()->getId()) {
+            Log::warning('OAuth state session mismatch', [
+                'provider' => $provider,
+                'ip' => $request->ip(),
+            ]);
+            session()->flash('error', 'Error de validación de sesión.');
+            return redirect()->route('login');
+        }
+
+        // Validate state value
+        if (empty($stateData['value']) || !hash_equals($stateData['value'], (string) $request->input('state'))) {
             Log::warning('OAuth state mismatch detected', [
                 'provider' => $provider,
                 'ip' => $request->ip(),
@@ -81,14 +193,59 @@ class SocialAuthController extends Controller
             return redirect()->route('login');
         }
 
-        if (empty($socialUser->getEmail())) {
+        // ✅ SECURITY FIX: Validate email format and check blacklist
+        $email = $socialUser->getEmail();
+
+        if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            Log::warning('Invalid email from OAuth provider', [
+                'provider' => $provider,
+                'email_provided' => !empty($email),
+                'ip' => $request->ip(),
+            ]);
             session()->flash('error', 'El proveedor no devolvió un correo electrónico válido. No se pudo completar el acceso.');
+            return redirect()->route('login');
+        }
+
+        // Check if email domain is blacklisted (disposable email services)
+        $disposableDomains = ['tempmail.com', 'guerrillamail.com', '10minutemail.com', 'throwaway.email'];
+        $emailDomain = strtolower(substr(strrchr($email, "@"), 1));
+
+        if (in_array($emailDomain, $disposableDomains)) {
+            Log::warning('Disposable email attempted OAuth login', [
+                'email_hash' => hash('sha256', strtolower($email)),
+                'provider' => $provider,
+                'ip' => $request->ip(),
+            ]);
+            session()->flash('error', 'Este correo electrónico no puede ser utilizado.');
             return redirect()->route('login');
         }
 
         $emailVerified = $this->providerMarksEmailVerified($socialUser);
 
         $user = $this->findOrCreateUser($socialUser, $provider, $emailVerified);
+
+        // ✅ SECURITY FIX: Check if user is banned BEFORE completing login
+        // This prevents session regeneration, trusted device creation, and audit log pollution
+        if ($user->isBanned()) {
+            $banInfo = $user->currentBan();
+
+            Log::warning('Banned user attempted social login', [
+                'user_id' => $user->id,
+                'email_hash' => hash('sha256', strtolower($user->email)),
+                'provider' => $provider,
+                'ip' => $request->ip(),
+                'ban_reason' => $banInfo?->reason,
+                'ban_type' => $banInfo?->is_permanent ? 'permanent' : 'temporary',
+                'ban_expires_at' => $banInfo?->expires_at?->toISOString(),
+            ]);
+
+            // Don't regenerate session or authenticate - just redirect with error
+            session()->flash('error', 'Tu cuenta ha sido suspendida. No puedes iniciar sesión en este momento.');
+            return redirect()->route('login');
+        }
+
+        // ✅ SECURITY FIX: Regenerate session BEFORE authentication to prevent session fixation
+        $request->session()->regenerate();
 
         $intended = $user->hasRole('admin') || $user->hasRole('editor')
             ? route('admin.dashboard', absolute: false)
@@ -102,7 +259,15 @@ class SocialAuthController extends Controller
             twoFactorMode: 'redirect'
         );
 
+        // ✅ SECURITY FIX: Regenerate CSRF token after authentication
+        $request->session()->regenerateToken();
+
         if (Auth::check() && Auth::id() === $user->id) {
+            // Log successful OAuth login
+            SecurityLogger::logSuccessfulLogin($user, [
+                'method' => 'oauth',
+                'provider' => $provider,
+            ]);
             session()->flash('success', '¡Bienvenido de vuelta, ' . $user->name . '!');
         } else {
             session()->flash('info', 'Completa la verificación de dos factores para finalizar el acceso.');
@@ -111,9 +276,53 @@ class SocialAuthController extends Controller
         return $response;
     }
 
+    
+    
+    
+    
     /**
-     * Find or create a user based on OAuth provider data.
+
+    
+    
+    
+     * Handle find or create user.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param mixed $socialUser The socialUser.
+
+    
+    
+    
+     * @param string $provider The provider.
+
+    
+    
+    
+     * @param bool $emailVerified The emailVerified.
+
+    
+    
+    
+     * @return User
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function findOrCreateUser($socialUser, string $provider, bool $emailVerified): User
     {
         // Check if user already exists with this provider
@@ -126,6 +335,7 @@ class SocialAuthController extends Controller
             $user->update([
                 'provider_token' => $socialUser->token,
                 'provider_refresh_token' => $socialUser->refreshToken,
+                'provider_token_expires_at' => now()->addHour(), // ✅ SECURITY FIX: Token expiration
             ]);
 
             if (!$user->hasVerifiedEmail() && $emailVerified) {
@@ -146,6 +356,7 @@ class SocialAuthController extends Controller
                 'provider_id' => $socialUser->getId(),
                 'provider_token' => $socialUser->token,
                 'provider_refresh_token' => $socialUser->refreshToken,
+                'provider_token_expires_at' => now()->addHour(), // ✅ SECURITY FIX: Token expiration
             ]);
 
             if (!$existingUser->hasVerifiedEmail() && $emailVerified) {
@@ -164,6 +375,7 @@ class SocialAuthController extends Controller
             'provider_id' => $socialUser->getId(),
             'provider_token' => $socialUser->token,
             'provider_refresh_token' => $socialUser->refreshToken,
+            'provider_token_expires_at' => now()->addHour(), // ✅ SECURITY FIX: Token expiration
             'password' => null,
             'avatar' => $socialUser->getAvatar() ?? null,
         ]);
@@ -186,9 +398,48 @@ class SocialAuthController extends Controller
         return $user;
     }
 
+    
+    
+    
+    
     /**
-     * Unlink OAuth provider from user account.
+
+    
+    
+    
+     * Handle unlink.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @param string $provider The provider.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function unlink(Request $request, string $provider)
     {
         $user = $request->user();
@@ -217,9 +468,43 @@ class SocialAuthController extends Controller
         return redirect()->back();
     }
 
+    
+    
+    
+    
     /**
-     * Show connected accounts page.
+
+    
+    
+    
+     * Display a listing of the resource.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function index(Request $request)
     {
         $user = $request->user();
@@ -239,9 +524,43 @@ class SocialAuthController extends Controller
         ]);
     }
 
+    
+    
+    
+    
     /**
-     * Determine if the provider explicitly marks the email as verified.
+
+    
+    
+    
+     * Handle provider marks email verified.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param mixed $socialUser The socialUser.
+
+    
+    
+    
+     * @return bool
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function providerMarksEmailVerified($socialUser): bool
     {
         $raw = method_exists($socialUser, 'getRaw') ? $socialUser->getRaw() : [];

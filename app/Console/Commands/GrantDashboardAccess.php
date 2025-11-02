@@ -5,6 +5,9 @@ namespace App\Console\Commands;
 use App\Models\User;
 use App\Models\Permission;
 use Illuminate\Console\Command;
+/**
+ * Class GrantDashboardAccess.
+ */
 
 class GrantDashboardAccess extends Command
 {
@@ -22,9 +25,38 @@ class GrantDashboardAccess extends Command
      */
     protected $description = 'Grant dashboard access permission to a user';
 
+    
+    
+    
+    
     /**
-     * Execute the console command.
+
+    
+    
+    
+     * Handle handle.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function handle()
     {
         $email = $this->argument('email');

@@ -11,12 +11,43 @@ use Illuminate\Support\Str;
  */
 class SanitizationService
 {
+    
+    
+    
+    
     /**
-     * Sanitize comment body content
+
+    
+    
+    
+     * Handle sanitize comment body.
+
+    
+    
+    
      *
-     * @param string|null $body
+
+    
+    
+    
+     * @param ?string $body The body.
+
+    
+    
+    
      * @return string
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function sanitizeCommentBody(?string $body): string
     {
         $body = $body ?? '';
@@ -49,13 +80,48 @@ class SanitizationService
         return trim($body);
     }
 
+    
+    
+    
+    
     /**
-     * Sanitize general text input (for names, subjects, etc.)
+
+    
+    
+    
+     * Handle sanitize text.
+
+    
+    
+    
      *
-     * @param string|null $text
-     * @param int $maxLength
+
+    
+    
+    
+     * @param ?string $text The text.
+
+    
+    
+    
+     * @param int $maxLength The maxLength.
+
+    
+    
+    
      * @return string
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function sanitizeText(?string $text, int $maxLength = 255): string
     {
         $text = strip_tags($text ?? '');
@@ -64,12 +130,43 @@ class SanitizationService
         return trim($text);
     }
 
+    
+    
+    
+    
     /**
-     * Sanitize filename
+
+    
+    
+    
+     * Handle sanitize filename.
+
+    
+    
+    
      *
-     * @param string $filename
+
+    
+    
+    
+     * @param string $filename The filename.
+
+    
+    
+    
      * @return string
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function sanitizeFilename(string $filename): string
     {
         // Remove path separators
@@ -88,13 +185,48 @@ class SanitizationService
         return $filename;
     }
 
+    
+    
+    
+    
     /**
-     * Sanitize search term
+
+    
+    
+    
+     * Handle sanitize search term.
+
+    
+    
+    
      *
-     * @param string $searchTerm
-     * @param int $maxLength
+
+    
+    
+    
+     * @param string $searchTerm The searchTerm.
+
+    
+    
+    
+     * @param int $maxLength The maxLength.
+
+    
+    
+    
      * @return string
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function sanitizeSearchTerm(string $searchTerm, int $maxLength = 100): string
     {
         $searchTerm = trim($searchTerm);
@@ -105,12 +237,43 @@ class SanitizationService
         return $searchTerm;
     }
 
+    
+    
+    
+    
     /**
-     * Remove null bytes from string (security measure)
+
+    
+    
+    
+     * Handle remove null bytes.
+
+    
+    
+    
      *
-     * @param string $string
+
+    
+    
+    
+     * @param string $string The string.
+
+    
+    
+    
      * @return string
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function removeNullBytes(string $string): string
     {
         return str_replace("\0", '', $string);

@@ -32,14 +32,48 @@ use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 class CommentController extends Controller
 {
     use AuthorizesRequests;
+    
+    
+    
+    
     /**
-     * Store a new comment for a blog post.
+
+    
+    
+    
+     * Store a newly created resource.
+
+    
+    
+    
      *
-     * @param Request $request The current HTTP request containing comment data.
-     * @param Post $post The post model receiving the comment.
-     * @return \Illuminate\Http\JsonResponse JSON response indicating the outcome.
-     * @throws ValidationException When the request fails validation or rate limiting.
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @param Post $post The post.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function store(Request $request, Post $post)
     {
         // 1) Check if comments are globally enabled via settings.
@@ -73,29 +107,10 @@ class CommentController extends Controller
 
         // 4) Validation rules differ for guests vs authenticated users.
         if (Auth::check()) {
-            // 4a) For authenticated users, block banned accounts and validate payload.
-            $user = Auth::user();
-            if ($user->isBanned()) {
-                $banStatus = $user->getBanStatus();
+            // ✅ REMOVED: isBanned() check - now handled by EnhancedAuthMiddleware (global)
+            // Banned users will never reach this point as they are logged out by the middleware
 
-                // Log the banned user's attempt to comment.
-                \Log::warning('Banned user attempted to comment', [
-                    'user_id' => $user->id,
-                    'user_email' => $user->email,
-                    'post_id' => $post->id,
-                    'ban_reason' => $banStatus['reason'],
-                    'ip' => $request->ip(),
-                    'timestamp' => now()->toISOString()
-                ]);
-
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Your account is suspended and cannot post comments.',
-                    'error' => 'USER_BANNED'
-                ], 403);
-            }
-
-            // 4b) Authenticated user validation with enhanced security.
+            // 4a) Authenticated user validation with enhanced security.
             $validated = $request->validate([
                 'body' => [
                     'required',
@@ -285,13 +300,48 @@ class CommentController extends Controller
         ], 201);
     }
 
+    
+    
+    
+    
     /**
-     * Calculate a basic spam score for a comment body.
+
+    
+    
+    
+     * Calculate spam score.
+
+    
+    
+    
      *
-     * @param string|null $body The comment text to evaluate.
-     * @param string|null $authorName Optional author name for heuristic checks.
-     * @return int Numeric spam score derived from simple heuristics.
+
+    
+    
+    
+     * @param mixed $body The body.
+
+    
+    
+    
+     * @param mixed $authorName The authorName.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function calculateSpamScore($body, $authorName = null)
     {
         $score = 0;
@@ -337,18 +387,43 @@ class CommentController extends Controller
         return $score;
     }
 
+    
+    
+    
+    
     /**
-     * Sanitize comment content to mitigate XSS while allowing minimal formatting.
+
+    
+    
+    
+     * Handle sanitize comment body.
+
+    
+    
+    
      *
-     * Strategy:
-     * - Strip script/style blocks explicitly.
-     * - Whitelist simple tags for readability (b, i, em, strong, a, br, p).
-     * - Rebuild <a> tags to only allow http/https href and add rel/target attributes.
-     * - Normalize whitespace and trim.
-     *
-     * @param string|null $body The raw comment body.
-     * @return string The sanitized content ready for storage.
+
+    
+    
+    
+     * @param ?string $body The body.
+
+    
+    
+    
+     * @return string
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function sanitizeCommentBody(?string $body): string
     {
         $body = $body ?? '';
@@ -381,12 +456,43 @@ class CommentController extends Controller
         return trim($body);
     }
 
+    
+    
+    
+    
     /**
-     * Resolve a user-friendly status message for the given comment.
+
+    
+    
+    
+     * Get comment status message.
+
+    
+    
+    
      *
-     * @param Comment $comment The comment instance being returned to the client.
-     * @return string Message explaining the moderation outcome.
+
+    
+    
+    
+     * @param mixed $comment The comment.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function getCommentStatusMessage($comment)
     {
         if ($comment->status === 'spam') {
@@ -400,16 +506,48 @@ class CommentController extends Controller
         }
     }
 
+    
+    
+    
+    
     /**
-     * Get comments for a specific post (public API).
+
+    
+    
+    
+     * Get comments.
+
+    
+    
+    
      *
-     * Includes soft-deleted comments to preserve conversation structure.
-     * Deleted comments will be marked with is_deleted flag for frontend display.
-     *
-     * @param Request $request The current HTTP request instance.
-     * @param Post $post The post whose comments are being retrieved.
-     * @return \Illuminate\Http\JsonResponse JSON response containing formatted comments.
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @param Post $post The post.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function getComments(Request $request, Post $post)
     {
         $userIp = $request->ip();
@@ -542,13 +680,48 @@ class CommentController extends Controller
         ]);
     }
 
+    
+    
+    
+    
     /**
-     * Update a comment's content (authenticated users only).
+
+    
+    
+    
+     * Update the specified resource.
+
+    
+    
+    
      *
-     * @param UpdateCommentRequest $request The validated request containing updated content.
-     * @param Comment $comment The comment instance to update.
-     * @return \Illuminate\Http\JsonResponse JSON response indicating the outcome.
+
+    
+    
+    
+     * @param UpdateCommentRequest $request The request.
+
+    
+    
+    
+     * @param Comment $comment The comment.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function update(UpdateCommentRequest $request, Comment $comment)
     {
         // Authorize the action using policy
@@ -676,12 +849,43 @@ class CommentController extends Controller
         }
     }
 
+    
+    
+    
+    
     /**
-     * Get edit history for a comment.
+
+    
+    
+    
+     * Handle edit history.
+
+    
+    
+    
      *
-     * @param Comment $comment The comment whose history is being retrieved.
-     * @return \Illuminate\Http\JsonResponse JSON response containing edit history.
+
+    
+    
+    
+     * @param Comment $comment The comment.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function editHistory(Comment $comment)
     {
         // Only the comment author or admins can view edit history
@@ -734,15 +938,43 @@ class CommentController extends Controller
         ]);
     }
 
+    
+    
+    
+    
     /**
-     * Delete a comment.
+
+    
+    
+    
+     * Remove the specified resource.
+
+    
+    
+    
      *
-     * Uses soft delete to preserve conversation structure when comments have replies.
-     * Soft-deleted comments will display as "[Comentario eliminado]" in the UI.
-     *
-     * @param Comment $comment The comment instance targeted for deletion.
-     * @return \Illuminate\Http\JsonResponse JSON response summarizing the deletion.
+
+    
+    
+    
+     * @param mixed $commentId The commentId.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function destroy($commentId)
     {
         // Retrieve comment including soft-deleted ones to provide graceful responses

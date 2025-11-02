@@ -23,9 +23,43 @@ class ContentAnalysisService
         'dÃƒÆ’Ã‚Â­a', 'vez', 'hombre', 'mujer', 'vida', 'mundo', 'paÃƒÆ’Ã‚Â­s', 'casa', 'parte', 'estado', 'nuevo', 'gran', 'mismo'
     ];
 
+    
+    
+    
+    
     /**
-     * Analyze the post content and generate vector representations.
+
+    
+    
+    
+     * Handle analyze post.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Post $post The post.
+
+    
+    
+    
+     * @return MLPostVector
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function analyzePost(Post $post): MLPostVector
     {
         $vector = MLPostVector::where('post_id', $post->id)->first();
@@ -56,9 +90,43 @@ class ContentAnalysisService
         return $vector;
     }
 
+    
+    
+    
+    
     /**
-     * Generate a TF-IDF vector for the post content.
+
+    
+    
+    
+     * Handle generate tfidfvector.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Post $post The post.
+
+    
+    
+    
+     * @return array
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function generateTFIDFVector(Post $post): array
     {
         // Combine title, excerpt, and content.
@@ -92,9 +160,43 @@ class ContentAnalysisService
         return $vector;
     }
 
+    
+    
+    
+    
     /**
-     * Tokenize the provided text string.
+
+    
+    
+    
+     * Handle tokenize.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param string $text The text.
+
+    
+    
+    
+     * @return array
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function tokenize(string $text): array
     {
         // Convert to lowercase and remove special characters.
@@ -110,9 +212,43 @@ class ContentAnalysisService
         });
     }
 
+    
+    
+    
+    
     /**
-     * Remove stop words from the token list.
+
+    
+    
+    
+     * Handle remove stop words.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param array $tokens The tokens.
+
+    
+    
+    
+     * @return array
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function removeStopWords(array $tokens): array
     {
         return array_filter($tokens, function($token) {
@@ -120,9 +256,43 @@ class ContentAnalysisService
         });
     }
 
+    
+    
+    
+    
     /**
-     * Calculate term frequency values.
+
+    
+    
+    
+     * Calculate tf.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param array $tokens The tokens.
+
+    
+    
+    
+     * @return array
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function calculateTF(array $tokens): array
     {
         $tf = array_count_values($tokens);
@@ -141,9 +311,38 @@ class ContentAnalysisService
         return $tf;
     }
 
+    
+    
+    
+    
     /**
-     * Retrieve a simplified global vocabulary (placeholder for database-backed approach).
+
+    
+    
+    
+     * Get global vocabulary.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return array
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function getGlobalVocabulary(): array
     {
         // In a production implementation this would derive from the entire corpus.
@@ -159,9 +358,43 @@ class ContentAnalysisService
         ];
     }
 
+    
+    
+    
+    
     /**
-     * Calculate a simplified IDF map.
+
+    
+    
+    
+     * Calculate idf.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param array $vocabulary The vocabulary.
+
+    
+    
+    
+     * @return array
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function calculateIDF(array $vocabulary): array
     {
         $totalDocs = Post::count();
@@ -184,9 +417,43 @@ class ContentAnalysisService
         return $idf;
     }
 
+    
+    
+    
+    
     /**
-     * Generate a one-hot category vector.
+
+    
+    
+    
+     * Handle generate category vector.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Post $post The post.
+
+    
+    
+    
+     * @return array
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function generateCategoryVector(Post $post): array
     {
         $categories = $post->categories ?? collect();
@@ -200,9 +467,43 @@ class ContentAnalysisService
         return $vector;
     }
 
+    
+    
+    
+    
     /**
-     * Generate a one-hot tag vector.
+
+    
+    
+    
+     * Handle generate tag vector.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Post $post The post.
+
+    
+    
+    
+     * @return array
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function generateTagVector(Post $post): array
     {
         $tags = $post->tags ?? collect();
@@ -216,9 +517,43 @@ class ContentAnalysisService
         return $vector;
     }
 
+    
+    
+    
+    
     /**
-     * Normalize the length of the post content.
+
+    
+    
+    
+     * Handle normalize content length.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Post $post The post.
+
+    
+    
+    
+     * @return float
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function normalizeContentLength(Post $post): float
     {
         $contentLength = strlen(strip_tags($post->content ?? ''));
@@ -227,9 +562,43 @@ class ContentAnalysisService
         return min($contentLength / $maxLength, 1.0);
     }
 
+    
+    
+    
+    
     /**
-     * Calculate a readability score for the post.
+
+    
+    
+    
+     * Calculate readability score.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Post $post The post.
+
+    
+    
+    
+     * @return float
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function calculateReadabilityScore(Post $post): float
     {
         $text = strip_tags($post->content ?? '');
@@ -261,9 +630,43 @@ class ContentAnalysisService
         return max(0, min(100, $score)) / 100;
     }
 
+    
+    
+    
+    
     /**
-     * Roughly count syllables in the given text.
+
+    
+    
+    
+     * Handle count syllables.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param string $text The text.
+
+    
+    
+    
+     * @return int
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function countSyllables(string $text): int
     {
         // Simple approximation for Spanish content.
@@ -285,9 +688,43 @@ class ContentAnalysisService
         return max(1, $syllables); // Ensure at least one syllable per word.
     }
 
+    
+    
+    
+    
     /**
-     * Calculate a post engagement score.
+
+    
+    
+    
+     * Calculate engagement score.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Post $post The post.
+
+    
+    
+    
+     * @return float
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function calculateEngagementScore(Post $post): float
     {
         $views = $post->views_count ?? 0;
@@ -307,9 +744,38 @@ class ContentAnalysisService
         return min($engagementRate, 1.0);
     }
 
+    
+    
+    
+    
     /**
-     * Analyze posts that require vector refresh.
+
+    
+    
+    
+     * Handle analyze all posts.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function analyzeAllPosts(): void
     {
         $posts = Post::whereDoesntHave('mlVector')

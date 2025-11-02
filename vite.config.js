@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite';
 import laravel from 'laravel-vite-plugin';
 import react from '@vitejs/plugin-react';
+import tailwindcss from '@tailwindcss/vite';
 
 export default defineConfig({
     plugins: [
@@ -9,6 +10,7 @@ export default defineConfig({
             refresh: true,
         }),
         react(),
+        tailwindcss(),
     ],
     server: {
         host: '0.0.0.0',
@@ -23,8 +25,9 @@ export default defineConfig({
     resolve: {
         alias: {
             '@': '/resources/js',
-            '@mui/material$': '/resources/js/mui-compat.js',
         },
+        // ⚡ CRITICAL: Dedupe React to avoid "Cannot set properties of undefined (setting 'AsyncMode')" error
+        dedupe: ['react', 'react-dom'],
     },
     optimizeDeps: {
         include: [
@@ -32,21 +35,15 @@ export default defineConfig({
             'react-dom',
             '@inertiajs/react',
             '@mui/material',
-            '@mui/material/index.js',
-            '@mui/material/Unstable_Grid2',
             '@emotion/react',
             '@emotion/styled',
         ],
     },
     build: {
-        rollupOptions: {
-            output: {
-                manualChunks: {
-                    'react-vendor': ['react', 'react-dom'],
-                    'mui-vendor': ['@mui/material', '@emotion/react', '@emotion/styled'],
-                    'inertia-vendor': ['@inertiajs/react'],
-                },
-            },
-        },
+        // ⚡ PERFORMANCE: Increase chunk size warning limit for large apps
+        chunkSizeWarningLimit: 2000,
+        // ⚠️ MANUAL CHUNKING DISABLED: Vite's automatic chunking works better with MUI
+        // Manual chunking was causing circular dependency errors in production
+        // Vite will automatically split vendors based on usage patterns
     },
 });

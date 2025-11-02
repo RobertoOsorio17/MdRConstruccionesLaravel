@@ -13,9 +13,43 @@ class SendCommentLikeNotification implements ShouldQueue
 {
     use InteractsWithQueue;
 
+    
+    
+    
+    
     /**
-     * Handle the event.
+
+    
+    
+    
+     * Handle handle.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param mixed $event The event.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function handle($event): void
     {
         $comment = $event->comment;

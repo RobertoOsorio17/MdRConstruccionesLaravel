@@ -25,10 +25,134 @@ class PostRevision extends Model
         'data' => 'array',
     ];
 
+
+    
+
+
+    
+
+    
+
+    
+
+    /**
+
+
+    
+
+    
+
+    
+
+     * Handle post.
+
+
+    
+
+    
+
+    
+
+     *
+
+
+    
+
+    
+
+    
+
+     * @return BelongsTo
+
+
+    
+
+    
+
+    
+
+     */
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
     public function post(): BelongsTo
     {
         return $this->belongsTo(Post::class);
     }
+
+
+    
+
+
+    
+
+    
+
+    
+
+    /**
+
+
+    
+
+    
+
+    
+
+     * Handle author.
+
+
+    
+
+    
+
+    
+
+     *
+
+
+    
+
+    
+
+    
+
+     * @return BelongsTo
+
+
+    
+
+    
+
+    
+
+     */
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
 
     public function author(): BelongsTo
     {

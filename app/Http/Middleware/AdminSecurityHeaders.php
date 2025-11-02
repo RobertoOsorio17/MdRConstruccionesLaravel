@@ -29,20 +29,42 @@ class AdminSecurityHeaders
         $response->headers->set('X-XSS-Protection', '1; mode=block');
         $response->headers->set('Referrer-Policy', 'strict-origin-when-cross-origin');
         $response->headers->set('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
-        
-        // Content Security Policy for admin (development-friendly)
+
+        // Generate nonce for inline scripts (stored in request for use in views)
+        $nonce = base64_encode(random_bytes(16));
+        $request->attributes->set('csp_nonce', $nonce);
+
+        $isDevelopment = app()->environment(['local', 'development']);
+
+        // Content Security Policy for admin panel
+        // ✅ SECURITY: Removed 'unsafe-inline' and 'unsafe-eval' in favor of nonces
+        $scriptSrc = $isDevelopment
+            ? "'self' 'nonce-{$nonce}' https://cdn.jsdelivr.net http://localhost:* http://127.0.0.1:* http://[::1]:*"
+            : "'self' 'nonce-{$nonce}' https://cdn.jsdelivr.net";
+
+        $styleSrc = $isDevelopment
+            ? "'self' 'nonce-{$nonce}' 'unsafe-inline' https://fonts.googleapis.com https://fonts.bunny.net"
+            : "'self' 'nonce-{$nonce}' https://fonts.googleapis.com https://fonts.bunny.net";
+
+        $connectSrc = $isDevelopment
+            ? "'self' ws://localhost:* ws://127.0.0.1:* ws://[::1]:* http://localhost:* http://127.0.0.1:* http://[::1]:*"
+            : "'self'";
+
         $csp = implode('; ', [
             "default-src 'self'",
-            "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net http://localhost:* http://127.0.0.1:* http://[::1]:*",
-            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://fonts.bunny.net",
+            "script-src {$scriptSrc}",
+            "style-src {$styleSrc}",
             "font-src 'self' https://fonts.gstatic.com https://fonts.bunny.net",
             "img-src 'self' data: https:",
-            "connect-src 'self' ws://localhost:* ws://127.0.0.1:* ws://[::1]:* http://localhost:* http://127.0.0.1:* http://[::1]:*",
+            "connect-src {$connectSrc}",
             "frame-ancestors 'none'",
             "base-uri 'self'",
-            "form-action 'self'"
+            "form-action 'self'",
+            "object-src 'none'",
+            "upgrade-insecure-requests",
+            "report-uri /api/csp-report"
         ]);
-        
+
         $response->headers->set('Content-Security-Policy', $csp);
 
         // Prevent caching of admin pages

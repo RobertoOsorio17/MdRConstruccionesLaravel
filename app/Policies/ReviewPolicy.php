@@ -12,17 +12,90 @@ use Illuminate\Auth\Access\Response;
  */
 class ReviewPolicy
 {
+    
+    
+    
+    
     /**
-     * Determine whether the user can view any models.
+
+    
+    
+    
+     * Handle view any.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param User $user The user.
+
+    
+    
+    
+     * @return bool
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function viewAny(User $user): bool
     {
         return $user->hasRole('admin') || $user->hasRole('editor');
     }
 
+    
+    
+    
+    
     /**
-     * Determine whether the user can view the model.
+
+    
+    
+    
+     * Handle view.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param User $user The user.
+
+    
+    
+    
+     * @param Review $review The review.
+
+    
+    
+    
+     * @return bool
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function view(User $user, Review $review): bool
     {
         // Admins and editors can view all reviews
@@ -34,18 +107,91 @@ class ReviewPolicy
         return $user->id === $review->user_id;
     }
 
+    
+    
+    
+    
     /**
-     * Determine whether the user can create models.
+
+    
+    
+    
+     * Show the form for creating a new resource.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param User $user The user.
+
+    
+    
+    
+     * @return bool
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function create(User $user): bool
     {
         // Only authenticated users can create reviews
         return true;
     }
 
+    
+    
+    
+    
     /**
-     * Determine whether the user can update the model.
+
+    
+    
+    
+     * Update the specified resource.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param User $user The user.
+
+    
+    
+    
+     * @param Review $review The review.
+
+    
+    
+    
+     * @return bool
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function update(User $user, Review $review): bool
     {
         // Admins and editors can update any review
@@ -57,9 +203,48 @@ class ReviewPolicy
         return $user->id === $review->user_id && $review->status === 'pending';
     }
 
+    
+    
+    
+    
     /**
-     * Determine whether the user can delete the model.
+
+    
+    
+    
+     * Remove the specified resource.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param User $user The user.
+
+    
+    
+    
+     * @param Review $review The review.
+
+    
+    
+    
+     * @return bool
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function delete(User $user, Review $review): bool
     {
         // Admins can delete any review
@@ -71,25 +256,127 @@ class ReviewPolicy
         return $user->id === $review->user_id && $review->status === 'pending';
     }
 
+    
+    
+    
+    
     /**
-     * Determine whether the user can moderate reviews.
+
+    
+    
+    
+     * Handle moderate.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param User $user The user.
+
+    
+    
+    
+     * @return bool
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function moderate(User $user): bool
     {
         return $user->hasRole('admin') || $user->hasRole('editor');
     }
 
+    
+    
+    
+    
     /**
-     * Determine whether the user can approve reviews.
+
+    
+    
+    
+     * Handle approve.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param User $user The user.
+
+    
+    
+    
+     * @return bool
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function approve(User $user): bool
     {
         return $user->hasRole('admin') || $user->hasRole('editor');
     }
 
+    
+    
+    
+    
     /**
-     * Determine whether the user can reject reviews.
+
+    
+    
+    
+     * Handle reject.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param User $user The user.
+
+    
+    
+    
+     * @return bool
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function reject(User $user): bool
     {
         return $user->hasRole('admin') || $user->hasRole('editor');

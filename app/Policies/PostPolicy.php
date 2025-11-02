@@ -12,18 +12,91 @@ use Illuminate\Auth\Access\Response;
  */
 class PostPolicy
 {
+    
+    
+    
+    
     /**
-     * Determine whether the user can view any models.
+
+    
+    
+    
+     * Handle view any.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param ?User $user The user.
+
+    
+    
+    
+     * @return bool
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function viewAny(?User $user): bool
     {
         // Anyone can view published posts
         return true;
     }
 
+    
+    
+    
+    
     /**
-     * Determine whether the user can view the model.
+
+    
+    
+    
+     * Handle view.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param ?User $user The user.
+
+    
+    
+    
+     * @param Post $post The post.
+
+    
+    
+    
+     * @return bool
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function view(?User $user, Post $post): bool
     {
         // Published posts can be viewed by anyone
@@ -41,9 +114,43 @@ class PostPolicy
         return false;
     }
 
+    
+    
+    
+    
     /**
-     * Determine whether the user can create models.
+
+    
+    
+    
+     * Show the form for creating a new resource.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param User $user The user.
+
+    
+    
+    
+     * @return bool
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function create(User $user): bool
     {
         // Only authenticated users with appropriate roles can create posts
@@ -52,9 +159,48 @@ class PostPolicy
                $user->hasRole('author');
     }
 
+    
+    
+    
+    
     /**
-     * Determine whether the user can update the model.
+
+    
+    
+    
+     * Update the specified resource.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param User $user The user.
+
+    
+    
+    
+     * @param Post $post The post.
+
+    
+    
+    
+     * @return bool
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function update(User $user, Post $post): bool
     {
         // Authors can update their own posts, admins and editors can update any post
@@ -63,9 +209,48 @@ class PostPolicy
                $user->hasRole('editor');
     }
 
+    
+    
+    
+    
     /**
-     * Determine whether the user can delete the model.
+
+    
+    
+    
+     * Remove the specified resource.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param User $user The user.
+
+    
+    
+    
+     * @param Post $post The post.
+
+    
+    
+    
+     * @return bool
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function delete(User $user, Post $post): bool
     {
         // Authors can delete their own posts, admins can delete any post
@@ -73,27 +258,144 @@ class PostPolicy
                $user->hasRole('admin');
     }
 
+    
+    
+    
+    
     /**
-     * Determine whether the user can restore the model.
+
+    
+    
+    
+     * Handle restore.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param User $user The user.
+
+    
+    
+    
+     * @param Post $post The post.
+
+    
+    
+    
+     * @return bool
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function restore(User $user, Post $post): bool
     {
         // Only admins can restore posts
         return $user->hasRole('admin');
     }
 
+    
+    
+    
+    
     /**
-     * Determine whether the user can permanently delete the model.
+
+    
+    
+    
+     * Handle force delete.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param User $user The user.
+
+    
+    
+    
+     * @param Post $post The post.
+
+    
+    
+    
+     * @return bool
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function forceDelete(User $user, Post $post): bool
     {
         // Only admins can permanently delete posts
         return $user->hasRole('admin');
     }
 
+    
+    
+    
+    
     /**
-     * Determine whether the user can publish the model.
+
+    
+    
+    
+     * Handle publish.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param User $user The user.
+
+    
+    
+    
+     * @param Post $post The post.
+
+    
+    
+    
+     * @return bool
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function publish(User $user, Post $post): bool
     {
         // Authors can publish their own posts, admins and editors can publish any post
@@ -102,9 +404,48 @@ class PostPolicy
                $user->hasRole('editor');
     }
 
+    
+    
+    
+    
     /**
-     * Determine whether the user can feature the model.
+
+    
+    
+    
+     * Handle feature.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param User $user The user.
+
+    
+    
+    
+     * @param Post $post The post.
+
+    
+    
+    
+     * @return bool
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function feature(User $user, Post $post): bool
     {
         // Only admins and editors can feature posts
@@ -112,9 +453,43 @@ class PostPolicy
                $user->hasRole('editor');
     }
 
+    
+    
+    
+    
     /**
-     * Determine whether the user can perform bulk actions.
+
+    
+    
+    
+     * Handle bulk action.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param User $user The user.
+
+    
+    
+    
+     * @return bool
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function bulkAction(User $user): bool
     {
         // Only admins and editors can perform bulk actions

@@ -64,22 +64,27 @@ class AppServiceProvider extends ServiceProvider
 
     /**
      * Apply general settings from database to runtime configuration.
+     *
+     * ⚡ PERFORMANCE: Load all settings at once instead of multiple queries
      */
     protected function applyGeneralSettings(): void
     {
         try {
+            // ⚡ PERFORMANCE: Get all settings with a single query
+            $settings = AdminSetting::getAllCached(3600);
+
             // Timezone
-            $timezone = AdminSetting::getCachedValue('timezone', 'UTC', 3600);
+            $timezone = $settings['timezone'] ?? 'UTC';
             Config::set('app.timezone', $timezone);
             date_default_timezone_set($timezone);
 
             // Locale
-            $locale = AdminSetting::getCachedValue('locale', 'es', 3600);
+            $locale = $settings['locale'] ?? 'es';
             Config::set('app.locale', $locale);
             app()->setLocale($locale);
 
             // Site name (for emails, etc.)
-            $siteName = AdminSetting::getCachedValue('site_name', config('app.name'), 3600);
+            $siteName = $settings['site_name'] ?? config('app.name');
             Config::set('app.name', $siteName);
         } catch (\Exception $e) {
             // Silently fail if settings table doesn't exist yet (during migrations)
@@ -89,36 +94,41 @@ class AppServiceProvider extends ServiceProvider
 
     /**
      * Apply email settings from database to runtime configuration.
+     *
+     * ⚡ PERFORMANCE: Load all settings at once instead of multiple queries
      */
     protected function applyEmailSettings(): void
     {
         try {
+            // ⚡ PERFORMANCE: Get all settings with a single query
+            $settings = AdminSetting::getAllCached(3600);
+
             // Mail from name
-            $mailFromName = AdminSetting::getCachedValue('mail_from_name', config('mail.from.name'), 3600);
+            $mailFromName = $settings['mail_from_name'] ?? config('mail.from.name');
             Config::set('mail.from.name', $mailFromName);
 
             // Mail from address
-            $mailFromAddress = AdminSetting::getCachedValue('mail_from_address', config('mail.from.address'), 3600);
+            $mailFromAddress = $settings['mail_from_address'] ?? config('mail.from.address');
             Config::set('mail.from.address', $mailFromAddress);
 
             // SMTP Host
-            $smtpHost = AdminSetting::getCachedValue('smtp_host', config('mail.mailers.smtp.host'), 3600);
+            $smtpHost = $settings['smtp_host'] ?? config('mail.mailers.smtp.host');
             Config::set('mail.mailers.smtp.host', $smtpHost);
 
             // SMTP Port
-            $smtpPort = AdminSetting::getCachedValue('smtp_port', config('mail.mailers.smtp.port'), 3600);
+            $smtpPort = $settings['smtp_port'] ?? config('mail.mailers.smtp.port');
             Config::set('mail.mailers.smtp.port', $smtpPort);
 
             // SMTP Username
-            $smtpUsername = AdminSetting::getCachedValue('smtp_username', config('mail.mailers.smtp.username'), 3600);
+            $smtpUsername = $settings['smtp_username'] ?? config('mail.mailers.smtp.username');
             Config::set('mail.mailers.smtp.username', $smtpUsername);
 
             // SMTP Password
-            $smtpPassword = AdminSetting::getCachedValue('smtp_password', config('mail.mailers.smtp.password'), 3600);
+            $smtpPassword = $settings['smtp_password'] ?? config('mail.mailers.smtp.password');
             Config::set('mail.mailers.smtp.password', $smtpPassword);
 
             // SMTP Encryption
-            $smtpEncryption = AdminSetting::getCachedValue('smtp_encryption', config('mail.mailers.smtp.encryption'), 3600);
+            $smtpEncryption = $settings['smtp_encryption'] ?? config('mail.mailers.smtp.encryption');
             Config::set('mail.mailers.smtp.encryption', $smtpEncryption);
         } catch (\Exception $e) {
             // Silently fail if settings table doesn't exist yet (during migrations)
@@ -128,24 +138,29 @@ class AppServiceProvider extends ServiceProvider
 
     /**
      * Apply performance settings from database to runtime configuration.
+     *
+     * ⚡ PERFORMANCE: Load all settings at once instead of multiple queries
      */
     protected function applyPerformanceSettings(): void
     {
         try {
+            // ⚡ PERFORMANCE: Get all settings with a single query
+            $settings = AdminSetting::getAllCached(3600);
+
             // Cache enabled
-            $cacheEnabled = AdminSetting::getCachedValue('cache_enabled', true, 3600);
+            $cacheEnabled = $settings['cache_enabled'] ?? true;
             Config::set('cache.enabled', $cacheEnabled);
 
             // Cache TTL (in seconds)
-            $cacheTtl = AdminSetting::getCachedValue('cache_ttl', 3600, 3600);
+            $cacheTtl = $settings['cache_ttl'] ?? 3600;
             Config::set('cache.default_ttl', $cacheTtl);
 
             // Minify HTML
-            $minifyHtml = AdminSetting::getCachedValue('minify_html', false, 3600);
+            $minifyHtml = $settings['minify_html'] ?? false;
             Config::set('app.minify_html', $minifyHtml);
 
             // Minify CSS
-            $minifyCss = AdminSetting::getCachedValue('minify_css', false, 3600);
+            $minifyCss = $settings['minify_css'] ?? false;
             Config::set('app.minify_css', $minifyCss);
         } catch (\Exception $e) {
             // Silently fail if settings table doesn't exist yet (during migrations)

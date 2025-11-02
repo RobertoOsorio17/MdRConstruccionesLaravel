@@ -19,12 +19,43 @@ class NotifyAdminsOfChange implements ShouldQueue
 {
     use InteractsWithQueue;
 
+    
+    
+    
+    
     /**
-     * Handle the event.
+
+    
+    
+    
+     * Handle handle.
+
+    
+    
+    
      *
-     * @param \App\Events\SettingChanged|\App\Events\MaintenanceModeToggled $event
+
+    
+    
+    
+     * @param SettingChanged|MaintenanceModeToggled $event The event.
+
+    
+    
+    
      * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function handle(SettingChanged|MaintenanceModeToggled $event): void
     {
         try {
@@ -40,12 +71,43 @@ class NotifyAdminsOfChange implements ShouldQueue
         }
     }
 
+    
+    
+    
+    
     /**
-     * Handle setting changed event.
+
+    
+    
+    
+     * Handle setting changed.
+
+    
+    
+    
      *
-     * @param \App\Events\SettingChanged $event
+
+    
+    
+    
+     * @param SettingChanged $event The event.
+
+    
+    
+    
      * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function handleSettingChanged(SettingChanged $event): void
     {
         // Only notify for critical settings
@@ -67,12 +129,43 @@ class NotifyAdminsOfChange implements ShouldQueue
         );
     }
 
+    
+    
+    
+    
     /**
-     * Handle maintenance mode toggled event.
+
+    
+    
+    
+     * Handle maintenance mode toggled.
+
+    
+    
+    
      *
-     * @param \App\Events\MaintenanceModeToggled $event
+
+    
+    
+    
+     * @param MaintenanceModeToggled $event The event.
+
+    
+    
+    
      * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function handleMaintenanceModeToggled(MaintenanceModeToggled $event): void
     {
         $type = $event->enabled ? 'error' : 'success';
@@ -93,15 +186,58 @@ class NotifyAdminsOfChange implements ShouldQueue
         );
     }
 
+    
+    
+    
+    
     /**
-     * Create an admin notification.
+
+    
+    
+    
+     * Handle create admin notification.
+
+    
+    
+    
      *
-     * @param string $title
-     * @param string $message
-     * @param string $type
-     * @param array $data
+
+    
+    
+    
+     * @param string $title The title.
+
+    
+    
+    
+     * @param string $message The message.
+
+    
+    
+    
+     * @param string $type The type.
+
+    
+    
+    
+     * @param array $data The data.
+
+    
+    
+    
      * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function createAdminNotification(string $title, string $message, string $type, array $data): void
     {
         // Check if AdminNotification model exists

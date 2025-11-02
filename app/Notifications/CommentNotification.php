@@ -18,27 +18,127 @@ class CommentNotification extends Notification implements ShouldQueue
 
     protected Comment $comment;
 
+    
+    
+    
+    
     /**
-     * Create a new notification instance.
+
+    
+    
+    
+     * Handle __construct.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Comment $comment The comment.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function __construct(Comment $comment)
     {
         $this->comment = $comment;
     }
 
+    
+    
+    
+    
     /**
-     * Get the notification's delivery channels.
+
+    
+    
+    
+     * Handle via.
+
+    
+    
+    
      *
-     * @return array<int, string>
+
+    
+    
+    
+     * @param object $notifiable The notifiable.
+
+    
+    
+    
+     * @return array
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function via(object $notifiable): array
     {
         return ['mail', 'database'];
     }
 
+    
+    
+    
+    
     /**
-     * Get the mail representation of the notification.
+
+    
+    
+    
+     * Handle to mail.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param object $notifiable The notifiable.
+
+    
+    
+    
+     * @return MailMessage
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function toMail(object $notifiable): MailMessage
     {
         $post = $this->comment->post;
@@ -53,11 +153,43 @@ class CommentNotification extends Notification implements ShouldQueue
             ->line('Gracias por usar nuestra plataforma.');
     }
 
+    
+    
+    
+    
     /**
-     * Get the array representation of the notification.
+
+    
+    
+    
+     * Handle to array.
+
+    
+    
+    
      *
-     * @return array<string, mixed>
+
+    
+    
+    
+     * @param object $notifiable The notifiable.
+
+    
+    
+    
+     * @return array
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function toArray(object $notifiable): array
     {
         $commenterName = $this->comment->user?->name ?? $this->comment->author_name ?? 'Un usuario';

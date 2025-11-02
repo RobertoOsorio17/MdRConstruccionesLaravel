@@ -186,16 +186,23 @@ class AdminAuditLog extends Model
     /**
      * Persist a new audit log entry based on the supplied context.
      *
+     * ✅ SECURITY: Anonymize session_id to prevent session hijacking via logs
+     *
      * @param array<string, mixed> $data Contextual attributes describing the audit event.
      * @return self Newly created audit log instance.
      */
     public static function logAction(array $data): self
     {
+        // ✅ SECURITY: Hash session_id instead of storing it in plain text
+        // This prevents session hijacking if logs are compromised
+        $sessionId = session()->getId();
+        $anonymizedSessionId = $sessionId ? substr(hash('sha256', $sessionId), 0, 16) : null;
+
         return self::create(array_merge([
             'user_id' => auth()->id(),
             'ip_address' => request()->ip(),
             'user_agent' => request()->userAgent(),
-            'session_id' => session()->getId(),
+            'session_id' => $anonymizedSessionId,
             'route_name' => request()->route()?->getName(),
             'url' => request()->fullUrl(),
             'severity' => 'low',

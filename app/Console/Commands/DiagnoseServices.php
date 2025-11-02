@@ -25,9 +25,38 @@ class DiagnoseServices extends Command
      */
     protected $description = 'Diagnose services FAQ data issues';
 
+    
+    
+    
+    
     /**
-     * Execute the console command.
+
+    
+    
+    
+     * Handle handle.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function handle()
     {
         $this->info('Diagnosing services data...');

@@ -16,39 +16,85 @@ use Inertia\Inertia;
 class CommentController extends Controller
 {
     use AuthorizesRequests;
+    
+    
+    
+    
     /**
-     * Display a listing of comments.
+
+    
+    
+    
+     * Display a listing of the resource.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function index(Request $request)
     {
-        // Authorize action.
+        /**
+         * Authorize action.
+         */
         $this->authorize('viewAny', Comment::class);
 
         $query = Comment::with(['post:id,title,slug', 'user:id,name', 'parent:id']);
 
-        // Filter by deletion status
+        /**
+         * Filter by deletion status.
+         */
         if ($request->has('deleted_status')) {
             if ($request->deleted_status === 'deleted') {
                 $query->onlyTrashed();
             } elseif ($request->deleted_status === 'active') {
-                // Default: only non-deleted
+                /**
+                 * Default: only non-deleted.
+                 */
             } elseif ($request->deleted_status === 'all') {
                 $query->withTrashed();
             }
         }
 
-        // Filter by moderation status when provided.
+        /**
+         * Filter by moderation status when provided.
+         */
         if ($request->has('status') && !empty($request->status)) {
             $query->where('status', $request->status);
         }
 
-        // Filter comments by the related post identifier.
+        /**
+         * Filter comments by the related post identifier.
+         */
         if ($request->has('post') && !empty($request->post)) {
             $query->where('post_id', $request->post);
         }
 
-        // Apply keyword search across body and author information.
-        // Security: Escape LIKE wildcards to prevent SQL injection.
+        /**
+         * Apply keyword search across body and author information.
+         * Security: Escape LIKE wildcards to prevent SQL injection.
+         */
         if ($request->has('search') && !empty($request->search)) {
             $search = str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $request->search);
             $query->where(function ($q) use ($search) {
@@ -78,7 +124,9 @@ class CommentController extends Controller
                 ];
             });
 
-        // Retrieve posts to populate the filter dropdown.
+        /**
+         * Retrieve posts to populate the filter dropdown.
+         */
         $posts = Post::select('id', 'title')->orderBy('title')->get();
 
         return Inertia::render('Admin/Comments/Index', [
@@ -100,12 +148,48 @@ class CommentController extends Controller
         ]);
     }
 
+    
+    
+    
+    
     /**
-     * Display the specified comment.
+
+    
+    
+    
+     * Display the specified resource.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Comment $comment The comment.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function show(Comment $comment)
     {
-        // Authorize action.
+        /**
+         * Authorize action.
+         */
         $this->authorize('view', $comment);
 
         $comment->load(['post:id,title,slug', 'user:id,name', 'parent:id,content,author_name', 'replies']);
@@ -129,17 +213,58 @@ class CommentController extends Controller
         ]);
     }
 
+    
+    
+    
+    
     /**
-     * Update the specified comment status.
+
+    
+    
+    
+     * Update the specified resource.
+
+    
+    
+    
      *
-     * Security: Added proper validation and sanitization.
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @param Comment $comment The comment.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function update(Request $request, Comment $comment)
     {
-        // Authorize action.
+        /**
+         * Authorize action.
+         */
         $this->authorize('update', $comment);
 
-        // Security: Proper validation with length limits and XSS prevention.
+        /**
+         * Security: Proper validation with length limits and XSS prevention.
+         */
         $validated = $request->validate([
             'status' => 'required|in:pending,approved,spam,rejected',
             'body' => [
@@ -148,18 +273,25 @@ class CommentController extends Controller
                 'string',
                 'min:10',
                 'max:2000',
-                'regex:/^[^<>]*$/', // Prevent HTML tags
+                /**
+                 * Reject input containing HTML tags.
+                 */
+                'regex:/^[^<>]*$/',
             ],
         ]);
 
-        // Security: Sanitize body content if provided.
+        /**
+         * Security: Sanitize body content if provided.
+         */
         if (isset($validated['body'])) {
             $validated['body'] = $this->sanitizeCommentBody($validated['body']);
         }
 
         $comment->update($validated);
 
-        // Improvement: Return updated comment data to avoid page reload.
+        /**
+         * Improvement: Return updated comment data to avoid page reload.
+         */
         return response()->json([
             'success' => true,
             'status' => $comment->status,
@@ -168,33 +300,101 @@ class CommentController extends Controller
         ]);
     }
 
+    
+    
+    
+    
     /**
-     * Sanitize comment body to prevent XSS attacks.
+
+    
+    
+    
+     * Handle sanitize comment body.
+
+    
+    
+    
      *
-     * Security: Strip HTML tags and trim whitespace.
+
+    
+    
+    
+     * @param string $body The body.
+
+    
+    
+    
+     * @return string
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function sanitizeCommentBody(string $body): string
     {
         return strip_tags(trim($body));
     }
 
+    
+    
+    
+    
     /**
-     * Remove the specified comment.
+
+    
+    
+    
+     * Remove the specified resource.
+
+    
+    
+    
      *
-     * Uses soft delete to preserve conversation structure.
-     * Soft-deleted comments display as "[Comentario eliminado]" in the UI.
-     * ✅ SECURITY FIX: Added audit logging
+
+    
+    
+    
+     * @param Comment $comment The comment.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function destroy(Comment $comment)
     {
-        // Authorize action.
+        /**
+         * Authorize action.
+         */
         $this->authorize('delete', $comment);
 
-        // Use soft delete to preserve conversation structure
-        // Replies will remain visible even when parent is deleted
+        /**
+         * Use soft delete to preserve conversation structure.
+         * Replies will remain visible even when parent is deleted.
+         */
         $comment->delete();
 
-        // Security: Log deletion in audit log.
+        /**
+         * Security: Log deletion in audit log.
+         */
         \App\Models\AdminAuditLog::logAction([
             'action' => 'delete',
             'model_type' => Comment::class,
@@ -214,20 +414,56 @@ class CommentController extends Controller
         ]);
     }
 
+    
+    
+    
+    
     /**
-     * Approve a comment through the moderation endpoint.
+
+    
+    
+    
+     * Handle approve.
+
+    
+    
+    
      *
-     * Security: Added audit logging.
+
+    
+    
+    
+     * @param Comment $comment The comment.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function approve(Comment $comment)
     {
-        // Authorize action.
+        /**
+         * Authorize action.
+         */
         $this->authorize('moderate', $comment);
 
         $oldStatus = $comment->status;
         $comment->update(['status' => 'approved']);
 
-        // Security: Log approval in audit log.
+        /**
+         * Security: Log approval in audit log.
+         */
         \App\Models\AdminAuditLog::logAction([
             'action' => 'approve',
             'model_type' => Comment::class,
@@ -248,20 +484,56 @@ class CommentController extends Controller
         ]);
     }
 
+    
+    
+    
+    
     /**
-     * Mark a comment as spam for moderation purposes.
+
+    
+    
+    
+     * Handle mark as spam.
+
+    
+    
+    
      *
-     * Security: Added audit logging.
+
+    
+    
+    
+     * @param Comment $comment The comment.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function markAsSpam(Comment $comment)
     {
-        // Authorize action.
+        /**
+         * Authorize action.
+         */
         $this->authorize('moderate', $comment);
 
         $oldStatus = $comment->status;
         $comment->update(['status' => 'spam']);
 
-        // Security: Log spam marking in audit log.
+        /**
+         * Security: Log spam marking in audit log.
+         */
         \App\Models\AdminAuditLog::logAction([
             'action' => 'mark_spam',
             'model_type' => Comment::class,
@@ -282,33 +554,76 @@ class CommentController extends Controller
         ]);
     }
 
+    
+    
+    
+    
     /**
-     * Approve multiple comments in a single request.
+
+    
+    
+    
+     * Handle bulk approve.
+
+    
+    
+    
      *
-     * Security: Only update comments that aren't already approved and log audit entry.
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function bulkApprove(Request $request)
     {
-        // Authorize bulk action capability.
+        /**
+         * Authorize bulk action capability.
+         */
         $this->authorize('moderate', Comment::class);
 
         $validated = $request->validate([
-            'comment_ids' => 'required|array|max:100', // Limit to 100.
+            /**
+             * Restrict bulk operations to one hundred comment identifiers.
+             */
+            'comment_ids' => 'required|array|max:100',
             'comment_ids.*' => 'exists:comments,id',
         ]);
 
-        // Verify authorization for each comment.
+        /**
+         * Verify authorization for each comment.
+         */
         $comments = Comment::whereIn('id', $validated['comment_ids'])->get();
         foreach ($comments as $comment) {
             $this->authorize('moderate', $comment);
         }
 
-        // Security fix: Only update comments that aren't already approved.
+        /**
+         * Security fix: Only update comments that aren't already approved.
+         */
         $count = Comment::whereIn('id', $validated['comment_ids'])
             ->where('status', '!=', 'approved')
             ->update(['status' => 'approved']);
 
-        // Security: Log bulk operation in audit log.
+        /**
+         * Security: Log bulk operation in audit log.
+         */
         \App\Models\AdminAuditLog::logAction([
             'action' => 'bulk_approve',
             'model_type' => Comment::class,
@@ -328,22 +643,61 @@ class CommentController extends Controller
         ]);
     }
 
+    
+    
+    
+    
     /**
-     * Delete multiple comments and their replies in bulk.
+
+    
+    
+    
+     * Handle bulk delete.
+
+    
+    
+    
      *
-     * Security: Added audit logging.
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function bulkDelete(Request $request)
     {
-        // Authorize bulk action capability.
+        /**
+         * Authorize bulk action capability.
+         */
         $this->authorize('moderate', Comment::class);
 
         $validated = $request->validate([
-            'comment_ids' => 'required|array|max:100', // Limit to 100.
+            /**
+             * Restrict bulk operations to one hundred comment identifiers.
+             */
+            'comment_ids' => 'required|array|max:100',
             'comment_ids.*' => 'exists:comments,id',
         ]);
 
-        // Verify authorization for each comment.
+        /**
+         * Verify authorization for each comment.
+         */
         $comments = Comment::whereIn('id', $validated['comment_ids'])->get();
         foreach ($comments as $comment) {
             $this->authorize('delete', $comment);
@@ -352,7 +706,9 @@ class CommentController extends Controller
         $count = Comment::whereIn('id', $validated['comment_ids'])->count();
         Comment::whereIn('id', $validated['comment_ids'])->delete();
 
-        // Security: Log bulk operation in audit log.
+        /**
+         * Security: Log bulk operation in audit log.
+         */
         \App\Models\AdminAuditLog::logAction([
             'action' => 'bulk_delete',
             'model_type' => Comment::class,
@@ -371,33 +727,76 @@ class CommentController extends Controller
         ]);
     }
 
+    
+    
+    
+    
     /**
-     * Flag multiple comments as spam in one operation.
+
+    
+    
+    
+     * Handle bulk mark as spam.
+
+    
+    
+    
      *
-     * Security: Only update non-spam comments and add audit logging.
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function bulkMarkAsSpam(Request $request)
     {
-        // Authorize bulk action capability.
+        /**
+         * Authorize bulk action capability.
+         */
         $this->authorize('moderate', Comment::class);
 
         $validated = $request->validate([
-            'comment_ids' => 'required|array|max:100', // Limit to 100.
+            /**
+             * Restrict bulk operations to one hundred comment identifiers.
+             */
+            'comment_ids' => 'required|array|max:100',
             'comment_ids.*' => 'exists:comments,id',
         ]);
 
-        // Verify authorization for each comment.
+        /**
+         * Verify authorization for each comment.
+         */
         $comments = Comment::whereIn('id', $validated['comment_ids'])->get();
         foreach ($comments as $comment) {
             $this->authorize('moderate', $comment);
         }
 
-        // Security: Only update comments that aren't already spam.
+        /**
+         * Security: Only update comments that aren't already spam.
+         */
         $count = Comment::whereIn('id', $validated['comment_ids'])
             ->where('status', '!=', 'spam')
             ->update(['status' => 'spam']);
 
-        // Security: Log bulk operation in audit log.
+        /**
+         * Security: Log bulk operation in audit log.
+         */
         \App\Models\AdminAuditLog::logAction([
             'action' => 'bulk_mark_spam',
             'model_type' => Comment::class,
@@ -417,54 +816,92 @@ class CommentController extends Controller
         ]);
     }
 
+    
+    
+    
+    
     /**
-     * Restore a soft-deleted comment.
+
+    
+    
+    
+     * Handle restore.
+
+    
+    
+    
      *
-     * Security validations:
-     * - Verifies comment exists and is actually deleted
-     * - Checks parent post integrity (not deleted)
-     * - Validates author ban status
-     * - Logs restoration action for audit trail
-     * - Rate limited to prevent abuse
-     *
-     * @param Comment $comment The comment to restore (route model binding with trashed)
-     * @return \Illuminate\Http\JsonResponse
+
+    
+    
+    
+     * @param mixed $id The id.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function restore($id)
     {
-        // Find comment including soft-deleted ones.
+        /**
+         * Find comment including soft-deleted ones.
+         */
         $comment = Comment::withTrashed()->findOrFail($id);
 
-        // Security: Authorize restore action.
+        /**
+         * Security: Authorize restore action.
+         */
         $this->authorize('restore', $comment);
 
-        // Validation: Verify comment is actually deleted.
+        /**
+         * Validation: Verify comment is actually deleted.
+         */
         if (!$comment->trashed()) {
             return response()->json([
                 'success' => false,
-                'message' => 'El comentario no está eliminado y no puede ser restaurado.'
+                'message' => 'El comentario no estÃ¡ eliminado y no puede ser restaurado.'
             ], 400);
         }
 
-        // Validation: Check parent post integrity.
+        /**
+         * Validation: Check parent post integrity.
+         */
         if (!$comment->post || $comment->post->trashed()) {
             return response()->json([
                 'success' => false,
-                'message' => 'No se puede restaurar el comentario porque el post padre está eliminado.'
+                'message' => 'No se puede restaurar el comentario porque el post padre estÃ¡ eliminado.'
             ], 422);
         }
 
-        // Validation: Check if author is banned (warning, not blocking).
+        /**
+         * Validation: Check if author is banned (warning, not blocking).
+         */
         $authorWarning = null;
         if ($comment->user && $comment->user->isBanned()) {
             $banStatus = $comment->user->getBanStatus();
-            $authorWarning = "Advertencia: El autor de este comentario está actualmente baneado. Motivo: {$banStatus['reason']}";
+            $authorWarning = "Advertencia: El autor de este comentario estÃ¡ actualmente baneado. Motivo: {$banStatus['reason']}";
         }
 
-        // Restore the comment
+        /**
+         * Restore the comment.
+         */
         $comment->restore();
 
-        // Audit: Log restoration action with detailed metadata.
+        /**
+         * Audit: Log restoration action with detailed metadata.
+         */
         \App\Models\AdminAuditLog::logAction([
             'action' => 'restore',
             'model_type' => Comment::class,
@@ -484,11 +921,13 @@ class CommentController extends Controller
             ]
         ]);
 
-        // Notification: Create admin notification.
+        /**
+         * Notification: Create admin notification.
+         */
         \App\Models\AdminNotification::createSystem([
             'type' => 'success',
             'title' => 'Comentario Restaurado',
-            'message' => auth()->user()->name . ' restauró un comentario en el post: ' . $comment->post->title,
+            'message' => auth()->user()->name . ' restaurÃ³ un comentario en el post: ' . $comment->post->title,
             'data' => [
                 'comment_id' => $comment->id,
                 'post_id' => $comment->post_id,

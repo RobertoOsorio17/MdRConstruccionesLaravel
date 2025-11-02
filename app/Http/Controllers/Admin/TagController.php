@@ -15,14 +15,50 @@ use Inertia\Inertia;
  */
 class TagController extends Controller
 {
+    
+    
+    
+    
     /**
-     * Display a listing of tags.
+
+    
+    
+    
+     * Display a listing of the resource.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function index(Request $request)
     {
         $query = Tag::withCount('posts');
 
-        // Apply keyword filtering.
+        /**
+         * Apply keyword filtering.
+         */
         if ($request->has('search') && !empty($request->search)) {
             $query->where('name', 'like', '%' . $request->search . '%');
         }
@@ -54,17 +90,80 @@ class TagController extends Controller
         ]);
     }
 
+    
+    
+    
+    
     /**
-     * Show the form for creating a new tag.
+
+    
+    
+    
+     * Show the form for creating a new resource.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function create()
     {
         return Inertia::render('Admin/Tags/Create');
     }
 
+    
+    
+    
+    
     /**
-     * Store a newly created tag.
+
+    
+    
+    
+     * Store a newly created resource.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function store(Request $request)
     {
         $validated = $request->validate([
@@ -73,11 +172,15 @@ class TagController extends Controller
             'color' => 'required|string|regex:/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/',
         ]);
 
-        // Generate slug if not provided.
+        /**
+         * Generate slug if not provided.
+         */
         if (empty($validated['slug'])) {
             $validated['slug'] = Str::slug($validated['name']);
 
-            // Ensure uniqueness.
+            /**
+             * Ensure uniqueness.
+             */
             $originalSlug = $validated['slug'];
             $counter = 1;
             while (Tag::where('slug', $validated['slug'])->exists()) {
@@ -92,9 +195,43 @@ class TagController extends Controller
             ->with('success', 'Tag created successfully.');
     }
 
+    
+    
+    
+    
     /**
-     * Display the specified tag.
+
+    
+    
+    
+     * Display the specified resource.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Tag $tag The tag.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function show(Tag $tag)
     {
         $tag->loadCount('posts');
@@ -112,9 +249,43 @@ class TagController extends Controller
         ]);
     }
 
+    
+    
+    
+    
     /**
-     * Show the form for editing the specified tag.
+
+    
+    
+    
+     * Show the form for editing the specified resource.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Tag $tag The tag.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function edit(Tag $tag)
     {
         return Inertia::render('Admin/Tags/Edit', [
@@ -127,9 +298,48 @@ class TagController extends Controller
         ]);
     }
 
+    
+    
+    
+    
     /**
-     * Update the specified tag.
+
+    
+    
+    
+     * Update the specified resource.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @param Tag $tag The tag.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function update(Request $request, Tag $tag)
     {
         $validated = $request->validate([
@@ -138,11 +348,15 @@ class TagController extends Controller
             'color' => 'required|string|regex:/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/',
         ]);
 
-        // Generate slug if not provided.
+        /**
+         * Generate slug if not provided.
+         */
         if (empty($validated['slug'])) {
             $validated['slug'] = Str::slug($validated['name']);
 
-            // Ensure uniqueness.
+            /**
+             * Ensure uniqueness.
+             */
             $originalSlug = $validated['slug'];
             $counter = 1;
             while (Tag::where('slug', $validated['slug'])->where('id', '!=', $tag->id)->exists()) {
@@ -157,12 +371,48 @@ class TagController extends Controller
             ->with('success', 'Tag updated successfully.');
     }
 
+    
+    
+    
+    
     /**
-     * Remove the specified tag.
+
+    
+    
+    
+     * Remove the specified resource.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Tag $tag The tag.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function destroy(Tag $tag)
     {
-        // Prevent deletion when posts still reference the tag.
+        /**
+         * Prevent deletion when posts still reference the tag.
+         */
         if ($tag->posts()->count() > 0) {
             return redirect()->route('admin.tags.index')
                 ->with('error', 'This tag cannot be removed because posts are still linked to it.');
@@ -174,9 +424,38 @@ class TagController extends Controller
             ->with('success', 'Tag deleted successfully.');
     }
 
+    
+    
+    
+    
     /**
-     * Bulk delete unused tags
+
+    
+    
+    
+     * Handle bulk delete unused.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function bulkDeleteUnused()
     {
         $deletedCount = Tag::doesntHave('posts')->delete();

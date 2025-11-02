@@ -24,36 +24,77 @@ use Inertia\Inertia;
  */
 class ContactRequestController extends Controller
 {
+    
+    
+    
+    
     /**
-     * Display a listing of contact requests.
+
+    
+    
+    
+     * Display a listing of the resource.
+
+    
+    
+    
      *
-     * @param Request $request The current HTTP request with filters.
-     * @return \Inertia\Response Inertia response with paginated requests and stats.
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function index(Request $request)
     {
-        // Authorize via policy.
+        /**
+         * Authorize via policy.
+         */
         Gate::authorize('viewAny', ContactRequest::class);
 
         $query = ContactRequest::with('respondedBy:id,name')
             ->withCount('attachments');
 
-        // Search term filter.
+        /**
+         * Search term filter.
+         */
         if ($request->filled('search')) {
             $query->search($request->search);
         }
 
-        // Filter by status.
+        /**
+         * Filter by status.
+         */
         if ($request->filled('status')) {
             $query->where('status', $request->status);
         }
 
-        // Filter by service.
+        /**
+         * Filter by service.
+         */
         if ($request->filled('service')) {
             $query->where('service', $request->service);
         }
 
-        // Filter by date range.
+        /**
+         * Filter by date range.
+         */
         if ($request->filled('date_from')) {
             $query->whereDate('created_at', '>=', $request->date_from);
         }
@@ -61,11 +102,15 @@ class ContactRequestController extends Controller
             $query->whereDate('created_at', '<=', $request->date_to);
         }
 
-        // Sort with allow-list validation.
+        /**
+         * Sort with allow-list validation.
+         */
         $sortField = $request->get('sort', 'created_at');
         $sortDirection = $request->get('direction', 'desc');
 
-        // Security: Whitelist allowed sort fields and directions.
+        /**
+         * Security: Whitelist allowed sort fields and directions.
+         */
         $allowedSorts = ['name', 'email', 'subject', 'status', 'created_at', 'updated_at'];
         $allowedDirections = ['asc', 'desc'];
 
@@ -77,7 +122,9 @@ class ContactRequestController extends Controller
 
         $requests = $query->paginate(15)->withQueryString();
 
-        // Aggregate stats for quick overview.
+        /**
+         * Aggregate stats for quick overview.
+         */
         $stats = [
             'total' => ContactRequest::count(),
             'new' => ContactRequest::new()->count(),
@@ -93,15 +140,48 @@ class ContactRequestController extends Controller
         ]);
     }
 
+    
+    
+    
+    
     /**
-     * Display the specified contact request.
+
+    
+    
+    
+     * Display the specified resource.
+
+    
+    
+    
      *
-     * @param ContactRequest $contactRequest The contact request.
-     * @return \Inertia\Response Inertia response with request details and attachments.
+
+    
+    
+    
+     * @param ContactRequest $contactRequest The contactRequest.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function show(ContactRequest $contactRequest)
     {
-        // Authorize via policy.
+        /**
+         * Authorize via policy.
+         */
         Gate::authorize('view', $contactRequest);
 
         $contactRequest->load([
@@ -111,12 +191,16 @@ class ContactRequestController extends Controller
             }
         ]);
 
-        // Auto-mark as read when first opened.
+        /**
+         * Auto-mark as read when first opened.
+         */
         if ($contactRequest->status === 'new') {
             $contactRequest->markAsRead();
         }
 
-        // Shape attachments for the frontend (handle null case).
+        /**
+         * Shape attachments for the frontend (handle null case).
+         */
         $formattedAttachments = $contactRequest->attachments
             ? $contactRequest->attachments->map(function ($attachment) {
                 return [
@@ -139,31 +223,97 @@ class ContactRequestController extends Controller
         ]);
     }
 
+    
+    
+    
+    
     /**
-     * Mark the contact request as read.
+
+    
+    
+    
+     * Handle mark as read.
+
+    
+    
+    
      *
-     * @param ContactRequest $contactRequest The request to update.
-     * @return \Illuminate\Http\RedirectResponse Redirect back with status.
+
+    
+    
+    
+     * @param ContactRequest $contactRequest The contactRequest.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function markAsRead(ContactRequest $contactRequest)
     {
-        // Authorize via policy.
+        /**
+         * Authorize via policy.
+         */
         Gate::authorize('markAsRead', $contactRequest);
 
         $contactRequest->markAsRead();
 
-        return back()->with('success', 'Solicitud marcada como leída.');
+        return back()->with('success', 'Solicitud marcada como leÃ­da.');
     }
 
+    
+    
+    
+    
     /**
-     * Mark the contact request as responded.
+
+    
+    
+    
+     * Handle mark as responded.
+
+    
+    
+    
      *
-     * @param ContactRequest $contactRequest The request to update.
-     * @return \Illuminate\Http\RedirectResponse Redirect back with status.
+
+    
+    
+    
+     * @param ContactRequest $contactRequest The contactRequest.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function markAsResponded(ContactRequest $contactRequest)
     {
-        // Authorize via policy.
+        /**
+         * Authorize via policy.
+         */
         Gate::authorize('markAsResponded', $contactRequest);
 
         $contactRequest->markAsResponded(auth()->id());
@@ -171,15 +321,48 @@ class ContactRequestController extends Controller
         return back()->with('success', 'Solicitud marcada como respondida.');
     }
 
+    
+    
+    
+    
     /**
-     * Archive the contact request.
+
+    
+    
+    
+     * Handle archive.
+
+    
+    
+    
      *
-     * @param ContactRequest $contactRequest The request to archive.
-     * @return \Illuminate\Http\RedirectResponse Redirect back with status.
+
+    
+    
+    
+     * @param ContactRequest $contactRequest The contactRequest.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function archive(ContactRequest $contactRequest)
     {
-        // Authorize via policy.
+        /**
+         * Authorize via policy.
+         */
         Gate::authorize('archive', $contactRequest);
 
         $contactRequest->archive();
@@ -187,19 +370,58 @@ class ContactRequestController extends Controller
         return back()->with('success', 'Solicitud archivada.');
     }
 
+    
+    
+    
+    
     /**
-     * Add administrator notes to the request.
+
+    
+    
+    
+     * Handle add notes.
+
+    
+    
+    
      *
-     * @param Request $request The current HTTP request instance.
-     * @param ContactRequest $contactRequest The request to annotate.
-     * @return \Illuminate\Http\RedirectResponse Redirect back with status.
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @param ContactRequest $contactRequest The contactRequest.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function addNotes(Request $request, ContactRequest $contactRequest)
     {
-        // Authorize via policy.
+        /**
+         * Authorize via policy.
+         */
         Gate::authorize('addNotes', $contactRequest);
 
-        // Validate input.
+        /**
+         * Validate input.
+         */
         $validated = $request->validate([
             'notes' => 'required|string|max:5000',
         ]);
@@ -212,32 +434,71 @@ class ContactRequestController extends Controller
     }
 
 
+    
+    
+    
+    
     /**
-     * Remove the specified contact request.
+
+    
+    
+    
+     * Remove the specified resource.
+
+    
+    
+    
      *
-     * @param ContactRequest $contactRequest The request to delete.
-     * @return \Illuminate\Http\RedirectResponse Redirect to index with status.
+
+    
+    
+    
+     * @param ContactRequest $contactRequest The contactRequest.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function destroy(ContactRequest $contactRequest)
     {
-        // Authorize via policy.
+        /**
+         * Authorize via policy.
+         */
         Gate::authorize('delete', $contactRequest);
 
-        // Count attachments before deletion
+        /**
+         * Count attachments before deletion.
+         */
         $attachmentCount = $contactRequest->attachments()->count();
 
-        // Delete encrypted attachments (uses delete() method in ContactRequestAttachment model).
+        /**
+         * Delete encrypted attachments (uses delete() method in ContactRequestAttachment model).
+         */
         foreach ($contactRequest->attachments as $attachment) {
             $attachment->delete(); // This deletes both DB record and encrypted file
         }
 
-        // Log deletion in audit logs.
+        /**
+         * Log deletion in audit logs.
+         */
         AdminAuditLog::create([
             'user_id' => auth()->id(),
             'action' => 'delete',
             'model_type' => ContactRequest::class,
             'model_id' => $contactRequest->id,
-            'description' => "Eliminó solicitud de contacto #{$contactRequest->id} de {$contactRequest->name} ({$contactRequest->email})" .
+            'description' => "EliminÃ³ solicitud de contacto #{$contactRequest->id} de {$contactRequest->name} ({$contactRequest->email})" .
                             ($attachmentCount > 0 ? " con {$attachmentCount} archivo(s) adjunto(s)" : ""),
             'ip_address' => request()->ip(),
             'user_agent' => request()->userAgent(),
@@ -250,25 +511,62 @@ class ContactRequestController extends Controller
             ],
         ]);
 
-        // Delete the contact request.
+        /**
+         * Delete the contact request.
+         */
         $contactRequest->delete();
 
         return redirect()->route('admin.contact-requests.index')
             ->with('success', 'Solicitud eliminada correctamente.');
     }
 
+    
+    
+    
+    
     /**
-     * Perform a bulk action on multiple contact requests.
+
+    
+    
+    
+     * Handle bulk action.
+
+    
+    
+    
      *
-     * @param Request $request The current HTTP request instance.
-     * @return \Illuminate\Http\RedirectResponse Redirect back with status.
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function bulkAction(Request $request)
     {
-        // Authorize via policy.
+        /**
+         * Authorize via policy.
+         */
         Gate::authorize('bulkAction', ContactRequest::class);
 
-        // Validate input.
+        /**
+         * Validate input.
+         */
         $validated = $request->validate([
             'action' => 'required|in:mark_read,mark_responded,archive,delete',
             'ids' => 'required|array|min:1',
@@ -283,7 +581,7 @@ class ContactRequestController extends Controller
                     'status' => 'read',
                     'read_at' => now(),
                 ]);
-                $message = "Se marcaron como leídas.";
+                $message = "Se marcaron como leÃ­das.";
                 break;
 
             case 'mark_responded':
@@ -314,24 +612,65 @@ class ContactRequestController extends Controller
         return back()->with('success', $message);
     }
 
+    
+    
+    
+    
     /**
-     * Download an encrypted attachment securely.
+
+    
+    
+    
+     * Handle download attachment.
+
+    
+    
+    
      *
-     * @param ContactRequest $contactRequest The parent contact request.
-     * @param ContactRequestAttachment $attachment The attachment to download.
-     * @return \Symfony\Component\HttpFoundation\StreamedResponse Streamed file response.
+
+    
+    
+    
+     * @param ContactRequest $contactRequest The contactRequest.
+
+    
+    
+    
+     * @param ContactRequestAttachment $attachment The attachment.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function downloadAttachment(ContactRequest $contactRequest, ContactRequestAttachment $attachment)
     {
-        // Authorize via policy.
+        /**
+         * Authorize via policy.
+         */
         Gate::authorize('view', $contactRequest);
 
-        // Verify that the attachment belongs to the provided request.
+        /**
+         * Verify that the attachment belongs to the provided request.
+         */
         if ($attachment->contact_request_id !== $contactRequest->id) {
             abort(403, 'Este archivo no pertenece a esta solicitud.');
         }
 
-        // Rate limiting: 20 downloads per minute per user.
+        /**
+         * Rate limiting: 20 downloads per minute per user.
+         */
         $key = 'attachment-download:' . auth()->id();
 
         if (RateLimiter::tooManyAttempts($key, 20)) {
@@ -341,7 +680,9 @@ class ContactRequestController extends Controller
 
         RateLimiter::hit($key, 60);
 
-        // Decrypt file contents.
+        /**
+         * Decrypt file contents.
+         */
         $decryptedContents = $attachment->getDecryptedContents();
 
         if ($decryptedContents === false) {
@@ -353,16 +694,20 @@ class ContactRequestController extends Controller
             abort(500, 'Error al descargar el archivo. Por favor contacta al administrador.');
         }
 
-        // Increment download counter.
+        /**
+         * Increment download counter.
+         */
         $attachment->incrementDownloadCount();
 
-        // Log download in audit logs.
+        /**
+         * Log download in audit logs.
+         */
         AdminAuditLog::create([
             'user_id' => auth()->id(),
             'action' => 'download',
             'model_type' => ContactRequestAttachment::class,
             'model_id' => $attachment->id,
-            'description' => "Descargó archivo adjunto: {$attachment->original_filename} de solicitud #{$contactRequest->id}",
+            'description' => "DescargÃ³ archivo adjunto: {$attachment->original_filename} de solicitud #{$contactRequest->id}",
             'ip_address' => request()->ip(),
             'user_agent' => request()->userAgent(),
             'severity' => 'low',
@@ -374,7 +719,9 @@ class ContactRequestController extends Controller
             ],
         ]);
 
-        // Return file as download (decrypted in memory, not saved to disk).
+        /**
+         * Return file as download (decrypted in memory, not saved to disk).
+         */
         return response()->streamDownload(
             function () use ($decryptedContents) {
                 echo $decryptedContents;

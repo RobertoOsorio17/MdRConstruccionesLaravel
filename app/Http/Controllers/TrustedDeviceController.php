@@ -16,12 +16,43 @@ use Illuminate\Support\Str;
  */
 class TrustedDeviceController extends Controller
 {
+    
+    
+    
+    
     /**
-     * Get all trusted devices for the authenticated user.
+
+    
+    
+    
+     * Display a listing of the resource.
+
+    
+    
+    
      *
-     * @param Request $request The current HTTP request instance.
-     * @return \Illuminate\Http\JsonResponse JSON response with trusted devices.
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function index(Request $request)
     {
         $devices = $request->user()
@@ -44,13 +75,48 @@ class TrustedDeviceController extends Controller
         return response()->json(['devices' => $devices]);
     }
 
+    
+    
+    
+    
     /**
-     * Revoke a specific trusted device.
+
+    
+    
+    
+     * Remove the specified resource.
+
+    
+    
+    
      *
-     * @param Request $request The current HTTP request instance.
-     * @param int|string $id The trusted device ID.
-     * @return \Illuminate\Http\JsonResponse JSON response indicating success.
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @param mixed $id The id.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function destroy(Request $request, $id)
     {
         $request->validate([
@@ -82,12 +148,43 @@ class TrustedDeviceController extends Controller
         ]);
     }
 
+    
+    
+    
+    
     /**
-     * Revoke all trusted devices.
+
+    
+    
+    
+     * Handle destroy all.
+
+    
+    
+    
      *
-     * @param Request $request The current HTTP request instance.
-     * @return \Illuminate\Http\JsonResponse JSON response with count revoked.
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function destroyAll(Request $request)
     {
         $request->validate([
@@ -119,12 +216,43 @@ class TrustedDeviceController extends Controller
         ]);
     }
 
+    
+    
+    
+    
     /**
-     * Regenerate recovery codes.
+
+    
+    
+    
+     * Handle regenerate recovery codes.
+
+    
+    
+    
      *
-     * @param Request $request The current HTTP request instance.
-     * @return \Illuminate\Http\JsonResponse JSON response with new recovery codes.
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function regenerateRecoveryCodes(Request $request)
     {
         $request->validate([
@@ -160,12 +288,43 @@ class TrustedDeviceController extends Controller
         ]);
     }
 
+    
+    
+    
+    
     /**
-     * Parse user agent to extract browser and OS info.
+
+    
+    
+    
+     * Handle parse user agent.
+
+    
+    
+    
      *
-     * @param string $userAgent The raw user agent string.
-     * @return string Friendly browser and OS label.
+
+    
+    
+    
+     * @param mixed $userAgent The userAgent.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function parseUserAgent($userAgent)
     {
         // Simple parsing - you can use a library like jenssegers/agent for better parsing

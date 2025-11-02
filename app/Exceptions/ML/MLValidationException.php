@@ -11,9 +11,38 @@ class MLValidationException extends MLException
     protected string $errorCode = 'ML_VALIDATION_FAILED';
     protected int $httpStatusCode = 422;
 
+    
+    
+    
+    
     /**
-     * Get the log severity level.
+
+    
+    
+    
+     * Get log severity.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return string
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     protected function getLogSeverity(): string
     {
         return 'info';

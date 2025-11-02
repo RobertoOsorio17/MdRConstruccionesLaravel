@@ -18,14 +18,114 @@ class ServicesExport implements FromQuery, WithHeadings, WithMapping, WithStyles
 {
     protected $filters;
 
+
+    
+
+
+    
+
+    
+
+    
+
+    /**
+
+
+    
+
+    
+
+    
+
+     * Handle __construct.
+
+
+    
+
+    
+
+    
+
+     *
+
+
+    
+
+    
+
+    
+
+     * @param mixed $filters The filters.
+
+
+    
+
+    
+
+    
+
+     * @return void
+
+
+    
+
+    
+
+    
+
+     */
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
     public function __construct($filters = [])
     {
         $this->filters = $filters;
     }
 
+    
+    
+    
+    
     /**
-     * Query for services with filters applied.
+
+    
+    
+    
+     * Handle query.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function query()
     {
         $query = Service::query();
@@ -52,9 +152,38 @@ class ServicesExport implements FromQuery, WithHeadings, WithMapping, WithStyles
         return $query->withCount('favorites')->orderBy('created_at', 'desc');
     }
 
+    
+    
+    
+    
     /**
-     * Define column headings.
+
+    
+    
+    
+     * Handle headings.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return array
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function headings(): array
     {
         return [
@@ -70,9 +199,43 @@ class ServicesExport implements FromQuery, WithHeadings, WithMapping, WithStyles
         ];
     }
 
+    
+    
+    
+    
     /**
-     * Map data for each row.
+
+    
+    
+    
+     * Handle map.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param mixed $service The service.
+
+    
+    
+    
+     * @return array
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function map($service): array
     {
         return [
@@ -88,9 +251,43 @@ class ServicesExport implements FromQuery, WithHeadings, WithMapping, WithStyles
         ];
     }
 
+    
+    
+    
+    
     /**
-     * Apply styles to the worksheet.
+
+    
+    
+    
+     * Handle styles.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Worksheet $sheet The sheet.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function styles(Worksheet $sheet)
     {
         return [

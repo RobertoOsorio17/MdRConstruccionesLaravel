@@ -38,6 +38,7 @@ const BanUserModal = ({ open, onClose, user, onConfirm, loading = false }) => {
         duration: 'permanent',
         customExpiration: null,
         ipBan: false,
+        isIrrevocable: false,
         adminNotes: '',
     });
     const [errors, setErrors] = useState({});
@@ -73,6 +74,7 @@ const BanUserModal = ({ open, onClose, user, onConfirm, loading = false }) => {
                 duration: 'permanent',
                 customExpiration: null,
                 ipBan: false,
+                isIrrevocable: false,
                 adminNotes: '',
             });
             setErrors({});
@@ -106,10 +108,24 @@ const BanUserModal = ({ open, onClose, user, onConfirm, loading = false }) => {
 
     // Handle form field changes
     const handleChange = (field, value) => {
-        setFormData(prev => ({
-            ...prev,
-            [field]: value
-        }));
+        setFormData(prev => {
+            const newData = {
+                ...prev,
+                [field]: value
+            };
+
+            // ✅ VALIDATION: If isIrrevocable is checked, force duration to permanent
+            if (field === 'isIrrevocable' && value === true) {
+                newData.duration = 'permanent';
+            }
+
+            // ✅ VALIDATION: If isIrrevocable is checked, prevent changing duration
+            if (field === 'duration' && prev.isIrrevocable && value !== 'permanent') {
+                return prev; // Don't allow changing duration if irrevocable
+            }
+
+            return newData;
+        });
 
         // Clear error when user starts typing
         if (errors[field]) {
@@ -164,8 +180,27 @@ const BanUserModal = ({ open, onClose, user, onConfirm, loading = false }) => {
             newErrors.customExpiration = 'La fecha de expiración debe ser futura';
         }
 
-        if (formData.adminNotes && formData.adminNotes.length > 1000) {
-            newErrors.adminNotes = 'Las notas no pueden exceder 1000 caracteres';
+        // ✅ VALIDATION: Irrevocable bans require admin notes
+        if (formData.isIrrevocable) {
+            const adminNotesField = document.querySelector('textarea[placeholder*="administradores"]');
+            const actualAdminNotes = adminNotesField ? adminNotesField.value : formData.adminNotes;
+
+            if (!actualAdminNotes || actualAdminNotes.trim().length === 0) {
+                newErrors.adminNotes = 'Las notas internas son obligatorias para baneos irrevocables';
+            } else if (actualAdminNotes.trim().length < 20) {
+                newErrors.adminNotes = 'Las notas internas deben tener al menos 20 caracteres para baneos irrevocables';
+            } else if (actualAdminNotes.length > 1000) {
+                newErrors.adminNotes = 'Las notas no pueden exceder 1000 caracteres';
+            }
+
+            // ✅ VALIDATION: Irrevocable bans must be permanent
+            if (formData.duration !== 'permanent') {
+                newErrors.duration = 'Los baneos irrevocables deben ser permanentes';
+            }
+        } else {
+            if (formData.adminNotes && formData.adminNotes.length > 1000) {
+                newErrors.adminNotes = 'Las notas no pueden exceder 1000 caracteres';
+            }
         }
 
         setErrors(newErrors);
@@ -196,10 +231,9 @@ const BanUserModal = ({ open, onClose, user, onConfirm, loading = false }) => {
             duration: formData.duration,
             expires_at: formData.duration === 'custom' ? formData.customExpiration : null,
             ip_ban: formData.ipBan,
+            is_irrevocable: formData.isIrrevocable,
             admin_notes: formData.adminNotes.trim() || null,
         };
-
-
 
         onConfirm(banData);
         setShowConfirmation(false);
@@ -309,16 +343,25 @@ const BanUserModal = ({ open, onClose, user, onConfirm, loading = false }) => {
                                             <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1, display: 'flex', alignItems: 'center', gap: 1, color: '#2D3748' }}>
                                                 <ScheduleIcon sx={{ fontSize: 20, color: '#4A5568' }} />
                                                 Duración de la Suspensión
+                                                {formData.isIrrevocable && (
+                                                    <Chip
+                                                        label="Permanente (Irrevocable)"
+                                                        size="small"
+                                                        color="error"
+                                                        sx={{ ml: 1 }}
+                                                    />
+                                                )}
                                             </Typography>
                                             <FormControl fullWidth error={!!errors.duration}>
                                                 <Select
                                                     value={formData.duration}
                                                     onChange={(e) => handleChange('duration', e.target.value)}
+                                                    disabled={formData.isIrrevocable}
                                                     sx={{
                                                         borderRadius: '12px',
-                                                        backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                                                        backgroundColor: formData.isIrrevocable ? 'rgba(220, 38, 38, 0.1)' : 'rgba(255, 255, 255, 0.8)',
                                                         '& .MuiSelect-select': {
-                                                            color: '#2D3748',
+                                                            color: formData.isIrrevocable ? '#DC2626' : '#2D3748',
                                                         }
                                                     }}
                                                 >
@@ -328,6 +371,11 @@ const BanUserModal = ({ open, onClose, user, onConfirm, loading = false }) => {
                                                         </MenuItem>
                                                     ))}
                                                 </Select>
+                                                {formData.isIrrevocable && (
+                                                    <Typography variant="caption" sx={{ mt: 0.5, color: '#DC2626', display: 'block' }}>
+                                                        Los baneos irrevocables deben ser permanentes
+                                                    </Typography>
+                                                )}
                                             </FormControl>
                                         </Box>
 
@@ -363,9 +411,9 @@ const BanUserModal = ({ open, onClose, user, onConfirm, loading = false }) => {
                                         )}
 
                                         {/* IP Ban Toggle */}
-                                        <Box sx={{ 
-                                            p: 2, 
-                                            borderRadius: '12px', 
+                                        <Box sx={{
+                                            p: 2,
+                                            borderRadius: '12px',
                                             backgroundColor: 'rgba(255, 255, 255, 0.05)',
                                             border: '1px solid rgba(255, 255, 255, 0.1)'
                                         }}>
@@ -393,10 +441,54 @@ const BanUserModal = ({ open, onClose, user, onConfirm, loading = false }) => {
                                             />
                                         </Box>
 
+                                        {/* Irrevocable Ban Toggle */}
+                                        <Box sx={{
+                                            p: 2,
+                                            borderRadius: '12px',
+                                            backgroundColor: formData.isIrrevocable ? 'rgba(220, 38, 38, 0.1)' : 'rgba(255, 255, 255, 0.05)',
+                                            border: formData.isIrrevocable ? '2px solid rgba(220, 38, 38, 0.5)' : '1px solid rgba(255, 255, 255, 0.1)',
+                                            transition: 'all 0.3s ease'
+                                        }}>
+                                            <FormControlLabel
+                                                control={
+                                                    <Switch
+                                                        checked={formData.isIrrevocable}
+                                                        onChange={(e) => handleChange('isIrrevocable', e.target.checked)}
+                                                        color="error"
+                                                    />
+                                                }
+                                                label={
+                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                        <BlockIcon sx={{ fontSize: 20, color: formData.isIrrevocable ? '#DC2626' : 'inherit' }} />
+                                                        <Box>
+                                                            <Typography variant="body1" sx={{ fontWeight: 600, color: formData.isIrrevocable ? '#DC2626' : 'inherit' }}>
+                                                                Baneo Irrevocable
+                                                            </Typography>
+                                                            <Typography variant="body2" sx={{ color: formData.isIrrevocable ? '#DC2626' : '#718096' }}>
+                                                                El usuario NO podrá apelar este baneo (permanente obligatorio)
+                                                            </Typography>
+                                                        </Box>
+                                                    </Box>
+                                                }
+                                            />
+                                            {formData.isIrrevocable && (
+                                                <Alert severity="error" sx={{ mt: 2, borderRadius: '8px' }}>
+                                                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                                        ⚠️ ADVERTENCIA: Este baneo será PERMANENTE e IRREVOCABLE
+                                                    </Typography>
+                                                    <Typography variant="body2" sx={{ mt: 0.5 }}>
+                                                        • El usuario no podrá apelar<br />
+                                                        • Debes especificar notas internas (mínimo 20 caracteres)<br />
+                                                        • Esta acción debe estar justificada
+                                                    </Typography>
+                                                </Alert>
+                                            )}
+                                        </Box>
+
                                         {/* Admin Notes */}
                                         <Box>
                                             <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
-                                                Notas Internas (Opcional)
+                                                Notas Internas {formData.isIrrevocable && <span style={{ color: '#DC2626' }}>(Obligatorio para baneos irrevocables)</span>}
                                             </Typography>
                                             <TextField
                                                 fullWidth
@@ -472,12 +564,24 @@ const BanUserModal = ({ open, onClose, user, onConfirm, loading = false }) => {
                                                 </Grid>
                                                 {formData.ipBan && (
                                                     <Grid item xs={12}>
-                                                        <Chip 
-                                                            label="Incluye suspensión por IP" 
-                                                            color="error" 
+                                                        <Chip
+                                                            label="Incluye suspensión por IP"
+                                                            color="error"
                                                             size="small"
                                                             icon={<SecurityIcon />}
                                                         />
+                                                    </Grid>
+                                                )}
+                                                {formData.isIrrevocable && (
+                                                    <Grid item xs={12}>
+                                                        <Alert severity="error" sx={{ borderRadius: '8px' }}>
+                                                            <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                                                ⚠️ BANEO IRREVOCABLE - NO SE PUEDE APELAR
+                                                            </Typography>
+                                                            <Typography variant="body2" sx={{ mt: 0.5, fontSize: '0.85rem' }}>
+                                                                Este baneo es permanente y el usuario no podrá solicitar una apelación.
+                                                            </Typography>
+                                                        </Alert>
                                                     </Grid>
                                                 )}
                                             </Grid>

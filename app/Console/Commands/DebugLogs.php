@@ -31,9 +31,38 @@ class DebugLogs extends Command
      */
     protected $description = 'Monitor and manage debug logs for the application';
 
+    
+    
+    
+    
     /**
-     * Execute the console command.
+
+    
+    
+    
+     * Handle handle.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function handle()
     {
         $logPath = storage_path('logs');
@@ -67,9 +96,53 @@ class DebugLogs extends Command
         }
     }
 
+    
+    
+    
+    
     /**
-     * Show tail of a specific log file
+
+    
+    
+    
+     * Handle show log tail.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param mixed $logPath The logPath.
+
+    
+    
+    
+     * @param mixed $logType The logType.
+
+    
+    
+    
+     * @param mixed $lines The lines.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function showLogTail($logPath, $logType, $lines)
     {
         $pattern = $logPath . "/{$logType}*.log";
@@ -119,9 +192,43 @@ class DebugLogs extends Command
         $this->line("");
     }
 
+    
+    
+    
+    
     /**
-     * Clear all log files
+
+    
+    
+    
+     * Handle clear logs.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param mixed $logPath The logPath.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function clearLogs($logPath)
     {
         $this->info('Clearing all log files...');

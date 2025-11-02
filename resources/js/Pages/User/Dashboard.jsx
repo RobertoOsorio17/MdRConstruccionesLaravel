@@ -94,6 +94,7 @@ import MainLayout from '@/Layouts/MainLayout';
 import { usePage } from '@inertiajs/react';
 import { useNotification } from '@/Context/NotificationContext';
 import ErrorBoundary from '@/Components/ErrorBoundary';
+import { Snackbar, Alert as MuiAlert } from '@mui/material';
 
 // Componente mejorado para tarjetas de estadísticas con efectos premium
 const EnhancedDashboardCard = ({ title, value, icon, color, subtitle, to, trend, trendValue, admin = false, delay = 0 }) => {
@@ -220,7 +221,7 @@ function Dashboard({ stats, recentComments, recentSavedPosts }) {
     const { auth } = usePage().props;
     const theme = useTheme();
     const [isLoading, setIsLoading] = useState(true);
-    const router = useRouter();
+    // ✅ FIX: router is already imported as an object, not a hook
     const [currentTab, setCurrentTab] = useState(0);
     const [comments, setComments] = useState([]);
     const [pendingComments, setPendingComments] = useState([]);
@@ -239,11 +240,27 @@ function Dashboard({ stats, recentComments, recentSavedPosts }) {
     });
     const [availablePosts, setAvailablePosts] = useState([]);
 
+    // ✅ State for 2FA recovery codes warning
+    const [showRecoveryWarning, setShowRecoveryWarning] = useState(false);
+    const [remainingRecoveryCodes, setRemainingRecoveryCodes] = useState(0);
+
     // Calculate isAdmin once
     const userName = auth?.user?.name || 'Usuario';
     const isAuthenticated = auth?.isAuthenticated || false;
     const userRole = auth?.user?.role || 'user';
     const isAdmin = stats?.total_posts !== undefined || userRole === 'admin' || auth?.user?.is_admin || false;
+
+    // ✅ Check for 2FA recovery codes warning from sessionStorage
+    React.useEffect(() => {
+        const warningData = sessionStorage.getItem('2fa_low_recovery_codes_warning');
+        if (warningData) {
+            const remaining = parseInt(warningData, 10);
+            setRemainingRecoveryCodes(remaining);
+            setShowRecoveryWarning(true);
+            // Clear from sessionStorage after reading
+            sessionStorage.removeItem('2fa_low_recovery_codes_warning');
+        }
+    }, []);
 
     React.useEffect(() => {
         const timer = setTimeout(() => {
@@ -1407,6 +1424,54 @@ function Dashboard({ stats, recentComments, recentSavedPosts }) {
                         </SpeedDial>
                     )}
                 </Container>
+
+                {/* ✅ 2FA Recovery Codes Warning Snackbar */}
+                <Snackbar
+                    open={showRecoveryWarning}
+                    autoHideDuration={10000}
+                    onClose={() => setShowRecoveryWarning(false)}
+                    anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+                >
+                    <MuiAlert
+                        onClose={() => setShowRecoveryWarning(false)}
+                        severity="warning"
+                        variant="filled"
+                        sx={{
+                            width: '100%',
+                            fontSize: '1rem',
+                            '& .MuiAlert-message': {
+                                width: '100%'
+                            }
+                        }}
+                    >
+                        <Box>
+                            <Typography variant="h6" fontWeight="bold" gutterBottom>
+                                ⚠️ ADVERTENCIA DE SEGURIDAD
+                            </Typography>
+                            <Typography variant="body1" gutterBottom>
+                                Solo te quedan <strong>{remainingRecoveryCodes}</strong> código(s) de recuperación de 2FA.
+                            </Typography>
+                            <Typography variant="body2">
+                                Te recomendamos regenerar tus códigos de recuperación inmediatamente desde tu{' '}
+                                <Box
+                                    component="span"
+                                    sx={{
+                                        textDecoration: 'underline',
+                                        cursor: 'pointer',
+                                        fontWeight: 'bold'
+                                    }}
+                                    onClick={() => {
+                                        setShowRecoveryWarning(false);
+                                        router.visit('/profile/settings?tab=security');
+                                    }}
+                                >
+                                    perfil en la sección de Seguridad
+                                </Box>
+                                .
+                            </Typography>
+                        </Box>
+                    </MuiAlert>
+                </Snackbar>
             </MainLayout>
         </ErrorBoundary>
     );

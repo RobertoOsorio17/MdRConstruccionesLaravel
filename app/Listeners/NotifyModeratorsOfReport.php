@@ -32,12 +32,43 @@ class NotifyModeratorsOfReport implements ShouldQueue
      */
     public $backoff = 60;
 
+    
+    
+    
+    
     /**
-     * Handle the event.
+
+    
+    
+    
+     * Handle handle.
+
+    
+    
+    
      *
-     * @param CommentReported $event
+
+    
+    
+    
+     * @param CommentReported $event The event.
+
+    
+    
+    
      * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function handle(CommentReported $event): void
     {
         $report = $event->report;
@@ -130,12 +161,43 @@ class NotifyModeratorsOfReport implements ShouldQueue
         }
     }
     
+    
+    
+    
+    
     /**
-     * Get human-readable label for report category.
+
+    
+    
+    
+     * Get category label.
+
+    
+    
+    
      *
-     * @param string $category
+
+    
+    
+    
+     * @param string $category The category.
+
+    
+    
+    
      * @return string
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function getCategoryLabel(string $category): string
     {
         return match($category) {
@@ -150,13 +212,48 @@ class NotifyModeratorsOfReport implements ShouldQueue
         };
     }
     
+    
+    
+    
+    
     /**
-     * Handle a job failure.
+
+    
+    
+    
+     * Handle failed.
+
+    
+    
+    
      *
-     * @param CommentReported $event
-     * @param \Throwable $exception
+
+    
+    
+    
+     * @param CommentReported $event The event.
+
+    
+    
+    
+     * @param \Throwable $exception The exception.
+
+    
+    
+    
      * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function failed(CommentReported $event, \Throwable $exception): void
     {
         Log::critical('Failed to notify moderators after all retries', [

@@ -12,6 +12,12 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\UnauthorizedException;
 use Inertia\Inertia;
+/**
+
+ * Controller for UserImpersonationController.
+
+ */
+
 
 class UserImpersonationController extends Controller
 {
@@ -22,37 +28,145 @@ class UserImpersonationController extends Controller
      */
     protected $impersonationService;
 
+    
+    
+    
+    
     /**
-     * Create a new controller instance.
+
+    
+    
+    
+     * Handle __construct.
+
+    
+    
+    
      *
-     * @param ImpersonationService $impersonationService
+
+    
+    
+    
+     * @param ImpersonationService $impersonationService The impersonationService.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function __construct(ImpersonationService $impersonationService)
     {
         $this->impersonationService = $impersonationService;
+
+        /**
+         * Ensure only admins can access this controller.
+         */
+        $this->middleware(function ($request, $next) {
+            $user = $request->user();
+
+            /**
+             * Check if user is admin (support both role column and roles relationship).
+             */
+            $isAdmin = $user->role === 'admin' ||
+                       $user->roles->contains('name', 'admin');
+
+            if (!$isAdmin) {
+                abort(403, 'This action is unauthorized. Only administrators can impersonate users.');
+            }
+
+            return $next($request);
+        });
     }
 
+    
+    
+    
+    
     /**
-     * Start impersonating a user.
+
+    
+    
+    
+     * Store a newly created resource.
+
+    
+    
+    
      *
-     * @param User $user
-     * @param Request $request
+
+    
+    
+    
+     * @param User $user The user.
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
      * @return RedirectResponse
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function store(User $user, Request $request): RedirectResponse
     {
         try {
-            // Check authorization using policy
-            if (!Gate::allows('impersonate-user', $user)) {
-                throw new UnauthorizedException('You are not authorized to impersonate this user.');
-            }
-
             $admin = Auth::user();
 
-            // Begin impersonation
+            /**
+             * Check authorization using policy first (provides basic checks).
+             * The service will provide more detailed error messages.
+             */
+            if (!Gate::allows('impersonate-user', $user)) {
+                // Provide specific error messages based on the reason
+                if ($user->isBanned()) {
+                    $banInfo = $user->currentBan();
+                    $banType = $banInfo && $banInfo->is_permanent ? 'permanentemente' : 'temporalmente';
+                    throw new UnauthorizedException("No puedes impersonar a usuarios suspendidos. Este usuario está {$banType} suspendido. Debes levantar la suspensión antes de poder impersonarlo.");
+                }
+
+                if ($user->hasRole('admin') || $user->hasRole('super-admin')) {
+                    throw new UnauthorizedException('No puedes impersonar a otros administradores. Solo se pueden impersonar usuarios con rol de usuario o editor.');
+                }
+
+                if ($admin->id === $user->id) {
+                    throw new UnauthorizedException('No puedes impersonarte a ti mismo.');
+                }
+
+                throw new UnauthorizedException('No tienes autorización para impersonar a este usuario.');
+            }
+
+            /**
+             * Begin impersonation (will perform additional validation).
+             */
             $this->impersonationService->begin($admin, $user);
 
-            // Log the action in admin audit log
+            /**
+             * Log the action in admin audit log.
+             */
             AdminAuditLog::create([
                 'user_id' => $admin->id,
                 'action' => 'impersonation.start',
@@ -68,7 +182,9 @@ class UserImpersonationController extends Controller
                 ],
             ]);
 
-            // Redirect to user's dashboard
+            /**
+             * Redirect to user's dashboard.
+             */
             return redirect()->route('dashboard')
                 ->with('success', "You are now viewing the application as {$user->name}.");
 
@@ -81,12 +197,43 @@ class UserImpersonationController extends Controller
         }
     }
 
+    
+    
+    
+    
     /**
-     * Stop impersonating and return to admin account.
+
+    
+    
+    
+     * Remove the specified resource.
+
+    
+    
+    
      *
-     * @param Request $request
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
      * @return RedirectResponse
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function destroy(Request $request): RedirectResponse
     {
         $context = $this->impersonationService->context();
@@ -96,21 +243,29 @@ class UserImpersonationController extends Controller
                 ->with('warning', 'No active impersonation session found.');
         }
 
-        // Get details before terminating
+        /**
+         * Get details before terminating.
+         */
         $targetUser = User::find($context['target_id']);
         $impersonatorId = $context['impersonator_id'];
         $startedAt = \Carbon\Carbon::parse($context['started_at']);
         $durationSeconds = now()->diffInSeconds($startedAt);
 
-        // Prepare fallback values in case user was deleted
+        /**
+         * Prepare fallback values in case user was deleted.
+         */
         $targetName = $targetUser ? $targetUser->name : 'Deleted User';
         $targetEmail = $targetUser ? $targetUser->email : 'unknown@deleted.user';
         $targetId = $targetUser ? $targetUser->id : $context['target_id'];
 
-        // Terminate impersonation
+        /**
+         * Terminate impersonation.
+         */
         $this->impersonationService->terminate($request);
 
-        // Log the action
+        /**
+         * Log the action.
+         */
         AdminAuditLog::create([
             'user_id' => $impersonatorId,
             'action' => 'impersonation.stop',
@@ -132,13 +287,43 @@ class UserImpersonationController extends Controller
             ->with('success', 'You have returned to your administrator account.');
     }
 
+    
+    
+    
+    
     /**
-     * Heartbeat endpoint to extend impersonation session.
-     * This can be called periodically from the frontend to keep the session alive.
+
+    
+    
+    
+     * Handle heartbeat.
+
+    
+    
+    
      *
-     * @param Request $request
-     * @return \Illuminate\Http\JsonResponse
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function heartbeat(Request $request)
     {
         if (!$this->impersonationService->isActive()) {
@@ -157,11 +342,38 @@ class UserImpersonationController extends Controller
         ]);
     }
 
+    
+    
+    
+    
     /**
-     * List all active impersonation sessions.
+
+    
+    
+    
+     * Display a listing of the resource.
+
+    
+    
+    
      *
-     * @return \Illuminate\Http\JsonResponse
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function index()
     {
         $sessions = $this->impersonationService->getActiveSessions();
@@ -190,11 +402,38 @@ class UserImpersonationController extends Controller
         ]);
     }
 
+    
+    
+    
+    
     /**
-     * Get active sessions as JSON (API endpoint).
+
+    
+    
+    
+     * Handle api index.
+
+    
+    
+    
      *
-     * @return \Illuminate\Http\JsonResponse
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function apiIndex()
     {
         $sessions = $this->impersonationService->getActiveSessions();
@@ -223,12 +462,43 @@ class UserImpersonationController extends Controller
         ]);
     }
 
+    
+    
+    
+    
     /**
-     * Force terminate a specific impersonation session.
+
+    
+    
+    
+     * Handle force terminate.
+
+    
+    
+    
      *
-     * @param int $sessionId
-     * @return \Illuminate\Http\JsonResponse
+
+    
+    
+    
+     * @param int $sessionId The sessionId.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function forceTerminate(int $sessionId)
     {
         $success = $this->impersonationService->terminateSessionById($sessionId, 'admin_terminated');
@@ -240,7 +510,9 @@ class UserImpersonationController extends Controller
             ], 404);
         }
 
-        // Log the action
+        /**
+         * Log the action.
+         */
         AdminAuditLog::create([
             'user_id' => Auth::id(),
             'action' => 'impersonation.force_terminate',

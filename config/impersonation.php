@@ -75,6 +75,21 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Maximum Sessions Per User
+    |--------------------------------------------------------------------------
+    |
+    | This value limits the number of concurrent impersonation sessions
+    | that a single administrator can have active at the same time.
+    | This prevents individual users from monopolizing impersonation resources.
+    |
+    | ✅ SECURITY: Recommended value is 2 or less to prevent abuse
+    |
+    */
+
+    'max_sessions_per_user' => env('IMPERSONATION_MAX_SESSIONS_PER_USER', 2),
+
+    /*
+    |--------------------------------------------------------------------------
     | Session Cleanup Days
     |--------------------------------------------------------------------------
     |

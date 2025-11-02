@@ -164,7 +164,7 @@ const ServiceHero = ({
                         alt={`Imagen principal de ${service?.title || 'servicio'}`}
                         loading="eager"
                         decoding="async"
-                        fetchpriority="high"
+                        fetchPriority="high"
                         sx={{
                             width: '100%',
                             height: '100%',

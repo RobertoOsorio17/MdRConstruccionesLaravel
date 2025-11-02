@@ -18,27 +18,127 @@ class PostPublishedNotification extends Notification implements ShouldQueue
 
     protected Post $post;
 
+    
+    
+    
+    
     /**
-     * Create a new notification instance.
+
+    
+    
+    
+     * Handle __construct.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Post $post The post.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function __construct(Post $post)
     {
         $this->post = $post;
     }
 
+    
+    
+    
+    
     /**
-     * Get the notification's delivery channels.
+
+    
+    
+    
+     * Handle via.
+
+    
+    
+    
      *
-     * @return array<int, string>
+
+    
+    
+    
+     * @param object $notifiable The notifiable.
+
+    
+    
+    
+     * @return array
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function via(object $notifiable): array
     {
         return ['mail', 'database'];
     }
 
+    
+    
+    
+    
     /**
-     * Get the mail representation of the notification.
+
+    
+    
+    
+     * Handle to mail.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param object $notifiable The notifiable.
+
+    
+    
+    
+     * @return MailMessage
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function toMail(object $notifiable): MailMessage
     {
         return (new MailMessage)
@@ -51,11 +151,43 @@ class PostPublishedNotification extends Notification implements ShouldQueue
             ->line('¡Gracias por seguirnos!');
     }
 
+    
+    
+    
+    
     /**
-     * Get the array representation of the notification.
+
+    
+    
+    
+     * Handle to array.
+
+    
+    
+    
      *
-     * @return array<string, mixed>
+
+    
+    
+    
+     * @param object $notifiable The notifiable.
+
+    
+    
+    
+     * @return array
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function toArray(object $notifiable): array
     {
         return [

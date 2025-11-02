@@ -15,9 +15,58 @@ abstract class MLException extends Exception
     protected string $errorCode;
     protected int $httpStatusCode = 500;
 
+    
+    
+    
+    
     /**
-     * Create a new ML exception instance.
+
+    
+    
+    
+     * Handle __construct.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param string $message The message.
+
+    
+    
+    
+     * @param array $context The context.
+
+    
+    
+    
+     * @param int $code The code.
+
+    
+    
+    
+     * @param ?\Throwable $previous The previous.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function __construct(
         string $message = "",
         array $context = [],
@@ -29,9 +78,38 @@ abstract class MLException extends Exception
         $this->logException();
     }
 
+    
+    
+    
+    
     /**
-     * Get the exception context.
+
+    
+    
+    
+     * Get context.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return array
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function getContext(): array
     {
         return array_merge($this->context, [
@@ -42,25 +120,112 @@ abstract class MLException extends Exception
         ]);
     }
 
+    
+    
+    
+    
     /**
-     * Get the error code.
+
+    
+    
+    
+     * Get error code.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return string
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function getErrorCode(): string
     {
         return $this->errorCode ?? 'ML_ERROR';
     }
 
+    
+    
+    
+    
     /**
-     * Get the HTTP status code.
+
+    
+    
+    
+     * Get http status code.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return int
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function getHttpStatusCode(): int
     {
         return $this->httpStatusCode;
     }
 
+    
+    
+    
+    
     /**
-     * Log the exception with appropriate severity.
+
+    
+    
+    
+     * Handle log exception.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     protected function logException(): void
     {
         $severity = $this->getLogSeverity();
@@ -68,17 +233,75 @@ abstract class MLException extends Exception
         Log::$severity($this->getMessage(), $this->getContext());
     }
 
+    
+    
+    
+    
     /**
-     * Get the log severity level.
+
+    
+    
+    
+     * Get log severity.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return string
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     protected function getLogSeverity(): string
     {
         return 'error';
     }
 
+    
+    
+    
+    
     /**
-     * Convert exception to JSON response.
+
+    
+    
+    
+     * Handle to response.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return array
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function toResponse(): array
     {
         return [
@@ -89,9 +312,43 @@ abstract class MLException extends Exception
         ];
     }
 
+    
+    
+    
+    
     /**
-     * Render the exception as an HTTP response.
+
+    
+    
+    
+     * Handle render.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param mixed $request The request.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function render($request)
     {
         if ($request->expectsJson()) {

@@ -21,15 +21,43 @@ use Illuminate\Support\Facades\Session;
  */
 class InactivityController extends Controller
 {
+    
+    
+    
+    
     /**
-     * Handle heartbeat to keep the session active.
+
+    
+    
+    
+     * Handle heartbeat.
+
+    
+    
+    
      *
-     * The frontend sends periodic heartbeats to indicate user activity and update the session timestamp.
-     * Security checks include IP and User-Agent validation, user status verification, concurrent session detection, and optional rate limiting.
-     *
-     * @param Request $request The incoming HTTP request.
-     * @return JsonResponse The heartbeat processing result.
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return JsonResponse
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function heartbeat(Request $request): JsonResponse
     {
         $user = Auth::user();
@@ -58,23 +86,11 @@ class InactivityController extends Controller
             ], 403);
         }
 
-        if (in_array($user->status, ['suspended', 'banned']) || $user->ml_blocked) {
-            Log::warning('Heartbeat from blocked/suspended user', [
-                'user_id' => $user->id,
-                'status' => $user->status,
-                'ml_blocked' => $user->ml_blocked
-            ]);
-
-            Auth::logout();
-            $request->session()->invalidate();
-            $request->session()->regenerateToken();
-
-            return response()->json([
-                'success' => false,
-                'message' => 'Tu cuenta ha sido suspendida. Contacta al administrador.',
-                'force_logout' => true
-            ], 403);
-        }
+        // ✅ REMOVED: Redundant status/banned check - now handled by global middlewares
+        // - CheckMLBlocked middleware handles ml_blocked
+        // - EnhancedAuthMiddleware handles isBanned()
+        // - CheckUserStatus middleware handles 'suspended' status
+        // Banned/suspended users will never reach this point
 
         $currentIp = $request->ip();
         $sessionIp = Session::get('login_ip');
@@ -92,7 +108,7 @@ class InactivityController extends Controller
                 'model_type' => 'User',
                 'model_id' => $user->id,
                 'severity' => 'high',
-                'description' => "Cambio de IP detectado durante sesión activa de {$user->name}",
+                'description' => "Cambio de IP detectado durante sesiÃ³n activa de {$user->name}",
                 'metadata' => [
                     'user_id' => $user->id,
                     'original_ip' => $sessionIp,
@@ -107,7 +123,7 @@ class InactivityController extends Controller
 
                 return response()->json([
                     'success' => false,
-                    'message' => 'Sesión cerrada por cambio de IP. Por favor, inicia sesión nuevamente.',
+                    'message' => 'SesiÃ³n cerrada por cambio de IP. Por favor, inicia sesiÃ³n nuevamente.',
                     'force_logout' => true
                 ], 401);
             }
@@ -129,7 +145,7 @@ class InactivityController extends Controller
                 'model_type' => 'User',
                 'model_id' => $user->id,
                 'severity' => 'medium',
-                'description' => "Cambio de User Agent detectado durante sesión de {$user->name}",
+                'description' => "Cambio de User Agent detectado durante sesiÃ³n de {$user->name}",
                 'metadata' => [
                     'user_id' => $user->id,
                     'original_ua' => $sessionUserAgent,
@@ -143,10 +159,14 @@ class InactivityController extends Controller
             $sessionId = Session::getId();
             $storedSessionId = cache()->get("user_session_{$user->id}");
 
-            // ✅ SECURITY FIX: Handle concurrent sessions intelligently
-            // Only reject if there's a stored session AND it's different AND it's still active
+            /**
+             * SECURITY FIX: Handle concurrent sessions intelligently.
+             * Only reject if there's a stored session AND it's different AND it's still active.
+             */
             if ($storedSessionId && $storedSessionId !== $sessionId) {
-                // Check if the stored session is still active in the database
+                /**
+                 * Check if the stored session is still active in the database.
+                 */
                 $storedSession = DB::table('sessions')
                     ->where('id', $storedSessionId)
                     ->where('user_id', $user->id)
@@ -154,12 +174,16 @@ class InactivityController extends Controller
                     ->first();
 
                 if ($storedSession) {
-                    // Get IP and User-Agent from both sessions
+                    /**
+                     * Get IP and User-Agent from both sessions.
+                     */
                     $storedIp = null;
                     $storedUserAgent = null;
 
                     try {
-                        // Try to decode session payload
+                        /**
+                         * Try to decode session payload.
+                         */
                         $storedSessionData = unserialize(base64_decode($storedSession->payload));
                         $storedIp = $storedSessionData['login_ip'] ?? null;
                         $storedUserAgent = $storedSessionData['login_user_agent'] ?? null;
@@ -174,14 +198,18 @@ class InactivityController extends Controller
                     $currentIpAddress = $request->ip();
                     $currentUserAgent = $request->userAgent();
 
-                    // ✅ SECURITY: Check if sessions are from same device (IP + User-Agent match)
-                    // If we can't decode the stored session, assume same device to avoid false positives
+                    /**
+                     * SECURITY: Check if sessions are from same device (IP + User-Agent match).
+                     * If we can't decode the stored session, assume same device to avoid false positives.
+                     */
                     $sameDevice = ($storedIp === null && $storedUserAgent === null) ||
                                   (($storedIp === $currentIpAddress) && ($storedUserAgent === $currentUserAgent));
 
                     if ($sameDevice) {
-                        // Same device - likely user refreshed or cleared cookies
-                        // Invalidate old session and accept new one
+                        /**
+                         * Same device - likely user refreshed or cleared cookies.
+                         * Invalidate old session and accept new one.
+                         */
                         Log::info('Invalidating old session from same device', [
                             'user_id' => $user->id,
                             'old_session' => $storedSessionId,
@@ -189,10 +217,14 @@ class InactivityController extends Controller
                             'ip' => $currentIpAddress
                         ]);
 
-                        // Delete old session from database
+                        /**
+                         * Delete old session from database.
+                         */
                         DB::table('sessions')->where('id', $storedSessionId)->delete();
                     } else {
-                        // Different device - potential session hijacking
+                        /**
+                         * Different device - potential session hijacking.
+                         */
                         Log::warning('Concurrent session from different device detected', [
                             'user_id' => $user->id,
                             'stored_session' => $storedSessionId,
@@ -201,7 +233,9 @@ class InactivityController extends Controller
                             'current_ip' => $currentIpAddress
                         ]);
 
-                        // Log security event
+                        /**
+                         * Log security event.
+                         */
                         app(\App\Services\SecurityLogger::class)->logSuspiciousActivity(
                             $user,
                             'concurrent_session_different_device',
@@ -216,14 +250,16 @@ class InactivityController extends Controller
 
                         return response()->json([
                             'success' => false,
-                            'message' => 'Se ha detectado otra sesión activa desde un dispositivo diferente. Por seguridad, debes cerrar la otra sesión primero.',
+                            'message' => 'Se ha detectado otra sesiÃ³n activa desde un dispositivo diferente. Por seguridad, debes cerrar la otra sesiÃ³n primero.',
                             'force_logout' => true,
                             'security_alert' => true,
                             'other_session_ip' => $storedIp ? substr($storedIp, 0, -5) . 'xxxxx' : 'desconocida'
                         ], 409);
                     }
                 } else {
-                    // Stored session is expired/invalid, update to current session
+                    /**
+                     * Stored session is expired/invalid, update to current session.
+                     */
                     Log::info('Updating expired session ID in cache', [
                         'user_id' => $user->id,
                         'old_session' => $storedSessionId,
@@ -256,14 +292,43 @@ class InactivityController extends Controller
         ]);
     }
 
+    
+    
+    
+    
     /**
-     * Record a logout due to inactivity.
+
+    
+    
+    
+     * Handle logout inactivity.
+
+    
+    
+    
      *
-     * When the frontend detects inactivity and logs the user out, it calls this endpoint to record the event in the audit log.
-     *
-     * @param Request $request The incoming HTTP request.
-     * @return JsonResponse The logout processing result.
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return JsonResponse
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function logoutInactivity(Request $request): JsonResponse
     {
         $user = Auth::user();
@@ -271,7 +336,7 @@ class InactivityController extends Controller
         if (!$user) {
             return response()->json([
                 'success' => true,
-                'message' => 'Sesión ya cerrada'
+                'message' => 'SesiÃ³n ya cerrada'
             ]);
         }
 
@@ -285,7 +350,7 @@ class InactivityController extends Controller
             'model_type' => 'User',
             'model_id' => $user->id,
             'severity' => 'low',
-            'description' => "Usuario {$user->name} cerró sesión por inactividad",
+            'description' => "Usuario {$user->name} cerrÃ³ sesiÃ³n por inactividad",
             'metadata' => [
                 'user_id' => $user->id,
                 'user_name' => $user->name,
@@ -314,17 +379,42 @@ class InactivityController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Sesión cerrada por inactividad'
+            'message' => 'SesiÃ³n cerrada por inactividad'
         ]);
     }
 
+    
+    
+    
+    
     /**
-     * Retrieve inactivity configuration.
+
+    
+    
+    
+     * Get config.
+
+    
+    
+    
      *
-     * Allows the frontend to obtain backend-configured timing values dynamically.
-     *
-     * @return JsonResponse The configuration values.
+
+    
+    
+    
+     * @return JsonResponse
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function getConfig(): JsonResponse
     {
         $user = Auth::user();
@@ -348,14 +438,43 @@ class InactivityController extends Controller
         ]);
     }
 
+    
+    
+    
+    
     /**
-     * Update inactivity configuration. Admin only.
+
+    
+    
+    
+     * Handle update config.
+
+    
+    
+    
      *
-     * Records requested configuration changes in the audit log. Persist to a database if desired.
-     *
-     * @param Request $request The incoming HTTP request with configuration values.
-     * @return JsonResponse The update outcome.
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return JsonResponse
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function updateConfig(Request $request): JsonResponse
     {
         $user = Auth::user();
@@ -363,7 +482,7 @@ class InactivityController extends Controller
         if (!$user || $user->role !== 'admin') {
             return response()->json([
                 'success' => false,
-                'message' => 'Solo administradores pueden cambiar esta configuración'
+                'message' => 'Solo administradores pueden cambiar esta configuraciÃ³n'
             ], 403);
         }
 
@@ -379,7 +498,7 @@ class InactivityController extends Controller
             'model_type' => 'SystemConfig',
             'model_id' => null,
             'severity' => 'medium',
-            'description' => "Usuario {$user->name} actualizó configuración de inactividad",
+            'description' => "Usuario {$user->name} actualizÃ³ configuraciÃ³n de inactividad",
             'metadata' => [
                 'user_id' => $user->id,
                 'changes' => $validated,
@@ -389,7 +508,7 @@ class InactivityController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Configuración actualizada correctamente',
+            'message' => 'ConfiguraciÃ³n actualizada correctamente',
             'config' => $validated
         ]);
     }

@@ -18,12 +18,43 @@ class ReadingTimeService
     const VIDEO_VIEWING_TIME = 30;     // Per video (if embedded)
     const CODE_BLOCK_OVERHEAD = 5;     // Additional time per code block
     
+    
+    
+    
+    
     /**
-     * Calculate reading time for content in minutes
+
+    
+    
+    
+     * Handle calculate.
+
+    
+    
+    
      *
-     * @param string $content
-     * @return int Reading time in minutes
+
+    
+    
+    
+     * @param string $content The content.
+
+    
+    
+    
+     * @return int
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function calculate(string $content): int
     {
         if (empty($content)) {
@@ -66,12 +97,43 @@ class ReadingTimeService
         return max(1, (int) ceil($textMinutes));
     }
     
+    
+    
+    
+    
     /**
-     * Extract text content (excluding code blocks)
+
+    
+    
+    
+     * Handle extract text content.
+
+    
+    
+    
      *
-     * @param string $content
+
+    
+    
+    
+     * @param string $content The content.
+
+    
+    
+    
      * @return string
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function extractTextContent(string $content): string
     {
         // Remove code blocks (will be counted separately)
@@ -85,12 +147,43 @@ class ReadingTimeService
         return $text;
     }
     
+    
+    
+    
+    
     /**
-     * Extract code blocks from content
+
+    
+    
+    
+     * Handle extract code blocks.
+
+    
+    
+    
      *
-     * @param string $content
+
+    
+    
+    
+     * @param string $content The content.
+
+    
+    
+    
      * @return array
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function extractCodeBlocks(string $content): array
     {
         $codeBlocks = [];
@@ -115,12 +208,43 @@ class ReadingTimeService
         return $codeBlocks;
     }
     
+    
+    
+    
+    
     /**
-     * Count images in content
+
+    
+    
+    
+     * Handle count images.
+
+    
+    
+    
      *
-     * @param string $content
+
+    
+    
+    
+     * @param string $content The content.
+
+    
+    
+    
      * @return int
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function countImages(string $content): int
     {
         // Count img tags
@@ -134,12 +258,43 @@ class ReadingTimeService
         return $imgTags + $mdImages;
     }
     
+    
+    
+    
+    
     /**
-     * Count videos in content
+
+    
+    
+    
+     * Handle count videos.
+
+    
+    
+    
      *
-     * @param string $content
+
+    
+    
+    
+     * @param string $content The content.
+
+    
+    
+    
      * @return int
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function countVideos(string $content): int
     {
         // Count video tags
@@ -153,12 +308,43 @@ class ReadingTimeService
         return $videoTags + $iframes;
     }
     
+    
+    
+    
+    
     /**
-     * Count lists in content
+
+    
+    
+    
+     * Handle count lists.
+
+    
+    
+    
      *
-     * @param string $content
+
+    
+    
+    
+     * @param string $content The content.
+
+    
+    
+    
      * @return int
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function countLists(string $content): int
     {
         // ✅ FIXED: Count ordered and unordered lists with or without attributes
@@ -167,12 +353,43 @@ class ReadingTimeService
         return count($matches[0]);
     }
     
+    
+    
+    
+    
     /**
-     * Format reading time for display
+
+    
+    
+    
+     * Handle format.
+
+    
+    
+    
      *
-     * @param int $minutes
+
+    
+    
+    
+     * @param int $minutes The minutes.
+
+    
+    
+    
      * @return string
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function format(int $minutes): string
     {
         if ($minutes < 1) {
@@ -197,12 +414,43 @@ class ReadingTimeService
         return "{$hours}h {$mins}min de lectura";
     }
 
+    
+    
+    
+    
     /**
-     * ✅ FIX: Unicode-aware word count for Spanish and other languages
+
+    
+    
+    
+     * Handle count words.
+
+    
+    
+    
      *
-     * str_word_count() is ASCII-only and doesn't count words with accents correctly.
-     * This method uses regex to count words with Unicode letters.
+
+    
+    
+    
+     * @param string $text The text.
+
+    
+    
+    
+     * @return int
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function countWords(string $text): int
     {
         if (empty($text)) {

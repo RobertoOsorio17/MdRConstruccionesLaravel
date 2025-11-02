@@ -17,27 +17,127 @@ class NewContactRequestNotification extends Notification implements ShouldQueue
 
     protected ContactRequest $contactRequest;
 
+    
+    
+    
+    
     /**
-     * Create a new notification instance.
+
+    
+    
+    
+     * Handle __construct.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param ContactRequest $contactRequest The contactRequest.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function __construct(ContactRequest $contactRequest)
     {
         $this->contactRequest = $contactRequest;
     }
 
+    
+    
+    
+    
     /**
-     * Get the notification's delivery channels.
+
+    
+    
+    
+     * Handle via.
+
+    
+    
+    
      *
-     * @return array<int, string>
+
+    
+    
+    
+     * @param object $notifiable The notifiable.
+
+    
+    
+    
+     * @return array
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function via(object $notifiable): array
     {
         return ['mail', 'database'];
     }
 
+    
+    
+    
+    
     /**
-     * Get the mail representation of the notification.
+
+    
+    
+    
+     * Handle to mail.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param object $notifiable The notifiable.
+
+    
+    
+    
+     * @return MailMessage
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function toMail(object $notifiable): MailMessage
     {
         $attachmentCount = $this->contactRequest->attachments()->count();
@@ -62,11 +162,43 @@ class NewContactRequestNotification extends Notification implements ShouldQueue
             ->line('Por favor, responde a esta solicitud lo antes posible.');
     }
 
+    
+    
+    
+    
     /**
-     * Get the array representation of the notification.
+
+    
+    
+    
+     * Handle to array.
+
+    
+    
+    
      *
-     * @return array<string, mixed>
+
+    
+    
+    
+     * @param object $notifiable The notifiable.
+
+    
+    
+    
+     * @return array
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function toArray(object $notifiable): array
     {
         return [

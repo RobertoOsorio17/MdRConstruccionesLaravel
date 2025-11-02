@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Auth\Concerns\DetectsNewDevices;
 use App\Http\Controllers\Auth\Concerns\HandlesTwoFactorLogin;
 use App\Http\Requests\Auth\LoginRequest;
 use Illuminate\Http\RedirectResponse;
@@ -20,11 +21,40 @@ use Inertia\Response;
  */
 class AuthenticatedSessionController extends Controller
 {
-    use HandlesTwoFactorLogin;
+    use HandlesTwoFactorLogin, DetectsNewDevices;
 
+    
+    
+    
+    
     /**
-     * Display the login view.
+
+    
+    
+    
+     * Show the form for creating a new resource.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return Response
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function create(): Response
     {
         Log::info('Login page accessed', [
@@ -39,9 +69,43 @@ class AuthenticatedSessionController extends Controller
         ]);
     }
 
+    
+    
+    
+    
     /**
-     * Handle an incoming authentication request.
+
+    
+    
+    
+     * Store a newly created resource.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param LoginRequest $request The request.
+
+    
+    
+    
+     * @return RedirectResponse
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function store(LoginRequest $request): RedirectResponse
     {
         // ✅ FIXED: Don't log full email, use masked version
@@ -66,6 +130,7 @@ class AuthenticatedSessionController extends Controller
             $user = \App\Models\User::where('email', $request->email)->first();
             if ($user->isBanned()) {
                 $banStatus = $user->getBanStatus();
+                $currentBan = $user->currentBan();
 
                 // Log the banned login attempt
                 Log::warning('Banned user attempted login', [
@@ -82,20 +147,50 @@ class AuthenticatedSessionController extends Controller
                 $request->session()->invalidate();
                 $request->session()->regenerateToken();
 
-                // Redirect back to login with error message
-                $errorMessage = 'Tu cuenta ha sido suspendida.';
-                if ($banStatus['reason']) {
-                    $errorMessage .= ' Motivo: ' . $banStatus['reason'];
-                }
-                if ($banStatus['expires_at']) {
-                    $errorMessage .= ' La suspensión expira el: ' . $banStatus['expires_at'];
-                } else {
-                    $errorMessage .= ' Esta suspensión es permanente.';
+                // Check if user can appeal this ban
+                $banAppealService = app(\App\Services\BanAppealService::class);
+                $appealEligibility = $banAppealService->canUserAppeal($user);
+
+                // ✅ SECURITY: Generate signed URL with token tracking (valid for 1 hour)
+                $appealUrl = null;
+                if ($appealEligibility['can_appeal']) {
+                    // Generate a unique token for this appeal URL
+                    $token = $currentBan->generateAppealUrlToken(60); // 60 minutes
+
+                    // Generate signed URL with the token
+                    $appealUrl = \Illuminate\Support\Facades\URL::temporarySignedRoute(
+                        'ban-appeal.create',
+                        now()->addHour(), // 1 hour expiration
+                        [
+                            'user' => $user->id,
+                            'ban' => $currentBan->id,
+                            'token' => $token, // Include token in URL
+                        ]
+                    );
+
+                    Log::info('Generated new appeal URL with token', [
+                        'user_id' => $user->id,
+                        'ban_id' => $currentBan->id,
+                        'token_expires_at' => $currentBan->appeal_url_expires_at->toISOString(),
+                    ]);
                 }
 
-                // Throw validation exception for Inertia
+                // ✅ SECURITY: Throw ValidationException with bannedUser error for modal handling
+                // Similar to requires2FA pattern
                 throw ValidationException::withMessages([
-                    'email' => $errorMessage
+                    'bannedUser' => 'true',
+                    'banInfo' => json_encode([
+                        'reason' => $banStatus['reason'] ?? 'No especificada',
+                        'banned_at' => $currentBan->banned_at?->format('d/m/Y H:i') ?? null,
+                        'expires_at' => $currentBan->expires_at?->format('d/m/Y H:i') ?? null,
+                        'is_permanent' => $currentBan->isPermanent(),
+                        'is_irrevocable' => $currentBan->isIrrevocable(),
+                        'can_appeal' => $appealEligibility['can_appeal'],
+                        'appeal_reason' => $appealEligibility['reason'] ?? null,
+                        'has_existing_appeal' => $currentBan->hasAppeal(),
+                        'existing_appeal_status' => $currentBan->hasAppeal() ? $currentBan->appeal->status : null,
+                        'appeal_url' => $appealUrl, // ✅ Signed URL for appeal
+                    ])
                 ]);
             }
 
@@ -106,9 +201,9 @@ class AuthenticatedSessionController extends Controller
                 'timestamp' => now()->toISOString()
             ]);
 
-            // ✅ SECURITY FIX: Regenerate session BEFORE authentication to prevent session fixation
-            // This ensures any session ID set by an attacker is replaced with a new one
-            $request->session()->regenerate();
+            // ✅ SECURITY FIX: Session regeneration moved to completeInteractiveLogin
+            // to avoid CSRF token mismatch when 2FA modal is shown
+            // Session will be regenerated AFTER 2FA verification or immediately if no 2FA
 
             return $this->completeInteractiveLogin(
                 $request,
@@ -129,9 +224,43 @@ class AuthenticatedSessionController extends Controller
         }
     }
 
+    
+    
+    
+    
     /**
-     * Destroy an authenticated session.
+
+    
+    
+    
+     * Remove the specified resource.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return RedirectResponse
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function destroy(Request $request): RedirectResponse
     {
         $user = Auth::user();

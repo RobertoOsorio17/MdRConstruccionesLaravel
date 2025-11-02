@@ -17,15 +17,51 @@ use Carbon\Carbon;
  */
 class AuditLogController extends Controller
 {
+    
+    
+    
+    
     /**
-     * Display the audit logs index page for administrators.
+
+    
+    
+    
+     * Display a listing of the resource.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return Response
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function index(Request $request): Response
     {
         $query = AdminAuditLog::with('user:id,name,email')
             ->orderBy('created_at', 'desc');
 
-        // Apply search filter
+        /**
+         * Apply search filter.
+         */
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
@@ -39,17 +75,23 @@ class AuditLogController extends Controller
             });
         }
 
-        // Filter by user
+        /**
+         * Filter by user.
+         */
         if ($request->filled('user_id')) {
             $query->where('user_id', $request->user_id);
         }
 
-        // Filter by action
+        /**
+         * Filter by action.
+         */
         if ($request->filled('action')) {
             $query->where('action', $request->action);
         }
 
-        // Filter by date range
+        /**
+         * Filter by date range.
+         */
         if ($request->filled('date_from')) {
             $query->whereDate('created_at', '>=', $request->date_from);
         }
@@ -58,16 +100,22 @@ class AuditLogController extends Controller
             $query->whereDate('created_at', '<=', $request->date_to);
         }
 
-        // Filter by severity
+        /**
+         * Filter by severity.
+         */
         if ($request->filled('severity')) {
             $query->where('severity', $request->severity);
         }
 
-        // Pagination
+        /**
+         * Pagination.
+         */
         $perPage = $request->get('per_page', 15);
         $logs = $query->paginate($perPage)->withQueryString();
 
-        // Calculate statistics
+        /**
+         * Calculate statistics.
+         */
         $stats = [
             'total' => AdminAuditLog::count(),
             'today' => AdminAuditLog::whereDate('created_at', Carbon::today())->count(),
@@ -82,15 +130,51 @@ class AuditLogController extends Controller
         ]);
     }
 
+    
+    
+    
+    
     /**
-     * Provide paginated audit log data for the Inertia API consumer.
+
+    
+    
+    
+     * Handle data.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return JsonResponse
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function data(Request $request): JsonResponse
     {
         $query = AdminAuditLog::with('user:id,name')
             ->orderBy('created_at', 'desc');
 
-        // Apply keyword filtering across descriptions, actions, and related users.
+        /**
+         * Apply keyword filtering across descriptions, actions, and related users.
+         */
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
@@ -103,22 +187,30 @@ class AuditLogController extends Controller
             });
         }
 
-        // Filter by action signature.
+        /**
+         * Filter by action signature.
+         */
         if ($request->filled('action')) {
             $query->byAction($request->action);
         }
 
-        // Filter by originating administrator.
+        /**
+         * Filter by originating administrator.
+         */
         if ($request->filled('user_id')) {
             $query->byUser($request->user_id);
         }
 
-        // Filter by severity ranking.
+        /**
+         * Filter by severity ranking.
+         */
         if ($request->filled('severity')) {
             $query->bySeverity($request->severity);
         }
 
-        // Restrict the result set to the desired date window.
+        /**
+         * Restrict the result set to the desired date window.
+         */
         if ($request->filled('date_from')) {
             $query->where('created_at', '>=', Carbon::parse($request->date_from)->startOfDay());
         }
@@ -162,9 +254,43 @@ class AuditLogController extends Controller
         ]);
     }
 
+    
+    
+    
+    
     /**
-     * Provide aggregate statistics for audit log dashboards.
+
+    
+    
+    
+     * Handle stats.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return JsonResponse
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function stats(Request $request): JsonResponse
     {
         $dateFrom = $request->filled('date_from') 
@@ -209,9 +335,48 @@ class AuditLogController extends Controller
         return response()->json($stats);
     }
 
+    
+    
+    
+    
     /**
-     * Generate day-by-day activity counts for charting.
+
+    
+    
+    
+     * Get daily activity.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Carbon $dateFrom The dateFrom.
+
+    
+    
+    
+     * @param Carbon $dateTo The dateTo.
+
+    
+    
+    
+     * @return array
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function getDailyActivity(Carbon $dateFrom, Carbon $dateTo): array
     {
         $days = [];
@@ -232,9 +397,43 @@ class AuditLogController extends Controller
         return $days;
     }
 
+    
+    
+    
+    
     /**
-     * Export audit logs to Excel/CSV format.
+
+    
+    
+    
+     * Handle export.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function export(Request $request)
     {
         $filters = [
@@ -264,9 +463,38 @@ class AuditLogController extends Controller
         }
     }
 
+    
+    
+    
+    
     /**
-     * Retrieve the available filter options for audit-log searches.
+
+    
+    
+    
+     * Handle filter options.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return JsonResponse
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function filterOptions(): JsonResponse
     {
         $actions = AdminAuditLog::distinct('action')
@@ -291,9 +519,43 @@ class AuditLogController extends Controller
         ]);
     }
 
+    
+    
+    
+    
     /**
-     * Return a detailed representation of a single audit log entry.
+
+    
+    
+    
+     * Display the specified resource.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param AdminAuditLog $auditLog The auditLog.
+
+    
+    
+    
+     * @return JsonResponse
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function show(AdminAuditLog $auditLog): JsonResponse
     {
         $auditLog->load('user:id,name');

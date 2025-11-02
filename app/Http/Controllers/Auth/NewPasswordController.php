@@ -25,9 +25,43 @@ use Inertia\Response;
  */
 class NewPasswordController extends Controller
 {
+    
+    
+    
+    
     /**
-     * Display the password reset view.
+
+    
+    
+    
+     * Show the form for creating a new resource.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return Response
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function create(Request $request): Response
     {
         return Inertia::render('Auth/ResetPasswordNew', [
@@ -36,12 +70,43 @@ class NewPasswordController extends Controller
         ]);
     }
 
+    
+    
+    
+    
     /**
-     * Handle an incoming new password request.
-     * ✅ SECURITY FIX: Stronger password requirements
+
+    
+    
+    
+     * Store a newly created resource.
+
+    
+    
+    
      *
-     * @throws \Illuminate\Validation\ValidationException
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return RedirectResponse
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function store(Request $request): RedirectResponse
     {
         // ✅ SECURITY FIX: Minimum 12 characters (increased from 8)

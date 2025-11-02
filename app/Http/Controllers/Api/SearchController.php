@@ -15,21 +15,84 @@ use Illuminate\Validation\ValidationException;
  */
 class SearchController extends Controller
 {
+    
+    
+    
+    
     /**
-     * Instantiate the controller with the search service dependency.
+
+    
+    
+    
+     * Handle __construct.
+
+    
+    
+    
      *
-     * @param SearchService $searchService The service that executes search queries.
+
+    
+    
+    
+     * @param private SearchService $searchService The searchService.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function __construct(
         private SearchService $searchService
     ) {}
 
+    
+    
+    
+    
     /**
-     * Perform a full search request with pagination and optional filters.
+
+    
+    
+    
+     * Handle search.
+
+    
+    
+    
      *
-     * @param SearchRequest $request The validated search request instance.
-     * @return JsonResponse JSON response containing search results and metadata.
+
+    
+    
+    
+     * @param SearchRequest $request The request.
+
+    
+    
+    
+     * @return JsonResponse
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function search(SearchRequest $request): JsonResponse
     {
         try {
@@ -76,12 +139,43 @@ class SearchController extends Controller
         }
     }
 
+    
+    
+    
+    
     /**
-     * Provide search suggestions suitable for autocomplete inputs.
+
+    
+    
+    
+     * Handle suggestions.
+
+    
+    
+    
      *
-     * @param Request $request The current HTTP request.
-     * @return JsonResponse JSON response containing suggestion strings.
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return JsonResponse
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function suggestions(Request $request): JsonResponse
     {
         try {
@@ -122,12 +216,43 @@ class SearchController extends Controller
         }
     }
 
+    
+    
+    
+    
     /**
-     * Return the most popular search terms within a recent window.
+
+    
+    
+    
+     * Handle popular.
+
+    
+    
+    
      *
-     * @param Request $request The current HTTP request.
-     * @return JsonResponse JSON response containing popular terms data.
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return JsonResponse
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function popular(Request $request): JsonResponse
     {
         try {
@@ -156,12 +281,43 @@ class SearchController extends Controller
         }
     }
 
+    
+    
+    
+    
     /**
-     * Return aggregate search analytics data for administrators.
+
+    
+    
+    
+     * Handle analytics.
+
+    
+    
+    
      *
-     * @param Request $request The current HTTP request.
-     * @return JsonResponse JSON response with analytics aggregates.
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return JsonResponse
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function analytics(Request $request): JsonResponse
     {
         // Add authorization check here if needed.
@@ -193,12 +349,43 @@ class SearchController extends Controller
         }
     }
 
+    
+    
+    
+    
     /**
-     * Run a lightweight search for instant-results contexts.
+
+    
+    
+    
+     * Handle quick.
+
+    
+    
+    
      *
-     * @param Request $request The current HTTP request containing query parameters.
-     * @return JsonResponse JSON response optimized for quick search UIs.
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return JsonResponse
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function quick(Request $request): JsonResponse
     {
         try {

@@ -16,14 +16,94 @@ use Spatie\Backup\Tasks\Monitor\BackupDestinationStatusFactory;
  */
 class BackupController extends Controller
 {
+    
+    
+    
+    
     /**
-     * Display the backup management interface.
+
+    
+    
+    
+     * Handle __construct.
+
+    
+    
+    
      *
-     * @return \Inertia\Response Inertia response with backup list and stats.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
+    public function __construct()
+    {
+        $this->middleware(function ($request, $next) {
+            $user = $request->user();
+
+            /**
+             * Check if user is admin (support both role column and roles relationship).
+             */
+            $isAdmin = $user->role === 'admin' ||
+                       $user->roles->contains('name', 'admin');
+
+            if (!$isAdmin) {
+                abort(403, 'This action is unauthorized. Only administrators can manage backups.');
+            }
+
+            return $next($request);
+        });
+    }
+
+    
+    
+    
+    
+    /**
+
+    
+    
+    
+     * Display a listing of the resource.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
+     */
+    
+    
+    
+    
+    
+    
+    
     public function index()
     {
-        // Authorize.
+        /**
+         * Authorize.
+         */
         if (!auth()->user()->hasPermission('system.backup')) {
             abort(403, 'Unauthorized action.');
         }
@@ -37,42 +117,85 @@ class BackupController extends Controller
         ]);
     }
 
+    
+    
+    
+    
     /**
-     * Create a new backup.
+
+    
+    
+    
+     * Show the form for creating a new resource.
+
+    
+    
+    
      *
-     * @param Request $request The current HTTP request instance.
-     * @return \Illuminate\Http\RedirectResponse Redirect back with status or errors.
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function create(Request $request)
     {
-        // Authorize.
+        /**
+         * Authorize.
+         */
         if (!auth()->user()->hasPermission('system.backup')) {
             abort(403, 'Unauthorized action.');
         }
 
-        // Validate.
+        /**
+         * Validate.
+         */
         $validated = $request->validate([
             'type' => 'required|in:full,database,files',
         ]);
 
         try {
-            // Ensure backup directory exists
+            /**
+             * Ensure backup directory exists.
+             */
             $backupPath = storage_path('app/' . config('backup.backup.name'));
             if (!file_exists($backupPath)) {
                 mkdir($backupPath, 0755, true);
             }
 
-            // Run backup command
+            /**
+             * Run backup command.
+             */
             $exitCode = match ($validated['type']) {
                 'full' => Artisan::call('backup:run'),
                 'database' => Artisan::call('backup:run', ['--only-db' => true]),
                 'files' => Artisan::call('backup:run', ['--only-files' => true]),
             };
 
-            // Get command output
+            /**
+             * Get command output.
+             */
             $output = Artisan::output();
 
-            // Log backup creation.
+            /**
+             * Log backup creation.
+             */
             \Log::info('Backup command executed', [
                 'admin_id' => auth()->id(),
                 'type' => $validated['type'],
@@ -93,20 +216,55 @@ class BackupController extends Controller
         }
     }
 
+    
+    
+    
+    
     /**
-     * Download a backup file.
+
+    
+    
+    
+     * Handle download.
+
+    
+    
+    
      *
-     * @param string $filename The backup archive filename.
-     * @return \Symfony\Component\HttpFoundation\StreamedResponse The download response.
+
+    
+    
+    
+     * @param mixed $filename The filename.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function download($filename)
     {
-        // Authorize.
+        /**
+         * Authorize.
+         */
         if (!auth()->user()->hasPermission('system.backup')) {
             abort(403, 'Unauthorized action.');
         }
 
-        // Validate filename to prevent directory traversal.
+        /**
+         * Validate filename to prevent directory traversal.
+         */
         if (!preg_match('/^[a-zA-Z0-9_\-\.]+\.zip$/', $filename)) {
             abort(400, 'Invalid filename');
         }
@@ -118,7 +276,9 @@ class BackupController extends Controller
             abort(404, 'Backup file not found');
         }
 
-        // Log download.
+        /**
+         * Log download.
+         */
         \Log::info('Backup downloaded', [
             'admin_id' => auth()->id(),
             'filename' => $filename,
@@ -127,20 +287,55 @@ class BackupController extends Controller
         return $disk->download($path);
     }
 
+    
+    
+    
+    
     /**
-     * Delete a backup file.
+
+    
+    
+    
+     * Remove the specified resource.
+
+    
+    
+    
      *
-     * @param string $filename The backup archive filename.
-     * @return \Illuminate\Http\RedirectResponse Redirect back with status.
+
+    
+    
+    
+     * @param mixed $filename The filename.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function destroy($filename)
     {
-        // Authorize.
+        /**
+         * Authorize.
+         */
         if (!auth()->user()->hasPermission('system.backup')) {
             abort(403, 'Unauthorized action.');
         }
 
-        // Validate filename.
+        /**
+         * Validate filename.
+         */
         if (!preg_match('/^[a-zA-Z0-9_\-\.]+\.zip$/', $filename)) {
             abort(400, 'Invalid filename');
         }
@@ -154,7 +349,9 @@ class BackupController extends Controller
 
         $disk->delete($path);
 
-        // Log deletion.
+        /**
+         * Log deletion.
+         */
         \Log::info('Backup deleted', [
             'admin_id' => auth()->id(),
             'filename' => $filename,
@@ -163,14 +360,43 @@ class BackupController extends Controller
         return back()->with('success', 'Backup deleted successfully.');
     }
 
+    
+    
+    
+    
     /**
-     * Clean old backups.
+
+    
+    
+    
+     * Handle clean.
+
+    
+    
+    
      *
-     * @return \Illuminate\Http\RedirectResponse Redirect back with status.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function clean()
     {
-        // Authorize.
+        /**
+         * Authorize.
+         */
         if (!auth()->user()->hasPermission('system.backup')) {
             abort(403, 'Unauthorized action.');
         }
@@ -178,7 +404,9 @@ class BackupController extends Controller
         try {
             Artisan::call('backup:clean');
 
-            // Log cleanup.
+            /**
+             * Log cleanup.
+             */
             \Log::info('Backup cleanup executed', [
                 'admin_id' => auth()->id(),
             ]);
@@ -194,11 +422,38 @@ class BackupController extends Controller
         }
     }
 
+    
+    
+    
+    
     /**
-     * Get list of backups.
+
+    
+    
+    
+     * Get backups.
+
+    
+    
+    
      *
-     * @return array A normalized list of backup metadata.
+
+    
+    
+    
+     * @return array
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function getBackups(): array
     {
         $disk = Storage::disk(config('backup.backup.destination.disks')[0] ?? 'local');
@@ -224,7 +479,9 @@ class BackupController extends Controller
             }
         }
 
-        // Sort by timestamp descending
+        /**
+         * Sort by timestamp descending.
+         */
         usort($backups, function ($a, $b) {
             return $b['timestamp'] - $a['timestamp'];
         });
@@ -232,11 +489,38 @@ class BackupController extends Controller
         return $backups;
     }
 
+    
+    
+    
+    
     /**
-     * Get backup statistics.
+
+    
+    
+    
+     * Get backup stats.
+
+    
+    
+    
      *
-     * @return array Aggregate backup metrics for display.
+
+    
+    
+    
+     * @return array
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function getBackupStats(): array
     {
         $backups = $this->getBackups();
@@ -258,13 +542,48 @@ class BackupController extends Controller
         ];
     }
 
+    
+    
+    
+    
     /**
-     * Format bytes to human readable string.
+
+    
+    
+    
+     * Handle format bytes.
+
+    
+    
+    
      *
-     * @param int|float $bytes The size in bytes.
-     * @param int $precision Decimal precision.
-     * @return string Formatted size, for example "12.0 MB".
+
+    
+    
+    
+     * @param mixed $bytes The bytes.
+
+    
+    
+    
+     * @param mixed $precision The precision.
+
+    
+    
+    
+     * @return string
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function formatBytes($bytes, $precision = 2): string
     {
         $units = ['B', 'KB', 'MB', 'GB', 'TB'];

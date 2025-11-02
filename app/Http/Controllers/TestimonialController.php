@@ -13,12 +13,43 @@ use Inertia\Inertia;
  */
 class TestimonialController extends Controller
 {
+    
+    
+    
+    
     /**
-     * Display the testimonials page.
+
+    
+    
+    
+     * Display a listing of the resource.
+
+    
+    
+    
      *
-     * @param Request $request The current HTTP request instance.
-     * @return \Inertia\Response Inertia response with testimonials and filters.
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function index(Request $request)
     {
         // Validate filters.
@@ -73,22 +104,80 @@ class TestimonialController extends Controller
         ]);
     }
 
+    
+    
+    
+    
     /**
-     * Show the testimonial submission form.
+
+    
+    
+    
+     * Show the form for creating a new resource.
+
+    
+    
+    
      *
-     * @return \Inertia\Response Inertia response for the create view.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function create()
     {
         return Inertia::render('Testimonials/Create');
     }
 
+    
+    
+    
+    
     /**
-     * Store a new testimonial.
+
+    
+    
+    
+     * Store a newly created resource.
+
+    
+    
+    
      *
-     * @param Request $request The current HTTP request instance.
-     * @return \Illuminate\Http\RedirectResponse Redirect to index with status.
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function store(Request $request)
     {
         // Validate input with strict rules.
@@ -141,12 +230,43 @@ class TestimonialController extends Controller
             ->with('success', 'Thank you! Your testimonial has been submitted and is pending approval.');
     }
 
+    
+    
+    
+    
     /**
-     * Display a single testimonial.
+
+    
+    
+    
+     * Display the specified resource.
+
+    
+    
+    
      *
-     * @param Testimonial $testimonial The testimonial model.
-     * @return \Inertia\Response Inertia response with testimonial details.
+
+    
+    
+    
+     * @param Testimonial $testimonial The testimonial.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function show(Testimonial $testimonial)
     {
         // Only show approved and active testimonials

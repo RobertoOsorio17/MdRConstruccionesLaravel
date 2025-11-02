@@ -16,11 +16,38 @@ use Inertia\Inertia;
  */
 class ServiceController extends Controller
 {
+    
+    
+    
+    
     /**
-     * Display a listing of services.
+
+    
+    
+    
+     * Display a listing of the resource.
+
+    
+    
+    
      *
-     * @return \Inertia\Response Inertia response with all services and featured subset.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function index()
     {
         try {
@@ -52,12 +79,43 @@ class ServiceController extends Controller
         ]);
     }
 
+    
+    
+    
+    
     /**
-     * Display the specified service.
+
+    
+    
+    
+     * Display the specified resource.
+
+    
+    
+    
      *
-     * @param Service $service The service model instance.
-     * @return \Inertia\Response Inertia response with service details and related services.
+
+    
+    
+    
+     * @param Service $service The service.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function show(Service $service)
     {
         // Check if service is active
@@ -97,17 +155,22 @@ class ServiceController extends Controller
                 'reviews_count' => $service->reviews_count ?? 0,
             ],
             'relatedServices' => $relatedServices,
-            'testimonials' => $service->approvedReviews()->limit(6)->get()->map(function($review) {
-                return [
-                    'id' => $review->id,
-                    'rating' => $review->rating,
-                    'comment' => $review->comment,
-                    'author_name' => $review->user->name ?? 'Cliente Anónimo',
-                    'author_role' => 'Cliente',
-                    'author_avatar' => $review->user->avatar ?? null,
-                    'created_at' => $review->created_at->format('Y-m-d'),
-                ];
-            }),
+            // ⚡ PERFORMANCE: Eager load user to prevent N+1 query
+            'testimonials' => $service->approvedReviews()
+                ->with('user:id,name,avatar') // Only load needed columns
+                ->limit(6)
+                ->get()
+                ->map(function($review) {
+                    return [
+                        'id' => $review->id,
+                        'rating' => $review->rating,
+                        'comment' => $review->comment,
+                        'author_name' => $review->user->name ?? 'Cliente Anónimo',
+                        'author_role' => 'Cliente',
+                        'author_avatar' => $review->user->avatar ?? null,
+                        'created_at' => $review->created_at->format('Y-m-d'),
+                    ];
+                }),
             'seo' => [
                 'title' => $service->title . ' - MDR Construcciones',
                 'description' => $service->excerpt,
@@ -118,12 +181,43 @@ class ServiceController extends Controller
         ]);
     }
 
+    
+    
+    
+    
     /**
-     * Display the specified service with ServicesV2 components.
+
+    
+    
+    
+     * Handle show v2.
+
+    
+    
+    
      *
-     * @param Service $service The service model instance.
-     * @return \Inertia\Response Inertia response for the Services V2 view.
+
+    
+    
+    
+     * @param Service $service The service.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function showV2(Service $service)
     {
         // Check if service is active

@@ -25,13 +25,48 @@ use App\Events\CommentReported;
 class CommentInteractionController extends Controller
 {
     use AuthorizesRequests;
+    
+    
+    
+    
     /**
-     * Store a like interaction for a comment.
+
+    
+    
+    
+     * Handle like.
+
+    
+    
+    
      *
-     * @param Request $request The current HTTP request instance.
-     * @param Comment $comment The comment being liked or unliked.
-     * @return JsonResponse JSON response including current like/dislike counts.
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @param Comment $comment The comment.
+
+    
+    
+    
+     * @return JsonResponse
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function like(Request $request, Comment $comment): JsonResponse
     {
         // Authorize the action using policy.
@@ -81,13 +116,48 @@ class CommentInteractionController extends Controller
         ]);
     }
     
+    
+    
+    
+    
     /**
-     * Store a dislike interaction for a comment.
+
+    
+    
+    
+     * Handle dislike.
+
+    
+    
+    
      *
-     * @param Request $request The current HTTP request instance.
-     * @param Comment $comment The comment being disliked or undisliked.
-     * @return JsonResponse JSON response including current like/dislike counts.
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @param Comment $comment The comment.
+
+    
+    
+    
+     * @return JsonResponse
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function dislike(Request $request, Comment $comment): JsonResponse
     {
         // Authorize the action using policy (same rules as like).
@@ -137,21 +207,48 @@ class CommentInteractionController extends Controller
         ]);
     }
     
+    
+    
+    
+    
     /**
-     * Report a comment.
+
+    
+    
+    
+     * Handle report.
+
+    
+    
+    
      *
-     * Security features:
-     * - Input sanitization to prevent XSS.
-     * - Duplicate report detection (per user/IP).
-     * - Spam detection (multiple reports from same user).
-     * - Automatic priority assignment based on category.
-     * - Audit logging for all reports.
-     * - Event dispatching for moderator notifications.
-     *
-     * @param Request $request The current HTTP request instance.
-     * @param Comment $comment The comment being reported.
-     * @return JsonResponse JSON response indicating success or failure.
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @param Comment $comment The comment.
+
+    
+    
+    
+     * @return JsonResponse
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function report(Request $request, Comment $comment): JsonResponse
     {
         // Security: Validate and sanitize inputs.
@@ -291,12 +388,43 @@ class CommentInteractionController extends Controller
         ]);
     }
 
+    
+    
+    
+    
     /**
-     * Calculate report priority based on category severity.
+
+    
+    
+    
+     * Calculate report priority.
+
+    
+    
+    
      *
-     * @param string $category Report category
-     * @return string Priority level (high, medium, low)
+
+    
+    
+    
+     * @param string $category The category.
+
+    
+    
+    
+     * @return string
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function calculateReportPriority(string $category): string
     {
         return match($category) {

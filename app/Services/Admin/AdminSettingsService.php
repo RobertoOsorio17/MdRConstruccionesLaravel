@@ -16,13 +16,48 @@ use Illuminate\Support\Facades\Validator;
  */
 class AdminSettingsService
 {
+    
+    
+    
+    
     /**
-     * Update settings and return the result status.
+
+    
+    
+    
+     * Handle update settings.
+
+    
+    
+    
      *
-     * @param array $settings
-     * @param \App\Models\User|null $user
-     * @return array{updated: array<int, string>, errors: array<string, string>}
+
+    
+    
+    
+     * @param array $settings The settings.
+
+    
+    
+    
+     * @param ?User $user The user.
+
+    
+    
+    
+     * @return array
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function updateSettings(array $settings, ?User $user = null): array
     {
         $errors = [];
@@ -97,11 +132,38 @@ class AdminSettingsService
         }
     }
 
+    
+    
+    
+    
     /**
-     * Validation messages for dynamic rules.
+
+    
+    
+    
+     * Handle validation messages.
+
+    
+    
+    
      *
-     * @return array<string, string>
+
+    
+    
+    
+     * @return array
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function validationMessages(): array
     {
         return [

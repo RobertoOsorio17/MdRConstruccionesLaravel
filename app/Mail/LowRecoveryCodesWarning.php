@@ -16,17 +16,75 @@ class LowRecoveryCodesWarning extends Mailable
 {
     use Queueable, SerializesModels;
 
+    
+    
+    
+    
     /**
-     * Create a new message instance.
+
+    
+    
+    
+     * Handle __construct.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function __construct()
     {
         //
     }
 
+    
+    
+    
+    
     /**
-     * Get the message envelope.
+
+    
+    
+    
+     * Handle envelope.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return Envelope
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function envelope(): Envelope
     {
         return new Envelope(
@@ -34,9 +92,38 @@ class LowRecoveryCodesWarning extends Mailable
         );
     }
 
+    
+    
+    
+    
     /**
-     * Get the message content definition.
+
+    
+    
+    
+     * Handle content.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return Content
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function content(): Content
     {
         return new Content(
@@ -44,11 +131,38 @@ class LowRecoveryCodesWarning extends Mailable
         );
     }
 
+    
+    
+    
+    
     /**
-     * Get the attachments for the message.
+
+    
+    
+    
+     * Handle attachments.
+
+    
+    
+    
      *
-     * @return array<int, \Illuminate\Mail\Mailables\Attachment>
+
+    
+    
+    
+     * @return array
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function attachments(): array
     {
         return [];

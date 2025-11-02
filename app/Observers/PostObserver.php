@@ -14,15 +14,119 @@ class PostObserver
 {
     protected $cacheService;
 
+
+    
+
+
+    
+
+    
+
+    
+
+    /**
+
+
+    
+
+    
+
+    
+
+     * Handle __construct.
+
+
+    
+
+    
+
+    
+
+     *
+
+
+    
+
+    
+
+    
+
+     * @param CacheService $cacheService The cacheService.
+
+
+    
+
+    
+
+    
+
+     * @return void
+
+
+    
+
+    
+
+    
+
+     */
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
     public function __construct(CacheService $cacheService)
     {
         $this->cacheService = $cacheService;
     }
 
+    
+    
+    
+    
     /**
-     * Handle the Post "created" event.
-     * ✅ FIXED: Dispatch PostCreated event for ML cache invalidation
+
+    
+    
+    
+     * Handle created.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Post $post The post.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function created(Post $post): void
     {
         // ✅ Dispatch event for ML cache invalidation
@@ -32,25 +136,127 @@ class PostObserver
         $this->invalidateCache($post);
     }
 
+    
+    
+    
+    
     /**
-     * Handle the Post "updated" event.
+
+    
+    
+    
+     * Handle updated.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Post $post The post.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function updated(Post $post): void
     {
         $this->invalidateCache($post);
     }
 
+    
+    
+    
+    
     /**
-     * Handle the Post "deleted" event.
+
+    
+    
+    
+     * Handle deleted.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Post $post The post.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function deleted(Post $post): void
     {
         $this->invalidateCache($post);
     }
 
+    
+    
+    
+    
     /**
-     * Invalidate related caches
+
+    
+    
+    
+     * Handle invalidate cache.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Post $post The post.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     protected function invalidateCache(Post $post): void
     {
         // Invalidate specific post cache (using post ID, not slug)

@@ -19,14 +19,114 @@ class UsersExport implements FromQuery, WithHeadings, WithMapping, WithStyles, S
 {
     protected $filters;
 
+
+    
+
+
+    
+
+    
+
+    
+
+    /**
+
+
+    
+
+    
+
+    
+
+     * Handle __construct.
+
+
+    
+
+    
+
+    
+
+     *
+
+
+    
+
+    
+
+    
+
+     * @param mixed $filters The filters.
+
+
+    
+
+    
+
+    
+
+     * @return void
+
+
+    
+
+    
+
+    
+
+     */
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
     public function __construct($filters = [])
     {
         $this->filters = $filters;
     }
 
+    
+    
+    
+    
     /**
-     * Query for users with filters applied.
+
+    
+    
+    
+     * Handle query.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function query()
     {
         $query = User::query();
@@ -61,9 +161,38 @@ class UsersExport implements FromQuery, WithHeadings, WithMapping, WithStyles, S
         return $query->orderBy('created_at', 'desc');
     }
 
+    
+    
+    
+    
     /**
-     * Define column headings.
+
+    
+    
+    
+     * Handle headings.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return array
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function headings(): array
     {
         return [
@@ -79,9 +208,43 @@ class UsersExport implements FromQuery, WithHeadings, WithMapping, WithStyles, S
         ];
     }
 
+    
+    
+    
+    
     /**
-     * Map data for each row.
+
+    
+    
+    
+     * Handle map.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param mixed $user The user.
+
+    
+    
+    
+     * @return array
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function map($user): array
     {
         return [
@@ -97,9 +260,43 @@ class UsersExport implements FromQuery, WithHeadings, WithMapping, WithStyles, S
         ];
     }
 
+    
+    
+    
+    
     /**
-     * Apply styles to the worksheet.
+
+    
+    
+    
+     * Handle styles.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Worksheet $sheet The sheet.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function styles(Worksheet $sheet)
     {
         return [

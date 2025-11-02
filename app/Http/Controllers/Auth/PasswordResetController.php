@@ -24,9 +24,38 @@ use Inertia\Response;
  */
 class PasswordResetLinkController extends Controller
 {
+    
+    
+    
+    
     /**
-     * Display the password reset link request view.
+
+    
+    
+    
+     * Show the form for creating a new resource.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return Response
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function create(): Response
     {
         return Inertia::render('Auth/ForgotPassword', [
@@ -34,11 +63,43 @@ class PasswordResetLinkController extends Controller
         ]);
     }
 
+    
+    
+    
+    
     /**
-     * Handle an incoming password reset link request.
+
+    
+    
+    
+     * Store a newly created resource.
+
+    
+    
+    
      *
-     * @throws \Illuminate\Validation\ValidationException
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return RedirectResponse
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function store(Request $request): RedirectResponse
     {
         $request->validate([
@@ -77,9 +138,43 @@ class PasswordResetLinkController extends Controller
  */
 class NewPasswordController extends Controller
 {
+    
+    
+    
+    
     /**
-     * Display the password reset view.
+
+    
+    
+    
+     * Show the form for creating a new resource.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return Response
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function create(Request $request): Response
     {
         return Inertia::render('Auth/ResetPassword', [
@@ -88,12 +183,43 @@ class NewPasswordController extends Controller
         ]);
     }
 
+    
+    
+    
+    
     /**
-     * Handle an incoming new password request.
-     * ✅ SECURITY FIX: Stronger password requirements
+
+    
+    
+    
+     * Store a newly created resource.
+
+    
+    
+    
      *
-     * @throws \Illuminate\Validation\ValidationException
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return RedirectResponse
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function store(Request $request): RedirectResponse
     {
         $request->validate([

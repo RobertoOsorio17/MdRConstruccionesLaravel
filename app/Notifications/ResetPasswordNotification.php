@@ -25,25 +25,127 @@ class ResetPasswordNotification extends Notification
      */
     public static $toEmailCallback;
 
+    
+    
+    
+    
     /**
-     * Create a notification instance.
+
+    
+    
+    
+     * Handle __construct.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param string $token The token.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function __construct(string $token)
     {
         $this->token = $token;
     }
 
+    
+    
+    
+    
     /**
-     * Get the notification's channels.
+
+    
+    
+    
+     * Handle via.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param object $notifiable The notifiable.
+
+    
+    
+    
+     * @return array
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function via(object $notifiable): array
     {
         return ['mail'];
     }
 
+    
+    
+    
+    
     /**
-     * Build the mail representation of the notification.
+
+    
+    
+    
+     * Handle to mail.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param object $notifiable The notifiable.
+
+    
+    
+    
+     * @return MailMessage
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function toMail(object $notifiable): MailMessage
     {
         $url = url(route('password.reset', [

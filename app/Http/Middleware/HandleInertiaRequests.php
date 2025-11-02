@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Helpers\VersionHelper;
 use App\Models\AdminSetting;
 use App\Services\ImpersonationService;
 use Illuminate\Http\Request;
@@ -77,81 +78,17 @@ class HandleInertiaRequests extends Middleware
     public function share(Request $request): array
     {
         $auth = $request->user();
+
+        // ⚡ PERFORMANCE: Eager load relationships to avoid N+1 queries
+        if ($auth) {
+            $auth->loadMissing(['roles.permissions']);
+        }
+
         $authData = [
             'isAuthenticated' => !! $auth,
             'isGuest' => ! $auth,
-            'user' => $auth ? [
-                'id' => $auth->id,
-                'name' => $auth->name,
-                'email' => $auth->email,
-                'avatar' => $auth->avatar,
-                'avatar_url' => $auth->avatar_url ?? null,
-                // ✅ FIXED: getRoleNames() returns Collection, convert to array
-                'roles' => $auth->roles->pluck('name')->toArray(),
-                'role' => $auth->roles->first()?->name, // ✅ Primary role for backward compatibility
-                'bio' => $auth->bio,
-                'profession' => $auth->profession,
-                'profile_visibility' => $auth->profile_visibility,
-                'initials' => $auth->initials ?? null,
-                'profile_completeness' => $auth->profile_completeness ?? 0,
-                'email_verified_at' => $auth->email_verified_at,
-                'is_email_verified' => ! is_null($auth->email_verified_at),
-            ] : null,
+            'user' => $auth ? $this->getUserData($auth) : null,
         ];
-
-        // Enrich with statistics and permissions when authenticated.
-        if ($auth) {
-            try {
-                $authData['user']['stats'] = [
-                    'comments_count' => method_exists($auth, 'comments') ? $auth->comments()->count() : 0,
-                    'saved_posts_count' => method_exists($auth, 'savedPosts') ? $auth->savedPosts()->count() : 0,
-                    'following_count' => method_exists($auth, 'following') ? $auth->following()->count() : 0,
-                    'followers_count' => method_exists($auth, 'followers') ? $auth->followers()->count() : 0,
-                ];
-
-                // Append permissions for role-based accounts.
-                if (method_exists($auth, 'roles') && $auth->roles()->exists()) {
-                    $permissions = $auth->roles()
-                        ->with('permissions')
-                        ->get()
-                        ->flatMap(function ($role) {
-                            return $role->permissions->map(function ($permission) {
-                                return [
-                                    'id' => $permission->id,
-                                    'name' => $permission->name,
-                                    'module' => $permission->module,
-                                    'action' => $permission->action,
-                                    'display_name' => $permission->display_name,
-                                ];
-                            });
-                        })
-                        ->unique('name')
-                        ->values()
-                        ->toArray();
-
-                    $authData['user']['permissions'] = $permissions;
-
-                    // Include the assigned roles.
-                    $authData['user']['roles'] = $auth->roles()->get()->map(function ($role) {
-                        return [
-                            'id' => $role->id,
-                            'name' => $role->name,
-                            'display_name' => $role->display_name,
-                            'color' => $role->color,
-                            'level' => $role->level,
-                        ];
-                    })->toArray();
-                }
-            } catch (\Exception $e) {
-                // Default statistics when enrichment fails.
-                $authData['user']['stats'] = [
-                    'comments_count' => 0,
-                    'saved_posts_count' => 0,
-                    'following_count' => 0,
-                    'followers_count' => 0,
-                ];
-            }
-        }
 
         // Get impersonation context
         $impersonationService = app(ImpersonationService::class);
@@ -177,50 +114,143 @@ class HandleInertiaRequests extends Middleware
                 'user_has_2fa' => $auth ? !is_null($auth->two_factor_secret) : false,
             ],
             'impersonation' => $impersonationContext,
+            'version' => VersionHelper::toArray(),
         ];
     }
 
     /**
+     * Get user data with caching to avoid repeated queries.
+     *
+     * @param \App\Models\User $auth
+     * @return array
+     */
+    protected function getUserData($auth): array
+    {
+        // ⚡ PERFORMANCE: Cache user data for 5 minutes to avoid repeated queries
+        $cacheKey = 'user_data_' . $auth->id . '_' . $auth->updated_at->timestamp;
+
+        return \Cache::remember($cacheKey, 300, function () use ($auth) {
+            $userData = [
+                'id' => $auth->id,
+                'name' => $auth->name,
+                'email' => $auth->email,
+                'avatar' => $auth->avatar,
+                'avatar_url' => $auth->avatar_url ?? null,
+                'bio' => $auth->bio,
+                'profession' => $auth->profession,
+                'profile_visibility' => $auth->profile_visibility,
+                'initials' => $auth->initials ?? null,
+                'profile_completeness' => $auth->profile_completeness ?? 0,
+                'email_verified_at' => $auth->email_verified_at,
+                'is_email_verified' => ! is_null($auth->email_verified_at),
+            ];
+
+            // ⚡ PERFORMANCE: Get roles from eager-loaded relationship
+            $rolesCollection = $auth->roles;
+            if ($rolesCollection->isNotEmpty()) {
+                $userData['roles'] = $rolesCollection->map(function ($role) {
+                    return [
+                        'id' => $role->id,
+                        'name' => $role->name,
+                        'display_name' => $role->display_name,
+                        'color' => $role->color,
+                        'level' => $role->level,
+                    ];
+                })->toArray();
+
+                $userData['role'] = $rolesCollection->first()->name;
+
+                // ⚡ PERFORMANCE: Get permissions from eager-loaded relationship
+                $userData['permissions'] = $rolesCollection
+                    ->flatMap(function ($role) {
+                        return $role->permissions->map(function ($permission) {
+                            return [
+                                'id' => $permission->id,
+                                'name' => $permission->name,
+                                'module' => $permission->module,
+                                'action' => $permission->action,
+                                'display_name' => $permission->display_name,
+                            ];
+                        });
+                    })
+                    ->unique('name')
+                    ->values()
+                    ->toArray();
+            } elseif ($auth->role) {
+                // ✅ FALLBACK: If no roles in relationship but has role field
+                $userData['roles'] = [[
+                    'name' => $auth->role,
+                    'display_name' => ucfirst($auth->role),
+                ]];
+                $userData['role'] = $auth->role;
+            } else {
+                $userData['roles'] = [];
+                $userData['role'] = null;
+            }
+
+            // ⚡ PERFORMANCE: Use withCount() instead of count() queries
+            try {
+                $auth->loadCount(['comments', 'savedPosts', 'following', 'followers']);
+
+                $userData['stats'] = [
+                    'comments_count' => $auth->comments_count ?? 0,
+                    'saved_posts_count' => $auth->saved_posts_count ?? 0,
+                    'following_count' => $auth->following_count ?? 0,
+                    'followers_count' => $auth->followers_count ?? 0,
+                ];
+            } catch (\Exception $e) {
+                $userData['stats'] = [
+                    'comments_count' => 0,
+                    'saved_posts_count' => 0,
+                    'following_count' => 0,
+                    'followers_count' => 0,
+                ];
+            }
+
+            return $userData;
+        });
+    }
+
+    /**
      * Get public settings to share with frontend.
+     *
+     * ⚡ PERFORMANCE: Load all settings at once instead of 30+ individual queries
      */
     protected function getPublicSettings(): array
     {
         try {
-            return [
-                // General Settings
-                'site_name' => AdminSetting::getCachedValue('site_name', config('app.name'), 3600),
-                'site_tagline' => AdminSetting::getCachedValue('site_tagline', '', 3600),
-                'site_logo' => AdminSetting::getCachedValue('site_logo', null, 3600),
-                'site_favicon' => AdminSetting::getCachedValue('site_favicon', null, 3600),
-                'timezone' => AdminSetting::getCachedValue('timezone', 'UTC', 3600),
-                'date_format' => AdminSetting::getCachedValue('date_format', 'Y-m-d', 3600),
-                'time_format' => AdminSetting::getCachedValue('time_format', 'H:i', 3600),
-                'locale' => AdminSetting::getCachedValue('locale', 'es', 3600),
+            // ⚡ PERFORMANCE: Get all settings with a single query
+            $settings = AdminSetting::getAllCached(3600);
 
-                // SEO Settings
-                'seo_title' => AdminSetting::getCachedValue('seo_title', '', 3600),
-                'seo_description' => AdminSetting::getCachedValue('seo_description', '', 3600),
-                'seo_keywords' => AdminSetting::getCachedValue('seo_keywords', '', 3600),
-                'og_image' => AdminSetting::getCachedValue('og_image', null, 3600),
-
-                // Company Information
-                'company_name' => AdminSetting::getCachedValue('company_name', '', 3600),
-                'company_phone' => AdminSetting::getCachedValue('company_phone', '', 3600),
-                'company_email' => AdminSetting::getCachedValue('company_email', '', 3600),
-                'company_address' => AdminSetting::getCachedValue('company_address', '', 3600),
-
-                // Social Media
-                'social_facebook' => AdminSetting::getCachedValue('social_facebook', '', 3600),
-                'social_twitter' => AdminSetting::getCachedValue('social_twitter', '', 3600),
-                'social_instagram' => AdminSetting::getCachedValue('social_instagram', '', 3600),
-                'social_linkedin' => AdminSetting::getCachedValue('social_linkedin', '', 3600),
-                'social_youtube' => AdminSetting::getCachedValue('social_youtube', '', 3600),
-
-                // Blog Settings
-                'blog_enabled' => AdminSetting::getCachedValue('blog_enabled', true, 300),
-                'blog_posts_per_page' => AdminSetting::getCachedValue('blog_posts_per_page', 12, 300),
-                'blog_allow_comments' => AdminSetting::getCachedValue('blog_allow_comments', true, 300),
+            $defaults = [
+                'site_name' => config('app.name'),
+                'site_tagline' => '',
+                'site_logo' => null,
+                'site_favicon' => null,
+                'timezone' => 'UTC',
+                'date_format' => 'Y-m-d',
+                'time_format' => 'H:i',
+                'locale' => 'es',
+                'seo_title' => '',
+                'seo_description' => '',
+                'seo_keywords' => '',
+                'og_image' => null,
+                'company_name' => '',
+                'company_phone' => '',
+                'company_email' => '',
+                'company_address' => '',
+                'social_facebook' => '',
+                'social_twitter' => '',
+                'social_instagram' => '',
+                'social_linkedin' => '',
+                'social_youtube' => '',
+                'blog_enabled' => true,
+                'blog_posts_per_page' => 12,
+                'blog_allow_comments' => true,
             ];
+
+            // Merge settings with defaults
+            return array_merge($defaults, array_intersect_key($settings, $defaults));
         } catch (\Exception $e) {
             // Return defaults if settings table doesn't exist yet
             return [

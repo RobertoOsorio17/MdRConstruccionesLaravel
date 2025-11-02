@@ -18,14 +18,114 @@ class NewsletterExport implements FromCollection, WithHeadings, WithMapping, Wit
 {
     protected $filters;
 
+
+    
+
+
+    
+
+    
+
+    
+
+    /**
+
+
+    
+
+    
+
+    
+
+     * Handle __construct.
+
+
+    
+
+    
+
+    
+
+     *
+
+
+    
+
+    
+
+    
+
+     * @param array $filters The filters.
+
+
+    
+
+    
+
+    
+
+     * @return void
+
+
+    
+
+    
+
+    
+
+     */
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
     public function __construct(array $filters = [])
     {
         $this->filters = $filters;
     }
 
+    
+    
+    
+    
     /**
-     * Get collection to export
+
+    
+    
+    
+     * Handle collection.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function collection()
     {
         $query = Newsletter::query();
@@ -48,9 +148,38 @@ class NewsletterExport implements FromCollection, WithHeadings, WithMapping, Wit
         return $query->orderByDesc('created_at')->get();
     }
 
+    
+    
+    
+    
     /**
-     * Define headings
+
+    
+    
+    
+     * Handle headings.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return array
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function headings(): array
     {
         return [
@@ -66,9 +195,43 @@ class NewsletterExport implements FromCollection, WithHeadings, WithMapping, Wit
         ];
     }
 
+    
+    
+    
+    
     /**
-     * Map data for each row
+
+    
+    
+    
+     * Handle map.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param mixed $newsletter The newsletter.
+
+    
+    
+    
+     * @return array
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function map($newsletter): array
     {
         $status = 'Active';
@@ -91,9 +254,43 @@ class NewsletterExport implements FromCollection, WithHeadings, WithMapping, Wit
         ];
     }
 
+    
+    
+    
+    
     /**
-     * Apply styles
+
+    
+    
+    
+     * Handle styles.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Worksheet $sheet The sheet.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function styles(Worksheet $sheet)
     {
         return [

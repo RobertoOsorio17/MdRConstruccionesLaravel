@@ -160,6 +160,19 @@ class RateLimitServiceProvider extends ServiceProvider
                     ], 429, $headers);
                 });
         });
+
+        // ✅ Ban appeals (prevent abuse of appeal system)
+        RateLimiter::for('ban-appeals', function (Request $request) {
+            return Limit::perHour(3)
+                ->by($request->user()?->id ?: $request->ip())
+                ->response(function (Request $request, array $headers) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Demasiados intentos de apelación. Solo puedes enviar 3 apelaciones por hora.',
+                        'error' => 'RATE_LIMIT_EXCEEDED'
+                    ], 429, $headers);
+                });
+        });
     }
 }
 

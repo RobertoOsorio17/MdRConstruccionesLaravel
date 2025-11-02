@@ -19,19 +19,43 @@ use Illuminate\Support\Str;
  */
 class SearchController extends Controller
 {
+    
+    
+    
+    
     /**
-     * Display global search results.
+
+    
+    
+    
+     * Display a listing of the resource.
+
+    
+    
+    
      *
-     * Flow:
-     * - Validate filter input (type/category/sort/paging).
-     * - Short‑circuit on tiny queries (<2 chars) with suggestions only.
-     * - Persist history for authenticated users.
-     * - Cache aggregated results for 5 minutes.
-     * - Render posts, services, projects, totals, suggestions, categories, and recent searches.
-     *
-     * @param Request $request The current HTTP request instance.
-     * @return \Inertia\Response Inertia response with aggregated results and context.
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function index(Request $request)
     {
         // 1) Validate input.
@@ -89,20 +113,58 @@ class SearchController extends Controller
         ]);
     }
 
+    
+    
+    
+    
     /**
-     * Perform the actual search across models.
+
+    
+    
+    
+     * Handle perform search.
+
+    
+    
+    
      *
-     * Strategy per type:
-     * - Posts: published scope, title/excerpt/content/SEO fields, optional category filter, relevance/date/views sorting.
-     * - Services: title/excerpt/description, optional category filter, basic relevance/date sorting.
-     * - Projects: title/summary/body/location, date/relevance sorting.
-     *
-     * @param string $query The user-provided search query.
-     * @param string $type The content type to search: all, posts, services, or projects.
-     * @param int|null $categoryId Optional category filter for posts or services.
-     * @param string $sort Sorting strategy: relevance, date, or views.
-     * @return array An associative array containing results and totals.
+
+    
+    
+    
+     * @param string $query The query.
+
+    
+    
+    
+     * @param string $type The type.
+
+    
+    
+    
+     * @param ?int $categoryId The categoryId.
+
+    
+    
+    
+     * @param string $sort The sort.
+
+    
+    
+    
+     * @return array
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     protected function performSearch(string $query, string $type, ?int $categoryId, string $sort): array
     {
         $results = [
@@ -132,14 +194,53 @@ class SearchController extends Controller
         return $results;
     }
 
+    
+    
+    
+    
     /**
-     * Search in posts.
+
+    
+    
+    
+     * Handle search posts.
+
+    
+    
+    
      *
-     * @param string $query The search keyword.
-     * @param int|null $categoryId Optional category to filter posts.
-     * @param string $sort Sorting method to apply.
-     * @return \Illuminate\Support\Collection A collection of transformed post results.
+
+    
+    
+    
+     * @param string $query The query.
+
+    
+    
+    
+     * @param ?int $categoryId The categoryId.
+
+    
+    
+    
+     * @param string $sort The sort.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     protected function searchPosts(string $query, ?int $categoryId, string $sort)
     {
         $likePattern = $this->buildLikePattern($query);
@@ -192,14 +293,53 @@ class SearchController extends Controller
         });
     }
 
+    
+    
+    
+    
     /**
-     * Search in services.
+
+    
+    
+    
+     * Handle search services.
+
+    
+    
+    
      *
-     * @param string $query The search keyword.
-     * @param int|null $categoryId Optional service category filter.
-     * @param string $sort Sorting method to apply.
-     * @return \Illuminate\Support\Collection A collection of transformed service results.
+
+    
+    
+    
+     * @param string $query The query.
+
+    
+    
+    
+     * @param ?int $categoryId The categoryId.
+
+    
+    
+    
+     * @param string $sort The sort.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     protected function searchServices(string $query, ?int $categoryId, string $sort)
     {
         $likePattern = $this->buildLikePattern($query);
@@ -240,13 +380,48 @@ class SearchController extends Controller
 
 
 
+    
+    
+    
+    
     /**
-     * Search in projects.
+
+    
+    
+    
+     * Handle search projects.
+
+    
+    
+    
      *
-     * @param string $query The search keyword.
-     * @param string $sort Sorting method to apply.
-     * @return \Illuminate\Support\Collection A collection of transformed project results.
+
+    
+    
+    
+     * @param string $query The query.
+
+    
+    
+    
+     * @param string $sort The sort.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     protected function searchProjects(string $query, string $sort)
     {
         $likePattern = $this->buildLikePattern($query);
@@ -284,12 +459,43 @@ class SearchController extends Controller
 
 
 
+    
+    
+    
+    
     /**
-     * Get search suggestions based on query.
+
+    
+    
+    
+     * Get suggestions.
+
+    
+    
+    
      *
-     * @param string $query The partial query string.
-     * @return array A list of unique suggestion strings.
+
+    
+    
+    
+     * @param string $query The query.
+
+    
+    
+    
+     * @return array
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     protected function getSuggestions(string $query): array
     {
         if (strlen($query) < 2) {
@@ -319,12 +525,43 @@ class SearchController extends Controller
         });
     }
 
+    
+    
+    
+    
     /**
-     * Save search history for authenticated users.
+
+    
+    
+    
+     * Handle save search history.
+
+    
+    
+    
      *
-     * @param string $query The search query to persist.
+
+    
+    
+    
+     * @param string $query The query.
+
+    
+    
+    
      * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     protected function saveSearchHistory(string $query): void
     {
         try {
@@ -343,11 +580,38 @@ class SearchController extends Controller
         }
     }
 
+    
+    
+    
+    
     /**
-     * Get recent searches for authenticated user.
+
+    
+    
+    
+     * Get recent searches.
+
+    
+    
+    
      *
-     * @return array A list of recent, unique search strings.
+
+    
+    
+    
+     * @return array
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     protected function getRecentSearches(): array
     {
         if (!Auth::check()) {
@@ -363,10 +627,179 @@ class SearchController extends Controller
             ->toArray();
     }
 
+
+    
+
+
+    
+
+    
+
+    
+
+    /**
+
+
+    
+
+    
+
+    
+
+     * Build cache key.
+
+
+    
+
+    
+
+    
+
+     *
+
+
+    
+
+    
+
+    
+
+     * @param string $query The query.
+
+
+    
+
+    
+
+    
+
+     * @param string $type The type.
+
+
+    
+
+    
+
+    
+
+     * @param ?int $categoryId The categoryId.
+
+
+    
+
+    
+
+    
+
+     * @param string $sort The sort.
+
+
+    
+
+    
+
+    
+
+     * @return string
+
+
+    
+
+    
+
+    
+
+     */
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
     protected function buildCacheKey(string $query, string $type, ?int $categoryId, string $sort): string
     {
         return sprintf('search:%s:%s:%s:%s', hash('sha256', $query), $type, $categoryId ?? 'none', $sort);
     }
+
+
+    
+
+
+    
+
+    
+
+    
+
+    /**
+
+
+    
+
+    
+
+    
+
+     * Handle sanitize search term.
+
+
+    
+
+    
+
+    
+
+     *
+
+
+    
+
+    
+
+    
+
+     * @param ?string $term The term.
+
+
+    
+
+    
+
+    
+
+     * @return string
+
+
+    
+
+    
+
+    
+
+     */
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
 
     protected function sanitizeSearchTerm(?string $term): string
     {
@@ -380,6 +813,77 @@ class SearchController extends Controller
         return $sanitized ? trim($sanitized) : '';
     }
 
+
+    
+
+
+    
+
+    
+
+    
+
+    /**
+
+
+    
+
+    
+
+    
+
+     * Build like pattern.
+
+
+    
+
+    
+
+    
+
+     *
+
+
+    
+
+    
+
+    
+
+     * @param string $term The term.
+
+
+    
+
+    
+
+    
+
+     * @return string
+
+
+    
+
+    
+
+    
+
+     */
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
     protected function buildLikePattern(string $term): string
     {
         $escaped = addcslashes($term, '\%_\\');
@@ -388,13 +892,48 @@ class SearchController extends Controller
     }
 
 
+    
+    
+    
+    
     /**
-     * Highlight search query in text.
+
+    
+    
+    
+     * Handle highlight text.
+
+    
+    
+    
      *
-     * @param string $text The source text to trim around the match.
-     * @param string $query The query to locate.
-     * @return string A trimmed excerpt containing the match when found.
+
+    
+    
+    
+     * @param string $text The text.
+
+    
+    
+    
+     * @param string $query The query.
+
+    
+    
+    
+     * @return string
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     protected function highlightText(string $text, string $query): string
     {
         if (empty($query)) {

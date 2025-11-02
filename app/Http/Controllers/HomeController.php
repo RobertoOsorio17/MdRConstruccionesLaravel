@@ -18,11 +18,38 @@ use Inertia\Inertia;
  */
 class HomeController extends Controller
 {
+    
+    
+    
+    
     /**
-     * Display the home page with featured services, projects, and statistics.
+
+    
+    
+    
+     * Display a listing of the resource.
+
+    
+    
+    
      *
-     * @return \Inertia\Response Inertia response for the public home page.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function index()
     {
         // Retrieve featured services to highlight on the landing page.

@@ -16,12 +16,43 @@ use Inertia\Inertia;
  */
 class ProjectController extends Controller
 {
+    
+    
+    
+    
     /**
-     * Display a listing of projects.
+
+    
+    
+    
+     * Display a listing of the resource.
+
+    
+    
+    
      *
-     * @param Request $request The current HTTP request instance with optional filters.
-     * @return \Inertia\Response Inertia response with projects and locations.
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function index(Request $request)
     {
         $query = Project::query();
@@ -67,12 +98,43 @@ class ProjectController extends Controller
         ]);
     }
 
+    
+    
+    
+    
     /**
-     * Display the specified project.
+
+    
+    
+    
+     * Display the specified resource.
+
+    
+    
+    
      *
-     * @param string $slug The project slug.
-     * @return \Inertia\Response Inertia response with project and related items.
+
+    
+    
+    
+     * @param mixed $slug The slug.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function show($slug)
     {
         $project = Project::where('slug', $slug)->firstOrFail();

@@ -24,11 +24,38 @@ use Inertia\Inertia;
  */
 class AnalyticsController extends Controller
 {
+    
+    
+    
+    
     /**
-     * Display the primary analytics dashboard for administrators.
+
+    
+    
+    
+     * Display a listing of the resource.
+
+    
+    
+    
      *
-     * @return \Inertia\Response Inertia response for the analytics overview page.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function index()
     {
         return Inertia::render('Admin/Analytics/Index', [
@@ -37,15 +64,48 @@ class AnalyticsController extends Controller
         ]);
     }
 
+    
+    
+    
+    
     /**
-     * Retrieve user analytics data grouped by the requested period.
+
+    
+    
+    
+     * Get user analytics.
+
+    
+    
+    
      *
-     * @param Request $request The current HTTP request instance.
-     * @return array Cached analytics payload containing user metrics.
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function getUserAnalytics(Request $request)
     {
-        // Fix: Validate and sanitize period to prevent TypeError in subDays().
+        /**
+         * Fix: Validate and sanitize period to prevent TypeError in subDays().
+         */
         $period = max(1, min(365, (int)$request->get('period', 30)));
         $startDate = Carbon::now()->subDays($period);
 
@@ -59,15 +119,48 @@ class AnalyticsController extends Controller
         });
     }
 
+    
+    
+    
+    
     /**
-     * Retrieve content analytics data such as posts and comments.
+
+    
+    
+    
+     * Get content analytics.
+
+    
+    
+    
      *
-     * @param Request $request The current HTTP request instance.
-     * @return array Cached analytics payload describing content performance.
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function getContentAnalytics(Request $request)
     {
-        // Fix: Validate and sanitize period.
+        /**
+         * Fix: Validate and sanitize period.
+         */
         $period = max(1, min(365, (int)$request->get('period', 30)));
         $startDate = Carbon::now()->subDays($period);
 
@@ -81,15 +174,48 @@ class AnalyticsController extends Controller
         });
     }
 
+    
+    
+    
+    
     /**
-     * Retrieve service analytics including performance and conversions.
+
+    
+    
+    
+     * Get service analytics.
+
+    
+    
+    
      *
-     * @param Request $request The current HTTP request instance.
-     * @return array Cached analytics payload describing service engagement.
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function getServiceAnalytics(Request $request)
     {
-        // Fix: Validate and sanitize period.
+        /**
+         * Fix: Validate and sanitize period.
+         */
         $period = max(1, min(365, (int)$request->get('period', 30)));
         $startDate = Carbon::now()->subDays($period);
 
@@ -103,15 +229,48 @@ class AnalyticsController extends Controller
         });
     }
 
+    
+    
+    
+    
     /**
-     * Retrieve project analytics metrics for reporting.
+
+    
+    
+    
+     * Get project analytics.
+
+    
+    
+    
      *
-     * @param Request $request The current HTTP request instance.
-     * @return array Cached analytics payload describing project performance.
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function getProjectAnalytics(Request $request)
     {
-        // Fix: Validate and sanitize period.
+        /**
+         * Fix: Validate and sanitize period.
+         */
         $period = max(1, min(365, (int)$request->get('period', 30)));
         $startDate = Carbon::now()->subDays($period);
 
@@ -125,12 +284,43 @@ class AnalyticsController extends Controller
         });
     }
 
+    
+    
+    
+    
     /**
-     * Retrieve system health and performance analytics.
+
+    
+    
+    
+     * Get system analytics.
+
+    
+    
+    
      *
-     * @param Request $request The current HTTP request instance.
-     * @return array Analytics payload describing system health indicators.
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function getSystemAnalytics(Request $request)
     {
         return [
@@ -141,14 +331,44 @@ class AnalyticsController extends Controller
         ];
     }
 
-    // Private helper methods.
 
+    
+    
+    
+    
     /**
-     * Build a date-indexed collection of user registrations.
+
+    
+    
+    
+     * Get user registrations.
+
+    
+    
+    
      *
-     * @param  Carbon  $startDate
-     * @return \Illuminate\Support\Collection
+
+    
+    
+    
+     * @param mixed $startDate The startDate.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function getUserRegistrations($startDate)
     {
         return User::where('created_at', '>=', $startDate)
@@ -164,12 +384,43 @@ class AnalyticsController extends Controller
             });
     }
 
+    
+    
+    
+    
     /**
-     * Summarize user activity metrics for the given window.
+
+    
+    
+    
+     * Get user activity.
+
+    
+    
+    
      *
-     * @param  Carbon  $startDate
-     * @return array
+
+    
+    
+    
+     * @param mixed $startDate The startDate.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function getUserActivity($startDate)
     {
         return [
@@ -182,11 +433,38 @@ class AnalyticsController extends Controller
         ];
     }
 
+    
+    
+    
+    
     /**
-     * Aggregate user demographic metrics such as roles and verification.
+
+    
+    
+    
+     * Get user demographics.
+
+    
+    
+    
      *
-     * @return array
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function getUserDemographics()
     {
         return [
@@ -198,12 +476,43 @@ class AnalyticsController extends Controller
         ];
     }
 
+    
+    
+    
+    
     /**
-     * Calculate per-user engagement statistics for comments and favorites.
+
+    
+    
+    
+     * Get user engagement.
+
+    
+    
+    
      *
-     * @param  Carbon  $startDate
-     * @return array
+
+    
+    
+    
+     * @param mixed $startDate The startDate.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function getUserEngagement($startDate)
     {
         $commentsPerUser = Comment::where('created_at', '>=', $startDate)
@@ -223,12 +532,43 @@ class AnalyticsController extends Controller
         ];
     }
 
+    
+    
+    
+    
     /**
-     * Compile post performance metrics for the requested period.
+
+    
+    
+    
+     * Get post analytics.
+
+    
+    
+    
      *
-     * @param  Carbon  $startDate
-     * @return array
+
+    
+    
+    
+     * @param mixed $startDate The startDate.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function getPostAnalytics($startDate)
     {
         return [
@@ -246,12 +586,43 @@ class AnalyticsController extends Controller
         ];
     }
 
+    
+    
+    
+    
     /**
-     * Compile comment activity metrics for the requested period.
+
+    
+    
+    
+     * Get comment analytics.
+
+    
+    
+    
      *
-     * @param  Carbon  $startDate
-     * @return array
+
+    
+    
+    
+     * @param mixed $startDate The startDate.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function getCommentAnalytics($startDate)
     {
         return [
@@ -269,12 +640,43 @@ class AnalyticsController extends Controller
         ];
     }
 
+    
+    
+    
+    
     /**
-     * Summarize category performance metrics.
+
+    
+    
+    
+     * Get category analytics.
+
+    
+    
+    
      *
-     * @param  Carbon  $startDate
-     * @return \Illuminate\Support\Collection
+
+    
+    
+    
+     * @param mixed $startDate The startDate.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function getCategoryAnalytics($startDate)
     {
         return Category::withCount(['posts' => function ($query) use ($startDate) {
@@ -291,12 +693,43 @@ class AnalyticsController extends Controller
             });
     }
 
+    
+    
+    
+    
     /**
-     * Calculate average engagement metrics for content.
+
+    
+    
+    
+     * Get content engagement.
+
+    
+    
+    
      *
-     * @param  Carbon  $startDate
-     * @return array
+
+    
+    
+    
+     * @param mixed $startDate The startDate.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function getContentEngagement($startDate)
     {
         return [
@@ -312,12 +745,43 @@ class AnalyticsController extends Controller
         ];
     }
 
+    
+    
+    
+    
     /**
-     * Summarize service performance metrics for the period.
+
+    
+    
+    
+     * Get service performance.
+
+    
+    
+    
      *
-     * @param  Carbon  $startDate
-     * @return \Illuminate\Database\Eloquent\Model|object|null
+
+    
+    
+    
+     * @param mixed $startDate The startDate.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function getServicePerformance($startDate)
     {
         return Service::where('created_at', '>=', $startDate)
@@ -329,12 +793,43 @@ class AnalyticsController extends Controller
             ->first();
     }
 
+    
+    
+    
+    
     /**
-     * Retrieve the most favorited services in the period.
+
+    
+    
+    
+     * Get service favorites.
+
+    
+    
+    
      *
-     * @param  Carbon  $startDate
-     * @return \Illuminate\Support\Collection
+
+    
+    
+    
+     * @param mixed $startDate The startDate.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function getServiceFavorites($startDate)
     {
         return ServiceFavorite::where('created_at', '>=', $startDate)
@@ -346,12 +841,43 @@ class AnalyticsController extends Controller
             ->get();
     }
 
+    
+    
+    
+    
     /**
-     * Build a time series of service views for the period.
+
+    
+    
+    
+     * Get service views.
+
+    
+    
+    
      *
-     * @param  Carbon  $startDate
-     * @return \Illuminate\Support\Collection
+
+    
+    
+    
+     * @param mixed $startDate The startDate.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function getServiceViews($startDate)
     {
         return Service::where('updated_at', '>=', $startDate)
@@ -361,12 +887,43 @@ class AnalyticsController extends Controller
             ->get();
     }
 
+    
+    
+    
+    
     /**
-     * Calculate service conversion metrics based on favorites versus views.
+
+    
+    
+    
+     * Get service conversion.
+
+    
+    
+    
      *
-     * @param  Carbon  $startDate
-     * @return array
+
+    
+    
+    
+     * @param mixed $startDate The startDate.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function getServiceConversion($startDate)
     {
         $totalViews = Service::sum('views_count');
@@ -379,12 +936,43 @@ class AnalyticsController extends Controller
         ];
     }
 
+    
+    
+    
+    
     /**
-     * Build completion trend data for projects.
+
+    
+    
+    
+     * Get project completion trends.
+
+    
+    
+    
      *
-     * @param  Carbon  $startDate
-     * @return \Illuminate\Support\Collection
+
+    
+    
+    
+     * @param mixed $startDate The startDate.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function getProjectCompletionTrends($startDate)
     {
         return Project::where('end_date', '>=', $startDate)
@@ -395,11 +983,38 @@ class AnalyticsController extends Controller
             ->get();
     }
 
+    
+    
+    
+    
     /**
-     * Summarize project counts by status.
+
+    
+    
+    
+     * Get project status distribution.
+
+    
+    
+    
      *
-     * @return \Illuminate\Support\Collection
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function getProjectStatusDistribution()
     {
         return Project::selectRaw('status, COUNT(*) as count')
@@ -410,12 +1025,43 @@ class AnalyticsController extends Controller
             });
     }
 
+    
+    
+    
+    
     /**
-     * Calculate project timeline averages for the requested window.
+
+    
+    
+    
+     * Get project timeline analysis.
+
+    
+    
+    
      *
-     * @param  Carbon  $startDate
-     * @return \Illuminate\Database\Eloquent\Model|object|null
+
+    
+    
+    
+     * @param mixed $startDate The startDate.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function getProjectTimelineAnalysis($startDate)
     {
         return Project::where('created_at', '>=', $startDate)
@@ -426,12 +1072,43 @@ class AnalyticsController extends Controller
             ->first();
     }
 
+    
+    
+    
+    
     /**
-     * Determine high-level project performance metrics.
+
+    
+    
+    
+     * Get project performance metrics.
+
+    
+    
+    
      *
-     * @param  Carbon  $startDate
-     * @return array
+
+    
+    
+    
+     * @param mixed $startDate The startDate.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function getProjectPerformanceMetrics($startDate)
     {
         $onTime = Project::where('status', 'completed')
@@ -450,15 +1127,48 @@ class AnalyticsController extends Controller
         ];
     }
 
+    
+    
+    
+    
     /**
-     * Calculate a simple retention rate for new users.
+
+    
+    
+    
+     * Calculate retention rate.
+
+    
+    
+    
      *
-     * @param  Carbon  $startDate
-     * @return float
+
+    
+    
+    
+     * @param mixed $startDate The startDate.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function calculateRetentionRate($startDate)
     {
-        // Simplified retention calculation.
+        /**
+         * Simplified retention calculation.
+         */
         $newUsers = User::where('created_at', '>=', $startDate)->count();
         $activeUsers = User::where('created_at', '>=', $startDate)
             ->where('last_login_at', '>=', $startDate)
@@ -467,11 +1177,38 @@ class AnalyticsController extends Controller
         return $newUsers > 0 ? ($activeUsers / $newUsers) * 100 : 0;
     }
 
+    
+    
+    
+    
     /**
-     * Provide synthesized system performance figures.
+
+    
+    
+    
+     * Get system performance.
+
+    
+    
+    
      *
-     * @return array
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function getSystemPerformance()
     {
         return [
@@ -481,11 +1218,38 @@ class AnalyticsController extends Controller
         ];
     }
 
+    
+    
+    
+    
     /**
-     * Provide synthesized system error statistics.
+
+    
+    
+    
+     * Get system errors.
+
+    
+    
+    
      *
-     * @return array
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function getSystemErrors()
     {
         return [
@@ -495,11 +1259,38 @@ class AnalyticsController extends Controller
         ];
     }
 
+    
+    
+    
+    
     /**
-     * Provide synthesized system resource utilization metrics.
+
+    
+    
+    
+     * Get system usage.
+
+    
+    
+    
      *
-     * @return array
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function getSystemUsage()
     {
         return [
@@ -509,11 +1300,38 @@ class AnalyticsController extends Controller
         ];
     }
 
+    
+    
+    
+    
     /**
-     * Provide a summarized system health snapshot.
+
+    
+    
+    
+     * Get system health.
+
+    
+    
+    
      *
-     * @return array
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function getSystemHealth()
     {
         return [

@@ -20,12 +20,43 @@ class ClearRelatedCache implements ShouldQueue
 {
     use InteractsWithQueue;
 
+    
+    
+    
+    
     /**
-     * Handle SettingChanged event.
+
+    
+    
+    
+     * Handle handle.
+
+    
+    
+    
      *
-     * @param \App\Events\SettingChanged $event
+
+    
+    
+    
+     * @param SettingChanged|MaintenanceModeToggled $event The event.
+
+    
+    
+    
      * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function handle(SettingChanged|MaintenanceModeToggled $event): void
     {
         try {
@@ -41,12 +72,43 @@ class ClearRelatedCache implements ShouldQueue
         }
     }
 
+    
+    
+    
+    
     /**
-     * Handle setting changed event.
+
+    
+    
+    
+     * Handle setting changed.
+
+    
+    
+    
      *
-     * @param \App\Events\SettingChanged $event
+
+    
+    
+    
+     * @param SettingChanged $event The event.
+
+    
+    
+    
      * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function handleSettingChanged(SettingChanged $event): void
     {
         $settingKey = $event->setting->key;
@@ -79,12 +141,43 @@ class ClearRelatedCache implements ShouldQueue
         ]);
     }
 
+    
+    
+    
+    
     /**
-     * Handle maintenance mode toggled event.
+
+    
+    
+    
+     * Handle maintenance mode toggled.
+
+    
+    
+    
      *
-     * @param \App\Events\MaintenanceModeToggled $event
+
+    
+    
+    
+     * @param MaintenanceModeToggled $event The event.
+
+    
+    
+    
      * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function handleMaintenanceModeToggled(MaintenanceModeToggled $event): void
     {
         // Clear all caches when maintenance mode changes
@@ -101,33 +194,114 @@ class ClearRelatedCache implements ShouldQueue
         ]);
     }
 
+    
+    
+    
+    
     /**
-     * Clear view cache.
+
+    
+    
+    
+     * Handle clear view cache.
+
+    
+    
+    
      *
+
+    
+    
+    
      * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function clearViewCache(): void
     {
         Artisan::call('view:clear');
         Cache::tags(['views'])->flush();
     }
 
+    
+    
+    
+    
     /**
-     * Clear SEO-related cache.
+
+    
+    
+    
+     * Handle clear seo cache.
+
+    
+    
+    
      *
+
+    
+    
+    
      * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function clearSeoCache(): void
     {
         Cache::tags(['seo', 'sitemap', 'meta'])->flush();
         Cache::forget('sitemap');
     }
 
+    
+    
+    
+    
     /**
-     * Clear performance-related cache.
+
+    
+    
+    
+     * Handle clear performance cache.
+
+    
+    
+    
      *
+
+    
+    
+    
      * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function clearPerformanceCache(): void
     {
         if (config('cache.default') === 'file') {
@@ -135,21 +309,75 @@ class ClearRelatedCache implements ShouldQueue
         }
     }
 
+    
+    
+    
+    
     /**
-     * Clear social media cache.
+
+    
+    
+    
+     * Handle clear social cache.
+
+    
+    
+    
      *
+
+    
+    
+    
      * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function clearSocialCache(): void
     {
         Cache::tags(['social'])->flush();
     }
 
+    
+    
+    
+    
     /**
-     * Clear config cache.
+
+    
+    
+    
+     * Handle clear config cache.
+
+    
+    
+    
      *
+
+    
+    
+    
      * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function clearConfigCache(): void
     {
         Artisan::call('config:clear');

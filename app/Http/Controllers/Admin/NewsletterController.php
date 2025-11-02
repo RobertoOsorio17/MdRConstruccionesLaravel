@@ -16,17 +16,106 @@ use App\Exports\NewsletterExport;
  */
 class NewsletterController extends Controller
 {
+    
+    
+    
+    
     /**
-     * Display newsletter subscribers
+
+    
+    
+    
+     * Handle __construct.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
+    public function __construct()
+    {
+        $this->middleware(function ($request, $next) {
+            $user = $request->user();
+
+            /**
+             * Check if user is admin (support both role column and roles relationship).
+             */
+            $isAdmin = $user->role === 'admin' ||
+                       $user->roles->contains('name', 'admin');
+
+            if (!$isAdmin) {
+                abort(403, 'This action is unauthorized. Only administrators can manage newsletters.');
+            }
+
+            return $next($request);
+        });
+    }
+
+    
+    
+    
+    
+    /**
+
+    
+    
+    
+     * Display a listing of the resource.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
+     */
+    
+    
+    
+    
+    
+    
+    
     public function index(Request $request)
     {
-        // ✅ Authorize
+        /**
+         * Authorize.
+         */
         if (!auth()->user()->hasPermission('newsletter.view')) {
             abort(403, 'Unauthorized action.');
         }
 
-        // ✅ Validate filters
+        /**
+         * Validate filters.
+         */
         $validated = $request->validate([
             'status' => 'nullable|in:all,verified,unverified,unsubscribed',
             'search' => 'nullable|string|max:255',
@@ -35,7 +124,9 @@ class NewsletterController extends Controller
 
         $query = Newsletter::query();
 
-        // Apply filters
+        /**
+         * Apply filters.
+         */
         if ($request->filled('status')) {
             switch ($validated['status']) {
                 case 'verified':
@@ -58,7 +149,9 @@ class NewsletterController extends Controller
             });
         }
 
-        // Apply sorting
+        /**
+         * Apply sorting.
+         */
         $sort = $validated['sort'] ?? 'recent';
         switch ($sort) {
             case 'email':
@@ -75,7 +168,9 @@ class NewsletterController extends Controller
 
         $subscribers = $query->paginate(50);
 
-        // Get stats
+        /**
+         * Get stats.
+         */
         $stats = [
             'total' => Newsletter::count(),
             'verified' => Newsletter::verified()->active()->count(),
@@ -91,17 +186,55 @@ class NewsletterController extends Controller
         ]);
     }
 
+    
+    
+    
+    
     /**
-     * Send newsletter campaign
+
+    
+    
+    
+     * Send campaign.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function sendCampaign(Request $request)
     {
-        // ✅ Authorize
+        /**
+         * Authorize.
+         */
         if (!auth()->user()->hasPermission('newsletter.send')) {
             abort(403, 'Unauthorized action.');
         }
 
-        // ✅ Validate
+        /**
+         * Validate.
+         */
         $validated = $request->validate([
             'subject' => 'required|string|max:255|regex:/^[^<>]*$/',
             'content' => 'required|string|min:50',
@@ -110,7 +243,9 @@ class NewsletterController extends Controller
             'preferences.*' => 'string|in:news,projects,services,blog',
         ]);
 
-        // Get recipients
+        /**
+         * Get recipients.
+         */
         $query = Newsletter::active()->verified();
 
         if ($validated['recipients'] === 'preferences' && !empty($validated['preferences'])) {
@@ -127,7 +262,9 @@ class NewsletterController extends Controller
             return back()->withErrors(['recipients' => 'No recipients found matching the criteria.']);
         }
 
-        // Send emails
+        /**
+         * Send emails.
+         */
         $sent = 0;
         $failed = 0;
 
@@ -151,7 +288,9 @@ class NewsletterController extends Controller
             }
         }
 
-        // ✅ Log campaign
+        /**
+         * Log campaign.
+         */
         \Log::info('Newsletter campaign sent', [
             'admin_id' => auth()->id(),
             'subject' => $validated['subject'],
@@ -162,17 +301,55 @@ class NewsletterController extends Controller
         return back()->with('success', "Newsletter sent successfully to {$sent} subscribers. {$failed} failed.");
     }
 
+    
+    
+    
+    
     /**
-     * Export subscribers
+
+    
+    
+    
+     * Handle export.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function export(Request $request)
     {
-        // ✅ Authorize
+        /**
+         * Authorize.
+         */
         if (!auth()->user()->hasPermission('newsletter.export')) {
             abort(403, 'Unauthorized action.');
         }
 
-        // ✅ Validate
+        /**
+         * Validate.
+         */
         $validated = $request->validate([
             'format' => 'required|in:xlsx,csv',
             'status' => 'nullable|in:all,verified,unverified,unsubscribed',
@@ -184,7 +361,9 @@ class NewsletterController extends Controller
 
         $filename = 'newsletter_subscribers_' . now()->format('Y-m-d_His') . '.' . $validated['format'];
 
-        // ✅ Log export
+        /**
+         * Log export.
+         */
         \Log::info('Newsletter subscribers exported', [
             'admin_id' => auth()->id(),
             'format' => $validated['format'],
@@ -194,19 +373,57 @@ class NewsletterController extends Controller
         return Excel::download(new NewsletterExport($filters), $filename);
     }
 
+    
+    
+    
+    
     /**
-     * Delete subscriber
+
+    
+    
+    
+     * Remove the specified resource.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Newsletter $newsletter The newsletter.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function destroy(Newsletter $newsletter)
     {
-        // ✅ Authorize
+        /**
+         * Authorize.
+         */
         if (!auth()->user()->hasPermission('newsletter.delete')) {
             abort(403, 'Unauthorized action.');
         }
 
         $newsletter->delete();
 
-        // ✅ Log deletion
+        /**
+         * Log deletion.
+         */
         \Log::info('Newsletter subscriber deleted', [
             'admin_id' => auth()->id(),
             'email' => $newsletter->email,
@@ -215,17 +432,55 @@ class NewsletterController extends Controller
         return back()->with('success', 'Subscriber deleted successfully.');
     }
 
+    
+    
+    
+    
     /**
-     * Bulk actions
+
+    
+    
+    
+     * Handle bulk action.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function bulkAction(Request $request)
     {
-        // ✅ Authorize
+        /**
+         * Authorize.
+         */
         if (!auth()->user()->hasPermission('newsletter.manage')) {
             abort(403, 'Unauthorized action.');
         }
 
-        // ✅ Validate
+        /**
+         * Validate.
+         */
         $validated = $request->validate([
             'action' => 'required|in:delete,verify,unsubscribe',
             'ids' => 'required|array|min:1',
@@ -258,7 +513,9 @@ class NewsletterController extends Controller
             }
         }
 
-        // ✅ Log bulk action
+        /**
+         * Log bulk action.
+         */
         \Log::info('Newsletter bulk action performed', [
             'admin_id' => auth()->id(),
             'action' => $validated['action'],

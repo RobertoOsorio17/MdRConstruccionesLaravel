@@ -23,17 +23,75 @@ class ServiceFavorite extends Model
         'updated_at' => 'datetime',
     ];
 
+    
+    
+    
+    
     /**
-     * Get the user that owns the favorite.
+
+    
+    
+    
+     * Handle user.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return BelongsTo
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
+    
+    
+    
+    
     /**
-     * Get the service that is favorited.
+
+    
+    
+    
+     * Handle service.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return BelongsTo
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function service(): BelongsTo
     {
         return $this->belongsTo(Service::class);

@@ -139,17 +139,19 @@ class ImpersonationService
             throw new UnauthorizedException('You cannot impersonate yourself.');
         }
 
-        // Check if target has a blocked role
+        // Check if target has a blocked role (cannot impersonate other admins)
         $blockedRoles = config('impersonation.blocked_roles', []);
         foreach ($blockedRoles as $role) {
             if ($target->hasRole($role)) {
-                throw new UnauthorizedException('You cannot impersonate users with administrative roles.');
+                throw new UnauthorizedException('No puedes impersonar a otros administradores. Solo se pueden impersonar usuarios con rol de usuario o editor.');
             }
         }
 
         // Check if target is banned/suspended
         if ($target->isBanned()) {
-            throw new UnauthorizedException('You cannot impersonate suspended users.');
+            $banInfo = $target->currentBan();
+            $banType = $banInfo && $banInfo->is_permanent ? 'permanentemente' : 'temporalmente';
+            throw new UnauthorizedException("No puedes impersonar a usuarios suspendidos. Este usuario está {$banType} suspendido. Debes levantar la suspensión antes de poder impersonarlo.");
         }
 
         // Check if actor has 2FA enabled (if required)
@@ -159,11 +161,18 @@ class ImpersonationService
             }
         }
 
-        // Check concurrent session limit
+        // Check concurrent session limit (global)
         $activeSessions = $this->countActiveSessions();
         $maxSessions = config('impersonation.max_concurrent_sessions', 5);
         if ($activeSessions >= $maxSessions) {
             throw new UnauthorizedException("Maximum concurrent impersonation sessions ({$maxSessions}) reached. Please wait for existing sessions to expire or terminate them manually.");
+        }
+
+        // ✅ SECURITY: Check concurrent session limit per user
+        $activeSessionsPerUser = $this->countActiveSessionsByUser($actor->id);
+        $maxSessionsPerUser = config('impersonation.max_sessions_per_user', 2);
+        if ($activeSessionsPerUser >= $maxSessionsPerUser) {
+            throw new UnauthorizedException("You have reached the maximum number of concurrent impersonation sessions ({$maxSessionsPerUser}). Please terminate an existing session before starting a new one.");
         }
     }
 
@@ -194,6 +203,21 @@ class ImpersonationService
     protected function countActiveSessions(): int
     {
         return ImpersonationSession::active()->count();
+    }
+
+    /**
+     * Count the number of currently active impersonation sessions for a specific user.
+     *
+     * ✅ SECURITY: Limit concurrent sessions per user to prevent abuse
+     *
+     * @param int $userId The impersonator user ID
+     * @return int
+     */
+    protected function countActiveSessionsByUser(int $userId): int
+    {
+        return ImpersonationSession::active()
+            ->where('impersonator_id', $userId)
+            ->count();
     }
 
     /**

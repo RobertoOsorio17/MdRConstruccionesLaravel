@@ -73,119 +73,530 @@ class Post extends Model
         });
     }
 
+    
+    
+    
+    
     /**
-     * Get the author of the post.
+
+    
+    
+    
+     * Handle author.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return BelongsTo
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function author(): BelongsTo
     {
         return $this->belongsTo(User::class, 'user_id');
     }
 
+    
+    
+    
+    
     /**
-     * Get the categories for the post.
+
+    
+    
+    
+     * Handle categories.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return BelongsToMany
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function categories(): BelongsToMany
     {
         return $this->belongsToMany(Category::class, 'post_category')
                     ->withTimestamps();
     }
 
+    
+    
+    
+    
     /**
-     * Get the tags for the post.
+
+    
+    
+    
+     * Handle tags.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return BelongsToMany
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function tags(): BelongsToMany
     {
         return $this->belongsToMany(Tag::class, 'post_tag')
                     ->withTimestamps();
     }
 
+    
+    
+    
+    
     /**
-     * Get the comments for the post.
+
+    
+    
+    
+     * Handle comments.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return HasMany
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function comments(): HasMany
     {
         return $this->hasMany(Comment::class);
     }
 
+    
+    
+    
+    
     /**
-     * Get approved comments for the post.
+
+    
+    
+    
+     * Handle approved comments.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return HasMany
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function approvedComments(): HasMany
     {
         return $this->hasMany(Comment::class)->where('status', 'approved');
     }
     
+    
+    
+    
+    
     /**
-     * Todas las interacciones del post (likes, bookmarks, etc.)
+
+    
+    
+    
+     * Handle interactions.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function interactions()
     {
         return $this->morphMany(UserInteraction::class, 'interactable');
     }
     
+    
+    
+    
+    
     /**
-     * Likes del post
+
+    
+    
+    
+     * Handle likes.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function likes()
     {
         return $this->morphMany(UserInteraction::class, 'interactable')
                     ->where('type', UserInteraction::TYPE_LIKE);
     }
     
+    
+    
+    
+    
     /**
-     * Bookmarks del post
+
+    
+    
+    
+     * Handle bookmarks.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function bookmarks()
     {
         return $this->morphMany(UserInteraction::class, 'interactable')
                     ->where('type', UserInteraction::TYPE_BOOKMARK);
     }
     
+    
+    
+    
+    
     /**
-     * Usuarios que han dado like al post
+
+    
+    
+    
+     * Handle liked by users.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function likedByUsers()
     {
         return $this->morphToMany(User::class, 'interactable', 'user_interactions')
                     ->wherePivot('type', UserInteraction::TYPE_LIKE);
     }
     
+    
+    
+    
+    
     /**
-     * Usuarios que han guardado el post
+
+    
+    
+    
+     * Handle bookmarked by users.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function bookmarkedByUsers()
     {
         return $this->morphToMany(User::class, 'interactable', 'user_interactions')
                     ->wherePivot('type', UserInteraction::TYPE_BOOKMARK);
     }
     
+    
+    
+    
+    
     /**
-     * Contar likes
+
+    
+    
+    
+     * Get likes count attribute.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function getLikesCountAttribute()
     {
         return $this->likes()->count();
     }
     
+    
+    
+    
+    
     /**
-     * Contar bookmarks
+
+    
+    
+    
+     * Get bookmarks count attribute.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function getBookmarksCountAttribute()
     {
         return $this->bookmarks()->count();
     }
 
+    
+    
+    
+    
     /**
-     * Get the ML vector for this post.
+
+    
+    
+    
+     * Handle ml vector.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return HasOne
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function mlVector(): HasOne
     {
         return $this->hasOne(MLPostVector::class);
     }
 
+    
+    
+    
+    
     /**
-     * Verificar si un usuario ha dado like al post
+
+    
+    
+    
+     * Determine whether liked by.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param ?User $user The user.
+
+    
+    
+    
+     * @return bool
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function isLikedBy(?User $user): bool
     {
         if (!$user) return false;
@@ -193,9 +604,43 @@ class Post extends Model
         return $this->likes()->where('user_id', $user->id)->exists();
     }
 
+    
+    
+    
+    
     /**
-     * Verificar si un usuario ha guardado el post
+
+    
+    
+    
+     * Determine whether bookmarked by.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param ?User $user The user.
+
+    
+    
+    
+     * @return bool
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function isBookmarkedBy(?User $user): bool
     {
         if (!$user) return false;
@@ -203,23 +648,91 @@ class Post extends Model
         return $this->bookmarks()->where('user_id', $user->id)->exists();
     }
 
+    
+    
+    
+    
     /**
-     * Scope a query to only include published posts.
+
+    
+    
+    
+     * Handle scope published.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param mixed $query The query.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function scopePublished($query)
     {
         return $query->where('status', 'published')
                     ->where('published_at', '<=', now());
     }
 
+    
+    
+    
+    
     /**
-     * Safely set the post author (only by admins/editors)
+
+    
+    
+    
+     * Set author.
+
+    
+    
+    
      *
-     * @param User $author The user to set as author
-     * @param User $admin The admin/editor performing the action
+
+    
+    
+    
+     * @param User $author The author.
+
+    
+    
+    
+     * @param User $admin The admin.
+
+    
+    
+    
      * @return bool
-     * @throws \Exception
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function setAuthor(User $author, User $admin): bool
     {
         if (!$admin->hasRole('admin') && !$admin->hasRole('editor')) {
@@ -230,55 +743,244 @@ class Post extends Model
         return $this->save();
     }
 
+    
+    
+    
+    
     /**
-     * Scope a query to only include featured posts.
+
+    
+    
+    
+     * Handle scope featured.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param mixed $query The query.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function scopeFeatured($query)
     {
         return $query->where('featured', true);
     }
 
+    
+    
+    
+    
     /**
-     * Get the route key for the model.
+
+    
+    
+    
+     * Get route key name.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return string
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function getRouteKeyName(): string
     {
         return 'slug';
     }
 
+    
+    
+    
+    
     /**
-     * Get the SEO title or fall back to title.
+
+    
+    
+    
+     * Get seo title attribute.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param mixed $value The value.
+
+    
+    
+    
+     * @return string
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function getSeoTitleAttribute($value): string
     {
         return $value ?: $this->title;
     }
 
+    
+    
+    
+    
     /**
-     * Get the SEO description or fall back to excerpt.
-     * ✅ FIX: Handle NULL excerpt to prevent strip_tags crash
+
+    
+    
+    
+     * Get seo description attribute.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param mixed $value The value.
+
+    
+    
+    
+     * @return string
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function getSeoDescriptionAttribute($value): string
     {
         $excerpt = $this->excerpt ?? '';
         return $value ?: Str::limit(strip_tags($excerpt), 160);
     }
 
+    
+    
+    
+    
     /**
-     * Increment the views count.
+
+    
+    
+    
+     * Handle increment views.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function incrementViews(): void
     {
         $this->increment('views_count');
     }
 
+    
+    
+    
+    
     /**
-     * Capture the current state of the post as a revision.
-     * Creates a snapshot of all important post data for audit and rollback purposes.
+
+    
+    
+    
+     * Handle capture revision.
+
+    
+    
+    
      *
-     * @param string|null $summary Optional description of why this revision was created
-     * @return PostRevision The created revision instance
+
+    
+    
+    
+     * @param ?string $summary The summary.
+
+    
+    
+    
+     * @return PostRevision
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function captureRevision(?string $summary = null): PostRevision
     {
         return PostRevision::create([
@@ -303,10 +1005,38 @@ class Post extends Model
         ]);
     }
 
+    
+    
+    
+    
     /**
-     * Obtener el tiempo estimado de lectura en minutos
-     * ✅ FIX: Handle NULL content to prevent strip_tags crash
+
+    
+    
+    
+     * Get reading time attribute.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function getReadingTimeAttribute()
     {
         $content = $this->content ?? '';
@@ -315,9 +1045,43 @@ class Post extends Model
         return max(1, $readingTime);
     }
 
+    
+    
+    
+    
     /**
-     * Obtener posts relacionados/sugeridos basados en categorÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­as y etiquetas
+
+    
+    
+    
+     * Get related posts.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param int $limit The limit.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function getRelatedPosts(int $limit = 3)
     {
         $categoryIds = $this->categories->pluck('id');
@@ -350,9 +1114,43 @@ class Post extends Model
             ->get();
     }
     
+    
+    
+    
+    
     /**
-     * Obtener posts sugeridos inteligentes basados en mÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âºltiples factores
+
+    
+    
+    
+     * Get suggested posts.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param mixed $limit The limit.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function getSuggestedPosts($limit = 4)
     {
         $categoryIds = $this->categories->pluck('id');
@@ -422,9 +1220,38 @@ class Post extends Model
         return $posts;
     }
 
+    
+    
+    
+    
     /**
-     * Obtener el extracto formateado
+
+    
+    
+    
+     * Get formatted excerpt attribute.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function getFormattedExcerptAttribute()
     {
         if ($this->excerpt) {
@@ -434,9 +1261,48 @@ class Post extends Model
         return Str::limit(strip_tags($this->content), 150);
     }
 
+    
+    
+    
+    
     /**
-     * Administrative method to update post status
+
+    
+    
+    
+     * Handle update status.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param string $status The status.
+
+    
+    
+    
+     * @param User $admin The admin.
+
+    
+    
+    
+     * @return bool
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function updateStatus(string $status, User $admin): bool
     {
         if (!$admin->hasRole('admin') && !$admin->hasRole('editor')) {
@@ -451,9 +1317,43 @@ class Post extends Model
         return $this->update(['status' => $status]);
     }
 
+    
+    
+    
+    
     /**
-     * Administrative method to feature/unfeature post
+
+    
+    
+    
+     * Handle toggle featured.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param User $admin The admin.
+
+    
+    
+    
+     * @return bool
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function toggleFeatured(User $admin): bool
     {
         if (!$admin->hasRole('admin') && !$admin->hasRole('editor')) {

@@ -27,6 +27,7 @@ import {
 import { router } from '@inertiajs/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import axios from 'axios';
+import { sanitizeHtmlStrict } from '@/utils/sanitize';
 
 const GlobalSearch = ({ open, onClose }) => {
     const [query, setQuery] = useState('');
@@ -281,7 +282,7 @@ const GlobalSearch = ({ open, onClose }) => {
                                                                         fontWeight: 700,
                                                                     }
                                                                 }}
-                                                                dangerouslySetInnerHTML={{ __html: result.title }}
+                                                                dangerouslySetInnerHTML={{ __html: sanitizeHtmlStrict(result.title) }}
                                                             />
                                                             <Chip
                                                                 label={getTypeLabel(result.type)}
@@ -312,7 +313,7 @@ const GlobalSearch = ({ open, onClose }) => {
                                                                     fontWeight: 700,
                                                                 }
                                                             }}
-                                                            dangerouslySetInnerHTML={{ __html: result.excerpt }}
+                                                            dangerouslySetInnerHTML={{ __html: sanitizeHtmlStrict(result.excerpt) }}
                                                         />
                                                     }
                                                 />

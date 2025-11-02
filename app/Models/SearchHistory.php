@@ -27,9 +27,38 @@ class SearchHistory extends Model
         'updated_at',
     ];
 
+    
+    
+    
+    
     /**
-     * Get the user who performed the search.
+
+    
+    
+    
+     * Handle user.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return BelongsTo
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);

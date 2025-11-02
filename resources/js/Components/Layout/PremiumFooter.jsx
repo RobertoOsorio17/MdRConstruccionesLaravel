@@ -24,7 +24,7 @@ import {
     WhatsApp as WhatsAppIcon,
     ArrowUpward as ArrowUpIcon
 } from '@mui/icons-material';
-import { Link } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
 import { motion } from 'framer-motion';
 
 // Premium design system
@@ -81,6 +81,9 @@ const PremiumFooter = () => {
     const scrollToTop = () => {
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
+
+    // Get version from Inertia props
+    const { version } = usePage().props;
 
     return (
         <Box
@@ -404,16 +407,44 @@ const PremiumFooter = () => {
                                 pb: 4
                             }}
                         >
-                            {/* Copyright */}
-                            <Typography
-                                variant="body2"
-                                sx={{
-                                    color: THEME.text.muted,
-                                    textAlign: { xs: 'center', md: 'left' }
-                                }}
-                            >
-                                © {currentYear} MDR Construcciones. Todos los derechos reservados.
-                            </Typography>
+                            {/* Copyright and Version */}
+                            <Stack spacing={0.5} sx={{ textAlign: { xs: 'center', md: 'left' } }}>
+                                <Typography
+                                    variant="body2"
+                                    sx={{
+                                        color: THEME.text.muted,
+                                    }}
+                                >
+                                    © {currentYear} MDR Construcciones. Todos los derechos reservados.
+                                </Typography>
+                                {version && (
+                                    <Typography
+                                        variant="caption"
+                                        sx={{
+                                            color: THEME.text.muted,
+                                            opacity: 0.7,
+                                            fontSize: '0.75rem',
+                                        }}
+                                    >
+                                        Versión {version.full}
+                                        {version.is_prerelease && (
+                                            <Chip
+                                                label={version.prerelease.toUpperCase()}
+                                                size="small"
+                                                sx={{
+                                                    ml: 1,
+                                                    height: '16px',
+                                                    fontSize: '0.65rem',
+                                                    fontWeight: 600,
+                                                    backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                                                    color: THEME.primary[300],
+                                                    border: `1px solid ${THEME.primary[400]}`,
+                                                }}
+                                            />
+                                        )}
+                                    </Typography>
+                                )}
+                            </Stack>
 
                             {/* Legal Links */}
                             <Stack

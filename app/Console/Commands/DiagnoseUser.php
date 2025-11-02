@@ -27,9 +27,38 @@ class DiagnoseUser extends Command
      */
     protected $description = 'Diagnose user permissions and roles';
 
+    
+    
+    
+    
     /**
-     * Execute the console command.
+
+    
+    
+    
+     * Handle handle.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function handle()
     {
         $email = $this->argument('email');

@@ -25,9 +25,38 @@ class SwitchDatabase extends Command
      */
     protected $description = 'Switch between SQLite and MySQL database configurations';
 
+    
+    
+    
+    
     /**
-     * Execute the console command.
+
+    
+    
+    
+     * Handle handle.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function handle()
     {
         $type = $this->argument('type');

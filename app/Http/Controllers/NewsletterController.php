@@ -19,15 +19,43 @@ use Illuminate\Support\Facades\RateLimiter;
  */
 class NewsletterController extends Controller
 {
+    
+    
+    
+    
     /**
-     * Subscribe a user to the newsletter.
+
+    
+    
+    
+     * Handle subscribe.
+
+    
+    
+    
      *
-     * Applies per-IP rate limiting, validates input, and sends a verification
-     * email to confirm the subscription before activating it.
-     *
-     * @param Request $request The incoming HTTP request containing subscription data.
-     * @return \Illuminate\Http\RedirectResponse Redirects back with status messaging.
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function subscribe(Request $request)
     {
         // 1) Apply a conservative rate limit (3/hour/IP).
@@ -99,13 +127,48 @@ class NewsletterController extends Controller
         return back()->with('success', 'Thank you for subscribing! Please check your email to verify your subscription.');
     }
 
+    
+    
+    
+    
     /**
-     * Verify a newsletter subscription by token.
+
+    
+    
+    
+     * Handle verify.
+
+    
+    
+    
      *
-     * @param Request $request The current HTTP request instance.
-     * @param string $token The verification token sent via email.
-     * @return \Illuminate\Http\RedirectResponse Redirect to home with status messaging.
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @param mixed $token The token.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function verify(Request $request, $token)
     {
         // 1) Resolve the subscription by token; 404 if invalid.
@@ -126,13 +189,48 @@ class NewsletterController extends Controller
         return redirect()->route('home')->with('success', 'Your subscription has been verified! Thank you for joining our newsletter.');
     }
 
+    
+    
+    
+    
     /**
-     * Unsubscribe a user from the newsletter.
+
+    
+    
+    
+     * Handle unsubscribe.
+
+    
+    
+    
      *
-     * @param Request $request The current HTTP request instance.
-     * @param string $token The subscription token used to authenticate the action.
-     * @return \Illuminate\Http\RedirectResponse Redirect to home with status messaging.
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @param mixed $token The token.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function unsubscribe(Request $request, $token)
     {
         // 1) Resolve the subscription by token; 404 if invalid.
@@ -153,13 +251,48 @@ class NewsletterController extends Controller
         return redirect()->route('home')->with('success', 'You have been unsubscribed from our newsletter. We\'re sorry to see you go!');
     }
 
+    
+    
+    
+    
     /**
-     * Update newsletter topic preferences for a subscription.
+
+    
+    
+    
+     * Handle update preferences.
+
+    
+    
+    
      *
-     * @param Request $request The current HTTP request instance.
-     * @param string $token The subscription token authorizing the update.
-     * @return \Illuminate\Http\RedirectResponse Redirect back with status messaging.
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @param mixed $token The token.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function updatePreferences(Request $request, $token)
     {
         // 1) Resolve subscription and validate category choices.
@@ -184,12 +317,43 @@ class NewsletterController extends Controller
         return back()->with('success', 'Your preferences have been updated successfully.');
     }
 
+    
+    
+    
+    
     /**
-     * Send the subscription verification email.
+
+    
+    
+    
+     * Send verification email.
+
+    
+    
+    
      *
-     * @param Newsletter $newsletter The newsletter subscription model.
+
+    
+    
+    
+     * @param Newsletter $newsletter The newsletter.
+
+    
+    
+    
      * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function sendVerificationEmail(Newsletter $newsletter)
     {
         try {

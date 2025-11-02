@@ -14,14 +14,53 @@ use Illuminate\Support\Str;
  */
 trait GeneratesUniqueSlug
 {
+    
+    
+    
+    
     /**
-     * Generate a unique slug for a given title and model class.
-     * 
-     * @param string $title The title to generate slug from
-     * @param string $modelClass The fully qualified model class name (e.g., Service::class)
-     * @param int|null $ignoreId Optional ID to ignore when checking uniqueness (for updates)
-     * @return string The unique slug
+
+    
+    
+    
+     * Handle generate unique slug.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param string $title The title.
+
+    
+    
+    
+     * @param string $modelClass The modelClass.
+
+    
+    
+    
+     * @param ?int $ignoreId The ignoreId.
+
+    
+    
+    
+     * @return string
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     protected function generateUniqueSlug(string $title, string $modelClass, ?int $ignoreId = null): string
     {
         $baseSlug = Str::slug($title);

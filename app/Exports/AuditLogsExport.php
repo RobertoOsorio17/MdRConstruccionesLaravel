@@ -20,14 +20,114 @@ class AuditLogsExport implements FromQuery, WithHeadings, WithMapping, WithStyle
 {
     protected $filters;
 
+
+    
+
+
+    
+
+    
+
+    
+
+    /**
+
+
+    
+
+    
+
+    
+
+     * Handle __construct.
+
+
+    
+
+    
+
+    
+
+     *
+
+
+    
+
+    
+
+    
+
+     * @param array $filters The filters.
+
+
+    
+
+    
+
+    
+
+     * @return void
+
+
+    
+
+    
+
+    
+
+     */
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
     public function __construct(array $filters = [])
     {
         $this->filters = $filters;
     }
 
+    
+    
+    
+    
     /**
-     * Build the query for export with filters applied.
+
+    
+    
+    
+     * Handle query.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function query()
     {
         $query = AdminAuditLog::with('user:id,name,email')
@@ -74,9 +174,38 @@ class AuditLogsExport implements FromQuery, WithHeadings, WithMapping, WithStyle
         return $query;
     }
 
+    
+    
+    
+    
     /**
-     * Define the column headings for the export.
+
+    
+    
+    
+     * Handle headings.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return array
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function headings(): array
     {
         return [
@@ -96,9 +225,43 @@ class AuditLogsExport implements FromQuery, WithHeadings, WithMapping, WithStyle
         ];
     }
 
+    
+    
+    
+    
     /**
-     * Map each audit log to an array for export.
+
+    
+    
+    
+     * Handle map.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param mixed $log The log.
+
+    
+    
+    
+     * @return array
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function map($log): array
     {
         return [
@@ -118,9 +281,43 @@ class AuditLogsExport implements FromQuery, WithHeadings, WithMapping, WithStyle
         ];
     }
 
+    
+    
+    
+    
     /**
-     * Apply styles to the spreadsheet.
+
+    
+    
+    
+     * Handle styles.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Worksheet $sheet The sheet.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function styles(Worksheet $sheet)
     {
         return [
@@ -138,9 +335,43 @@ class AuditLogsExport implements FromQuery, WithHeadings, WithMapping, WithStyle
         ];
     }
 
+    
+    
+    
+    
     /**
-     * Get human-readable severity label.
+
+    
+    
+    
+     * Get severity label.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param ?string $severity The severity.
+
+    
+    
+    
+     * @return string
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function getSeverityLabel(?string $severity): string
     {
         return match($severity) {

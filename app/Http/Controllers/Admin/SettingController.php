@@ -26,19 +26,99 @@ class SettingController extends Controller
      */
     private AdminSettingsService $settingsService;
 
+    
+    
+    
+    
     /**
-     * Create a new controller instance.
+
+    
+    
+    
+     * Handle __construct.
+
+    
+    
+    
      *
-     * @param \App\Services\Admin\AdminSettingsService $settingsService
+
+    
+    
+    
+     * @param AdminSettingsService $settingsService The settingsService.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function __construct(AdminSettingsService $settingsService)
     {
         $this->settingsService = $settingsService;
+
+        /**
+         * Ensure only admins can access settings.
+         */
+        $this->middleware(function ($request, $next) {
+            $user = $request->user();
+
+            /**
+             * Check if user is admin (support both role column and roles relationship).
+             */
+            $isAdmin = $user->role === 'admin' ||
+                       $user->roles->contains('name', 'admin');
+
+            if (!$isAdmin) {
+                abort(403, 'This action is unauthorized. Only administrators can manage settings.');
+            }
+
+            return $next($request);
+        });
     }
 
+    
+    
+    
+    
     /**
-     * Display the settings page
+
+    
+    
+    
+     * Display a listing of the resource.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function index()
     {
         $settings = AdminSetting::orderBy('group')
@@ -53,9 +133,43 @@ class SettingController extends Controller
         ]);
     }
 
+    
+    
+    
+    
     /**
-     * Update settings with history tracking and event dispatching.
+
+    
+    
+    
+     * Update the specified resource.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param UpdateSettingsRequest $request The request.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function update(UpdateSettingsRequest $request)
     {
         $payload = $request->validated();
@@ -63,7 +177,9 @@ class SettingController extends Controller
 
         $result = $this->settingsService->updateSettings($settings, $request->user());
 
-        // Clear ML settings cache if any ML setting was updated
+        /**
+         * Clear ML settings cache if any ML setting was updated.
+         */
         $mlSettingsUpdated = collect($result['updated'] ?? [])->contains(function ($key) {
             return str_starts_with($key, 'ml_');
         });
@@ -85,9 +201,38 @@ class SettingController extends Controller
         return back()->with('success', 'Configuraciones actualizadas correctamente.');
     }
 
+    
+    
+    
+    
     /**
-     * Get setting groups configuration
+
+    
+    
+    
+     * Get setting groups.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function getSettingGroups()
     {
         return [
@@ -154,13 +299,44 @@ class SettingController extends Controller
         ];
     }
 
+    
+    
+    
+    
     /**
-     * Initialize default settings
+
+    
+    
+    
+     * Handle initialize defaults.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function initializeDefaults()
     {
         $defaultSettings = [
-            // General Settings
+            /**
+             * General Settings.
+             */
             [
                 'key' => 'site_name',
                 'value' => 'MDR Construcciones',
@@ -196,7 +372,7 @@ class SettingController extends Controller
             ],
             [
                 'key' => 'site_tagline',
-                'value' => 'Construyendo tus sueños',
+                'value' => 'Construyendo tus sueÃ±os',
                 'type' => 'string',
                 'group' => 'general',
                 'label' => 'Site Tagline',
@@ -255,7 +431,7 @@ class SettingController extends Controller
                 'type' => 'text',
                 'group' => 'maintenance',
                 'label' => 'Mensaje de Mantenimiento',
-                'description' => 'Mensaje personalizado que verán los usuarios durante mantenimiento',
+                'description' => 'Mensaje personalizado que verÃ¡n los usuarios durante mantenimiento',
                 'validation_rules' => ['required_if:maintenance_mode,true', 'string', 'max:1000'],
                 'is_public' => false,
                 'sort_order' => 2,
@@ -343,13 +519,15 @@ class SettingController extends Controller
                 'type' => 'select',
                 'group' => 'maintenance',
                 'label' => 'Plantilla de Mantenimiento',
-                'description' => 'Plantilla visual para la página de mantenimiento',
+                'description' => 'Plantilla visual para la pÃ¡gina de mantenimiento',
                 'validation_rules' => ['required', 'string', 'in:default,minimal,modern'],
                 'is_public' => false,
                 'sort_order' => 10,
             ],
 
-            // Company Information
+            /**
+             * Company Information.
+             */
             [
                 'key' => 'company_name',
                 'value' => 'MDR Construcciones',
@@ -395,7 +573,9 @@ class SettingController extends Controller
                 'sort_order' => 4,
             ],
 
-            // Email Settings
+            /**
+             * Email Settings.
+             */
             [
                 'key' => 'mail_from_name',
                 'value' => 'MDR Construcciones',
@@ -419,7 +599,9 @@ class SettingController extends Controller
                 'sort_order' => 2,
             ],
 
-            // Security Settings
+            /**
+             * Security Settings.
+             */
             [
                 'key' => 'session_timeout',
                 'value' => 120,
@@ -448,7 +630,7 @@ class SettingController extends Controller
                 'type' => 'integer',
                 'group' => 'security',
                 'label' => 'Lockout Duration (minutes)',
-                'description' => 'Tiempo de bloqueo después de exceder intentos de login',
+                'description' => 'Tiempo de bloqueo despuÃ©s de exceder intentos de login',
                 'validation_rules' => ['required', 'integer', 'min:1', 'max:1440'],
                 'is_public' => false,
                 'sort_order' => 3,
@@ -459,7 +641,7 @@ class SettingController extends Controller
                 'type' => 'integer',
                 'group' => 'security',
                 'label' => 'Password Min Length',
-                'description' => 'Longitud mínima de contraseña',
+                'description' => 'Longitud mÃ­nima de contraseÃ±a',
                 'validation_rules' => ['required', 'integer', 'min:6', 'max:32'],
                 'is_public' => false,
                 'sort_order' => 4,
@@ -470,7 +652,7 @@ class SettingController extends Controller
                 'type' => 'boolean',
                 'group' => 'security',
                 'label' => 'Require Special Characters',
-                'description' => 'Requerir caracteres especiales en contraseñas',
+                'description' => 'Requerir caracteres especiales en contraseÃ±as',
                 'validation_rules' => ['boolean'],
                 'is_public' => false,
                 'sort_order' => 5,
@@ -492,7 +674,7 @@ class SettingController extends Controller
                 'type' => 'boolean',
                 'group' => 'security',
                 'label' => 'Enable 2FA',
-                'description' => 'Habilitar autenticación de dos factores',
+                'description' => 'Habilitar autenticaciÃ³n de dos factores',
                 'validation_rules' => ['boolean'],
                 'is_public' => false,
                 'sort_order' => 7,
@@ -514,13 +696,15 @@ class SettingController extends Controller
                 'type' => 'integer',
                 'group' => 'security',
                 'label' => 'Max Upload Size (KB)',
-                'description' => 'Tamaño máximo de archivo para subir en KB',
+                'description' => 'TamaÃ±o mÃ¡ximo de archivo para subir en KB',
                 'validation_rules' => ['required', 'integer', 'min:1024', 'max:102400'],
                 'is_public' => false,
                 'sort_order' => 9,
             ],
 
-            // Email Settings
+            /**
+             * Email Settings.
+             */
             [
                 'key' => 'enable_email_notifications',
                 'value' => true,
@@ -544,7 +728,9 @@ class SettingController extends Controller
                 'sort_order' => 2,
             ],
 
-            // Performance Settings
+            /**
+             * Performance Settings.
+             */
             [
                 'key' => 'enable_asset_compression',
                 'value' => true,
@@ -562,7 +748,7 @@ class SettingController extends Controller
                 'type' => 'boolean',
                 'group' => 'performance',
                 'label' => 'Enable Lazy Loading',
-                'description' => 'Carga diferida de imágenes',
+                'description' => 'Carga diferida de imÃ¡genes',
                 'validation_rules' => ['boolean'],
                 'is_public' => false,
                 'sort_order' => 2,
@@ -579,14 +765,16 @@ class SettingController extends Controller
                 'sort_order' => 3,
             ],
 
-            // Backup Settings
+            /**
+             * Backup Settings.
+             */
             [
                 'key' => 'backup_enabled',
                 'value' => true,
                 'type' => 'boolean',
                 'group' => 'backup',
                 'label' => 'Enable Backups',
-                'description' => 'Habilitar backups automáticos',
+                'description' => 'Habilitar backups automÃ¡ticos',
                 'validation_rules' => ['boolean'],
                 'is_public' => false,
                 'sort_order' => 1,
@@ -597,7 +785,7 @@ class SettingController extends Controller
                 'type' => 'select',
                 'group' => 'backup',
                 'label' => 'Backup Frequency',
-                'description' => 'Frecuencia de backups automáticos',
+                'description' => 'Frecuencia de backups automÃ¡ticos',
                 'validation_rules' => ['required', 'string', 'in:hourly,daily,weekly,monthly'],
                 'is_public' => false,
                 'sort_order' => 2,
@@ -608,7 +796,7 @@ class SettingController extends Controller
                 'type' => 'integer',
                 'group' => 'backup',
                 'label' => 'Backup Retention (days)',
-                'description' => 'Días de retención de backups',
+                'description' => 'DÃ­as de retenciÃ³n de backups',
                 'validation_rules' => ['required', 'integer', 'min:1', 'max:365'],
                 'is_public' => false,
                 'sort_order' => 3,
@@ -619,7 +807,7 @@ class SettingController extends Controller
                 'type' => 'boolean',
                 'group' => 'backup',
                 'label' => 'Auto Backup',
-                'description' => 'Ejecutar backups automáticamente',
+                'description' => 'Ejecutar backups automÃ¡ticamente',
                 'validation_rules' => ['boolean'],
                 'is_public' => false,
                 'sort_order' => 4,
@@ -647,16 +835,52 @@ class SettingController extends Controller
         return back()->with('success', 'Default settings initialized successfully.');
     }
 
+    
+    
+    
+    
     /**
-     * Handle file upload for settings (logo, favicon, og_image).
+
+    
+    
+    
+     * Handle upload file.
+
+    
+    
+    
      *
-     * @param \Illuminate\Http\Request $request
-     * @return \Illuminate\Http\RedirectResponse
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function uploadFile(Request $request)
     {
-        // Get upload settings
-        $maxUploadSize = AdminSetting::getCachedValue('max_upload_size', 10240, 300); // KB
+        /**
+         * Get upload settings.
+         */
+        /**
+         * Retrieve the maximum upload size (in kilobytes) from cached settings.
+         */
+        $maxUploadSize = AdminSetting::getCachedValue('max_upload_size', 10240, 300);
         $allowedExtensions = AdminSetting::getCachedValue('allowed_upload_extensions', 'jpg,jpeg,png,pdf,doc,docx', 300);
 
         $validator = Validator::make($request->all(), [
@@ -668,8 +892,8 @@ class SettingController extends Controller
                 'mimes:' . $allowedExtensions,
             ],
         ], [
-            'key.required' => 'La clave de configuración es requerida.',
-            'key.exists' => 'La configuración no existe.',
+            'key.required' => 'La clave de configuraciÃ³n es requerida.',
+            'key.exists' => 'La configuraciÃ³n no existe.',
             'file.required' => 'Debe seleccionar un archivo.',
             'file.max' => "El archivo no debe superar " . round($maxUploadSize / 1024, 2) . "MB.",
             'file.mimes' => "El archivo debe ser de tipo: {$allowedExtensions}.",
@@ -682,28 +906,40 @@ class SettingController extends Controller
         $key = $request->input('key');
         $setting = AdminSetting::where('key', $key)->first();
 
-        // Validate that this is a file-type setting
+        /**
+         * Validate that this is a file-type setting.
+         */
         if ($setting->type !== 'file') {
-            return back()->withErrors(['file' => 'Esta configuración no acepta archivos.']);
+            return back()->withErrors(['file' => 'Esta configuraciÃ³n no acepta archivos.']);
         }
 
-        // Store the file
+        /**
+         * Store the file.
+         */
         $file = $request->file('file');
         $path = $file->store('settings', 'public');
 
-        // Delete old file if exists
+        /**
+         * Delete old file if exists.
+         */
         if ($setting->value && Storage::disk('public')->exists($setting->value)) {
             Storage::disk('public')->delete($setting->value);
         }
 
-        // Store old value
+        /**
+         * Store old value.
+         */
         $oldValue = $setting->value;
 
-        // Update setting
+        /**
+         * Update setting.
+         */
         $setting->value = $path;
         $setting->save();
 
-        // Fire event
+        /**
+         * Fire event.
+         */
         event(new SettingChanged(
             setting: $setting,
             oldValue: $oldValue,
@@ -716,12 +952,43 @@ class SettingController extends Controller
         return back();
     }
 
+    
+    
+    
+    
     /**
-     * Get the history of changes for a specific setting.
+
+    
+    
+    
+     * Get history.
+
+    
+    
+    
      *
-     * @param string $key
-     * @return \Illuminate\Http\JsonResponse
+
+    
+    
+    
+     * @param string $key The key.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function getHistory(string $key)
     {
         $setting = AdminSetting::where('key', $key)->first();
@@ -751,13 +1018,48 @@ class SettingController extends Controller
         ]);
     }
 
+    
+    
+    
+    
     /**
-     * Revert a setting to a previous value from history.
+
+    
+    
+    
+     * Handle revert.
+
+    
+    
+    
      *
-     * @param \Illuminate\Http\Request $request
-     * @param string $key
-     * @return \Illuminate\Http\RedirectResponse
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @param string $key The key.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function revert(Request $request, string $key)
     {
         $validator = Validator::make($request->all(), [
@@ -774,25 +1076,52 @@ class SettingController extends Controller
         $setting = AdminSetting::where('key', $key)->first();
 
         if (!$setting) {
-            return back()->withErrors(['error' => 'Configuración no encontrada.']);
+            return back()->withErrors(['error' => 'ConfiguraciÃ³n no encontrada.']);
         }
 
         $success = $setting->revertTo($request->input('history_id'));
 
         if ($success) {
-            session()->flash('success', 'Configuración revertida correctamente.');
+            session()->flash('success', 'ConfiguraciÃ³n revertida correctamente.');
         } else {
-            return back()->withErrors(['error' => 'No se pudo revertir la configuración.']);
+            return back()->withErrors(['error' => 'No se pudo revertir la configuraciÃ³n.']);
         }
 
         return back();
     }
 
+    
+    
+    
+    
     /**
-     * Export all settings as JSON.
+
+    
+    
+    
+     * Handle export.
+
+    
+    
+    
      *
-     * @return \Symfony\Component\HttpFoundation\BinaryFileResponse
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function export()
     {
         $settings = AdminSetting::all()->map(function ($setting) {
@@ -814,12 +1143,43 @@ class SettingController extends Controller
         return response()->download($path)->deleteFileAfterSend(true);
     }
 
+    
+    
+    
+    
     /**
-     * Import settings from JSON file.
+
+    
+    
+    
+     * Handle import.
+
+    
+    
+    
      *
-     * @param \Illuminate\Http\Request $request
-     * @return \Illuminate\Http\RedirectResponse
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function import(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -839,7 +1199,7 @@ class SettingController extends Controller
         $settings = json_decode($content, true);
 
         if (!is_array($settings)) {
-            return back()->withErrors(['file' => 'El archivo JSON no es válido.']);
+            return back()->withErrors(['file' => 'El archivo JSON no es vÃ¡lido.']);
         }
 
         $imported = 0;
@@ -854,7 +1214,9 @@ class SettingController extends Controller
                 $setting->value = $settingData['value'];
                 $setting->save();
 
-                // Fire event
+                /**
+                 * Fire event.
+                 */
                 event(new SettingChanged(
                     setting: $setting,
                     oldValue: $oldValue,
@@ -871,15 +1233,48 @@ class SettingController extends Controller
         return back();
     }
 
+    
+    
+    
+    
     /**
-     * Reset all settings to their default values.
+
+    
+    
+    
+     * Handle reset all.
+
+    
+    
+    
      *
-     * @param \Illuminate\Http\Request $request
-     * @return \Illuminate\Http\RedirectResponse
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function resetAll(Request $request)
     {
-        // Get all settings with their default values
+        /**
+         * Get all settings with their default values.
+         */
         $defaultSettings = $this->getDefaultSettings();
 
         $reset = 0;
@@ -890,12 +1285,16 @@ class SettingController extends Controller
                 $oldValue = $setting->value;
                 $newValue = $defaultSetting['value'];
 
-                // Only update if value is different
+                /**
+                 * Only update if value is different.
+                 */
                 if ($oldValue != $newValue) {
                     $setting->value = $newValue;
                     $setting->save();
 
-                    // Fire event
+                    /**
+                     * Fire event.
+                     */
                     event(new SettingChanged(
                         setting: $setting,
                         oldValue: $oldValue,
@@ -918,38 +1317,73 @@ class SettingController extends Controller
         return back();
     }
 
+    
+    
+    
+    
     /**
-     * Get default settings values.
+
+    
+    
+    
+     * Get default settings.
+
+    
+    
+    
      *
-     * @return array
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function getDefaultSettings()
     {
         return [
-            // General Settings
+            /**
+             * General Settings.
+             */
             ['key' => 'site_name', 'value' => 'MDR Construcciones'],
-            ['key' => 'site_tagline', 'value' => 'Construcción de Calidad Premium'],
-            ['key' => 'site_description', 'value' => 'Empresa líder en construcción y reformas en Madrid. Ofrecemos servicios de calidad con más de 20 años de experiencia.'],
+            ['key' => 'site_tagline', 'value' => 'ConstrucciÃ³n de Calidad Premium'],
+            ['key' => 'site_description', 'value' => 'Empresa lÃ­der en construcciÃ³n y reformas en Madrid. Ofrecemos servicios de calidad con mÃ¡s de 20 aÃ±os de experiencia.'],
             ['key' => 'site_logo', 'value' => '/images/logo.png'],
             ['key' => 'site_favicon', 'value' => '/favicon.ico'],
             ['key' => 'timezone', 'value' => 'Europe/Madrid'],
             ['key' => 'date_format', 'value' => 'd/m/Y'],
             ['key' => 'time_format', 'value' => 'H:i'],
 
-            // Company Information
+            /**
+             * Company Information.
+             */
             ['key' => 'company_name', 'value' => 'MDR Construcciones'],
             ['key' => 'company_phone', 'value' => '+34 123 456 789'],
             ['key' => 'company_email', 'value' => 'info@mdrconstrucciones.com'],
             ['key' => 'company_address', 'value' => 'Calle Principal 123, 28001 Madrid'],
 
-            // Email Settings
+            /**
+             * Email Settings.
+             */
             ['key' => 'mail_from_name', 'value' => 'MDR Construcciones'],
             ['key' => 'mail_from_address', 'value' => 'noreply@mdrconstrucciones.com'],
             ['key' => 'mail_driver', 'value' => 'smtp'],
             ['key' => 'mail_host', 'value' => 'smtp.mailtrap.io'],
             ['key' => 'mail_port', 'value' => '2525'],
 
-            // Security Settings
+            /**
+             * Security Settings.
+             */
             ['key' => 'session_timeout', 'value' => '120'],
             ['key' => 'max_login_attempts', 'value' => '5'],
             ['key' => 'password_min_length', 'value' => '8'],
@@ -959,7 +1393,9 @@ class SettingController extends Controller
             ['key' => 'max_upload_size', 'value' => '10240'],
             ['key' => 'enable_captcha', 'value' => false],
 
-            // Maintenance
+            /**
+             * Maintenance.
+             */
             ['key' => 'maintenance_mode', 'value' => false],
             ['key' => 'maintenance_message', 'value' => 'Estamos realizando mejoras en nuestro sitio. Volveremos pronto.'],
             ['key' => 'maintenance_allowed_ips', 'value' => []],
@@ -971,36 +1407,46 @@ class SettingController extends Controller
             ['key' => 'maintenance_secret', 'value' => ''],
             ['key' => 'maintenance_template', 'value' => 'default'],
 
-            // Social Media
+            /**
+             * Social Media.
+             */
             ['key' => 'facebook_url', 'value' => ''],
             ['key' => 'twitter_url', 'value' => ''],
             ['key' => 'instagram_url', 'value' => ''],
             ['key' => 'linkedin_url', 'value' => ''],
             ['key' => 'youtube_url', 'value' => ''],
 
-            // SEO
-            ['key' => 'seo_title', 'value' => 'MDR Construcciones - Construcción de Calidad Premium'],
-            ['key' => 'seo_description', 'value' => 'Empresa líder en construcción y reformas en Madrid'],
-            ['key' => 'seo_keywords', 'value' => 'construcción, reformas, Madrid, calidad'],
+            /**
+             * SEO.
+             */
+            ['key' => 'seo_title', 'value' => 'MDR Construcciones - ConstrucciÃ³n de Calidad Premium'],
+            ['key' => 'seo_description', 'value' => 'Empresa lÃ­der en construcciÃ³n y reformas en Madrid'],
+            ['key' => 'seo_keywords', 'value' => 'construcciÃ³n, reformas, Madrid, calidad'],
             ['key' => 'og_image', 'value' => '/images/og-image.jpg'],
             ['key' => 'google_analytics_id', 'value' => ''],
             ['key' => 'google_search_console_id', 'value' => ''],
             ['key' => 'enable_sitemap', 'value' => true],
             ['key' => 'sitemap_frequency', 'value' => 'daily'],
 
-            // Backup
+            /**
+             * Backup.
+             */
             ['key' => 'backup_enabled', 'value' => true],
             ['key' => 'backup_frequency', 'value' => 'daily'],
             ['key' => 'backup_retention_days', 'value' => '30'],
             ['key' => 'backup_notification_email', 'value' => 'admin@mdrconstrucciones.com'],
 
-            // Performance
+            /**
+             * Performance.
+             */
             ['key' => 'cache_enabled', 'value' => true],
             ['key' => 'cache_ttl', 'value' => '3600'],
             ['key' => 'minify_html', 'value' => false],
             ['key' => 'minify_css', 'value' => false],
 
-            // Blog
+            /**
+             * Blog.
+             */
             ['key' => 'blog_enabled', 'value' => true],
             ['key' => 'blog_posts_per_page', 'value' => 12],
             ['key' => 'blog_allow_comments', 'value' => true],
@@ -1010,7 +1456,9 @@ class SettingController extends Controller
             ['key' => 'blog_enable_categories', 'value' => true],
             ['key' => 'blog_enable_tags', 'value' => true],
 
-            // User Registration
+            /**
+             * User Registration.
+             */
             ['key' => 'registration_enabled', 'value' => true],
             ['key' => 'registration_require_email_verification', 'value' => true],
             ['key' => 'registration_auto_approve', 'value' => true],

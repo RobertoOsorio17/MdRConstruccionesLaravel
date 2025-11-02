@@ -49,11 +49,9 @@ class PostController extends Controller
                 // Fix: Eager load counts to avoid queries in transform loop.
                 ->withCount(['likes', 'bookmarks', 'approvedComments']);
 
-            Log::debug('Initial query setup', [
-                'base_query_count' => Post::published()->count(),
-                'total_posts_count' => Post::count(),
-                'published_posts_count' => Post::where('status', 'published')->count()
-            ]);
+            // ⚡ PERFORMANCE: Removed 3 redundant count queries for logging
+            // These queries added ~50ms per request with no actionable value
+            // Use Laravel Telescope or Clockwork for query debugging instead
 
         // 3) Apply optional full‑text filters with basic SQL injection protection.
         if ($request->has('search') && !empty($request->search)) {

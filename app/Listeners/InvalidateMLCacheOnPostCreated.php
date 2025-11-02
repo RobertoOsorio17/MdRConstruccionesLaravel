@@ -12,17 +12,80 @@ use Illuminate\Support\Facades\Log;
  */
 class InvalidateMLCacheOnPostCreated
 {
+    
+    
+    
+    
     /**
-     * Create the event listener.
+
+    
+    
+    
+     * Handle __construct.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function __construct()
     {
         //
     }
 
+    
+    
+    
+    
     /**
-     * Handle the event.
+
+    
+    
+    
+     * Handle handle.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param PostCreated $event The event.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function handle(PostCreated $event): void
     {
         try {
@@ -51,9 +114,38 @@ class InvalidateMLCacheOnPostCreated
         }
     }
 
+    
+    
+    
+    
     /**
-     * Get all ML cache keys to invalidate
+
+    
+    
+    
+     * Get mlcache keys.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return array
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function getMLCacheKeys(): array
     {
         // In production, you might want to use Redis SCAN command

@@ -26,6 +26,8 @@ import {
     DialogActions,
     Tabs,
     Tab,
+    Grid,
+    alpha,
 } from '@mui/material';
 import {
     Visibility,
@@ -44,6 +46,9 @@ import {
     VpnKey,
     Key,
     Warning,
+    Block as BlockIcon,
+    Close as CloseIcon,
+    Gavel as GavelIcon,
 } from '@mui/icons-material';
 import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion';
 import { Head, Link, useForm, router } from '@inertiajs/react';
@@ -68,6 +73,10 @@ export default function LoginNew({ status, canResetPassword }) {
     const [twoFactorSuccess, setTwoFactorSuccess] = useState(false);
     const [attempts, setAttempts] = useState(0);
     const [rememberDevice, setRememberDevice] = useState(false);
+
+    // Banned User Modal States
+    const [showBannedModal, setShowBannedModal] = useState(false);
+    const [banInfo, setBanInfo] = useState(null);
 
     const { data, setData, post, processing, errors, reset } = useForm({
         email: '',
@@ -106,6 +115,17 @@ export default function LoginNew({ status, canResetPassword }) {
                     setTwoFactorCode('');
                     setRecoveryCode('');
                     setAttempts(0);
+                }
+
+                // ✅ Check if user is banned
+                if (errors.bannedUser && errors.banInfo) {
+                    try {
+                        const parsedBanInfo = JSON.parse(errors.banInfo);
+                        setBanInfo(parsedBanInfo);
+                        setShowBannedModal(true);
+                    } catch (e) {
+                        console.error('Error parsing ban info:', e);
+                    }
                 }
             },
             preserveScroll: true,
@@ -151,18 +171,19 @@ export default function LoginNew({ status, canResetPassword }) {
             // Check for low recovery codes warning
             if (response.data.low_recovery_codes) {
                 const remainingCodes = response.data.remaining_codes;
-                setTimeout(() => {
-                    alert(`⚠️ ADVERTENCIA DE SEGURIDAD\n\nSolo te quedan ${remainingCodes} código(s) de recuperación.\n\nTe recomendamos regenerar tus códigos de recuperación inmediatamente desde tu perfil en la sección de Seguridad.`);
-                }, 1600);
+                // Show warning after redirect using sessionStorage
+                sessionStorage.setItem('2fa_low_recovery_codes_warning', remainingCodes);
             }
 
+            // ✅ FIX: Redirect immediately to avoid CSRF token mismatch
+            // Session was regenerated after 2FA verification, so we need a full page reload
             setTimeout(() => {
                 if (response.data.redirect) {
                     window.location.href = response.data.redirect;
                 } else {
-                    router.visit(route('dashboard'));
+                    window.location.href = route('dashboard');
                 }
-            }, response.data.low_recovery_codes ? 2500 : 1500);
+            }, 500); // Minimal delay to show success animation
         } catch (error) {
             setTwoFactorProcessing(false);
 
@@ -993,6 +1014,244 @@ export default function LoginNew({ status, canResetPassword }) {
                         </Button>
                     </DialogActions>
                 )}
+            </Dialog>
+
+            {/* Banned User Modal */}
+            <Dialog
+                open={showBannedModal}
+                onClose={() => setShowBannedModal(false)}
+                maxWidth="md"
+                fullWidth
+                PaperProps={{
+                    sx: {
+                        borderRadius: 4,
+                        background: '#ffffff',
+                        backdropFilter: 'blur(20px)',
+                        boxShadow: `0 20px 60px ${alpha('#000', 0.3)}`,
+                        border: `2px solid ${alpha('#DC2626', 0.3)}`,
+                        overflow: 'hidden',
+                        position: 'relative',
+                        '&::before': {
+                            content: '""',
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            height: '6px',
+                            background: 'linear-gradient(90deg, #DC2626 0%, #991B1B 100%)',
+                        }
+                    }
+                }}
+                BackdropProps={{
+                    sx: {
+                        backgroundColor: alpha('#000', 0.7),
+                        backdropFilter: 'blur(8px)',
+                    }
+                }}
+            >
+                <DialogTitle sx={{ pb: 2, pt: 3 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                        <Box
+                            sx={{
+                                width: 56,
+                                height: 56,
+                                borderRadius: '50%',
+                                background: 'linear-gradient(135deg, #DC2626 0%, #991B1B 100%)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                boxShadow: `0 8px 24px ${alpha('#DC2626', 0.4)}`,
+                            }}
+                        >
+                            <BlockIcon sx={{ fontSize: 32, color: '#fff' }} />
+                        </Box>
+                        <Box sx={{ flex: 1 }}>
+                            <Typography variant="h5" sx={{ fontWeight: 700, color: '#1a202c' }}>
+                                Cuenta Suspendida
+                            </Typography>
+                            <Typography variant="body2" sx={{ color: '#718096', mt: 0.5 }}>
+                                Tu cuenta ha sido suspendida por un administrador
+                            </Typography>
+                        </Box>
+                        <IconButton
+                            onClick={() => setShowBannedModal(false)}
+                            sx={{
+                                color: '#718096',
+                                '&:hover': { backgroundColor: alpha('#DC2626', 0.1), color: '#DC2626' }
+                            }}
+                        >
+                            <CloseIcon />
+                        </IconButton>
+                    </Box>
+                </DialogTitle>
+
+                <DialogContent sx={{ px: 3, pb: 3 }}>
+                    {banInfo && (
+                        <Box>
+                            {/* Ban Information */}
+                            <Alert
+                                severity="error"
+                                sx={{
+                                    mb: 3,
+                                    borderRadius: 2,
+                                    '& .MuiAlert-icon': {
+                                        fontSize: 28
+                                    }
+                                }}
+                            >
+                                <Typography variant="body1" sx={{ fontWeight: 600, mb: 1 }}>
+                                    Motivo de la suspensión:
+                                </Typography>
+                                <Typography variant="body2">
+                                    {banInfo.reason}
+                                </Typography>
+                            </Alert>
+
+                            {/* Ban Details */}
+                            <Box sx={{
+                                p: 3,
+                                borderRadius: 2,
+                                backgroundColor: alpha('#DC2626', 0.05),
+                                border: `1px solid ${alpha('#DC2626', 0.2)}`,
+                                mb: 3
+                            }}>
+                                <Grid container spacing={2}>
+                                    <Grid item xs={12} sm={6}>
+                                        <Typography variant="body2" sx={{ color: '#718096', mb: 0.5 }}>
+                                            Fecha de suspensión:
+                                        </Typography>
+                                        <Typography variant="body1" sx={{ fontWeight: 600 }}>
+                                            {banInfo.banned_at || 'No especificada'}
+                                        </Typography>
+                                    </Grid>
+                                    <Grid item xs={12} sm={6}>
+                                        <Typography variant="body2" sx={{ color: '#718096', mb: 0.5 }}>
+                                            {banInfo.is_permanent ? 'Tipo de suspensión:' : 'Expira el:'}
+                                        </Typography>
+                                        <Chip
+                                            label={banInfo.is_permanent ? 'PERMANENTE' : banInfo.expires_at}
+                                            color="error"
+                                            size="small"
+                                            sx={{ fontWeight: 600 }}
+                                        />
+                                    </Grid>
+                                </Grid>
+                            </Box>
+
+                            {/* Irrevocable Ban Warning */}
+                            {banInfo.is_irrevocable && (
+                                <Alert severity="error" sx={{ mb: 3, borderRadius: 2 }}>
+                                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                        ⚠️ BANEO IRREVOCABLE
+                                    </Typography>
+                                    <Typography variant="body2" sx={{ mt: 0.5 }}>
+                                        Este baneo es permanente y no puede ser apelado. Si crees que esto es un error,
+                                        contacta directamente con el soporte del sitio.
+                                    </Typography>
+                                </Alert>
+                            )}
+
+                            {/* Appeal Section */}
+                            {!banInfo.is_irrevocable && (
+                                <Box>
+                                    {banInfo.can_appeal ? (
+                                        <Box sx={{
+                                            p: 3,
+                                            borderRadius: 2,
+                                            backgroundColor: alpha('#10B981', 0.05),
+                                            border: `1px solid ${alpha('#10B981', 0.2)}`
+                                        }}>
+                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+                                                <GavelIcon sx={{ fontSize: 32, color: '#10B981' }} />
+                                                <Box>
+                                                    <Typography variant="h6" sx={{ fontWeight: 600, color: '#1a202c' }}>
+                                                        Puedes apelar esta suspensión
+                                                    </Typography>
+                                                    <Typography variant="body2" sx={{ color: '#718096' }}>
+                                                        Tienes derecho a presentar una apelación
+                                                    </Typography>
+                                                </Box>
+                                            </Box>
+                                            <Typography variant="body2" sx={{ mb: 2, color: '#4a5568' }}>
+                                                Si crees que esta suspensión es injusta o fue un error, puedes enviar una apelación
+                                                explicando tu situación. Un administrador revisará tu caso.
+                                            </Typography>
+                                            <Button
+                                                variant="contained"
+                                                color="success"
+                                                fullWidth
+                                                startIcon={<GavelIcon />}
+                                                onClick={() => {
+                                                    setShowBannedModal(false);
+                                                    // ✅ Use signed URL from backend
+                                                    if (banInfo.appeal_url) {
+                                                        window.location.href = banInfo.appeal_url;
+                                                    } else {
+                                                        console.error('No appeal URL provided');
+                                                    }
+                                                }}
+                                                sx={{
+                                                    py: 1.5,
+                                                    borderRadius: 2,
+                                                    fontWeight: 600,
+                                                    textTransform: 'none',
+                                                    fontSize: '1rem'
+                                                }}
+                                            >
+                                                Presentar Apelación
+                                            </Button>
+                                        </Box>
+                                    ) : (
+                                        <Alert severity="warning" sx={{ borderRadius: 2 }}>
+                                            <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.5 }}>
+                                                No puedes apelar esta suspensión
+                                            </Typography>
+                                            <Typography variant="body2">
+                                                {banInfo.appeal_reason || 'Ya has enviado una apelación para este baneo.'}
+                                            </Typography>
+                                            {banInfo.has_existing_appeal && (
+                                                <Box sx={{ mt: 2 }}>
+                                                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                                        Estado de tu apelación:
+                                                    </Typography>
+                                                    <Chip
+                                                        label={
+                                                            banInfo.existing_appeal_status === 'pending' ? 'Pendiente de revisión' :
+                                                            banInfo.existing_appeal_status === 'approved' ? 'Aprobada' :
+                                                            banInfo.existing_appeal_status === 'rejected' ? 'Rechazada' :
+                                                            banInfo.existing_appeal_status
+                                                        }
+                                                        color={
+                                                            banInfo.existing_appeal_status === 'pending' ? 'warning' :
+                                                            banInfo.existing_appeal_status === 'approved' ? 'success' :
+                                                            'error'
+                                                        }
+                                                        size="small"
+                                                        sx={{ mt: 1, fontWeight: 600 }}
+                                                    />
+                                                </Box>
+                                            )}
+                                        </Alert>
+                                    )}
+                                </Box>
+                            )}
+                        </Box>
+                    )}
+                </DialogContent>
+
+                <DialogActions sx={{ px: 3, pb: 3 }}>
+                    <Button
+                        onClick={() => setShowBannedModal(false)}
+                        variant="outlined"
+                        sx={{
+                            borderRadius: 2,
+                            textTransform: 'none',
+                            fontWeight: 600
+                        }}
+                    >
+                        Cerrar
+                    </Button>
+                </DialogActions>
             </Dialog>
         </>
     );

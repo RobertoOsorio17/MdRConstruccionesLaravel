@@ -37,49 +37,238 @@ class Project extends Model
         'views_count' => 'integer',
     ];
 
+    
+    
+    
+    
     /**
-     * Scope a query to only include published projects.
+
+    
+    
+    
+     * Handle scope published.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param mixed $query The query.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function scopePublished($query)
     {
         return $query->where('status', 'published');
     }
 
+    
+    
+    
+    
     /**
-     * Scope a query to only include completed projects.
+
+    
+    
+    
+     * Handle scope completed.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param mixed $query The query.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function scopeCompleted($query)
     {
         return $query->where('status', 'completed');
     }
 
+    
+    
+    
+    
     /**
-     * Scope a query to only include featured projects.
+
+    
+    
+    
+     * Handle scope featured.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param mixed $query The query.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function scopeFeatured($query)
     {
         return $query->where('featured', true);
     }
 
+    
+    
+    
+    
     /**
-     * Get the route key for the model.
+
+    
+    
+    
+     * Get route key name.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function getRouteKeyName()
     {
         return 'slug';
     }
 
+    
+    
+    
+    
     /**
-     * Get the first image from gallery.
+
+    
+    
+    
+     * Get cover image attribute.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function getCoverImageAttribute()
     {
         return $this->gallery && count($this->gallery) > 0 ? $this->gallery[0] : null;
     }
 
+    
+    
+    
+    
     /**
-     * Get project duration in days.
+
+    
+    
+    
+     * Get duration in days attribute.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function getDurationInDaysAttribute()
     {
         if ($this->start_date && $this->end_date) {
@@ -88,9 +277,38 @@ class Project extends Model
         return null;
     }
 
+    
+    
+    
+    
     /**
-     * Get formatted budget estimate.
+
+    
+    
+    
+     * Get formatted budget attribute.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function getFormattedBudgetAttribute()
     {
         if ($this->budget_estimate) {
@@ -99,9 +317,38 @@ class Project extends Model
         return 'Consultar';
     }
 
+    
+    
+    
+    
     /**
-     * Increment the views count.
+
+    
+    
+    
+     * Handle increment views.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function incrementViews()
     {
         $this->increment('views_count');

@@ -33,9 +33,53 @@ class BatchTrainModelsJob implements ShouldQueue
     private int $batchSize;
     private array $options;
 
+    
+    
+    
+    
     /**
-     * Create a new job instance.
+
+    
+    
+    
+     * Handle __construct.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param string $mode The mode.
+
+    
+    
+    
+     * @param int $batchSize The batchSize.
+
+    
+    
+    
+     * @param array $options The options.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function __construct(string $mode = 'full', int $batchSize = 100, array $options = [])
     {
         $this->mode = $mode;
@@ -44,9 +88,58 @@ class BatchTrainModelsJob implements ShouldQueue
         $this->onQueue('ml-training');
     }
 
+    
+    
+    
+    
     /**
-     * Execute the job.
+
+    
+    
+    
+     * Handle handle.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param ContentAnalysisServiceV2 $contentAnalysis The contentAnalysis.
+
+    
+    
+    
+     * @param MLUserProfileService $profileService The profileService.
+
+    
+    
+    
+     * @param KMeansClusteringService $clusteringService The clusteringService.
+
+    
+    
+    
+     * @param MatrixFactorizationService $matrixFactorization The matrixFactorization.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function handle(
         ContentAnalysisServiceV2 $contentAnalysis,
         MLUserProfileService $profileService,
@@ -116,9 +209,43 @@ class BatchTrainModelsJob implements ShouldQueue
         }
     }
 
+    
+    
+    
+    
     /**
-     * Train post vectors in batches.
+
+    
+    
+    
+     * Handle train post vectors.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param ContentAnalysisServiceV2 $contentAnalysis The contentAnalysis.
+
+    
+    
+    
+     * @return int
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function trainPostVectors(ContentAnalysisServiceV2 $contentAnalysis): int
     {
         $count = 0;
@@ -154,9 +281,43 @@ class BatchTrainModelsJob implements ShouldQueue
         return $count;
     }
 
+    
+    
+    
+    
     /**
-     * Update user profiles in batches.
+
+    
+    
+    
+     * Handle update user profiles.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param MLUserProfileService $profileService The profileService.
+
+    
+    
+    
+     * @return int
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function updateUserProfiles(MLUserProfileService $profileService): int
     {
         $count = 0;
@@ -189,9 +350,43 @@ class BatchTrainModelsJob implements ShouldQueue
         return $count;
     }
 
+    
+    
+    
+    
     /**
-     * Perform K-Means clustering.
+
+    
+    
+    
+     * Handle perform clustering.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param KMeansClusteringService $clusteringService The clusteringService.
+
+    
+    
+    
+     * @return int
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function performClustering(KMeansClusteringService $clusteringService): int
     {
         $profiles = MLUserProfile::whereNotNull('category_preferences')
@@ -239,9 +434,43 @@ class BatchTrainModelsJob implements ShouldQueue
         return $updated;
     }
 
+    
+    
+    
+    
     /**
-     * Train matrix factorization model.
+
+    
+    
+    
+     * Handle train matrix factorization.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param MatrixFactorizationService $matrixFactorization The matrixFactorization.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function trainMatrixFactorization(MatrixFactorizationService $matrixFactorization): void
     {
         Log::info("Starting matrix factorization training");
@@ -256,9 +485,38 @@ class BatchTrainModelsJob implements ShouldQueue
         ]);
     }
 
+    
+    
+    
+    
     /**
-     * Clear ML caches.
+
+    
+    
+    
+     * Handle clear caches.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function clearCaches(): void
     {
         Cache::tags(['ml_recommendations', 'ml_metrics', 'ml_clustering'])->flush();
@@ -266,18 +524,86 @@ class BatchTrainModelsJob implements ShouldQueue
         Log::info("ML caches cleared");
     }
 
+    
+    
+    
+    
     /**
+
+    
+    
+    
      * Send completion notification.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param array $stats The stats.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function sendCompletionNotification(array $stats): void
     {
         // Implementation would use Laravel Notifications
         Log::info("Training completion notification sent", $stats);
     }
 
+    
+    
+    
+    
     /**
-     * Handle a job failure.
+
+    
+    
+    
+     * Handle failed.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param \Throwable $exception The exception.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function failed(\Throwable $exception): void
     {
         Log::error("Batch ML training job failed permanently", [
@@ -287,9 +613,38 @@ class BatchTrainModelsJob implements ShouldQueue
         ]);
     }
 
+    
+    
+    
+    
     /**
-     * Get the tags that should be assigned to the job.
+
+    
+    
+    
+     * Handle tags.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return array
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function tags(): array
     {
         return ['ml-training', 'batch', "mode:{$this->mode}"];

@@ -313,6 +313,22 @@ class User extends Authenticatable
     }
 
     /**
+     * Get all ban appeals submitted by this user.
+     */
+    public function banAppeals(): HasMany
+    {
+        return $this->hasMany(BanAppeal::class, 'user_id');
+    }
+
+    /**
+     * Get ban appeals reviewed by this user (admin).
+     */
+    public function reviewedAppeals(): HasMany
+    {
+        return $this->hasMany(BanAppeal::class, 'reviewed_by');
+    }
+
+    /**
      * Get the current active ban for this user.
      */
     public function currentBan(): ?UserBan

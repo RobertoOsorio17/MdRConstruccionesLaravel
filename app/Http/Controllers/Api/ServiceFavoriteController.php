@@ -16,9 +16,43 @@ use Illuminate\Support\Facades\Log;
  */
 class ServiceFavoriteController extends Controller
 {
+    
+    
+    
+    
     /**
-     * Toggle favorite status for a service.
+
+    
+    
+    
+     * Handle toggle.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Service $service The service.
+
+    
+    
+    
+     * @return JsonResponse
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function toggle(Service $service): JsonResponse
     {
         try {
@@ -87,9 +121,38 @@ class ServiceFavoriteController extends Controller
         }
     }
 
+    
+    
+    
+    
     /**
-     * Get user's favorite services.
+
+    
+    
+    
+     * Display a listing of the resource.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return JsonResponse
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function index(): JsonResponse
     {
         try {
@@ -136,9 +199,43 @@ class ServiceFavoriteController extends Controller
         }
     }
 
+    
+    
+    
+    
     /**
-     * Check if a service is favorited by the current user.
+
+    
+    
+    
+     * Handle check.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Service $service The service.
+
+    
+    
+    
+     * @return JsonResponse
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function check(Service $service): JsonResponse
     {
         try {

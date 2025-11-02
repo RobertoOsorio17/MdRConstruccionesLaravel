@@ -10,6 +10,9 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
+/**
+ * Job UpdateMLUserProfileJob.
+ */
 
 class UpdateMLUserProfileJob implements ShouldQueue
 {
@@ -29,18 +32,96 @@ class UpdateMLUserProfileJob implements ShouldQueue
      */
     public $timeout = 120;
 
+    
+    
+    
+    
     /**
-     * Create a new job instance.
+
+    
+    
+    
+     * Handle __construct.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param protected string $sessionId The sessionId.
+
+    
+    
+    
+     * @param protected ?int $userId The userId.
+
+    
+    
+    
+     * @param protected int $interactionId The interactionId.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function __construct(
         protected string $sessionId,
         protected ?int $userId,
         protected int $interactionId
     ) {}
 
+    
+    
+    
+    
     /**
-     * Execute the job.
+
+    
+    
+    
+     * Handle handle.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param MLUserProfileService $userProfileService The userProfileService.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function handle(MLUserProfileService $userProfileService): void
     {
         try {
@@ -77,9 +158,43 @@ class UpdateMLUserProfileJob implements ShouldQueue
         }
     }
 
+    
+    
+    
+    
     /**
-     * Handle a job failure.
+
+    
+    
+    
+     * Handle failed.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param \Throwable $exception The exception.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function failed(\Throwable $exception): void
     {
         Log::error('ML user profile update job failed permanently', [

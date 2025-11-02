@@ -32,9 +32,48 @@ class TrainMLModels extends Command
     private ContentAnalysisServiceV2 $contentAnalysis;
     private MLUserProfileService $profileService;
 
+    
+    
+    
+    
     /**
-     * Create a new command instance.
+
+    
+    
+    
+     * Handle __construct.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param ContentAnalysisServiceV2 $contentAnalysis The contentAnalysis.
+
+    
+    
+    
+     * @param MLUserProfileService $profileService The profileService.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function __construct(
         ContentAnalysisServiceV2 $contentAnalysis,
         MLUserProfileService $profileService
@@ -44,9 +83,38 @@ class TrainMLModels extends Command
         $this->profileService = $profileService;
     }
 
+    
+    
+    
+    
     /**
-     * Execute the console command.
+
+    
+    
+    
+     * Handle handle.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return int
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function handle(): int
     {
         $this->info('🤖 Starting ML model training...');
@@ -114,9 +182,43 @@ class TrainMLModels extends Command
         }
     }
 
+    
+    
+    
+    
     /**
-     * Display training summary.
+
+    
+    
+    
+     * Handle display summary.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param array $stats The stats.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function displaySummary(array $stats): void
     {
         $this->newLine();

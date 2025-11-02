@@ -22,9 +22,58 @@ class SearchService
     private const MAX_QUERY_LENGTH = 500;
     private const MAX_PER_PAGE = 100; // ✅ FIXED: Maximum results per page
 
+    
+    
+    
+    
     /**
-     * Perform comprehensive search across posts, categories, and tags
+
+    
+    
+    
+     * Handle search.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param string $query The query.
+
+    
+    
+    
+     * @param array $filters The filters.
+
+    
+    
+    
+     * @param int $perPage The perPage.
+
+    
+    
+    
+     * @param int $page The page.
+
+    
+    
+    
+     * @return array
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function search(
         string $query,
         array $filters = [],
@@ -56,9 +105,48 @@ class SearchService
         return $results;
     }
 
+    
+    
+    
+    
     /**
-     * Get search suggestions for autocomplete
+
+    
+    
+    
+     * Get suggestions.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param string $query The query.
+
+    
+    
+    
+     * @param int $limit The limit.
+
+    
+    
+    
+     * @return array
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function getSuggestions(string $query, int $limit = 8): array
     {
         $query = $this->sanitizeQuery($query);
@@ -99,9 +187,43 @@ class SearchService
         });
     }
 
+    
+    
+    
+    
     /**
-     * Get popular search terms
+
+    
+    
+    
+     * Get popular searches.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param int $limit The limit.
+
+    
+    
+    
+     * @return array
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function getPopularSearches(int $limit = 10): array
     {
         return Cache::remember('popular_searches:' . $limit, self::CACHE_TTL * 4, function () use ($limit) {
@@ -109,9 +231,43 @@ class SearchService
         });
     }
 
+    
+    
+    
+    
     /**
-     * Get search analytics summary
+
+    
+    
+    
+     * Get analytics summary.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param int $days The days.
+
+    
+    
+    
+     * @return array
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function getAnalyticsSummary(int $days = 30): array
     {
         return Cache::remember('search_analytics:' . $days, self::CACHE_TTL * 2, function () use ($days) {
@@ -119,9 +275,58 @@ class SearchService
         });
     }
 
+    
+    
+    
+    
     /**
-     * Perform the actual search
+
+    
+    
+    
+     * Handle perform search.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param string $query The query.
+
+    
+    
+    
+     * @param array $filters The filters.
+
+    
+    
+    
+     * @param int $perPage The perPage.
+
+    
+    
+    
+     * @param int $page The page.
+
+    
+    
+    
+     * @return array
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function performSearch(string $query, array $filters, int $perPage, int $page): array
     {
         $postsQuery = $this->buildPostsQuery($query, $filters);
@@ -182,9 +387,48 @@ class SearchService
         ];
     }
 
+    
+    
+    
+    
     /**
-     * Build the posts query with search and filters
+
+    
+    
+    
+     * Build posts query.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param string $query The query.
+
+    
+    
+    
+     * @param array $filters The filters.
+
+    
+    
+    
+     * @return Builder
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function buildPostsQuery(string $query, array $filters): Builder
     {
         $likePattern = $this->buildLikePattern($query);
@@ -225,9 +469,53 @@ class SearchService
         return $postsQuery;
     }
 
+    
+    
+    
+    
     /**
-     * Apply sorting to the query
+
+    
+    
+    
+     * Apply sorting.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Builder $query The query.
+
+    
+    
+    
+     * @param string $searchQuery The searchQuery.
+
+    
+    
+    
+     * @param string $sort The sort.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function applySorting(Builder $query, string $searchQuery, string $sort): void
     {
         switch ($sort) {
@@ -252,10 +540,48 @@ class SearchService
         }
     }
 
+    
+    
+    
+    
     /**
-     * Highlight search terms in text
-     * ✅ FIX: Handle nullable text parameter
+
+    
+    
+    
+     * Handle highlight text.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param ?string $text The text.
+
+    
+    
+    
+     * @param string $query The query.
+
+    
+    
+    
+     * @return string
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function highlightText(?string $text, string $query): string
     {
         // ✅ FIX: Return empty string if text is null
@@ -278,9 +604,53 @@ class SearchService
         return $text;
     }
 
+    
+    
+    
+    
     /**
-     * Get highlighted content snippet
+
+    
+    
+    
+     * Get highlighted content.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param string $content The content.
+
+    
+    
+    
+     * @param string $query The query.
+
+    
+    
+    
+     * @param int $snippetLength The snippetLength.
+
+    
+    
+    
+     * @return string
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function getHighlightedContent(string $content, string $query, int $snippetLength = 200): string
     {
         $content = strip_tags($content);
@@ -329,9 +699,43 @@ class SearchService
         return $snippet;
     }
 
+    
+    
+    
+    
     /**
-     * Sanitize search query
+
+    
+    
+    
+     * Handle sanitize query.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param string $query The query.
+
+    
+    
+    
+     * @return string
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function sanitizeQuery(string $query): string
     {
         $normalized = Str::of($query)->squish()->limit(self::MAX_QUERY_LENGTH, '');
@@ -340,6 +744,77 @@ class SearchService
         return $sanitized ? trim($sanitized) : '';
     }
 
+
+    
+
+
+    
+
+    
+
+    
+
+    /**
+
+
+    
+
+    
+
+    
+
+     * Build like pattern.
+
+
+    
+
+    
+
+    
+
+     *
+
+
+    
+
+    
+
+    
+
+     * @param string $term The term.
+
+
+    
+
+    
+
+    
+
+     * @return string
+
+
+    
+
+    
+
+    
+
+     */
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
     private function buildLikePattern(string $term): string
     {
         $escaped = addcslashes($term, '\%_\\');
@@ -347,10 +822,58 @@ class SearchService
         return '%' . $escaped . '%';
     }
 
+    
+    
+    
+    
     /**
-     * Record search analytics
-     * ✅ FIX: Handle CLI/queue context where request() is unavailable
+
+    
+    
+    
+     * Handle record search analytics.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param string $query The query.
+
+    
+    
+    
+     * @param int $total The total.
+
+    
+    
+    
+     * @param array $filters The filters.
+
+    
+    
+    
+     * @param float $responseTime The responseTime.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function recordSearchAnalytics(string $query, int $total, array $filters, float $responseTime): void
     {
         try {
@@ -376,9 +899,38 @@ class SearchService
         }
     }
 
+    
+    
+    
+    
     /**
-     * Return empty results structure
+
+    
+    
+    
+     * Handle empty results.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return array
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function emptyResults(): array
     {
         return [

@@ -5,6 +5,9 @@ namespace App\Console\Commands;
 use Illuminate\Console\Command;
 use App\Models\UserBan;
 use App\Models\IpBan;
+/**
+ * Class CleanupExpiredBans.
+ */
 
 class CleanupExpiredBans extends Command
 {
@@ -22,9 +25,38 @@ class CleanupExpiredBans extends Command
      */
     protected $description = 'Mark expired user and IP bans as inactive to keep records tidy';
 
+    
+    
+    
+    
     /**
-     * Execute the console command.
+
+    
+    
+    
+     * Handle handle.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function handle()
     {
         if (!$this->option('force') && !$this->confirm('This will mark all expired bans as inactive. Continue?')) {

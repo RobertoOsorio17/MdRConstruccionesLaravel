@@ -21,13 +21,38 @@ class MatrixFactorizationService
     private float $learningRate = 0.01;
     private float $convergenceThreshold = 0.001;
 
+    
+    
+    
+    
     /**
-     * Train matrix factorization model using ALS.
-     * ✅ FIXED: Added optimistic locking to prevent concurrent training conflicts
+
+    
+    
+    
+     * Handle train.
+
+    
+    
+    
      *
-     * @return array ['user_factors' => array, 'item_factors' => array, 'metrics' => array]
-     * @throws \Exception If concurrent training is detected
+
+    
+    
+    
+     * @return array
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function train(): array
     {
         Log::info('Starting Matrix Factorization training');
@@ -150,9 +175,38 @@ class MatrixFactorizationService
         }
     }
 
+    
+    
+    
+    
     /**
-     * Build user-item interaction matrix from logs.
+
+    
+    
+    
+     * Build interaction matrix.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return array
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function buildInteractionMatrix(): array
     {
         // Get all interactions with implicit ratings
@@ -207,9 +261,48 @@ class MatrixFactorizationService
         ];
     }
 
+    
+    
+    
+    
     /**
-     * Initialize factor matrix with random values.
+
+    
+    
+    
+     * Handle initialize factors.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param int $rows The rows.
+
+    
+    
+    
+     * @param int $cols The cols.
+
+    
+    
+    
+     * @return array
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function initializeFactors(int $rows, int $cols): array
     {
         $factors = [];
@@ -225,9 +318,53 @@ class MatrixFactorizationService
         return $factors;
     }
 
+    
+    
+    
+    
     /**
-     * Update user factors using ALS.
+
+    
+    
+    
+     * Handle update user factors.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param array $matrix The matrix.
+
+    
+    
+    
+     * @param array $userFactors The userFactors.
+
+    
+    
+    
+     * @param array $itemFactors The itemFactors.
+
+    
+    
+    
+     * @return array
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function updateUserFactors(array $matrix, array $userFactors, array $itemFactors): array
     {
         $numUsers = count($userFactors);
@@ -253,9 +390,53 @@ class MatrixFactorizationService
         return $newUserFactors;
     }
 
+    
+    
+    
+    
     /**
-     * Update item factors using ALS.
+
+    
+    
+    
+     * Handle update item factors.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param array $matrix The matrix.
+
+    
+    
+    
+     * @param array $userFactors The userFactors.
+
+    
+    
+    
+     * @param array $itemFactors The itemFactors.
+
+    
+    
+    
+     * @return array
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function updateItemFactors(array $matrix, array $userFactors, array $itemFactors): array
     {
         $numItems = count($itemFactors);
@@ -281,9 +462,48 @@ class MatrixFactorizationService
         return $newItemFactors;
     }
 
+    
+    
+    
+    
     /**
-     * Solve ALS equation for a single factor vector.
+
+    
+    
+    
+     * Handle solve als.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param array $ratings The ratings.
+
+    
+    
+    
+     * @param array $factors The factors.
+
+    
+    
+    
+     * @return array
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function solveALS(array $ratings, array $factors): array
     {
         $k = $this->numFactors;
@@ -311,9 +531,48 @@ class MatrixFactorizationService
         return $this->gaussianElimination($A, $b);
     }
 
+    
+    
+    
+    
     /**
-     * Create identity matrix with diagonal values.
+
+    
+    
+    
+     * Handle create identity matrix.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param int $size The size.
+
+    
+    
+    
+     * @param float $diagonal The diagonal.
+
+    
+    
+    
+     * @return array
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function createIdentityMatrix(int $size, float $diagonal): array
     {
         $matrix = [];
@@ -324,9 +583,48 @@ class MatrixFactorizationService
         return $matrix;
     }
 
+    
+    
+    
+    
     /**
-     * Solve linear system using Gaussian elimination.
+
+    
+    
+    
+     * Handle gaussian elimination.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param array $A The A.
+
+    
+    
+    
+     * @param array $b The b.
+
+    
+    
+    
+     * @return array
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function gaussianElimination(array $A, array $b): array
     {
         $n = count($b);
@@ -374,9 +672,53 @@ class MatrixFactorizationService
         return $x;
     }
 
+    
+    
+    
+    
     /**
-     * Calculate reconstruction loss (RMSE).
+
+    
+    
+    
+     * Calculate loss.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param array $matrix The matrix.
+
+    
+    
+    
+     * @param array $userFactors The userFactors.
+
+    
+    
+    
+     * @param array $itemFactors The itemFactors.
+
+    
+    
+    
+     * @return float
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function calculateLoss(array $matrix, array $userFactors, array $itemFactors): float
     {
         $totalError = 0;
@@ -405,9 +747,48 @@ class MatrixFactorizationService
         return $count > 0 ? sqrt($totalError / $count) + $regTerm : 0;
     }
 
+    
+    
+    
+    
     /**
-     * Calculate dot product of two vectors.
+
+    
+    
+    
+     * Handle dot product.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param array $a The a.
+
+    
+    
+    
+     * @param array $b The b.
+
+    
+    
+    
+     * @return float
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function dotProduct(array $a, array $b): float
     {
         $sum = 0;
@@ -420,9 +801,48 @@ class MatrixFactorizationService
         return $sum;
     }
 
+    
+    
+    
+    
     /**
-     * Predict rating for user-item pair.
+
+    
+    
+    
+     * Handle predict.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param string $userId The userId.
+
+    
+    
+    
+     * @param int $itemId The itemId.
+
+    
+    
+    
+     * @return float
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function predict(string $userId, int $itemId): float
     {
         $userFactors = Cache::get('ml_user_factors', []);
@@ -435,9 +855,53 @@ class MatrixFactorizationService
         return $this->dotProduct($userFactors[$userId], $itemFactors[$itemId]);
     }
 
+    
+    
+    
+    
     /**
-     * Get top N recommendations for a user.
+
+    
+    
+    
+     * Get recommendations.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param string $userId The userId.
+
+    
+    
+    
+     * @param int $limit The limit.
+
+    
+    
+    
+     * @param array $excludeItems The excludeItems.
+
+    
+    
+    
+     * @return array
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function getRecommendations(string $userId, int $limit = 10, array $excludeItems = []): array
     {
         $userFactors = Cache::get('ml_user_factors', []);
@@ -464,9 +928,48 @@ class MatrixFactorizationService
         return array_slice($scores, 0, $limit, true);
     }
 
+    
+    
+    
+    
     /**
-     * Get similar items using item factors.
+
+    
+    
+    
+     * Get similar items.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param int $itemId The itemId.
+
+    
+    
+    
+     * @param int $limit The limit.
+
+    
+    
+    
+     * @return array
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function getSimilarItems(int $itemId, int $limit = 10): array
     {
         $itemFactors = Cache::get('ml_item_factors', []);
@@ -492,9 +995,48 @@ class MatrixFactorizationService
         return array_slice($similarities, 0, $limit, true);
     }
 
+    
+    
+    
+    
     /**
-     * Calculate cosine similarity between two vectors.
+
+    
+    
+    
+     * Handle cosine similarity.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param array $a The a.
+
+    
+    
+    
+     * @param array $b The b.
+
+    
+    
+    
+     * @return float
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function cosineSimilarity(array $a, array $b): float
     {
         $dotProd = $this->dotProduct($a, $b);
@@ -508,9 +1050,48 @@ class MatrixFactorizationService
         return $dotProd / ($magA * $magB);
     }
 
+    
+    
+    
+    
     /**
-     * Perform SVD decomposition (simplified).
+
+    
+    
+    
+     * Handle perform svd.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param array $matrix The matrix.
+
+    
+    
+    
+     * @param int $k The k.
+
+    
+    
+    
+     * @return array
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function performSVD(array $matrix, int $k): array
     {
         // This is a simplified SVD using power iteration
@@ -587,9 +1168,38 @@ class MatrixFactorizationService
         ];
     }
 
+    
+    
+    
+    
     /**
-     * Get model configuration.
+
+    
+    
+    
+     * Get config.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return array
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function getConfig(): array
     {
         return [
@@ -601,9 +1211,43 @@ class MatrixFactorizationService
         ];
     }
 
+    
+    
+    
+    
     /**
-     * Set model configuration.
+
+    
+    
+    
+     * Set config.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param array $config The config.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function setConfig(array $config): void
     {
         if (isset($config['num_factors'])) {

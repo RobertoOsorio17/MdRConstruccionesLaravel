@@ -26,11 +26,38 @@ use Inertia\Inertia;
  */
 class AdminController extends Controller
 {
+    
+    
+    
+    
     /**
-     * Retrieve high-level system statistics for administrator dashboards.
+
+    
+    
+    
+     * Get system stats.
+
+    
+    
+    
      *
-     * @return array Aggregated counts and metrics for administrative widgets.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function getSystemStats()
     {
         return Cache::remember('admin.system.stats', 300, function () {
@@ -76,19 +103,52 @@ class AdminController extends Controller
         });
     }
 
+    
+    
+    
+    
     /**
-     * Retrieve recent content activity across the application.
+
+    
+    
+    
+     * Get recent activity.
+
+    
+    
+    
      *
-     * @param Request $request The current HTTP request containing pagination hints.
-     * @return \Illuminate\Support\Collection Collection of normalized activity records.
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function getRecentActivity(Request $request)
     {
         $limit = $request->get('limit', 20);
 
         $activities = collect();
 
-        // Append recently created posts.
+        /**
+         * Append recently created posts.
+         */
         Post::with('author:id,name')
             ->orderBy('created_at', 'desc')
             ->limit($limit / 2)
@@ -100,13 +160,15 @@ class AdminController extends Controller
                     'title' => $post->title,
                     'user' => $post->author->name ?? 'System',
                     'created_at' => $post->created_at,
-                    'url' => route('admin.posts.edit', $post->slug), // ✅ Use slug for route resolution
+                    'url' => route('admin.posts.edit', $post->slug), // âœ… Use slug for route resolution
                     'icon' => 'article',
                     'color' => 'primary',
                 ]);
             });
 
-        // Append recently submitted comments.
+        /**
+         * Append recently submitted comments.
+         */
         Comment::with(['post:id,title', 'user:id,name'])
             ->orderBy('created_at', 'desc')
             ->limit($limit / 2)
@@ -133,11 +195,38 @@ class AdminController extends Controller
             });
     }
 
+    
+    
+    
+    
     /**
-     * Report current system health checks for core services.
+
+    
+    
+    
+     * Get system health.
+
+    
+    
+    
      *
-     * @return array Structured health indicators for infrastructure components.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function getSystemHealth()
     {
         $health = [
@@ -145,7 +234,9 @@ class AdminController extends Controller
             'checks' => [],
         ];
 
-        // Verify database connectivity.
+        /**
+         * Verify database connectivity.
+         */
         try {
             DB::connection()->getPdo();
             $health['checks']['database'] = [
@@ -160,7 +251,9 @@ class AdminController extends Controller
             ];
         }
 
-        // Evaluate application storage usage.
+        /**
+         * Evaluate application storage usage.
+         */
         try {
             $diskFree = disk_free_space(storage_path());
             $diskTotal = disk_total_space(storage_path());
@@ -182,7 +275,9 @@ class AdminController extends Controller
             ];
         }
 
-        // Confirm cache store availability.
+        /**
+         * Confirm cache store availability.
+         */
         try {
             Cache::put('health_check', 'test', 60);
             $cached = Cache::get('health_check');
@@ -201,28 +296,69 @@ class AdminController extends Controller
         return $health;
     }
 
+    
+    
+    
+    
     /**
-     * Clear core application caches and record the audit trail.
+
+    
+    
+    
+     * Handle clear caches.
+
+    
+    
+    
      *
-     * @param Request $request The current HTTP request supplying audit metadata.
-     * @return \Illuminate\Http\JsonResponse JSON response confirming the cache operation.
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function clearCaches(Request $request)
     {
         try {
-            // Clear the application cache store.
+            /**
+             * Clear the application cache store.
+             */
             \Artisan::call('cache:clear');
 
-            // Clear the configuration cache.
+            /**
+             * Clear the configuration cache.
+             */
             \Artisan::call('config:clear');
 
-            // Clear the cached route definitions.
+            /**
+             * Clear the cached route definitions.
+             */
             \Artisan::call('route:clear');
 
-            // Clear compiled Blade views.
+            /**
+             * Clear compiled Blade views.
+             */
             \Artisan::call('view:clear');
 
-            // Log the cache clearing for audit purposes.
+            /**
+             * Log the cache clearing for audit purposes.
+             */
             AdminAuditLog::create([
                 'user_id' => Auth::id(),
                 'action' => 'system.cache.clear',
@@ -249,11 +385,38 @@ class AdminController extends Controller
         }
     }
 
+    
+    
+    
+    
     /**
-     * Calculate the current disk usage for the storage path.
+
+    
+    
+    
+     * Get disk usage.
+
+    
+    
+    
      *
-     * @return string Human-readable disk usage measurement.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function getDiskUsage()
     {
         try {
@@ -264,11 +427,38 @@ class AdminController extends Controller
         }
     }
 
+    
+    
+    
+    
     /**
-     * Estimate the cache directory size in human-readable format.
+
+    
+    
+    
+     * Get cache size.
+
+    
+    
+    
      *
-     * @return string Estimated cache footprint measurement.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function getCacheSize()
     {
         try {
@@ -294,13 +484,48 @@ class AdminController extends Controller
         }
     }
 
+    
+    
+    
+    
     /**
-     * Convert a byte count into a human-readable unit value.
+
+    
+    
+    
+     * Handle format bytes.
+
+    
+    
+    
      *
-     * @param int|float $bytes The number of bytes to convert.
-     * @param int $precision The decimal precision for rounding.
-     * @return string Human-readable representation of the byte count.
+
+    
+    
+    
+     * @param mixed $bytes The bytes.
+
+    
+    
+    
+     * @param mixed $precision The precision.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function formatBytes($bytes, $precision = 2)
     {
         $units = ['B', 'KB', 'MB', 'GB', 'TB'];

@@ -21,9 +21,43 @@ class MLHealthMonitorService
     private const CACHE_KEY = 'ml_health_status';
     private const CACHE_TTL = 300; // 5 minutes
 
+    
+    
+    
+    
     /**
-     * Obtener estado completo de salud del sistema ML
+
+    
+    
+    
+     * Get health status.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param bool $detailed The detailed.
+
+    
+    
+    
+     * @return array
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function getHealthStatus(bool $detailed = false): array
     {
         if (!$detailed) {
@@ -35,9 +69,38 @@ class MLHealthMonitorService
         return $this->calculateHealthStatus();
     }
 
+    
+    
+    
+    
     /**
-     * Calcular estado de salud
+
+    
+    
+    
+     * Calculate health status.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return array
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function calculateHealthStatus(): array
     {
         $checks = [
@@ -63,9 +126,38 @@ class MLHealthMonitorService
         ];
     }
 
+    
+    
+    
+    
     /**
-     * Verificar calidad de datos
+
+    
+    
+    
+     * Handle check data quality.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return array
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function checkDataQuality(): array
     {
         $issues = [];
@@ -127,9 +219,38 @@ class MLHealthMonitorService
         ];
     }
 
+    
+    
+    
+    
     /**
-     * Verificar rendimiento del modelo
+
+    
+    
+    
+     * Handle check model performance.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return array
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function checkModelPerformance(): array
     {
         $issues = [];
@@ -187,9 +308,38 @@ class MLHealthMonitorService
         ];
     }
 
+    
+    
+    
+    
     /**
-     * Verificar recursos del sistema
+
+    
+    
+    
+     * Handle check system resources.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return array
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function checkSystemResources(): array
     {
         $issues = [];
@@ -235,9 +385,38 @@ class MLHealthMonitorService
         ];
     }
 
+    
+    
+    
+    
     /**
-     * Verificar frescura de datos
+
+    
+    
+    
+     * Handle check data freshness.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return array
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function checkDataFreshness(): array
     {
         $issues = [];
@@ -294,9 +473,38 @@ class MLHealthMonitorService
         ];
     }
 
+    
+    
+    
+    
     /**
-     * Verificar calidad de recomendaciones
+
+    
+    
+    
+     * Handle check recommendation quality.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return array
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function checkRecommendationQuality(): array
     {
         $issues = [];
@@ -338,9 +546,38 @@ class MLHealthMonitorService
         ];
     }
 
+    
+    
+    
+    
     /**
-     * Verificar tasa de anomalías
+
+    
+    
+    
+     * Handle check anomaly rate.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return array
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function checkAnomalyRate(): array
     {
         $issues = [];
@@ -372,9 +609,43 @@ class MLHealthMonitorService
         ];
     }
 
+    
+    
+    
+    
     /**
-     * Calcular score general
+
+    
+    
+    
+     * Calculate overall score.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param array $checks The checks.
+
+    
+    
+    
+     * @return float
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function calculateOverallScore(array $checks): float
     {
         $weights = [
@@ -394,9 +665,43 @@ class MLHealthMonitorService
         return $totalScore;
     }
 
+    
+    
+    
+    
     /**
-     * Generar alertas
+
+    
+    
+    
+     * Handle generate alerts.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param array $checks The checks.
+
+    
+    
+    
+     * @return array
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function generateAlerts(array $checks): array
     {
         $alerts = [];
@@ -417,9 +722,43 @@ class MLHealthMonitorService
         return $alerts;
     }
 
+    
+    
+    
+    
     /**
-     * Generar recomendaciones
+
+    
+    
+    
+     * Handle generate recommendations.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param array $checks The checks.
+
+    
+    
+    
+     * @return array
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function generateRecommendations(array $checks): array
     {
         $recommendations = [];
@@ -447,15 +786,120 @@ class MLHealthMonitorService
         return $recommendations;
     }
 
+    
+    
+    
+    
     /**
-     * Helpers
+
+    
+    
+    
+     * Get check status.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param float $score The score.
+
+    
+    
+    
+     * @return string
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function getCheckStatus(float $score): string
     {
         if ($score >= 80) return 'healthy';
         if ($score >= 60) return 'warning';
         return 'critical';
     }
+
+
+    
+
+
+    
+
+    
+
+    
+
+    /**
+
+
+    
+
+    
+
+    
+
+     * Get status level.
+
+
+    
+
+    
+
+    
+
+     *
+
+
+    
+
+    
+
+    
+
+     * @param float $score The score.
+
+
+    
+
+    
+
+    
+
+     * @return string
+
+
+    
+
+    
+
+    
+
+     */
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
 
     private function getStatusLevel(float $score): string
     {

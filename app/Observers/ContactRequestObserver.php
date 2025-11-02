@@ -12,9 +12,43 @@ use Illuminate\Support\Facades\Log;
  */
 class ContactRequestObserver
 {
+    
+    
+    
+    
     /**
-     * Handle the ContactRequest "created" event.
+
+    
+    
+    
+     * Handle created.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param ContactRequest $contactRequest The contactRequest.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function created(ContactRequest $contactRequest): void
     {
         // Log new contact request creation for admin notification
@@ -48,9 +82,43 @@ class ContactRequestObserver
         }
     }
 
+    
+    
+    
+    
     /**
-     * Handle the ContactRequest "updated" event.
+
+    
+    
+    
+     * Handle updated.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param ContactRequest $contactRequest The contactRequest.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function updated(ContactRequest $contactRequest): void
     {
         // Log status changes by admin
@@ -75,9 +143,43 @@ class ContactRequestObserver
         }
     }
 
+    
+    
+    
+    
     /**
-     * Handle the ContactRequest "deleted" event.
+
+    
+    
+    
+     * Handle deleted.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param ContactRequest $contactRequest The contactRequest.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function deleted(ContactRequest $contactRequest): void
     {
         // Log deletion by admin

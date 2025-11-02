@@ -15,12 +15,94 @@ use Carbon\Carbon;
  */
 class MaintenanceModeController extends Controller
 {
+    
+    
+    
+    
     /**
-     * Toggle maintenance mode on or off.
+
+    
+    
+    
+     * Handle __construct.
+
+    
+    
+    
      *
-     * @param \Illuminate\Http\Request $request
-     * @return \Illuminate\Http\RedirectResponse
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
+    public function __construct()
+    {
+        $this->middleware(function ($request, $next) {
+            $user = $request->user();
+
+            /**
+             * Check if user is admin (support both role column and roles relationship).
+             */
+            $isAdmin = $user->role === 'admin' ||
+                       $user->roles->contains('name', 'admin');
+
+            if (!$isAdmin) {
+                abort(403, 'This action is unauthorized. Only administrators can manage maintenance mode.');
+            }
+
+            return $next($request);
+        });
+    }
+
+    
+    
+    
+    
+    /**
+
+    
+    
+    
+     * Handle toggle.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
+     */
+    
+    
+    
+    
+    
+    
+    
     public function toggle(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -29,7 +111,7 @@ class MaintenanceModeController extends Controller
         ], [
             'enabled.required' => 'El estado es requerido.',
             'enabled.boolean' => 'El estado debe ser verdadero o falso.',
-            'message.required_if' => 'El mensaje es requerido cuando el modo mantenimiento está activo.',
+            'message.required_if' => 'El mensaje es requerido cuando el modo mantenimiento estÃ¡ activo.',
             'message.max' => 'El mensaje no debe superar 1000 caracteres.',
         ]);
 
@@ -40,14 +122,18 @@ class MaintenanceModeController extends Controller
         $enabled = $request->input('enabled');
         $message = $request->input('message');
 
-        // Update maintenance mode setting
+        /**
+         * Update maintenance mode setting.
+         */
         AdminSetting::setValueWithHistory(
             'maintenance_mode',
             $enabled,
             $enabled ? 'Enabled via admin panel' : 'Disabled via admin panel'
         );
 
-        // Update message if provided
+        /**
+         * Update message if provided.
+         */
         if ($message) {
             AdminSetting::setValueWithHistory(
                 'maintenance_message',
@@ -56,7 +142,9 @@ class MaintenanceModeController extends Controller
             );
         }
 
-        // Fire event
+        /**
+         * Fire event.
+         */
         event(new MaintenanceModeToggled(
             enabled: $enabled,
             message: $message,
@@ -64,19 +152,50 @@ class MaintenanceModeController extends Controller
         ));
 
         $successMessage = $enabled 
-            ? '🔧 Modo mantenimiento activado correctamente.' 
-            : '✅ Modo mantenimiento desactivado correctamente.';
+            ? 'ðŸ”§ Modo mantenimiento activado correctamente.' 
+            : 'âœ… Modo mantenimiento desactivado correctamente.';
 
         session()->flash('success', $successMessage);
         return back();
     }
 
+    
+    
+    
+    
     /**
-     * Schedule a maintenance window.
+
+    
+    
+    
+     * Handle schedule.
+
+    
+    
+    
      *
-     * @param \Illuminate\Http\Request $request
-     * @return \Illuminate\Http\RedirectResponse
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function schedule(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -85,10 +204,10 @@ class MaintenanceModeController extends Controller
             'message' => 'required|string|max:1000',
         ], [
             'start_at.required' => 'La fecha de inicio es requerida.',
-            'start_at.date' => 'La fecha de inicio debe ser una fecha válida.',
+            'start_at.date' => 'La fecha de inicio debe ser una fecha vÃ¡lida.',
             'start_at.after' => 'La fecha de inicio debe ser futura.',
             'end_at.required' => 'La fecha de fin es requerida.',
-            'end_at.date' => 'La fecha de fin debe ser una fecha válida.',
+            'end_at.date' => 'La fecha de fin debe ser una fecha vÃ¡lida.',
             'end_at.after' => 'La fecha de fin debe ser posterior a la fecha de inicio.',
             'message.required' => 'El mensaje es requerido.',
             'message.max' => 'El mensaje no debe superar 1000 caracteres.',
@@ -102,13 +221,17 @@ class MaintenanceModeController extends Controller
         $endAt = $request->input('end_at');
         $message = $request->input('message');
 
-        // Update settings
+        /**
+         * Update settings.
+         */
         AdminSetting::setValueWithHistory('maintenance_mode', true, 'Scheduled maintenance');
         AdminSetting::setValueWithHistory('maintenance_start_at', $startAt, 'Scheduled via admin panel');
         AdminSetting::setValueWithHistory('maintenance_end_at', $endAt, 'Scheduled via admin panel');
         AdminSetting::setValueWithHistory('maintenance_message', $message, 'Scheduled via admin panel');
 
-        // Fire event
+        /**
+         * Fire event.
+         */
         event(new MaintenanceModeToggled(
             enabled: true,
             message: $message,
@@ -117,15 +240,42 @@ class MaintenanceModeController extends Controller
             endAt: $endAt
         ));
 
-        session()->flash('success', '📅 Mantenimiento programado correctamente.');
+        session()->flash('success', 'ðŸ“… Mantenimiento programado correctamente.');
         return back();
     }
 
+    
+    
+    
+    
     /**
-     * Preview the maintenance page.
+
+    
+    
+    
+     * Handle preview.
+
+    
+    
+    
      *
-     * @return \Illuminate\View\View
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function preview()
     {
         $message = AdminSetting::getValue(
@@ -146,19 +296,50 @@ class MaintenanceModeController extends Controller
         ]);
     }
 
+    
+    
+    
+    
     /**
-     * Add an IP address to the whitelist.
+
+    
+    
+    
+     * Handle add ip.
+
+    
+    
+    
      *
-     * @param \Illuminate\Http\Request $request
-     * @return \Illuminate\Http\RedirectResponse
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function addIp(Request $request)
     {
         $validator = Validator::make($request->all(), [
             'ip' => 'required|ip',
         ], [
-            'ip.required' => 'La dirección IP es requerida.',
-            'ip.ip' => 'Debe ser una dirección IP válida.',
+            'ip.required' => 'La direcciÃ³n IP es requerida.',
+            'ip.ip' => 'Debe ser una direcciÃ³n IP vÃ¡lida.',
         ]);
 
         if ($validator->fails()) {
@@ -173,7 +354,7 @@ class MaintenanceModeController extends Controller
         }
 
         if (in_array($ip, $allowedIps)) {
-            return back()->withErrors(['ip' => 'Esta IP ya está en la lista.']);
+            return back()->withErrors(['ip' => 'Esta IP ya estÃ¡ en la lista.']);
         }
 
         $allowedIps[] = $ip;
@@ -184,16 +365,47 @@ class MaintenanceModeController extends Controller
             "Added IP {$ip} via admin panel"
         );
 
-        session()->flash('success', "✅ IP {$ip} agregada a la lista permitida.");
+        session()->flash('success', "âœ… IP {$ip} agregada a la lista permitida.");
         return back();
     }
 
+    
+    
+    
+    
     /**
-     * Remove an IP address from the whitelist.
+
+    
+    
+    
+     * Handle remove ip.
+
+    
+    
+    
      *
-     * @param string $ip
-     * @return \Illuminate\Http\RedirectResponse
+
+    
+    
+    
+     * @param string $ip The ip.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function removeIp(string $ip)
     {
         $allowedIps = AdminSetting::getValue('maintenance_allowed_ips', []);
@@ -205,11 +417,14 @@ class MaintenanceModeController extends Controller
         $key = array_search($ip, $allowedIps);
         
         if ($key === false) {
-            return back()->withErrors(['ip' => 'Esta IP no está en la lista.']);
+            return back()->withErrors(['ip' => 'Esta IP no estÃ¡ en la lista.']);
         }
 
         unset($allowedIps[$key]);
-        $allowedIps = array_values($allowedIps); // Re-index array
+        /**
+         * Re-index the allowlist array values.
+         */
+        $allowedIps = array_values($allowedIps);
 
         AdminSetting::setValueWithHistory(
             'maintenance_allowed_ips',
@@ -217,15 +432,42 @@ class MaintenanceModeController extends Controller
             "Removed IP {$ip} via admin panel"
         );
 
-        session()->flash('success', "🗑️ IP {$ip} eliminada de la lista permitida.");
+        session()->flash('success', "ðŸ—‘ï¸ IP {$ip} eliminada de la lista permitida.");
         return back();
     }
 
+    
+    
+    
+    
     /**
-     * Get current maintenance mode status (API endpoint).
+
+    
+    
+    
+     * Handle status.
+
+    
+    
+    
      *
-     * @return \Illuminate\Http\JsonResponse
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function status()
     {
         $enabled = AdminSetting::getValue('maintenance_mode', false);

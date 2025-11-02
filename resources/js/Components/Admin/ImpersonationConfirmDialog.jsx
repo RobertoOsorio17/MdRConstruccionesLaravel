@@ -16,6 +16,7 @@ import {
     ListItem,
     ListItemIcon,
     ListItemText,
+    Snackbar,
 } from '@mui/material';
 import {
     Warning as WarningIcon,
@@ -24,6 +25,7 @@ import {
     Visibility as VisibilityIcon,
     Person as PersonIcon,
     Email as EmailIcon,
+    Error as ErrorIcon,
 } from '@mui/icons-material';
 import { router } from '@inertiajs/react';
 
@@ -36,6 +38,8 @@ import { router } from '@inertiajs/react';
 const ImpersonationConfirmDialog = ({ open, onClose, user }) => {
     const [acknowledged, setAcknowledged] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [errorMessage, setErrorMessage] = useState('');
+    const [showError, setShowError] = useState(false);
 
     const handleConfirm = () => {
         if (!acknowledged) {
@@ -52,10 +56,11 @@ const ImpersonationConfirmDialog = ({ open, onClose, user }) => {
             onError: (errors) => {
                 setLoading(false);
                 // Inertia error bag: extract first error message
-                const errorMessage = typeof errors === 'object'
+                const message = typeof errors === 'object'
                     ? Object.values(errors).flat()[0]
                     : (errors.message || 'No tienes permiso para impersonar a este usuario.');
-                alert(errorMessage);
+                setErrorMessage(message);
+                setShowError(true);
             },
             onFinish: () => {
                 setLoading(false);
@@ -66,13 +71,20 @@ const ImpersonationConfirmDialog = ({ open, onClose, user }) => {
     const handleClose = () => {
         if (!loading) {
             setAcknowledged(false);
+            setErrorMessage('');
+            setShowError(false);
             onClose();
         }
+    };
+
+    const handleCloseError = () => {
+        setShowError(false);
     };
 
     if (!user) return null;
 
     return (
+        <>
         <Dialog
             open={open}
             onClose={handleClose}
@@ -276,6 +288,31 @@ const ImpersonationConfirmDialog = ({ open, onClose, user }) => {
                 </Button>
             </DialogActions>
         </Dialog>
+
+        {/* Error Snackbar */}
+        <Snackbar
+            open={showError}
+            autoHideDuration={6000}
+            onClose={handleCloseError}
+            anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+        >
+            <Alert
+                onClose={handleCloseError}
+                severity="error"
+                variant="filled"
+                icon={<ErrorIcon />}
+                sx={{
+                    width: '100%',
+                    borderRadius: 2,
+                    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+                }}
+            >
+                <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                    {errorMessage}
+                </Typography>
+            </Alert>
+        </Snackbar>
+    </>
     );
 };
 

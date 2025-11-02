@@ -25,11 +25,38 @@ use Inertia\Inertia;
  */
 class ExportController extends Controller
 {
+    
+    
+    
+    
     /**
-     * Display export options page.
+
+    
+    
+    
+     * Display a listing of the resource.
+
+    
+    
+    
      *
-     * @return \Inertia\Response Inertia response with export stats.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function index()
     {
         // Authorize: only admins can export data.
@@ -44,12 +71,43 @@ class ExportController extends Controller
         ]);
     }
 
+    
+    
+    
+    
     /**
-     * Export posts to Excel/CSV.
+
+    
+    
+    
+     * Export posts.
+
+    
+    
+    
      *
-     * @param Request $request The current HTTP request instance with filters.
-     * @return \Symfony\Component\HttpFoundation\BinaryFileResponse The Excel/CSV download.
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function exportPosts(Request $request)
     {
         // Authorize: only admins can export.
@@ -85,12 +143,43 @@ class ExportController extends Controller
         return Excel::download(new PostsExport($filters), $filename);
     }
 
+    
+    
+    
+    
     /**
-     * Export comments to Excel/CSV.
+
+    
+    
+    
+     * Export comments.
+
+    
+    
+    
      *
-     * @param Request $request The current HTTP request instance with filters.
-     * @return \Symfony\Component\HttpFoundation\BinaryFileResponse The Excel/CSV download.
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function exportComments(Request $request)
     {
         // Authorize: only admins can export.
@@ -126,12 +215,43 @@ class ExportController extends Controller
         return Excel::download(new CommentsExport($filters), $filename);
     }
 
+    
+    
+    
+    
     /**
-     * Export posts to PDF.
+
+    
+    
+    
+     * Export posts pdf.
+
+    
+    
+    
      *
-     * @param Request $request The current HTTP request instance with filters.
-     * @return \Symfony\Component\HttpFoundation\BinaryFileResponse The PDF download.
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function exportPostsPdf(Request $request)
     {
         // Authorize: only admins can export.
@@ -188,12 +308,43 @@ class ExportController extends Controller
         return $pdf->download('posts_' . now()->format('Y-m-d_His') . '.pdf');
     }
 
+    
+    
+    
+    
     /**
-     * Export comments to PDF.
+
+    
+    
+    
+     * Export comments pdf.
+
+    
+    
+    
      *
-     * @param Request $request The current HTTP request instance with filters.
-     * @return \Symfony\Component\HttpFoundation\BinaryFileResponse The PDF download.
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function exportCommentsPdf(Request $request)
     {
         // Authorize: only admins can export.
@@ -248,12 +399,43 @@ class ExportController extends Controller
         return $pdf->download('comments_' . now()->format('Y-m-d_His') . '.pdf');
     }
 
+    
+    
+    
+    
     /**
-     * Export users to Excel/CSV.
+
+    
+    
+    
+     * Export users.
+
+    
+    
+    
      *
-     * @param Request $request The current HTTP request instance with filters.
-     * @return \Symfony\Component\HttpFoundation\BinaryFileResponse The Excel/CSV download.
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function exportUsers(Request $request)
     {
         // Authorize: only admins can export.

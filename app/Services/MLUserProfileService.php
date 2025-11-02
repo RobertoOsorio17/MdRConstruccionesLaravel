@@ -20,13 +20,123 @@ class MLUserProfileService
 {
     private KMeansClusteringService $clusteringService;
 
+
+    
+
+
+    
+
+    
+
+    
+
+    /**
+
+
+    
+
+    
+
+    
+
+     * Handle __construct.
+
+
+    
+
+    
+
+    
+
+     *
+
+
+    
+
+    
+
+    
+
+     * @param KMeansClusteringService $clusteringService The clusteringService.
+
+
+    
+
+    
+
+    
+
+     * @return void
+
+
+    
+
+    
+
+    
+
+     */
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
     public function __construct(KMeansClusteringService $clusteringService)
     {
         $this->clusteringService = $clusteringService;
     }
+    
+    
+    
+    
     /**
-     * Update or create user profile based on recent interactions.
+
+    
+    
+    
+     * Handle update user profile.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param string $sessionId The sessionId.
+
+    
+    
+    
+     * @param int $userId The userId.
+
+    
+    
+    
+     * @return MLUserProfile
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function updateUserProfile(string $sessionId = null, int $userId = null): MLUserProfile
     {
         $profile = MLUserProfile::findByIdentifier($sessionId, $userId);
@@ -93,9 +203,43 @@ class MLUserProfileService
         return $profile;
     }
 
+    
+    
+    
+    
     /**
-     * Calculate reading patterns (time of day, day of week preferences).
+
+    
+    
+    
+     * Calculate reading patterns.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param mixed $interactions The interactions.
+
+    
+    
+    
+     * @return array
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function calculateReadingPatterns($interactions): array
     {
         $patterns = [
@@ -178,9 +322,43 @@ class MLUserProfileService
         return $patterns;
     }
 
+    
+    
+    
+    
     /**
-     * Calculate category preferences with weighted scores.
+
+    
+    
+    
+     * Calculate category preferences.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param mixed $interactions The interactions.
+
+    
+    
+    
+     * @return array
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function calculateCategoryPreferences($interactions): array
     {
         $categoryScores = [];
@@ -208,9 +386,43 @@ class MLUserProfileService
         return $categoryScores;
     }
 
+    
+    
+    
+    
     /**
-     * Calculate tag interests with weighted scores.
+
+    
+    
+    
+     * Calculate tag interests.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param mixed $interactions The interactions.
+
+    
+    
+    
+     * @return array
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function calculateTagInterests($interactions): array
     {
         $tagScores = [];
@@ -238,9 +450,43 @@ class MLUserProfileService
         return $tagScores;
     }
 
+    
+    
+    
+    
     /**
-     * Calculate content type preferences (length, complexity).
+
+    
+    
+    
+     * Calculate content type preferences.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param mixed $interactions The interactions.
+
+    
+    
+    
+     * @return array
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function calculateContentTypePreferences($interactions): array
     {
         $preferences = [
@@ -273,9 +519,43 @@ class MLUserProfileService
         return $preferences;
     }
 
+    
+    
+    
+    
     /**
-     * Calculate return rate (how often user comes back).
+
+    
+    
+    
+     * Calculate return rate.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param mixed $interactions The interactions.
+
+    
+    
+    
+     * @return float
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function calculateReturnRate($interactions): float
     {
         if ($interactions->count() < 2) {
@@ -292,9 +572,43 @@ class MLUserProfileService
         return min($dates->count() / $totalDays, 1.0);
     }
 
+    
+    
+    
+    
     /**
-     * Get interaction weight based on type.
+
+    
+    
+    
+     * Get interaction weight.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param mixed $interaction The interaction.
+
+    
+    
+    
+     * @return float
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function getInteractionWeight($interaction): float
     {
         $weights = [
@@ -321,9 +635,43 @@ class MLUserProfileService
         return $baseWeight;
     }
 
+    
+    
+    
+    
     /**
-     * Update cluster assignment using K-Means clustering.
+
+    
+    
+    
+     * Handle update cluster assignment.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param MLUserProfile $profile The profile.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function updateClusterAssignment(MLUserProfile $profile): void
     {
         // Get cached centroids from last clustering run
@@ -353,9 +701,48 @@ class MLUserProfileService
         $profile->cluster_confidence = $this->clusteringService->getClusterConfidence($profile, $centroids);
     }
 
+    
+    
+    
+    
     /**
-     * Calculate Euclidean distance between two vectors.
+
+    
+    
+    
+     * Handle euclidean distance.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param array $a The a.
+
+    
+    
+    
+     * @param array $b The b.
+
+    
+    
+    
+     * @return float
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function euclideanDistance(array $a, array $b): float
     {
         $sum = 0;
@@ -369,9 +756,43 @@ class MLUserProfileService
         return sqrt($sum);
     }
 
+    
+    
+    
+    
     /**
-     * Assign user to a cluster using simple rule-based approach (fallback).
+
+    
+    
+    
+     * Handle assign user cluster simple.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param MLUserProfile $profile The profile.
+
+    
+    
+    
+     * @return int
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function assignUserClusterSimple(MLUserProfile $profile): int
     {
         // Simplified clustering based on engagement patterns
@@ -393,9 +814,43 @@ class MLUserProfileService
         }
     }
 
+    
+    
+    
+    
     /**
-     * Calculate confidence in cluster assignment (simple fallback).
+
+    
+    
+    
+     * Calculate cluster confidence simple.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param MLUserProfile $profile The profile.
+
+    
+    
+    
+     * @return float
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function calculateClusterConfidenceSimple(MLUserProfile $profile): float
     {
         $totalInteractions = $profile->total_posts_read ?? 0;
@@ -412,9 +867,38 @@ class MLUserProfileService
         }
     }
 
+    
+    
+    
+    
     /**
-     * Batch update all user profiles that need refresh.
+
+    
+    
+    
+     * Handle update all profiles.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return int
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function updateAllProfiles(): int
     {
         $profiles = MLUserProfile::where('profile_updated_at', '<', now()->subHours(24))
@@ -430,9 +914,48 @@ class MLUserProfileService
         return $count;
     }
 
+    
+    
+    
+    
     /**
-     * Get similar users based on cluster and preferences.
+
+    
+    
+    
+     * Get similar users.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param MLUserProfile $profile The profile.
+
+    
+    
+    
+     * @param int $limit The limit.
+
+    
+    
+    
+     * @return array
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function getSimilarUsers(MLUserProfile $profile, int $limit = 10): array
     {
         return MLUserProfile::where('user_cluster', $profile->user_cluster)

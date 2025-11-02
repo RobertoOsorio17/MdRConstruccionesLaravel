@@ -6,6 +6,9 @@ use App\Models\User;
 use Illuminate\Console\Command;
 use Laravel\Fortify\TwoFactorAuthenticationProvider;
 use PragmaRX\Google2FA\Google2FA;
+/**
+ * Class Generate2FACode.
+ */
 
 class Generate2FACode extends Command
 {
@@ -23,9 +26,38 @@ class Generate2FACode extends Command
      */
     protected $description = 'Generate current valid 2FA code for a user and test verification';
 
+    
+    
+    
+    
     /**
-     * Execute the console command.
+
+    
+    
+    
+     * Handle handle.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function handle()
     {
         if (! app()->environment(['local', 'development', 'testing'])) {

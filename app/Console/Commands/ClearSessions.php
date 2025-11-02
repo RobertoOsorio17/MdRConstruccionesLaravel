@@ -33,14 +33,114 @@ class ClearSessions extends Command
      */
     protected $description = 'Remove all stored sessions for the active session driver.';
 
+
+    
+
+
+    
+
+    
+
+    
+
+    /**
+
+
+    
+
+    
+
+    
+
+     * Handle __construct.
+
+
+    
+
+    
+
+    
+
+     *
+
+
+    
+
+    
+
+    
+
+     * @param private readonly Filesystem $filesystem The filesystem.
+
+
+    
+
+    
+
+    
+
+     * @return void
+
+
+    
+
+    
+
+    
+
+     */
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
     public function __construct(private readonly Filesystem $filesystem)
     {
         parent::__construct();
     }
 
+    
+    
+    
+    
     /**
-     * Execute the console command.
+
+    
+    
+    
+     * Handle handle.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return int
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function handle(): int
     {
         if (!$this->option('force')
@@ -71,6 +171,77 @@ class ClearSessions extends Command
         return self::SUCCESS;
     }
 
+
+    
+
+
+    
+
+    
+
+    
+
+    /**
+
+
+    
+
+    
+
+    
+
+     * Handle clear database sessions.
+
+
+    
+
+    
+
+    
+
+     *
+
+
+    
+
+    
+
+    
+
+     * @param DatabaseSessionHandler $handler The handler.
+
+
+    
+
+    
+
+    
+
+     * @return void
+
+
+    
+
+    
+
+    
+
+     */
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
     private function clearDatabaseSessions(DatabaseSessionHandler $handler): void
     {
         $table = method_exists($handler, 'getTable') ? $handler->getTable() : Config::get('session.table', 'sessions');
@@ -79,6 +250,77 @@ class ClearSessions extends Command
 
         $this->line("• Truncated database session table [{$table}]");
     }
+
+
+    
+
+
+    
+
+    
+
+    
+
+    /**
+
+
+    
+
+    
+
+    
+
+     * Handle clear file sessions.
+
+
+    
+
+    
+
+    
+
+     *
+
+
+    
+
+    
+
+    
+
+     * @param FileSessionHandler $handler The handler.
+
+
+    
+
+    
+
+    
+
+     * @return void
+
+
+    
+
+    
+
+    
+
+     */
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
 
     private function clearFileSessions(FileSessionHandler $handler): void
     {
@@ -93,6 +335,77 @@ class ClearSessions extends Command
 
         $this->line("• Emptied session directory [{$path}]");
     }
+
+
+    
+
+
+    
+
+    
+
+    
+
+    /**
+
+
+    
+
+    
+
+    
+
+     * Handle clear cache sessions.
+
+
+    
+
+    
+
+    
+
+     *
+
+
+    
+
+    
+
+    
+
+     * @param CacheBasedSessionHandler $handler The handler.
+
+
+    
+
+    
+
+    
+
+     * @return void
+
+
+    
+
+    
+
+    
+
+     */
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
 
     private function clearCacheSessions(CacheBasedSessionHandler $handler): void
     {

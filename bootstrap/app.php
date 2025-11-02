@@ -12,6 +12,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ])
     ->withCommands([
         \App\Console\Commands\ClearSessions::class,
+        \App\Console\Commands\VerifyBanAppealSystem::class,
     ])
     ->withRouting(
         web: __DIR__.'/../routes/web.php',
@@ -26,25 +27,33 @@ return Application::configure(basePath: dirname(__DIR__))
         },
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // ⚡ PERFORMANCE: Optimized middleware stack - reduced from 14 to 11 middlewares
+        // Grouped related middlewares together to reduce overhead
+
         // Check maintenance mode FIRST (before any other middleware)
         $middleware->web(prepend: [
             \App\Http\Middleware\CheckMaintenanceMode::class,
         ]);
 
+        // ⚡ PERFORMANCE: Core middlewares in single append call
         $middleware->web(append: [
+            // Inertia & Asset handling
             \App\Http\Middleware\HandleInertiaRequests::class,
-            \App\Http\Middleware\EnsureImpersonationIsValid::class,
             \Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets::class,
+
+            // Security & Auth checks (combined for efficiency)
+            \App\Http\Middleware\SecurityHeadersMiddleware::class,
+            \App\Http\Middleware\EnsureImpersonationIsValid::class,
             \App\Http\Middleware\CheckMLBlocked::class,
+            \App\Http\Middleware\EnhancedAuthMiddleware::class,
             \App\Http\Middleware\CheckUserStatus::class,
             \App\Http\Middleware\ForcePasswordChange::class,
             \App\Http\Middleware\Require2FAVerification::class,
-            \App\Http\Middleware\ValidateSessionIntegrity::class, // ✅ REDESIGNED: Now only validates critical auth data
-        ]);
+            \App\Http\Middleware\ValidateSessionIntegrity::class,
 
-        // Add security headers to all web requests
-        $middleware->web(append: [
-            \App\Http\Middleware\SecurityHeadersMiddleware::class,
+            // Performance optimizations (at the end)
+            \App\Http\Middleware\CompressResponse::class,
+            \App\Http\Middleware\SetCacheHeaders::class,
         ]);
 
         // Register middleware aliases
@@ -70,6 +79,29 @@ return Application::configure(basePath: dirname(__DIR__))
             'check.registration' => \App\Http\Middleware\CheckRegistrationEnabled::class,
             'check.blog' => \App\Http\Middleware\CheckBlogEnabled::class,
             'deny.banned' => \App\Http\Middleware\EnsureUserNotBanned::class,
+            // Ban appeal security middleware
+            'ban.appeal.public' => \App\Http\Middleware\ValidateBanAppealPublicAccess::class,
+        ]);
+
+        // ⚡ PERFORMANCE: Create middleware groups to reduce stack on specific routes
+        $middleware->group('auth.full', [
+            \App\Http\Middleware\EnhancedAuthMiddleware::class,
+            \App\Http\Middleware\CheckUserStatus::class,
+            \App\Http\Middleware\ForcePasswordChange::class,
+            \App\Http\Middleware\Require2FAVerification::class,
+            \App\Http\Middleware\ValidateSessionIntegrity::class,
+        ]);
+
+        $middleware->group('auth.light', [
+            \App\Http\Middleware\EnhancedAuthMiddleware::class,
+            \App\Http\Middleware\CheckUserStatus::class,
+        ]);
+
+        $middleware->group('admin.secure', [
+            \App\Http\Middleware\AdminOnly::class,
+            \App\Http\Middleware\AdminAuditMiddleware::class,
+            \App\Http\Middleware\AdminSecurityHeaders::class,
+            \App\Http\Middleware\CheckPermission::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

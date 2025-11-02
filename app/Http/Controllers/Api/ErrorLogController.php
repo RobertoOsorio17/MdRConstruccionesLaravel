@@ -13,9 +13,43 @@ use Illuminate\Support\Facades\Log;
  */
 class ErrorLogController extends Controller
 {
+    
+    
+    
+    
     /**
-     * Log frontend errors
+
+    
+    
+    
+     * Handle log error.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return JsonResponse
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function logError(Request $request): JsonResponse
     {
         try {
@@ -29,18 +63,20 @@ class ErrorLogController extends Controller
                 'context.timestamp' => 'nullable|string',
             ]);
 
-            // Prepare log context
+            // ✅ SECURITY: Prepare log context with minimal sensitive data
             $logContext = [
                 'message' => $validated['message'],
-                'stack' => $validated['stack'] ?? null,
-                'component_stack' => $validated['componentStack'] ?? null,
+                // Truncate stack traces to prevent log bloat
+                'stack' => isset($validated['stack']) ? substr($validated['stack'], 0, 1000) : null,
+                'component_stack' => isset($validated['componentStack']) ? substr($validated['componentStack'], 0, 500) : null,
                 'url' => $validated['context']['url'] ?? null,
                 'user_agent' => $validated['context']['userAgent'] ?? null,
                 'timestamp' => $validated['context']['timestamp'] ?? now()->toISOString(),
                 'user_id' => auth()->id(),
                 'ip_address' => $request->ip(),
-                'session_id' => $request->session()->getId(),
-                'additional_context' => $validated['context'] ?? [],
+                // ✅ SECURITY: Removed session_id to prevent session hijacking via logs
+                // Only include essential context, not full payload
+                'browser' => $this->extractBrowserInfo($validated['context']['userAgent'] ?? ''),
             ];
 
             // Determine log level based on error severity
@@ -74,9 +110,43 @@ class ErrorLogController extends Controller
         }
     }
 
+    
+    
+    
+    
     /**
-     * Determine log level based on error message
+
+    
+    
+    
+     * Handle determine log level.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param string $message The message.
+
+    
+    
+    
+     * @return string
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function determineLogLevel(string $message): string
     {
         $message = strtolower($message);
@@ -98,14 +168,48 @@ class ErrorLogController extends Controller
         return 'error';
     }
 
+    
+    
+    
+    
     /**
-     * Get error statistics (admin only)
+
+    
+    
+    
+     * Get error stats.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return JsonResponse
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function getErrorStats(Request $request): JsonResponse
     {
         // This would require a database table to store errors
         // For now, return a placeholder response
-        
+
         return response()->json([
             'success' => true,
             'stats' => [
@@ -115,6 +219,37 @@ class ErrorLogController extends Controller
             ],
             'message' => 'Error statistics feature coming soon',
         ]);
+    }
+
+    /**
+     * Extract minimal browser information from user agent
+     *
+     * ✅ SECURITY: Only extract essential browser info, not full user agent
+     */
+    private function extractBrowserInfo(string $userAgent): array
+    {
+        $browser = 'Unknown';
+        $version = 'Unknown';
+
+        // Detect common browsers
+        if (preg_match('/Chrome\/([0-9.]+)/', $userAgent, $matches)) {
+            $browser = 'Chrome';
+            $version = $matches[1];
+        } elseif (preg_match('/Firefox\/([0-9.]+)/', $userAgent, $matches)) {
+            $browser = 'Firefox';
+            $version = $matches[1];
+        } elseif (preg_match('/Safari\/([0-9.]+)/', $userAgent, $matches)) {
+            $browser = 'Safari';
+            $version = $matches[1];
+        } elseif (preg_match('/Edge\/([0-9.]+)/', $userAgent, $matches)) {
+            $browser = 'Edge';
+            $version = $matches[1];
+        }
+
+        return [
+            'name' => $browser,
+            'version' => $version,
+        ];
     }
 }
 

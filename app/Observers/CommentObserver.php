@@ -15,14 +15,119 @@ class CommentObserver
 {
     protected $cacheService;
 
+
+    
+
+
+    
+
+    
+
+    
+
+    /**
+
+
+    
+
+    
+
+    
+
+     * Handle __construct.
+
+
+    
+
+    
+
+    
+
+     *
+
+
+    
+
+    
+
+    
+
+     * @param CacheService $cacheService The cacheService.
+
+
+    
+
+    
+
+    
+
+     * @return void
+
+
+    
+
+    
+
+    
+
+     */
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
     public function __construct(CacheService $cacheService)
     {
         $this->cacheService = $cacheService;
     }
 
+    
+    
+    
+    
     /**
-     * Handle the Comment "created" event.
+
+    
+    
+    
+     * Handle created.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Comment $comment The comment.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function created(Comment $comment): void
     {
         $this->invalidateCache($comment);
@@ -70,25 +175,127 @@ class CommentObserver
         }
     }
 
+    
+    
+    
+    
     /**
-     * Handle the Comment "updated" event.
+
+    
+    
+    
+     * Handle updated.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Comment $comment The comment.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function updated(Comment $comment): void
     {
         $this->invalidateCache($comment);
     }
 
+    
+    
+    
+    
     /**
-     * Handle the Comment "deleted" event.
+
+    
+    
+    
+     * Handle deleted.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Comment $comment The comment.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function deleted(Comment $comment): void
     {
         $this->invalidateCache($comment);
     }
 
+    
+    
+    
+    
     /**
-     * Invalidate related caches
+
+    
+    
+    
+     * Handle invalidate cache.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Comment $comment The comment.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     protected function invalidateCache(Comment $comment): void
     {
         // Invalidate dashboard stats

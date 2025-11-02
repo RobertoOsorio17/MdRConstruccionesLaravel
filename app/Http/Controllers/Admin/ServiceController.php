@@ -14,9 +14,38 @@ use Illuminate\Support\Str;
  */
 class ServiceController extends Controller
 {
+    
+    
+    
+    
     /**
-     * Display a listing of services.
+
+    
+    
+    
+     * Display a listing of the resource.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function index()
     {
         $services = Service::orderBy('sort_order')
@@ -31,17 +60,80 @@ class ServiceController extends Controller
         ]);
     }
 
+    
+    
+    
+    
     /**
-     * Show the form for creating a new service.
+
+    
+    
+    
+     * Show the form for creating a new resource.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function create()
     {
         return Inertia::render('Admin/Services/Create');
     }
 
+    
+    
+    
+    
     /**
-     * Store a newly created service.
+
+    
+    
+    
+     * Store a newly created resource.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function store(Request $request)
     {
         $validated = $request->validate([
@@ -59,7 +151,9 @@ class ServiceController extends Controller
 
         $validated['slug'] = Str::slug($validated['title']);
 
-        // Ensure unique slug.
+        /**
+         * Ensure unique slug.
+         */
         $originalSlug = $validated['slug'];
         $counter = 1;
         while (Service::where('slug', $validated['slug'])->exists()) {
@@ -67,7 +161,9 @@ class ServiceController extends Controller
             $counter++;
         }
 
-        // Convert FAQ array to JSON if present.
+        /**
+         * Convert FAQ array to JSON if present.
+         */
         if (isset($validated['faq'])) {
             $validated['faq'] = json_encode($validated['faq']);
         }
@@ -78,9 +174,43 @@ class ServiceController extends Controller
             ->with('success', 'Service created successfully.');
     }
 
+    
+    
+    
+    
     /**
-     * Display the specified service.
+
+    
+    
+    
+     * Display the specified resource.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Service $service The service.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function show(Service $service)
     {
         return Inertia::render('Admin/Services/Show', [
@@ -88,12 +218,48 @@ class ServiceController extends Controller
         ]);
     }
 
+    
+    
+    
+    
     /**
-     * Show the form for editing the specified service.
+
+    
+    
+    
+     * Show the form for editing the specified resource.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Service $service The service.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function edit(Service $service)
     {
-        // Parse FAQ JSON back to array for editing.
+        /**
+         * Parse FAQ JSON back to array for editing.
+         */
         $service->faq = $service->faq ? json_decode($service->faq, true) : [];
         
         return Inertia::render('Admin/Services/Edit', [
@@ -101,9 +267,48 @@ class ServiceController extends Controller
         ]);
     }
 
+    
+    
+    
+    
     /**
-     * Update the specified service.
+
+    
+    
+    
+     * Update the specified resource.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @param Service $service The service.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function update(Request $request, Service $service)
     {
         $validated = $request->validate([
@@ -119,11 +324,15 @@ class ServiceController extends Controller
             'featured' => 'boolean',
         ]);
 
-        // Update slug only when the title changes.
+        /**
+         * Update slug only when the title changes.
+         */
         if ($validated['title'] !== $service->title) {
             $validated['slug'] = Str::slug($validated['title']);
 
-            // Ensure unique slug.
+            /**
+             * Ensure unique slug.
+             */
             $originalSlug = $validated['slug'];
             $counter = 1;
             while (Service::where('slug', $validated['slug'])->where('id', '!=', $service->id)->exists()) {
@@ -132,7 +341,9 @@ class ServiceController extends Controller
             }
         }
 
-        // Convert FAQ array to JSON if present.
+        /**
+         * Convert FAQ array to JSON if present.
+         */
         if (isset($validated['faq'])) {
             $validated['faq'] = json_encode($validated['faq']);
         }
@@ -143,9 +354,43 @@ class ServiceController extends Controller
             ->with('success', 'Service updated successfully.');
     }
 
+    
+    
+    
+    
     /**
-     * Remove the specified service.
+
+    
+    
+    
+     * Remove the specified resource.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Service $service The service.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function destroy(Service $service)
     {
         $service->delete();
@@ -154,9 +399,43 @@ class ServiceController extends Controller
             ->with('success', 'Service deleted successfully.');
     }
 
+    
+    
+    
+    
     /**
-     * Update the sort order of services.
+
+    
+    
+    
+     * Handle update order.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function updateOrder(Request $request)
     {
         $validated = $request->validate([
@@ -173,9 +452,43 @@ class ServiceController extends Controller
         return response()->json(['message' => 'Sort order updated successfully.']);
     }
 
+    
+    
+    
+    
     /**
-     * Toggle service status (active/inactive).
+
+    
+    
+    
+     * Handle toggle status.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Service $service The service.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function toggleStatus(Service $service)
     {
         $service->update(['is_active' => !$service->is_active]);
@@ -186,9 +499,43 @@ class ServiceController extends Controller
         ]);
     }
 
+    
+    
+    
+    
     /**
-     * Toggle featured status.
+
+    
+    
+    
+     * Handle toggle featured.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Service $service The service.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function toggleFeatured(Service $service)
     {
         $service->update(['featured' => !$service->featured]);

@@ -35,9 +35,48 @@ class AccountLockoutService
      */
     const MAX_LOCKOUT_MINUTES = 1440; // 24 hours
     
+    
+    
+    
+    
     /**
-     * Record a failed login attempt for a user
+
+    
+    
+    
+     * Handle record failed attempt.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param string $email The email.
+
+    
+    
+    
+     * @param string $ip The ip.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function recordFailedAttempt(string $email, string $ip): void
     {
         $emailHash = hash('sha256', strtolower($email));
@@ -70,9 +109,53 @@ class AccountLockoutService
         ]);
     }
     
+    
+    
+    
+    
     /**
-     * Lock an account temporarily
+
+    
+    
+    
+     * Handle lock account.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param string $email The email.
+
+    
+    
+    
+     * @param string $ip The ip.
+
+    
+    
+    
+     * @param array $attempts The attempts.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     protected function lockAccount(string $email, string $ip, array $attempts): void
     {
         $emailHash = hash('sha256', strtolower($email));
@@ -126,9 +209,43 @@ class AccountLockoutService
         }
     }
     
+    
+    
+    
+    
     /**
-     * Calculate progressive lockout duration
+
+    
+    
+    
+     * Calculate lockout duration.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param int $lockoutCount The lockoutCount.
+
+    
+    
+    
+     * @return int
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     protected function calculateLockoutDuration(int $lockoutCount): int
     {
         return min(
@@ -137,9 +254,43 @@ class AccountLockoutService
         );
     }
     
+    
+    
+    
+    
     /**
-     * Check if an account is currently locked
+
+    
+    
+    
+     * Determine whether account locked.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param string $email The email.
+
+    
+    
+    
+     * @return bool
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function isAccountLocked(string $email): bool
     {
         $emailHash = hash('sha256', strtolower($email));
@@ -148,9 +299,43 @@ class AccountLockoutService
         return Cache::has($lockKey);
     }
     
+    
+    
+    
+    
     /**
-     * Get lockout information for an account
+
+    
+    
+    
+     * Get lockout info.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param string $email The email.
+
+    
+    
+    
+     * @return ?array
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function getLockoutInfo(string $email): ?array
     {
         $emailHash = hash('sha256', strtolower($email));
@@ -159,9 +344,43 @@ class AccountLockoutService
         return Cache::get($lockKey);
     }
     
+    
+    
+    
+    
     /**
-     * Get remaining lockout time in seconds
+
+    
+    
+    
+     * Get remaining lockout time.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param string $email The email.
+
+    
+    
+    
+     * @return int
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function getRemainingLockoutTime(string $email): int
     {
         $info = $this->getLockoutInfo($email);
@@ -174,9 +393,43 @@ class AccountLockoutService
         return max(0, $lockedUntil->diffInSeconds(now()));
     }
     
+    
+    
+    
+    
     /**
-     * Clear failed attempts for an account (on successful login)
+
+    
+    
+    
+     * Handle clear failed attempts.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param string $email The email.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function clearFailedAttempts(string $email): void
     {
         $emailHash = hash('sha256', strtolower($email));
@@ -192,9 +445,48 @@ class AccountLockoutService
         ]);
     }
     
+    
+    
+    
+    
     /**
-     * Manually unlock an account (admin action)
+
+    
+    
+    
+     * Handle unlock account.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param string $email The email.
+
+    
+    
+    
+     * @param ?User $admin The admin.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function unlockAccount(string $email, ?User $admin = null): void
     {
         $emailHash = hash('sha256', strtolower($email));
@@ -223,9 +515,53 @@ class AccountLockoutService
         }
     }
     
+    
+    
+    
+    
     /**
-     * Notify admins of persistent attack
+
+    
+    
+    
+     * Handle notify admins of persistent attack.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param string $email The email.
+
+    
+    
+    
+     * @param string $ip The ip.
+
+    
+    
+    
+     * @param array $attempts The attempts.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     protected function notifyAdminsOfPersistentAttack(string $email, string $ip, array $attempts): void
     {
         Log::critical('Persistent brute force attack detected', [
@@ -241,9 +577,43 @@ class AccountLockoutService
         // TODO: Consider IP blocking at firewall level
     }
     
+    
+    
+    
+    
     /**
-     * Get failed attempt count for an account
+
+    
+    
+    
+     * Get failed attempt count.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param string $email The email.
+
+    
+    
+    
+     * @return int
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function getFailedAttemptCount(string $email): int
     {
         $emailHash = hash('sha256', strtolower($email));

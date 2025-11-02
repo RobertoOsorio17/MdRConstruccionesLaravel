@@ -15,17 +15,55 @@ use Inertia\Inertia;
  */
 class CategoryController extends Controller
 {
+    
+    
+    
+    
     /**
-     * Display a listing of categories.
+
+    
+    
+    
+     * Display a listing of the resource.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function index(Request $request)
     {
-        // Authorize action.
+        /**
+         * Authorize action.
+         */
         $this->authorize('viewAny', Category::class);
 
         $query = Category::withCount('posts');
 
-        // Apply keyword search across name and description.
+        /**
+         * Apply keyword search across name and description.
+         */
         if ($request->has('search') && !empty($request->search)) {
             $query->where(function ($q) use ($request) {
                 $q->where('name', 'like', '%' . $request->search . '%')
@@ -33,7 +71,9 @@ class CategoryController extends Controller
             });
         }
 
-        // Filter by active state when requested.
+        /**
+         * Filter by active state when requested.
+         */
         if ($request->has('status')) {
             if ($request->status === 'active') {
                 $query->where('is_active', true);
@@ -74,23 +114,90 @@ class CategoryController extends Controller
         ]);
     }
 
+    
+    
+    
+    
     /**
-     * Show the form for creating a new category.
+
+    
+    
+    
+     * Show the form for creating a new resource.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function create()
     {
-        // Authorize action.
+        /**
+         * Authorize action.
+         */
         $this->authorize('create', Category::class);
 
         return Inertia::render('Admin/Categories/Create');
     }
 
+    
+    
+    
+    
     /**
-     * Store a newly created category.
+
+    
+    
+    
+     * Store a newly created resource.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function store(Request $request)
     {
-        // Authorize action.
+        /**
+         * Authorize action.
+         */
         $this->authorize('create', Category::class);
 
         $validated = $request->validate([
@@ -102,11 +209,15 @@ class CategoryController extends Controller
             'is_active' => 'boolean',
         ]);
 
-        // Generate a slug when none is provided by the request.
+        /**
+         * Generate a slug when none is provided by the request.
+         */
         if (empty($validated['slug'])) {
             $validated['slug'] = Str::slug($validated['name']);
             
-            // Ensure the slug remains unique within the categories table.
+            /**
+             * Ensure the slug remains unique within the categories table.
+             */
             $originalSlug = $validated['slug'];
             $counter = 1;
             while (Category::where('slug', $validated['slug'])->exists()) {
@@ -115,7 +226,9 @@ class CategoryController extends Controller
             }
         }
 
-        // Default the sort order to the next available slot when omitted.
+        /**
+         * Default the sort order to the next available slot when omitted.
+         */
         if (!isset($validated['sort_order'])) {
             $validated['sort_order'] = Category::max('sort_order') + 1;
         }
@@ -126,12 +239,48 @@ class CategoryController extends Controller
             ->with('success', 'Category created successfully.');
     }
 
+    
+    
+    
+    
     /**
-     * Display the specified category.
+
+    
+    
+    
+     * Display the specified resource.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Category $category The category.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function show(Category $category)
     {
-        // Authorize action.
+        /**
+         * Authorize action.
+         */
         $this->authorize('view', $category);
 
         $category->loadCount('posts');
@@ -152,12 +301,48 @@ class CategoryController extends Controller
         ]);
     }
 
+    
+    
+    
+    
     /**
-     * Show the form for editing the specified category.
+
+    
+    
+    
+     * Show the form for editing the specified resource.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Category $category The category.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function edit(Category $category)
     {
-        // Authorize action.
+        /**
+         * Authorize action.
+         */
         $this->authorize('update', $category);
 
         return Inertia::render('Admin/Categories/Edit', [
@@ -173,12 +358,53 @@ class CategoryController extends Controller
         ]);
     }
 
+    
+    
+    
+    
     /**
-     * Update the specified category.
+
+    
+    
+    
+     * Update the specified resource.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @param Category $category The category.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function update(Request $request, Category $category)
     {
-        // Authorize action.
+        /**
+         * Authorize action.
+         */
         $this->authorize('update', $category);
 
         $validated = $request->validate([
@@ -190,11 +416,15 @@ class CategoryController extends Controller
             'is_active' => 'boolean',
         ]);
 
-        // Generate a slug when none is provided by the request.
+        /**
+         * Generate a slug when none is provided by the request.
+         */
         if (empty($validated['slug'])) {
             $validated['slug'] = Str::slug($validated['name']);
             
-            // Ensure the slug remains unique, excluding the current category.
+            /**
+             * Ensure the slug remains unique, excluding the current category.
+             */
             $originalSlug = $validated['slug'];
             $counter = 1;
             while (Category::where('slug', $validated['slug'])->where('id', '!=', $category->id)->exists()) {
@@ -209,15 +439,53 @@ class CategoryController extends Controller
             ->with('success', 'Category updated successfully.');
     }
 
+    
+    
+    
+    
     /**
-     * Remove the specified category.
+
+    
+    
+    
+     * Remove the specified resource.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Category $category The category.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function destroy(Category $category)
     {
-        // Authorize action.
+        /**
+         * Authorize action.
+         */
         $this->authorize('delete', $category);
 
-        // Prevent deletion when the category still has related posts.
+        /**
+         * Prevent deletion when the category still has related posts.
+         */
         if ($category->posts()->count() > 0) {
             return redirect()->route('admin.categories.index')
                 ->with('error', 'This category cannot be deleted because posts are still assigned to it.');
@@ -229,12 +497,48 @@ class CategoryController extends Controller
             ->with('success', 'Category deleted successfully.');
     }
 
+    
+    
+    
+    
     /**
-     * Toggle the active status for the specified category.
+
+    
+    
+    
+     * Handle toggle status.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Category $category The category.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function toggleStatus(Category $category)
     {
-        // Authorize action.
+        /**
+         * Authorize action.
+         */
         $this->authorize('toggleStatus', $category);
 
         $category->update(['is_active' => !$category->is_active]);
@@ -246,12 +550,48 @@ class CategoryController extends Controller
         ]);
     }
 
+    
+    
+    
+    
     /**
-     * Persist the manual sort order supplied by the admin UI.
+
+    
+    
+    
+     * Handle update order.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function updateOrder(Request $request)
     {
-        // Authorize action.
+        /**
+         * Authorize action.
+         */
         $this->authorize('updateOrder', Category::class);
 
         $validated = $request->validate([

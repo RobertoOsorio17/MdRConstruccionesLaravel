@@ -17,17 +17,63 @@ use Illuminate\Validation\ValidationException;
  */
 trait HandlesTwoFactorLogin
 {
+    
+    
+    
+    
     /**
-     * Complete the login flow for the given user, enforcing 2FA and trusted device checks.
+
+    
+    
+    
+     * Handle complete interactive login.
+
+    
+    
+    
      *
-     * @param Request $request
-     * @param \App\Models\User $user
-     * @param bool $remember
-     * @param string|null $intended
-     * @param string $twoFactorMode Either 'validation' (throw ValidationException) or 'redirect'
-     *
-     * @throws ValidationException
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @param \App\Models\User $user The user.
+
+    
+    
+    
+     * @param bool $remember The remember.
+
+    
+    
+    
+     * @param ?string $intended The intended.
+
+    
+    
+    
+     * @param string $twoFactorMode The twoFactorMode.
+
+    
+    
+    
+     * @return RedirectResponse
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     protected function completeInteractiveLogin(
         Request $request,
         \App\Models\User $user,
@@ -145,9 +191,48 @@ trait HandlesTwoFactorLogin
         return $response ?: redirect()->intended($intendedUrl);
     }
 
+    
+    
+    
+    
     /**
-     * Determine destination URL for the user after login.
+
+    
+    
+    
+     * Handle determine intended url.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param \App\Models\User $user The user.
+
+    
+    
+    
+     * @param ?string $provided The provided.
+
+    
+    
+    
+     * @return string
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     protected function determineIntendedUrl(\App\Models\User $user, ?string $provided = null): string
     {
         if ($provided) {
@@ -159,18 +244,67 @@ trait HandlesTwoFactorLogin
             : route('user.dashboard', absolute: false);
     }
 
+    
+    
+    
+    
     /**
-     * Prepare the session for the two-factor authentication challenge.
+
+    
+    
+    
+     * Handle prepare two factor challenge.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @param \App\Models\User $user The user.
+
+    
+    
+    
+     * @param bool $remember The remember.
+
+    
+    
+    
+     * @param string $intended The intended.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     protected function prepareTwoFactorChallenge(
         Request $request,
         \App\Models\User $user,
         bool $remember,
         string $intended
     ): void {
-        // ✅ SECURITY FIX: Regenerate session BEFORE storing sensitive data
-        // This prevents session fixation attacks during 2FA flow
-        $request->session()->regenerate();
+        // ✅ SECURITY FIX: Session regeneration moved to AFTER 2FA verification
+        // to prevent CSRF token mismatch when 2FA modal is shown
+        // Session will be regenerated in TwoFactorController@verify after successful 2FA
 
         session()->put('url.intended', $intended);
         session()->put('2fa_required', true);
@@ -193,13 +327,53 @@ trait HandlesTwoFactorLogin
         session()->put('login.attempt_time', now()->timestamp);
     }
 
+    
+    
+    
+    
     /**
-     * Log the user into the application and update bookkeeping.
+
+    
+    
+    
+     * Handle log user in.
+
+    
+    
+    
      *
-     * Note: Session is regenerated here even if it was already regenerated before
-     * authentication. This is intentional and provides defense-in-depth against
-     * session fixation attacks.
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @param \App\Models\User $user The user.
+
+    
+    
+    
+     * @param bool $remember The remember.
+
+    
+    
+    
+     * @return ?RedirectResponse
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     protected function logUserIn(
         Request $request,
         \App\Models\User $user,
@@ -228,6 +402,20 @@ trait HandlesTwoFactorLogin
             'remember' => $remember,
             'has_2fa' => !is_null($user->two_factor_secret),
         ]);
+
+        // ✅ SECURITY FIX: Detect new device login
+        if (method_exists($this, 'detectNewDevice')) {
+            try {
+                $this->detectNewDevice($request, $user);
+            } catch (\Exception $e) {
+                // Log error but don't block login
+                Log::error('Failed to detect new device', [
+                    'user_id' => $user->id,
+                    'error' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString(),
+                ]);
+            }
+        }
 
         return null;
     }

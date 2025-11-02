@@ -14,10 +14,48 @@ use Illuminate\Support\Facades\Cache;
  */
 class MLMetricsService
 {
+    
+    
+    
+    
     /**
-     * Calculate Precision@K for recommendations.
-     * Measures what proportion of recommended items were relevant.
+
+    
+    
+    
+     * Calculate precision at k.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param int $k The k.
+
+    
+    
+    
+     * @param int $days The days.
+
+    
+    
+    
+     * @return float
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function calculatePrecisionAtK(int $k = 10, int $days = 7): float
     {
         $recommendationClicks = MLInteractionLog::where('interaction_type', 'recommendation_click')
@@ -38,10 +76,48 @@ class MLMetricsService
         return $relevantCount / $recommendationClicks->count();
     }
 
+    
+    
+    
+    
     /**
-     * Calculate Recall@K for recommendations.
-     * Measures what proportion of relevant items were recommended.
+
+    
+    
+    
+     * Calculate recall at k.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param int $k The k.
+
+    
+    
+    
+     * @param int $days The days.
+
+    
+    
+    
+     * @return float
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function calculateRecallAtK(int $k = 10, int $days = 7): float
     {
         // Get all posts user engaged with
@@ -65,9 +141,48 @@ class MLMetricsService
         return $recommendedEngaged / $engagedPosts;
     }
 
+    
+    
+    
+    
     /**
-     * Calculate F1 Score (harmonic mean of precision and recall).
+
+    
+    
+    
+     * Calculate f1score.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param int $k The k.
+
+    
+    
+    
+     * @param int $days The days.
+
+    
+    
+    
+     * @return float
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function calculateF1Score(int $k = 10, int $days = 7): float
     {
         $precision = $this->calculatePrecisionAtK($k, $days);
@@ -80,10 +195,48 @@ class MLMetricsService
         return 2 * ($precision * $recall) / ($precision + $recall);
     }
 
+    
+    
+    
+    
     /**
-     * Calculate Normalized Discounted Cumulative Gain (NDCG@K).
-     * Measures ranking quality of recommendations.
+
+    
+    
+    
+     * Calculate ndcgat k.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param int $k The k.
+
+    
+    
+    
+     * @param int $days The days.
+
+    
+    
+    
+     * @return float
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function calculateNDCGAtK(int $k = 10, int $days = 7): float
     {
         $sessions = MLInteractionLog::where('interaction_type', 'recommendation_click')
@@ -137,9 +290,43 @@ class MLMetricsService
         return !empty($ndcgScores) ? array_sum($ndcgScores) / count($ndcgScores) : 0.0;
     }
 
+    
+    
+    
+    
     /**
-     * Get relevance score for a recommendation interaction.
+
+    
+    
+    
+     * Get relevance score.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param MLInteractionLog $log The log.
+
+    
+    
+    
+     * @return float
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function getRelevanceScore(MLInteractionLog $log): float
     {
         $score = 0;
@@ -165,9 +352,43 @@ class MLMetricsService
         return min($score, 5.0); // Cap at 5.0
     }
 
+    
+    
+    
+    
     /**
-     * Calculate Click-Through Rate (CTR) for recommendations.
+
+    
+    
+    
+     * Calculate ctr.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param int $days The days.
+
+    
+    
+    
+     * @return float
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function calculateCTR(int $days = 7): float
     {
         $totalRecommendations = MLInteractionLog::where('recommendation_source', '!=', null)
@@ -185,9 +406,43 @@ class MLMetricsService
         return $clicks / $totalRecommendations;
     }
 
+    
+    
+    
+    
     /**
-     * Calculate average engagement score for recommendations.
+
+    
+    
+    
+     * Calculate average engagement.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param int $days The days.
+
+    
+    
+    
+     * @return float
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function calculateAverageEngagement(int $days = 7): float
     {
         return MLInteractionLog::where('interaction_type', 'recommendation_click')
@@ -195,9 +450,43 @@ class MLMetricsService
             ->avg('engagement_score') ?? 0.0;
     }
 
+    
+    
+    
+    
     /**
-     * Calculate diversity of recommendations (how many unique posts recommended).
+
+    
+    
+    
+     * Calculate diversity.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param int $days The days.
+
+    
+    
+    
+     * @return float
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function calculateDiversity(int $days = 7): float
     {
         $totalRecommendations = MLInteractionLog::where('interaction_type', 'recommendation_click')
@@ -216,9 +505,43 @@ class MLMetricsService
         return $uniquePosts / $totalRecommendations;
     }
 
+    
+    
+    
+    
     /**
-     * Calculate coverage (what % of catalog is being recommended).
+
+    
+    
+    
+     * Calculate coverage.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param int $days The days.
+
+    
+    
+    
+     * @return float
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function calculateCoverage(int $days = 7): float
     {
         $totalPosts = Post::published()->count();
@@ -235,9 +558,48 @@ class MLMetricsService
         return $recommendedPosts / $totalPosts;
     }
 
+    
+    
+    
+    
     /**
-     * Get comprehensive metrics report.
+
+    
+    
+    
+     * Get metrics report.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param int $k The k.
+
+    
+    
+    
+     * @param int $days The days.
+
+    
+    
+    
+     * @return array
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function getMetricsReport(int $k = 10, int $days = 7): array
     {
         return Cache::remember("ml_metrics_report_{$k}_{$days}", 300, function() use ($k, $days) {
@@ -257,9 +619,43 @@ class MLMetricsService
         });
     }
 
+    
+    
+    
+    
     /**
-     * Get performance by recommendation source.
+
+    
+    
+    
+     * Get performance by source.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param int $days The days.
+
+    
+    
+    
+     * @return array
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function getPerformanceBySource(int $days = 7): array
     {
         $sources = MLInteractionLog::where('interaction_type', 'recommendation_click')
@@ -287,9 +683,53 @@ class MLMetricsService
         return $performance;
     }
 
+    
+    
+    
+    
     /**
-     * Get A/B test results comparing different algorithm versions.
+
+    
+    
+    
+     * Get abtest results.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param string $variantA The variantA.
+
+    
+    
+    
+     * @param string $variantB The variantB.
+
+    
+    
+    
+     * @param int $days The days.
+
+    
+    
+    
+     * @return array
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function getABTestResults(string $variantA, string $variantB, int $days = 7): array
     {
         $resultsA = MLInteractionLog::where('recommendation_source', $variantA)
@@ -317,9 +757,48 @@ class MLMetricsService
         ];
     }
 
+    
+    
+    
+    
     /**
-     * Determine winner in A/B test.
+
+    
+    
+    
+     * Handle determine winner.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param mixed $resultsA The resultsA.
+
+    
+    
+    
+     * @param mixed $resultsB The resultsB.
+
+    
+    
+    
+     * @return string
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function determineWinner($resultsA, $resultsB): string
     {
         $scoreA = ($resultsA->avg('engagement_score') ?? 0) * 0.7 + 

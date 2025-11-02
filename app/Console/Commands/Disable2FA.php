@@ -4,6 +4,9 @@ namespace App\Console\Commands;
 
 use App\Models\User;
 use Illuminate\Console\Command;
+/**
+ * Class Disable2FA.
+ */
 
 class Disable2FA extends Command
 {
@@ -21,9 +24,38 @@ class Disable2FA extends Command
      */
     protected $description = 'Disable 2FA for a specific user';
 
+    
+    
+    
+    
     /**
-     * Execute the console command.
+
+    
+    
+    
+     * Handle handle.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function handle()
     {
         if (! app()->environment(['local', 'development', 'testing'])) {

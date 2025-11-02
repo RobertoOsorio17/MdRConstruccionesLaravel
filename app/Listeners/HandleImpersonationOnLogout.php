@@ -5,22 +5,90 @@ namespace App\Listeners;
 use Illuminate\Auth\Events\Logout;
 use App\Services\ImpersonationService;
 use Illuminate\Support\Facades\Session;
+/**
+ * Class HandleImpersonationOnLogout.
+ */
 
 class HandleImpersonationOnLogout
 {
+    
+    
+    
+    
     /**
-     * Create the event listener.
+
+    
+    
+    
+     * Handle __construct.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param protected ImpersonationService $impersonationService The impersonationService.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function __construct(
         protected ImpersonationService $impersonationService
     ) {}
 
+    
+    
+    
+    
     /**
-     * Handle the event.
+
+    
+    
+    
+     * Handle handle.
+
+    
+    
+    
      *
-     * If the user logs out while impersonating, terminate the impersonation
-     * and restore the original admin session instead of logging out completely.
+
+    
+    
+    
+     * @param Logout $event The event.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function handle(Logout $event): void
     {
         // Check if there's an active impersonation session

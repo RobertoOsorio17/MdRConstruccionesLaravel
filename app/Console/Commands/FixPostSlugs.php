@@ -26,10 +26,38 @@ class FixPostSlugs extends Command
      */
     protected $description = 'Fix missing slugs for blog posts';
 
+    
+    
+    
+    
     /**
-     * Execute the console command.
-     * ✅ FIX: Use chunking to avoid loading entire table into memory
+
+    
+    
+    
+     * Handle handle.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function handle()
     {
         $this->info('Checking and repairing post slugs...');

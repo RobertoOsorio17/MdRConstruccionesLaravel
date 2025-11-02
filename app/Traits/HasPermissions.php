@@ -12,18 +12,76 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
  */
 trait HasPermissions
 {
+    
+    
+    
+    
     /**
-     * Roles del usuario
+
+    
+    
+    
+     * Handle roles.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return BelongsToMany
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function roles(): BelongsToMany
     {
         return $this->belongsToMany(Role::class, 'role_user')
                     ->withTimestamps();
     }
 
+    
+    
+    
+    
     /**
-     * Permisos directos del usuario
+
+    
+    
+    
+     * Handle permissions.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return BelongsToMany
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function permissions(): BelongsToMany
     {
         return $this->belongsToMany(Permission::class, 'permission_user')
@@ -31,9 +89,43 @@ trait HasPermissions
                     ->withTimestamps();
     }
 
+    
+    
+    
+    
     /**
-     * Verificar si el usuario tiene un rol especifico
+
+    
+    
+    
+     * Determine whether role.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param string|array $roles The roles.
+
+    
+    
+    
+     * @return bool
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function hasRole(string|array $roles): bool
     {
         if (is_array($roles)) {
@@ -43,9 +135,43 @@ trait HasPermissions
         return $this->roles()->where('name', $roles)->exists();
     }
 
+    
+    
+    
+    
     /**
-     * Verificar si el usuario tiene todos los roles especificados
+
+    
+    
+    
+     * Determine whether all roles.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param array $roles The roles.
+
+    
+    
+    
+     * @return bool
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function hasAllRoles(array $roles): bool
     {
         foreach ($roles as $role) {
@@ -57,17 +183,85 @@ trait HasPermissions
         return true;
     }
 
+    
+    
+    
+    
     /**
-     * Verificar si el usuario tiene algun rol especificado
+
+    
+    
+    
+     * Determine whether any role.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param array $roles The roles.
+
+    
+    
+    
+     * @return bool
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function hasAnyRole(array $roles): bool
     {
         return $this->hasRole($roles);
     }
 
+    
+    
+    
+    
     /**
-     * Verificar si el usuario tiene un permiso especifico
+
+    
+    
+    
+     * Determine whether permission.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param string $permission The permission.
+
+    
+    
+    
+     * @return bool
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function hasPermission(string $permission): bool
     {
         // Verificar permiso directo
@@ -88,9 +282,43 @@ trait HasPermissions
             ->exists();
     }
 
+    
+    
+    
+    
     /**
-     * Verificar si el usuario tiene todos los permisos especificados
+
+    
+    
+    
+     * Determine whether all permissions.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param array $permissions The permissions.
+
+    
+    
+    
+     * @return bool
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function hasAllPermissions(array $permissions): bool
     {
         foreach ($permissions as $permission) {
@@ -102,9 +330,43 @@ trait HasPermissions
         return true;
     }
 
+    
+    
+    
+    
     /**
-     * Verificar si el usuario tiene algun permiso especificado
+
+    
+    
+    
+     * Determine whether any permission.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param array $permissions The permissions.
+
+    
+    
+    
+     * @return bool
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function hasAnyPermission(array $permissions): bool
     {
         foreach ($permissions as $permission) {
@@ -116,9 +378,43 @@ trait HasPermissions
         return false;
     }
 
+    
+    
+    
+    
     /**
-     * Asignar rol al usuario
+
+    
+    
+    
+     * Handle assign role.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Role|string $role The role.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function assignRole(Role|string $role): void
     {
         if (is_string($role)) {
@@ -130,9 +426,43 @@ trait HasPermissions
         }
     }
 
+    
+    
+    
+    
     /**
-     * Remover rol del usuario
+
+    
+    
+    
+     * Handle remove role.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Role|string $role The role.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function removeRole(Role|string $role): void
     {
         if (is_string($role)) {
@@ -142,9 +472,43 @@ trait HasPermissions
         $this->roles()->detach($role->id);
     }
 
+    
+    
+    
+    
     /**
-     * Sincronizar roles del usuario
+
+    
+    
+    
+     * Handle sync roles.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param array $roles The roles.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function syncRoles(array $roles): void
     {
         $roleIds = collect($roles)->map(function ($role) {
@@ -157,9 +521,43 @@ trait HasPermissions
         $this->roles()->sync($roleIds);
     }
 
+    
+    
+    
+    
     /**
-     * Dar permiso directo al usuario
+
+    
+    
+    
+     * Handle give permission to.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Permission|string $permission The permission.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function givePermissionTo(Permission|string $permission): void
     {
         if (is_string($permission)) {
@@ -171,9 +569,43 @@ trait HasPermissions
         ]);
     }
 
+    
+    
+    
+    
     /**
-     * Revocar permiso directo del usuario
+
+    
+    
+    
+     * Handle revoke permission to.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Permission|string $permission The permission.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function revokePermissionTo(Permission|string $permission): void
     {
         if (is_string($permission)) {
@@ -185,9 +617,38 @@ trait HasPermissions
         ]);
     }
 
+    
+    
+    
+    
     /**
-     * Obtener todos los permisos del usuario (directos + de roles)
+
+    
+    
+    
+     * Get all permissions.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function getAllPermissions()
     {
         $directPermissions = $this->permissions()
@@ -201,25 +662,112 @@ trait HasPermissions
         return $directPermissions->merge($rolePermissions)->unique('id');
     }
 
+    
+    
+    
+    
     /**
-     * Verificar si el usuario es admin
+
+    
+    
+    
+     * Determine whether admin.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return bool
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function isAdmin(): bool
     {
         return $this->hasRole('admin') || $this->role === 'admin';
     }
 
+    
+    
+    
+    
     /**
-     * Verificar si el usuario es editor
+
+    
+    
+    
+     * Determine whether editor.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return bool
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function isEditor(): bool
     {
         return $this->hasRole('editor') || $this->role === 'editor';
     }
 
+    
+    
+    
+    
     /**
-     * Verificar si el usuario es moderador
+
+    
+    
+    
+     * Determine whether moderator.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return bool
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function isModerator(): bool
     {
         return $this->hasRole('moderator');

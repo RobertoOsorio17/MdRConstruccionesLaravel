@@ -14,9 +14,38 @@ use Illuminate\Validation\Rule;
  */
 class NotificationController extends Controller
 {
+    
+    
+    
+    
     /**
-     * Return a lightweight unread count for the authenticated admin.
+
+    
+    
+    
+     * Handle unread count.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return JsonResponse
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function unreadCount(): JsonResponse
     {
         $count = AdminNotification::forUser(auth()->id())
@@ -27,12 +56,48 @@ class NotificationController extends Controller
         return response()->json(['count' => $count]);
     }
 
+    
+    
+    
+    
     /**
-     * Return the most recent notifications for the authenticated admin.
+
+    
+    
+    
+     * Handle recent.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return JsonResponse
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function recent(Request $request): JsonResponse
     {
-        // Limit to max 100 to prevent abuse
+        /**
+         * Limit to max 100 to prevent abuse.
+         */
         $limit = min((int) $request->get('limit', 10), 100);
 
         $items = AdminNotification::forUser(auth()->id())
@@ -50,28 +115,109 @@ class NotificationController extends Controller
         ]);
     }
 
+    
+    
+    
+    
     /**
-     * Long-poll endpoint that waits for new notifications or unread changes.
-     * The client supplies the last seen notification id.
+
+    
+    
+    
+     * Handle wait updates.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return JsonResponse
+
+    
+    
+    
+     */
+    
+    
+    
+    
+    
+    
+    
+    /**
+     * ⚡ PERFORMANCE: Optimized from long-polling to short-polling
+     *
+     * Changed from 25-second blocking requests to instant responses.
+     * This prevents page load delays and improves overall performance.
+     *
+     * @param Request $request
+     * @return JsonResponse
      */
     public function waitUpdates(Request $request): JsonResponse
     {
         $userId = auth()->id();
         $lastId = (int) $request->get('last_id', 0);
-        $timeoutSeconds = min((int) $request->get('timeout', 25), 60);
+        $timeoutSeconds = min((int) $request->get('timeout', 0), 60); // ⚡ Default to 0 (instant)
         $started = time();
 
-        // Capture initial unread count to detect changes
+        /**
+         * Capture initial unread count to detect changes.
+         */
         $initialUnread = AdminNotification::forUser($userId)->active()->unread()->count();
 
-        // Basic long-poll loop
+        /**
+         * ⚡ PERFORMANCE: If timeout is 0, return immediately (short-polling mode)
+         */
+        if ($timeoutSeconds === 0) {
+            $newItems = AdminNotification::forUser($userId)
+                ->active()
+                ->where('id', '>', $lastId)
+                ->orderBy('created_at', 'desc')
+                ->limit(10)
+                ->get();
+
+            $currentUnread = AdminNotification::forUser($userId)->active()->unread()->count();
+
+            if ($newItems->isNotEmpty() || $currentUnread !== $initialUnread) {
+                $transformed = $newItems->map(fn ($n) => $this->transform($n));
+                return response()->json([
+                    'changed' => true,
+                    'new_notifications' => $transformed,
+                    'unread_count' => $currentUnread,
+                    'last_id' => (int) ($newItems->first()->id ?? $lastId),
+                ]);
+            }
+
+            return response()->json([
+                'changed' => false,
+                'new_notifications' => [],
+                'unread_count' => $currentUnread,
+                'last_id' => $lastId,
+            ]);
+        }
+
+        /**
+         * Long-poll loop (only if timeout > 0)
+         */
         while (true) {
-            // Check if client disconnected
+            /**
+             * Check if client disconnected.
+             */
             if (connection_aborted()) {
                 break;
             }
 
-            // New notifications since last id
+            /**
+             * New notifications since last id.
+             */
             $newItems = AdminNotification::forUser($userId)
                 ->active()
                 ->where('id', '>', $lastId)
@@ -100,11 +246,15 @@ class NotificationController extends Controller
                 ]);
             }
 
-            // Sleep briefly to reduce load
-            usleep(500000); // 500ms
+            /**
+             * Pause for half a second to limit polling pressure on the server.
+             */
+            usleep(500000);
         }
 
-        // If connection was aborted, return empty response
+        /**
+         * If connection was aborted, return empty response.
+         */
         return response()->json([
             'changed' => false,
             'new_notifications' => [],
@@ -113,17 +263,52 @@ class NotificationController extends Controller
         ]);
     }
 
+    
+    
+    
+    
     /**
-     * Retrieve paginated notifications for the authenticated administrator.
+
+    
+    
+    
+     * Display a listing of the resource.
+
+    
+    
+    
      *
-     * @param Request $request The request containing filter parameters.
-     * @return JsonResponse JSON response with notification data and pagination metadata.
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return JsonResponse
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function index(Request $request): JsonResponse
     {
-        // If limit parameter is provided, return simple list (for dropdown)
+        /**
+         * If limit parameter is provided, return simple list (for dropdown).
+         */
         if ($request->has('limit')) {
-            // Limit to max 100 to prevent abuse
+            /**
+             * Limit to max 100 to prevent abuse.
+             */
             $limit = min((int) $request->get('limit', 10), 100);
 
             $notifications = AdminNotification::forUser(auth()->id())
@@ -144,23 +329,31 @@ class NotificationController extends Controller
             ]);
         }
 
-        // Otherwise, return paginated list
+        /**
+         * Otherwise, return paginated list.
+         */
         $query = AdminNotification::forUser(auth()->id())
             ->active()
             ->orderBy('priority', 'desc')
             ->orderBy('created_at', 'desc');
 
-        // Filter by read status.
+        /**
+         * Filter by read status.
+         */
         if ($request->has('unread_only') && $request->boolean('unread_only')) {
             $query->unread();
         }
 
-        // Filter by notification type.
+        /**
+         * Filter by notification type.
+         */
         if ($request->filled('type')) {
             $query->byType($request->type);
         }
 
-        // Filter by priority level.
+        /**
+         * Filter by priority level.
+         */
         if ($request->filled('priority')) {
             $query->byPriority($request->priority);
         }
@@ -179,15 +372,48 @@ class NotificationController extends Controller
         ]);
     }
 
+    
+    
+    
+    
     /**
-     * Mark a notification as read.
+
+    
+    
+    
+     * Handle mark as read.
+
+    
+    
+    
      *
-     * @param AdminNotification $notification The notification instance to update.
-     * @return JsonResponse JSON response describing the updated notification state.
+
+    
+    
+    
+     * @param AdminNotification $notification The notification.
+
+    
+    
+    
+     * @return JsonResponse
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function markAsRead(AdminNotification $notification): JsonResponse
     {
-        // Ensure the acting administrator owns the notification unless it is a system notice.
+        /**
+         * Ensure the acting administrator owns the notification unless it is a system notice.
+         */
         if ($notification->user_id !== auth()->id() && !$notification->is_system) {
             return response()->json(['message' => 'Unauthorized.'], 403);
         }
@@ -200,15 +426,48 @@ class NotificationController extends Controller
         ]);
     }
 
+    
+    
+    
+    
     /**
-     * Mark a notification as unread.
+
+    
+    
+    
+     * Handle mark as unread.
+
+    
+    
+    
      *
-     * @param AdminNotification $notification The notification instance to update.
-     * @return JsonResponse JSON response describing the updated notification state.
+
+    
+    
+    
+     * @param AdminNotification $notification The notification.
+
+    
+    
+    
+     * @return JsonResponse
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function markAsUnread(AdminNotification $notification): JsonResponse
     {
-        // Ensure the acting administrator owns the notification unless it is a system notice.
+        /**
+         * Ensure the acting administrator owns the notification unless it is a system notice.
+         */
         if ($notification->user_id !== auth()->id() && !$notification->is_system) {
             return response()->json(['message' => 'Unauthorized.'], 403);
         }
@@ -221,11 +480,38 @@ class NotificationController extends Controller
         ]);
     }
 
+    
+    
+    
+    
     /**
-     * Mark all unread notifications as read for the authenticated user.
+
+    
+    
+    
+     * Handle mark all as read.
+
+    
+    
+    
      *
-     * @return JsonResponse JSON response summarizing how many notifications were updated.
+
+    
+    
+    
+     * @return JsonResponse
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function markAllAsRead(): JsonResponse
     {
         $count = AdminNotification::forUser(auth()->id())
@@ -238,20 +524,55 @@ class NotificationController extends Controller
         ]);
     }
 
+    
+    
+    
+    
     /**
-     * Delete a notification.
+
+    
+    
+    
+     * Remove the specified resource.
+
+    
+    
+    
      *
-     * @param AdminNotification $notification The notification instance to delete.
-     * @return JsonResponse JSON response confirming the deletion.
+
+    
+    
+    
+     * @param AdminNotification $notification The notification.
+
+    
+    
+    
+     * @return JsonResponse
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function destroy(AdminNotification $notification): JsonResponse
     {
-        // Ensure the acting administrator owns the notification unless it is a system notice.
+        /**
+         * Ensure the acting administrator owns the notification unless it is a system notice.
+         */
         if ($notification->user_id !== auth()->id() && !$notification->is_system) {
             return response()->json(['message' => 'Unauthorized.'], 403);
         }
 
-        // Check if the notification is dismissible.
+        /**
+         * Check if the notification is dismissible.
+         */
         if (!$notification->is_dismissible) {
             return response()->json(['message' => 'This notification cannot be deleted.'], 400);
         }
@@ -263,12 +584,43 @@ class NotificationController extends Controller
         ]);
     }
 
+    
+    
+    
+    
     /**
-     * Create a new notification (admin only).
+
+    
+    
+    
+     * Store a newly created resource.
+
+    
+    
+    
      *
-     * @param Request $request The request payload describing the notification.
-     * @return JsonResponse JSON response containing the newly created notification.
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return JsonResponse
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function store(Request $request): JsonResponse
     {
         $request->validate([
@@ -292,11 +644,38 @@ class NotificationController extends Controller
         ], 201);
     }
 
+    
+    
+    
+    
     /**
-     * Get notification statistics for the current administrator.
+
+    
+    
+    
+     * Handle stats.
+
+    
+    
+    
      *
-     * @return JsonResponse JSON response containing aggregated notification counts.
+
+    
+    
+    
+     * @return JsonResponse
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function stats(): JsonResponse
     {
         $userId = auth()->id();
@@ -320,11 +699,38 @@ class NotificationController extends Controller
         return response()->json($stats);
     }
 
+    
+    
+    
+    
     /**
-     * Clean up expired notifications.
+
+    
+    
+    
+     * Handle cleanup.
+
+    
+    
+    
      *
-     * @return JsonResponse JSON response summarizing how many notifications were removed.
+
+    
+    
+    
+     * @return JsonResponse
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function cleanup(): JsonResponse
     {
         $count = AdminNotification::cleanupExpired();
@@ -335,9 +741,87 @@ class NotificationController extends Controller
         ]);
     }
 
+    
+    
+    
+    
     /**
-     * Normalize notification structure for the admin UI.
+
+    
+    
+    
+     * Handle delete all read.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return JsonResponse
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
+    public function deleteAllRead(): JsonResponse
+    {
+        $count = AdminNotification::forUser(auth()->id())
+            ->read()
+            ->delete();
+
+        return response()->json([
+            'message' => "{$count} read notification(s) deleted successfully.",
+            'count' => $count,
+        ]);
+    }
+
+    
+    
+    
+    
+    /**
+
+    
+    
+    
+     * Handle transform.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param AdminNotification $n The n.
+
+    
+    
+    
+     * @return array
+
+    
+    
+    
+     */
+    
+    
+    
+    
+    
+    
+    
     protected function transform(AdminNotification $n): array
     {
         return [

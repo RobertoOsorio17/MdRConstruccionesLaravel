@@ -320,7 +320,7 @@ const FeaturedServicesSection = ({ services, prefersReducedMotion = false }) => 
         {/* Grid de servicios */}
         <Grid container spacing={{ xs: 3, md: 4 }}>
           {featuredServices.map((service, index) => (
-            <Grid size={{ xs: 12, sm: 6, lg: 3 }} key={service.id || index}>
+            <Grid item xs={12} sm={6} lg={3} key={service.id || index}>
               <ServiceCard 
                 service={service} 
                 index={index}

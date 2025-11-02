@@ -24,18 +24,76 @@ class Permission extends Model
         'updated_at',
     ];
 
+    
+    
+    
+    
     /**
-     * Roles que tienen este permiso
+
+    
+    
+    
+     * Handle roles.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return BelongsToMany
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function roles(): BelongsToMany
     {
         return $this->belongsToMany(Role::class, 'permission_role')
                     ->withTimestamps();
     }
 
+    
+    
+    
+    
     /**
-     * Usuarios que tienen este permiso directamente
+
+    
+    
+    
+     * Handle users.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return BelongsToMany
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function users(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'permission_user')
@@ -43,9 +101,48 @@ class Permission extends Model
                     ->withTimestamps();
     }
 
+    
+    
+    
+    
     /**
-     * Scope para filtrar por grupo
+
+    
+    
+    
+     * Handle scope by group.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param mixed $query The query.
+
+    
+    
+    
+     * @param string $group The group.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function scopeByGroup($query, string $group)
     {
         return $query->where('group', $group);
@@ -59,9 +156,43 @@ class Permission extends Model
         return static::all()->groupBy('group');
     }
 
+    
+    
+    
+    
     /**
-     * Verificar si un usuario tiene este permiso
+
+    
+    
+    
+     * Determine whether user.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param User $user The user.
+
+    
+    
+    
+     * @return bool
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function hasUser(User $user): bool
     {
         return $this->users()->where('user_id', $user->id)->exists();

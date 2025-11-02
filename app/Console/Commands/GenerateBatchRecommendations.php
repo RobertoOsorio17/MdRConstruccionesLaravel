@@ -6,6 +6,9 @@ use App\Models\User;
 use App\Jobs\GenerateBatchRecommendationsJob;
 use App\Helpers\MLSettingsHelper;
 use Illuminate\Console\Command;
+/**
+ * Class GenerateBatchRecommendations.
+ */
 
 class GenerateBatchRecommendations extends Command
 {
@@ -26,9 +29,38 @@ class GenerateBatchRecommendations extends Command
      */
     protected $description = 'Generate recommendations in batch for multiple users';
 
+    
+    
+    
+    
     /**
-     * Execute the console command.
+
+    
+    
+    
+     * Handle handle.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function handle()
     {
         $performanceConfig = MLSettingsHelper::getPerformanceConfig();

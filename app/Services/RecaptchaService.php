@@ -11,14 +11,53 @@ use Illuminate\Support\Facades\Log;
  */
 class RecaptchaService
 {
+    
+    
+    
+    
     /**
-     * Verify reCAPTCHA v3 token
+
+    
+    
+    
+     * Handle verify.
+
+    
+    
+    
      *
-     * @param string $token
-     * @param string $action
-     * @param float $minScore
+
+    
+    
+    
+     * @param string $token The token.
+
+    
+    
+    
+     * @param string $action The action.
+
+    
+    
+    
+     * @param float $minScore The minScore.
+
+    
+    
+    
      * @return array
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function verify(string $token, string $action = 'contact_form', float $minScore = 0.5): array
     {
         $secretKey = config('services.recaptcha.secret_key');
@@ -117,22 +156,76 @@ class RecaptchaService
         }
     }
 
+    
+    
+    
+    
     /**
-     * Check if reCAPTCHA is enabled
+
+    
+    
+    
+     * Determine whether enabled.
+
+    
+    
+    
      *
+
+    
+    
+    
      * @return bool
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function isEnabled(): bool
     {
         return !empty(config('services.recaptcha.secret_key')) 
             && !empty(config('services.recaptcha.site_key'));
     }
 
+    
+    
+    
+    
     /**
-     * Get site key for frontend
+
+    
+    
+    
+     * Get site key.
+
+    
+    
+    
      *
-     * @return string|null
+
+    
+    
+    
+     * @return ?string
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function getSiteKey(): ?string
     {
         return config('services.recaptcha.site_key');

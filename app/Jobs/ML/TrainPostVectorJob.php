@@ -26,18 +26,86 @@ class TrainPostVectorJob implements ShouldQueue
 
     private int $postId;
 
+    
+    
+    
+    
     /**
-     * Create a new job instance.
+
+    
+    
+    
+     * Handle __construct.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param int $postId The postId.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function __construct(int $postId)
     {
         $this->postId = $postId;
         $this->onQueue('ml-training');
     }
 
+    
+    
+    
+    
     /**
-     * Execute the job.
+
+    
+    
+    
+     * Handle handle.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param ContentAnalysisServiceV2 $contentAnalysis The contentAnalysis.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function handle(ContentAnalysisServiceV2 $contentAnalysis): void
     {
         try {
@@ -65,9 +133,43 @@ class TrainPostVectorJob implements ShouldQueue
         }
     }
 
+    
+    
+    
+    
     /**
-     * Handle a job failure.
+
+    
+    
+    
+     * Handle failed.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param \Throwable $exception The exception.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function failed(\Throwable $exception): void
     {
         Log::error("Post vector training job failed permanently", [
@@ -79,9 +181,38 @@ class TrainPostVectorJob implements ShouldQueue
         // Notification::route('mail', config('mail.admin'))->notify(new MLJobFailedNotification($exception));
     }
 
+    
+    
+    
+    
     /**
-     * Get the tags that should be assigned to the job.
+
+    
+    
+    
+     * Handle tags.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return array
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function tags(): array
     {
         return ['ml-training', 'post-vector', "post:{$this->postId}"];

@@ -23,27 +23,67 @@ use Carbon\Carbon;
  */
 class PostController extends Controller
 {
+    
+    
+    
+    
     /**
-     * Display a listing of posts.
+
+    
+    
+    
+     * Display a listing of the resource.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function index(Request $request)
     {
         $query = Post::with(['author:id,name', 'categories:id,name,slug,color', 'tags:id,name,slug'])
             ->orderBy('created_at', 'desc');
 
-        // Filter by post status.
+        /**
+         * Filter by post status.
+         */
         if ($request->has('status') && !empty($request->status)) {
             $query->where('status', $request->status);
         }
 
-        // Filter by category selection.
+        /**
+         * Filter by category selection.
+         */
         if ($request->has('category') && !empty($request->category)) {
             $query->whereHas('categories', function ($q) use ($request) {
                 $q->where('id', $request->category);
             });
         }
 
-        // Apply keyword search across title, excerpt, and content.
+        /**
+         * Apply keyword search across title, excerpt, and content.
+         */
         if ($request->has('search') && !empty($request->search)) {
             $query->where(function ($q) use ($request) {
                 $q->where('title', 'like', '%' . $request->search . '%')
@@ -71,7 +111,9 @@ class PostController extends Controller
             ];
         });
 
-        // Retrieve categories and tags for filter dropdowns.
+        /**
+         * Retrieve categories and tags for filter dropdowns.
+         */
         $categories = Category::active()->ordered()->get(['id', 'name']);
         $tags = Tag::orderBy('name')->get(['id', 'name']);
 
@@ -93,9 +135,38 @@ class PostController extends Controller
         ]);
     }
 
+    
+    
+    
+    
     /**
-     * Show the form for creating a new post.
+
+    
+    
+    
+     * Show the form for creating a new resource.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function create()
     {
         $categories = Category::active()->ordered()->get(['id', 'name', 'slug', 'color']);
@@ -111,9 +182,43 @@ class PostController extends Controller
         ]);
     }
 
+    
+    
+    
+    
     /**
-     * Store a newly created post.
+
+    
+    
+    
+     * Store a newly created resource.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function store(Request $request)
     {
         $validated = $request->validate([
@@ -134,32 +239,44 @@ class PostController extends Controller
             'seo_description' => 'nullable|string|max:255',
         ]);
 
-        // Auto-generate slug if not provided.
+        /**
+         * Auto-generate slug if not provided.
+         */
         if (empty($validated['slug'])) {
             $validated['slug'] = Str::slug($validated['title']);
         }
 
-        // Set author to the acting user when not explicitly assigned.
+        /**
+         * Set author to the acting user when not explicitly assigned.
+         */
         if (empty($validated['user_id'])) {
             $validated['user_id'] = auth()->id();
         }
 
-        // Handle scheduled publication dates.
+        /**
+         * Handle scheduled publication dates.
+         */
         if ($validated['status'] === 'scheduled' && !$validated['published_at']) {
             $validated['published_at'] = now()->addHour();
         }
 
-        // Ensure published posts have a publication timestamp.
+        /**
+         * Ensure published posts have a publication timestamp.
+         */
         if ($validated['status'] === 'published' && !$validated['published_at']) {
             $validated['published_at'] = now();
         }
 
-        // Fix: Generate slug if empty.
+        /**
+         * Fix: Generate slug if empty.
+         */
         if (empty($validated['slug'])) {
             $validated['slug'] = Str::slug($validated['title']);
         }
 
-        // Fix: Ensure slug uniqueness (moved outside unreachable branch).
+        /**
+         * Fix: Ensure slug uniqueness (moved outside unreachable branch).
+         */
         $originalSlug = $validated['slug'];
         $counter = 1;
         while (Post::where('slug', $validated['slug'])->exists()) {
@@ -167,21 +284,29 @@ class PostController extends Controller
             $counter++;
         }
 
-        // Finalize the author attribution.
+        /**
+         * Finalize the author attribution.
+         */
         $validated['user_id'] = $validated['user_id'] ?? \Illuminate\Support\Facades\Auth::id();
 
-        // Normalize publication timestamps for the given status.
+        /**
+         * Normalize publication timestamps for the given status.
+         */
         if ($validated['status'] === 'published' && !$validated['published_at']) {
             $validated['published_at'] = now();
         } elseif ($validated['status'] !== 'published') {
             $validated['published_at'] = $validated['published_at'] ?? null;
         }
 
-        // Fix: Wrap post creation and relationships in transaction.
+        /**
+         * Fix: Wrap post creation and relationships in transaction.
+         */
         $post = \DB::transaction(function () use ($validated) {
             $post = Post::create($validated);
 
-            // Attach categories and tags.
+            /**
+             * Attach categories and tags.
+             */
             if (!empty($validated['categories'])) {
                 $post->categories()->attach($validated['categories']);
             }
@@ -193,7 +318,9 @@ class PostController extends Controller
             return $post;
         });
 
-        // Generate success message with post details
+        /**
+         * Generate success message with post details.
+         */
         $statusText = match($post->status) {
             'published' => 'publicada',
             'draft' => 'borrador',
@@ -203,7 +330,7 @@ class PostController extends Controller
 
         $truncatedTitle = \Illuminate\Support\Str::limit($post->title, 50);
         $message = sprintf(
-            "La publicación '%s' ha sido creada exitosamente como %s",
+            "La publicaciÃ³n '%s' ha sido creada exitosamente como %s",
             $truncatedTitle,
             $statusText
         );
@@ -212,9 +339,43 @@ class PostController extends Controller
         return redirect()->route('admin.posts.index');
     }
 
+    
+    
+    
+    
     /**
-     * Display the specified post.
+
+    
+    
+    
+     * Display the specified resource.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Post $post The post.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function show(Post $post)
     {
         $post->load(['author:id,name', 'categories:id,name,slug,color', 'tags:id,name,slug']);
@@ -242,9 +403,43 @@ class PostController extends Controller
         ]);
     }
 
+    
+    
+    
+    
     /**
-     * Show the form for editing the specified post.
+
+    
+    
+    
+     * Show the form for editing the specified resource.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Post $post The post.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function edit(Post $post)
     {
         $post->load(['categories:id', 'tags:id']);
@@ -278,9 +473,48 @@ class PostController extends Controller
         ]);
     }
 
+    
+    
+    
+    
     /**
-     * Update the specified post.
+
+    
+    
+    
+     * Update the specified resource.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @param Post $post The post.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function update(Request $request, Post $post)
     {
         $validated = $request->validate([
@@ -301,11 +535,15 @@ class PostController extends Controller
             'seo_description' => 'nullable|string|max:255',
         ]);
 
-        // Generate slug if not provided
+        /**
+         * Generate slug if not provided.
+         */
         if (empty($validated['slug'])) {
             $validated['slug'] = Str::slug($validated['title']);
             
-            // Ensure uniqueness
+            /**
+             * Ensure uniqueness.
+             */
             $originalSlug = $validated['slug'];
             $counter = 1;
             while (Post::where('slug', $validated['slug'])->where('id', '!=', $post->id)->exists()) {
@@ -314,23 +552,31 @@ class PostController extends Controller
             }
         }
 
-        // Handle published_at.
+        /**
+         * Handle published_at.
+         */
         if ($validated['status'] === 'published' && !$post->published_at && !$validated['published_at']) {
             $validated['published_at'] = now();
         } elseif ($validated['status'] !== 'published' && $post->status === 'published') {
-            // Don't change published_at if moving from published to another status
+            /**
+             * Don't change published_at if moving from published to another status.
+             */
         }
 
         $post->update($validated);
 
-        // Sync categories and tags
+        /**
+         * Sync categories and tags.
+         */
         $post->categories()->sync($validated['categories'] ?? []);
         $post->tags()->sync($validated['tags'] ?? []);
 
-        // Generate success message with post details
+        /**
+         * Generate success message with post details.
+         */
         $truncatedTitle = \Illuminate\Support\Str::limit($post->title, 50);
         $message = sprintf(
-            "La publicaciÃ³n '%s' ha sido actualizada exitosamente",
+            "La publicaciÃƒÂ³n '%s' ha sido actualizada exitosamente",
             $truncatedTitle
         );
 
@@ -338,12 +584,48 @@ class PostController extends Controller
             ->with('success', $message);
     }
 
+    
+    
+    
+    
     /**
-     * Remove the specified post.
+
+    
+    
+    
+     * Remove the specified resource.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Post $post The post.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function destroy(Post $post)
     {
-        // Delete cover image if it exists.
+        /**
+         * Delete cover image if it exists.
+         */
         if ($post->cover_image && Storage::exists($post->cover_image)) {
             Storage::delete($post->cover_image);
         }
@@ -354,9 +636,43 @@ class PostController extends Controller
             ->with('success', 'Post deleted successfully.');
     }
 
+    
+    
+    
+    
     /**
-     * Toggle featured status
+
+    
+    
+    
+     * Handle toggle featured.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Post $post The post.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function toggleFeatured(Post $post)
     {
         $post->update(['featured' => !$post->featured]);
@@ -368,9 +684,48 @@ class PostController extends Controller
         ]);
     }
 
+    
+    
+    
+    
     /**
-     * Change post status
+
+    
+    
+    
+     * Handle change status.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @param Post $post The post.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function changeStatus(Request $request, Post $post)
     {
         $validated = $request->validate([
@@ -421,6 +776,77 @@ class PostController extends Controller
         ]);
     }
 
+
+    
+
+
+    
+
+    
+
+    
+
+    /**
+
+
+    
+
+    
+
+    
+
+     * Handle revisions.
+
+
+    
+
+    
+
+    
+
+     *
+
+
+    
+
+    
+
+    
+
+     * @param Post $post The post.
+
+
+    
+
+    
+
+    
+
+     * @return void
+
+
+    
+
+    
+
+    
+
+     */
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
     public function revisions(Post $post)
     {
         $revisions = $post->revisions()
@@ -442,6 +868,95 @@ class PostController extends Controller
         ]);
     }
 
+
+    
+
+
+    
+
+    
+
+    
+
+    /**
+
+
+    
+
+    
+
+    
+
+     * Handle restore revision.
+
+
+    
+
+    
+
+    
+
+     *
+
+
+    
+
+    
+
+    
+
+     * @param Request $request The request.
+
+
+    
+
+    
+
+    
+
+     * @param Post $post The post.
+
+
+    
+
+    
+
+    
+
+     * @param PostRevision $revision The revision.
+
+
+    
+
+    
+
+    
+
+     * @return void
+
+
+    
+
+    
+
+    
+
+     */
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
     public function restoreRevision(Request $request, Post $post, PostRevision $revision)
     {
         if ($revision->post_id !== $post->id) {
@@ -453,7 +968,7 @@ class PostController extends Controller
         if (empty($revisionData)) {
             return redirect()
                 ->route('admin.posts.edit', $post->slug)
-                ->with('error', 'La revisión seleccionada no contiene datos válidos para restaurar.');
+                ->with('error', 'La revisiÃ³n seleccionada no contiene datos vÃ¡lidos para restaurar.');
         }
 
         $syncCategories = collect($revisionData['categories'] ?? [])
@@ -510,7 +1025,7 @@ class PostController extends Controller
         $tagsChanged = false;
 
         DB::transaction(function () use (&$revisionSnapshot, &$attributeChanges, &$categoriesChanged, &$tagsChanged, $post, $payload, $syncCategories, $syncTags, $revision, $existingCategories, $existingTags) {
-            $revisionSnapshot = $post->captureRevision('Estado anterior a restaurar la revisión #' . $revision->id);
+            $revisionSnapshot = $post->captureRevision('Estado anterior a restaurar la revisiÃ³n #' . $revision->id);
 
             $post->update($payload);
             $post->categories()->sync($syncCategories);
@@ -542,12 +1057,46 @@ class PostController extends Controller
         }
 
         return redirect()->route('admin.posts.edit', $post->slug)
-            ->with('success', 'La revisión seleccionada fue restaurada correctamente.');
+            ->with('success', 'La revisiÃ³n seleccionada fue restaurada correctamente.');
     }
 
+    
+    
+    
+    
     /**
-     * Duplicate post
+
+    
+    
+    
+     * Handle duplicate.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Post $post The post.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function duplicate(Post $post)
     {
         $newPost = $post->replicate();
@@ -560,7 +1109,9 @@ class PostController extends Controller
         $newPost->user_id = \Illuminate\Support\Facades\Auth::id();
         $newPost->save();
 
-        // Copy relationships
+        /**
+         * Copy relationships.
+         */
         $newPost->categories()->attach($post->categories->pluck('id'));
         $newPost->tags()->attach($post->tags->pluck('id'));
 
@@ -568,25 +1119,68 @@ class PostController extends Controller
             ->with('success', 'Post duplicated successfully.');
     }
 
+    
+    
+    
+    
     /**
-     * Bulk actions for posts.
+
+    
+    
+    
+     * Handle bulk action.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function bulkAction(Request $request)
     {
-        // âœ… Authorize bulk action capability
+        /**
+         * Authorize bulk action capability.
+         */
         $this->authorize('bulkAction', Post::class);
 
         $request->validate([
             'action' => 'required|in:delete,publish,draft,feature,unfeature',
-            'posts' => 'required|array|max:100', // âœ… Limit to 100 posts
+            /**
+             * Limit bulk post mutations to one hundred records.
+             */
+            'posts' => 'required|array|max:100',
             'posts.*' => 'exists:posts,id'
         ]);
 
         try {
-            // âœ… Get posts as collection to verify authorization for each
+            /**
+             * Get posts as collection to verify authorization for each.
+             */
             $posts = Post::whereIn('id', $request->posts)->get();
 
-            // âœ… Verify authorization for each post individually
+            /**
+             * Verify authorization for each post individually.
+             */
             foreach ($posts as $post) {
                 switch ($request->action) {
                     case 'delete':
@@ -605,7 +1199,9 @@ class PostController extends Controller
                 }
             }
 
-            // âœ… Execute action only after all authorizations pass
+            /**
+             * Execute action only after all authorizations pass.
+             */
             $count = 0;
             foreach ($posts as $post) {
                 switch ($request->action) {
@@ -654,9 +1250,38 @@ class PostController extends Controller
         }
     }
 
+    
+    
+    
+    
     /**
-     * Get post analytics.
+
+    
+    
+    
+     * Handle analytics.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function analytics()
     {
         try {
@@ -700,9 +1325,43 @@ class PostController extends Controller
         }
     }
 
+    
+    
+    
+    
     /**
-     * Export posts to Excel/CSV using Laravel Excel.
+
+    
+    
+    
+     * Handle export.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function export(Request $request)
     {
         $filters = [
@@ -712,7 +1371,10 @@ class PostController extends Controller
             'featured' => $request->get('featured'),
         ];
 
-        $format = $request->get('format', 'xlsx'); // xlsx, csv
+        /**
+         * Determine the requested export format (xlsx or csv).
+         */
+        $format = $request->get('format', 'xlsx');
         $filename = 'posts_' . now()->format('Y-m-d_H-i-s');
 
         try {
@@ -729,6 +1391,48 @@ class PostController extends Controller
             return back()->with('error', 'Error al exportar posts: ' . $e->getMessage());
         }
     }
+    
+    
+    
+    
+    /**
+
+    
+    
+    
+     * Handle ensure unique slug.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param ?string $slug The slug.
+
+    
+    
+    
+     * @param ?int $ignoreId The ignoreId.
+
+    
+    
+    
+     * @return string
+
+    
+    
+    
+     */
+    
+    
+    
+    
+    
+    
+    
     private function ensureUniqueSlug(?string $slug, ?int $ignoreId = null): string
     {
         $slug = $slug ?: Str::slug(Str::random(8));

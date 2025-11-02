@@ -24,9 +24,38 @@ class TestNotifications extends Command
      */
     protected $description = 'Create test notifications for the admin panel';
 
+    
+    
+    
+    
     /**
-     * Execute the console command.
+
+    
+    
+    
+     * Handle handle.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function handle()
     {
         $count = $this->option('count');

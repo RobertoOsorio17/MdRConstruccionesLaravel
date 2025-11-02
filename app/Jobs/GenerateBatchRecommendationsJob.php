@@ -12,6 +12,9 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache;
+/**
+ * Job GenerateBatchRecommendationsJob.
+ */
 
 class GenerateBatchRecommendationsJob implements ShouldQueue
 {
@@ -31,16 +34,84 @@ class GenerateBatchRecommendationsJob implements ShouldQueue
      */
     public $timeout = 300;
 
+    
+    
+    
+    
     /**
-     * Create a new job instance.
+
+    
+    
+    
+     * Handle __construct.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param protected array $userIds The userIds.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function __construct(
         protected array $userIds
     ) {}
 
+    
+    
+    
+    
     /**
-     * Execute the job.
+
+    
+    
+    
+     * Handle handle.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param MLRecommendationService $recommendationService The recommendationService.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function handle(MLRecommendationService $recommendationService): void
     {
         $performanceConfig = MLSettingsHelper::getPerformanceConfig();
@@ -86,9 +157,43 @@ class GenerateBatchRecommendationsJob implements ShouldQueue
         ]);
     }
 
+    
+    
+    
+    
     /**
-     * Handle a job failure.
+
+    
+    
+    
+     * Handle failed.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param \Throwable $exception The exception.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function failed(\Throwable $exception): void
     {
         Log::error('Batch recommendations job failed permanently', [

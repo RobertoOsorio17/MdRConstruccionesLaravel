@@ -23,11 +23,38 @@ use Inertia\Response;
  */
 class UserDashboardController extends Controller
 {
+    
+    
+    
+    
     /**
-     * Display user dashboard overview.
+
+    
+    
+    
+     * Display a listing of the resource.
+
+    
+    
+    
      *
-     * @return Response|RedirectResponse Inertia response with personalized dashboard data or redirect for admins.
+
+    
+    
+    
+     * @return Response|\Illuminate\Http\RedirectResponse
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function index(): Response|\Illuminate\Http\RedirectResponse
     {
         Log::info('Dashboard access attempt', [
@@ -113,9 +140,43 @@ class UserDashboardController extends Controller
         }
     }
 
+    
+    
+    
+    
     /**
-     * Display user's comments management.
+
+    
+    
+    
+     * Handle comments.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return Response
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function comments(Request $request): Response
     {
         $perPage = $request->get('per_page', 10);
@@ -140,12 +201,43 @@ class UserDashboardController extends Controller
         ]);
     }
 
+    
+    
+    
+    
     /**
-     * Display the user's saved posts.
+
+    
+    
+    
+     * Handle saved posts.
+
+    
+    
+    
      *
-     * @param Request $request The current HTTP request instance.
-     * @return Response Inertia response with saved posts and filters.
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return Response
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function savedPosts(Request $request): Response
     {
         $perPage = $request->get('per_page', 12);
@@ -191,12 +283,43 @@ class UserDashboardController extends Controller
         ]);
     }
 
+    
+    
+    
+    
     /**
-     * Display the user's following list.
+
+    
+    
+    
+     * Handle following.
+
+    
+    
+    
      *
-     * @param Request $request The current HTTP request instance.
-     * @return Response Inertia response with following users and filters.
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return Response
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function following(Request $request): Response
     {
         $perPage = $request->get('per_page', 12);
@@ -224,11 +347,38 @@ class UserDashboardController extends Controller
         ]);
     }
 
+    
+    
+    
+    
     /**
-     * Display the user preferences screen.
+
+    
+    
+    
+     * Handle preferences.
+
+    
+    
+    
      *
-     * @return Response Inertia response with user profile snapshot and default preferences.
+
+    
+    
+    
+     * @return Response
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function preferences(): Response
     {
         $user = Auth::user();
@@ -249,12 +399,43 @@ class UserDashboardController extends Controller
         ]);
     }
 
+    
+    
+    
+    
     /**
-     * Update user preferences.
+
+    
+    
+    
+     * Handle update preferences.
+
+    
+    
+    
      *
-     * @param Request $request The current HTTP request instance.
-     * @return \Illuminate\Http\RedirectResponse Redirect back with status.
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function updatePreferences(Request $request)
     {
         $request->validate([
@@ -272,12 +453,43 @@ class UserDashboardController extends Controller
         return back()->with('success', 'Preferencias actualizadas correctamente');
     }
 
+    
+    
+    
+    
     /**
-     * Display the user's liked posts.
+
+    
+    
+    
+     * Handle liked posts.
+
+    
+    
+    
      *
-     * @param Request $request The current HTTP request instance.
-     * @return Response Inertia response with liked posts and filters.
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return Response
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function likedPosts(Request $request): Response
     {
         $perPage = $request->get('per_page', 12);
@@ -323,23 +535,85 @@ class UserDashboardController extends Controller
         ]);
     }
 
+    
+    
+    
+    
     /**
-     * Display the user's bookmarks (alias for saved posts).
+
+    
+    
+    
+     * Handle bookmarks.
+
+    
+    
+    
      *
-     * @param Request $request The current HTTP request instance.
-     * @return Response Inertia response with saved posts.
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return Response
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function bookmarks(Request $request): Response
     {
         return $this->savedPosts($request);
     }
 
+    
+    
+    
+    
     /**
-     * Display the user's liked comments.
+
+    
+    
+    
+     * Handle liked comments.
+
+    
+    
+    
      *
-     * @param Request $request The current HTTP request instance.
-     * @return Response Inertia response with liked comments and filters.
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return Response
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function likedComments(Request $request): Response
     {
         $perPage = $request->get('per_page', 12);
@@ -369,12 +643,43 @@ class UserDashboardController extends Controller
         ]);
     }
 
+    
+    
+    
+    
     /**
-     * Remove a saved post.
+
+    
+    
+    
+     * Handle remove saved post.
+
+    
+    
+    
      *
-     * @param Post $post The post to remove from saved.
-     * @return \Illuminate\Http\JsonResponse JSON response indicating success.
+
+    
+    
+    
+     * @param Post $post The post.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function removeSavedPost(Post $post)
     {
         Auth::user()->savedPosts()->detach($post->id);
@@ -385,14 +690,43 @@ class UserDashboardController extends Controller
         ]);
     }
 
+    
+    
+    
+    
     /**
-     * Delete a comment.
+
+    
+    
+    
+     * Handle delete comment.
+
+    
+    
+    
      *
-     * Uses soft delete to preserve conversation structure.
-     *
-     * @param Comment $comment The comment to delete.
-     * @return \Illuminate\Http\JsonResponse JSON response indicating success or failure.
+
+    
+    
+    
+     * @param Comment $comment The comment.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function deleteComment(Comment $comment)
     {
         // Check if user owns the comment
@@ -412,12 +746,43 @@ class UserDashboardController extends Controller
         ]);
     }
 
+    
+    
+    
+    
     /**
-     * Unfollow a user.
+
+    
+    
+    
+     * Handle unfollow user.
+
+    
+    
+    
      *
-     * @param User $user The user to unfollow.
-     * @return \Illuminate\Http\JsonResponse JSON response indicating success.
+
+    
+    
+    
+     * @param User $user The user.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function unfollowUser(User $user)
     {
         Auth::user()->following()->detach($user->id);

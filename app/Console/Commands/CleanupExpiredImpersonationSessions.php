@@ -5,6 +5,9 @@ namespace App\Console\Commands;
 use App\Models\ImpersonationSession;
 use Carbon\Carbon;
 use Illuminate\Console\Command;
+/**
+ * Class CleanupExpiredImpersonationSessions.
+ */
 
 class CleanupExpiredImpersonationSessions extends Command
 {
@@ -24,9 +27,38 @@ class CleanupExpiredImpersonationSessions extends Command
      */
     protected $description = 'Clean up old impersonation session records from the database';
 
+    
+    
+    
+    
     /**
-     * Execute the console command.
+
+    
+    
+    
+     * Handle handle.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function handle()
     {
         $days = (int) $this->option('days');

@@ -34,19 +34,75 @@ class SocialAccount extends Model
         'provider_refresh_token',
     ];
 
+    
+    
+    
+    
     /**
-     * Get the user that owns the social account.
+
+    
+    
+    
+     * Handle user.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return BelongsTo
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
+    
+    
+    
+    
     /**
-     * Get the provider name in a human-readable format.
+
+    
+    
+    
+     * Get provider name attribute.
+
+    
+    
+    
      *
+
+    
+    
+    
      * @return string
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function getProviderNameAttribute(): string
     {
         return match($this->provider) {
@@ -57,11 +113,38 @@ class SocialAccount extends Model
         };
     }
 
+    
+    
+    
+    
     /**
-     * Check if the token is expired (if refresh token exists).
+
+    
+    
+    
+     * Determine whether token expired.
+
+    
+    
+    
      *
+
+    
+    
+    
      * @return bool
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function isTokenExpired(): bool
     {
         // This is a simplified check - in production you'd want to check actual expiry

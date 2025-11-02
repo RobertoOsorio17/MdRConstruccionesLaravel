@@ -35,7 +35,8 @@ Route::get('/login', [App\Http\Controllers\Admin\Auth\AdminAuthController::class
     ->name('login');
 
 // Inactivity Detection Routes (require auth but less strict middleware)
-Route::middleware(['auth', 'auth.enhanced', 'role:admin,editor,moderator', 'throttle:admin-heartbeat'])->group(function () {
+// ✅ OPTIMIZED: Removed 'auth.enhanced' - now global middleware
+Route::middleware(['auth', 'role:admin,editor,moderator', 'throttle:admin-heartbeat'])->group(function () {
     Route::post('/heartbeat', [App\Http\Controllers\Admin\InactivityController::class, 'heartbeat'])
         ->name('heartbeat');
     Route::post('/logout-inactivity', [App\Http\Controllers\Admin\InactivityController::class, 'logoutInactivity'])
@@ -45,13 +46,15 @@ Route::middleware(['auth', 'auth.enhanced', 'role:admin,editor,moderator', 'thro
 });
 
 // Update inactivity config (admin only)
-Route::middleware(['auth', 'auth.enhanced', 'role:admin'])->group(function () {
+// ✅ OPTIMIZED: Removed 'auth.enhanced' - now global middleware
+Route::middleware(['auth', 'role:admin'])->group(function () {
     Route::post('/inactivity-config', [App\Http\Controllers\Admin\InactivityController::class, 'updateConfig'])
         ->name('inactivity-config.update');
 });
 
 // All admin routes require authentication and admin/editor role with enhanced security
-Route::middleware(['auth', 'auth.enhanced', 'role:admin,editor', 'admin.timeout', 'admin.audit'])->group(function () {
+// ✅ OPTIMIZED: Removed 'auth.enhanced' - now global middleware
+Route::middleware(['auth', 'role:admin,editor', 'admin.timeout', 'admin.audit'])->group(function () {
 
     // Admin root redirect to dashboard
     Route::get('/', function () {
@@ -87,6 +90,7 @@ Route::middleware(['auth', 'auth.enhanced', 'role:admin,editor', 'admin.timeout'
         Route::patch('/notifications/{notification}/unread', [App\Http\Controllers\Admin\NotificationController::class, 'markAsUnread'])->name('api.notifications.unread');
         Route::patch('/notifications/mark-all-read', [App\Http\Controllers\Admin\NotificationController::class, 'markAllAsRead'])->name('api.notifications.mark-all-read');
         Route::delete('/notifications/{notification}', [App\Http\Controllers\Admin\NotificationController::class, 'destroy'])->name('api.notifications.destroy');
+        Route::delete('/notifications/delete-all-read', [App\Http\Controllers\Admin\NotificationController::class, 'deleteAllRead'])->name('api.notifications.delete-all-read');
         Route::get('/notifications/stats', [App\Http\Controllers\Admin\NotificationController::class, 'stats'])->name('api.notifications.stats');
         Route::post('/notifications/cleanup', [App\Http\Controllers\Admin\NotificationController::class, 'cleanup'])->name('api.notifications.cleanup');
     });
@@ -99,49 +103,7 @@ Route::middleware(['auth', 'auth.enhanced', 'role:admin,editor', 'admin.timeout'
     Route::get('/audit-logs/filter-options', [App\Http\Controllers\Admin\AuditLogController::class, 'filterOptions'])->name('audit-logs.filter-options');
     Route::get('/audit-logs/{auditLog}', [App\Http\Controllers\Admin\AuditLogController::class, 'show'])->name('audit-logs.show');
 
-    // User Management
-    Route::resource('users', App\Http\Controllers\Admin\UserManagementController::class)
-        ->names([
-            'index' => 'users.index',
-            'create' => 'users.create',
-            'store' => 'users.store',
-            'show' => 'users.show',
-            'edit' => 'users.edit',
-            'update' => 'users.update',
-            'destroy' => 'users.destroy',
-        ]);
-    // âœ… Bulk action with dedicated rate limiting
-    Route::post('/users/bulk-action', [App\Http\Controllers\Admin\UserManagementController::class, 'bulkAction'])
-        ->middleware('throttle:bulk-operations')
-        ->name('users.bulk-action');
-    Route::get('/users/export', [App\Http\Controllers\Admin\UserManagementController::class, 'export'])->name('users.export');
-
-    // User Ban Management
-    Route::post('/users/{user}/ban', [App\Http\Controllers\Admin\UserManagementController::class, 'banUser'])->name('users.ban');
-    Route::patch('/users/{user}/ban', [App\Http\Controllers\Admin\UserManagementController::class, 'modifyBan'])->name('users.ban.modify');
-    Route::post('/users/{user}/unban', [App\Http\Controllers\Admin\UserManagementController::class, 'unbanUser'])->name('users.unban');
-    Route::get('/users/{user}/ban-history', [App\Http\Controllers\Admin\UserManagementController::class, 'getBanHistory'])->name('users.ban-history');
-
-    // User Comment Management
-    Route::get('/users/{user}/comments', [App\Http\Controllers\Admin\UserManagementController::class, 'getUserComments'])->name('users.comments');
-    Route::patch('/users/{user}/comments/{comment}/status', [App\Http\Controllers\Admin\UserManagementController::class, 'updateCommentStatus'])->name('users.comments.status');
-    Route::delete('/users/{user}/comments/{comment}', [App\Http\Controllers\Admin\UserManagementController::class, 'deleteComment'])->name('users.comments.delete');
-    Route::post('/users/{user}/comments/bulk-actions', [App\Http\Controllers\Admin\UserManagementController::class, 'bulkCommentActions'])->name('users.comments.bulk');
-
-    // User Verification Management
-    Route::post('/users/{user}/verify', [App\Http\Controllers\Admin\UserManagementController::class, 'verifyUser'])->name('users.verify');
-    Route::post('/users/{user}/unverify', [App\Http\Controllers\Admin\UserManagementController::class, 'unverifyUser'])->name('users.unverify');
-
-    // User Impersonation
-    Route::get('/impersonation/sessions', [App\Http\Controllers\Admin\UserImpersonationController::class, 'index'])
-        ->name('impersonation.sessions.index');
-    Route::get('/impersonation/sessions/api', [App\Http\Controllers\Admin\UserImpersonationController::class, 'apiIndex'])
-        ->name('impersonation.sessions.api');
-    Route::delete('/impersonation/sessions/{sessionId}', [App\Http\Controllers\Admin\UserImpersonationController::class, 'forceTerminate'])
-        ->name('impersonation.sessions.terminate');
-    Route::post('/users/{user}/impersonate', [App\Http\Controllers\Admin\UserImpersonationController::class, 'store'])
-        ->middleware('throttle:impersonation')
-        ->name('users.impersonate');
+    // NOTE: User Management and Impersonation routes moved to ADMIN-ONLY group (see line ~380)
 
     // Service Management
     Route::resource('services', App\Http\Controllers\Admin\ServiceManagementController::class)
@@ -184,21 +146,7 @@ Route::middleware(['auth', 'auth.enhanced', 'role:admin,editor', 'admin.timeout'
     Route::post('/testimonials/{testimonial}/approve', [App\Http\Controllers\Admin\TestimonialController::class, 'approve'])->name('testimonials.approve');
     Route::post('/testimonials/{testimonial}/reject', [App\Http\Controllers\Admin\TestimonialController::class, 'reject'])->name('testimonials.reject');
 
-    // Newsletter Management
-    Route::get('/newsletter', [App\Http\Controllers\Admin\NewsletterController::class, 'index'])->name('newsletter.index');
-    Route::post('/newsletter/send-campaign', [App\Http\Controllers\Admin\NewsletterController::class, 'sendCampaign'])->name('newsletter.send-campaign');
-    Route::get('/newsletter/export', [App\Http\Controllers\Admin\NewsletterController::class, 'export'])->name('newsletter.export');
-    Route::delete('/newsletter/{newsletter}', [App\Http\Controllers\Admin\NewsletterController::class, 'destroy'])->name('newsletter.destroy');
-    Route::post('/newsletter/bulk-action', [App\Http\Controllers\Admin\NewsletterController::class, 'bulkAction'])
-        ->middleware('throttle:bulk-operations')
-        ->name('newsletter.bulk-action');
-
-    // Backup Management
-    Route::get('/backup', [App\Http\Controllers\Admin\BackupController::class, 'index'])->name('backup.index');
-    Route::post('/backup/create', [App\Http\Controllers\Admin\BackupController::class, 'create'])->name('backup.create');
-    Route::get('/backup/download/{filename}', [App\Http\Controllers\Admin\BackupController::class, 'download'])->name('backup.download');
-    Route::delete('/backup/{filename}', [App\Http\Controllers\Admin\BackupController::class, 'destroy'])->name('backup.destroy');
-    Route::post('/backup/clean', [App\Http\Controllers\Admin\BackupController::class, 'clean'])->name('backup.clean');
+    // NOTE: Newsletter and Backup Management routes moved to ADMIN-ONLY group (see line ~380)
 
     // Posts Management
     // âš ï¸ IMPORTANT: Specific routes MUST come BEFORE Route::resource to avoid conflicts
@@ -323,39 +271,7 @@ Route::middleware(['auth', 'auth.enhanced', 'role:admin,editor', 'admin.timeout'
     Route::get('comment-management/export', [App\Http\Controllers\Admin\CommentManagementController::class, 'export'])
         ->name('comment-management.export');
 
-    // Settings Management
-    Route::get('/settings', [App\Http\Controllers\Admin\SettingController::class, 'index'])
-        ->name('settings.index');
-    Route::post('/settings', [App\Http\Controllers\Admin\SettingController::class, 'update'])
-        ->name('settings.update');
-    Route::post('/settings/initialize', [App\Http\Controllers\Admin\SettingController::class, 'initializeDefaults'])
-        ->name('settings.initialize');
-    Route::post('/settings/upload', [App\Http\Controllers\Admin\SettingController::class, 'uploadFile'])
-        ->name('settings.upload');
-    Route::get('/settings/history/{key}', [App\Http\Controllers\Admin\SettingController::class, 'getHistory'])
-        ->name('settings.history');
-    Route::post('/settings/revert/{key}', [App\Http\Controllers\Admin\SettingController::class, 'revert'])
-        ->name('settings.revert');
-    Route::get('/settings/export', [App\Http\Controllers\Admin\SettingController::class, 'export'])
-        ->name('settings.export');
-    Route::post('/settings/import', [App\Http\Controllers\Admin\SettingController::class, 'import'])
-        ->name('settings.import');
-    Route::post('/settings/reset-all', [App\Http\Controllers\Admin\SettingController::class, 'resetAll'])
-        ->name('settings.reset-all');
-
-    // Maintenance Mode Management
-    Route::post('/maintenance/toggle', [App\Http\Controllers\Admin\MaintenanceModeController::class, 'toggle'])
-        ->name('maintenance.toggle');
-    Route::post('/maintenance/schedule', [App\Http\Controllers\Admin\MaintenanceModeController::class, 'schedule'])
-        ->name('maintenance.schedule');
-    Route::get('/maintenance/preview', [App\Http\Controllers\Admin\MaintenanceModeController::class, 'preview'])
-        ->name('maintenance.preview');
-    Route::post('/maintenance/ip/add', [App\Http\Controllers\Admin\MaintenanceModeController::class, 'addIp'])
-        ->name('maintenance.ip.add');
-    Route::delete('/maintenance/ip/{ip}', [App\Http\Controllers\Admin\MaintenanceModeController::class, 'removeIp'])
-        ->name('maintenance.ip.remove');
-    Route::get('/maintenance/status', [App\Http\Controllers\Admin\MaintenanceModeController::class, 'status'])
-        ->name('maintenance.status');
+    // NOTE: Settings and Maintenance Mode Management routes moved to ADMIN-ONLY group (see line ~380)
 
     // Media Management
     Route::get('/media', [App\Http\Controllers\Admin\MediaController::class, 'index'])
@@ -378,9 +294,141 @@ Route::middleware(['auth', 'auth.enhanced', 'role:admin,editor', 'admin.timeout'
 });
 
 // Admin only routes (restricted to admin role) with enhanced security
-Route::middleware(['auth', 'auth.enhanced', 'role:admin', 'admin.security', 'admin.timeout', 'admin.audit'])->group(function () {
+// ✅ OPTIMIZED: Removed 'auth.enhanced' - now global middleware
+Route::middleware(['auth', 'role:admin', 'admin.security', 'admin.timeout', 'admin.audit'])->group(function () {
 
+    // ========================================
+    // USER NOTIFICATIONS (Admin Only)
+    // ========================================
+    Route::get('/user-notifications/send', [App\Http\Controllers\Admin\UserNotificationController::class, 'create'])
+        ->name('user-notifications.send');
+    Route::post('/user-notifications/send', [App\Http\Controllers\Admin\UserNotificationController::class, 'store'])
+        ->middleware('throttle:10,1') // Rate limit: 10 requests per minute
+        ->name('user-notifications.store');
+    Route::get('/user-notifications/history', [App\Http\Controllers\Admin\UserNotificationController::class, 'history'])
+        ->name('user-notifications.history');
+
+    // ========================================
+    // USER MANAGEMENT (Admin Only)
+    // ========================================
+    Route::resource('users', App\Http\Controllers\Admin\UserManagementController::class)
+        ->names([
+            'index' => 'users.index',
+            'create' => 'users.create',
+            'store' => 'users.store',
+            'show' => 'users.show',
+            'edit' => 'users.edit',
+            'update' => 'users.update',
+            'destroy' => 'users.destroy',
+        ]);
+
+    // Bulk action with dedicated rate limiting
+    Route::post('/users/bulk-action', [App\Http\Controllers\Admin\UserManagementController::class, 'bulkAction'])
+        ->middleware('throttle:bulk-operations')
+        ->name('users.bulk-action');
+    Route::get('/users/export', [App\Http\Controllers\Admin\UserManagementController::class, 'export'])->name('users.export');
+
+    // User Ban Management
+    Route::post('/users/{user}/ban', [App\Http\Controllers\Admin\UserManagementController::class, 'banUser'])->name('users.ban');
+    Route::patch('/users/{user}/ban', [App\Http\Controllers\Admin\UserManagementController::class, 'modifyBan'])->name('users.ban.modify');
+    Route::post('/users/{user}/unban', [App\Http\Controllers\Admin\UserManagementController::class, 'unbanUser'])->name('users.unban');
+    Route::get('/users/{user}/ban-history', [App\Http\Controllers\Admin\UserManagementController::class, 'getBanHistory'])->name('users.ban-history');
+
+    // User Comment Management
+    Route::get('/users/{user}/comments', [App\Http\Controllers\Admin\UserManagementController::class, 'getUserComments'])->name('users.comments');
+    Route::patch('/users/{user}/comments/{comment}/status', [App\Http\Controllers\Admin\UserManagementController::class, 'updateCommentStatus'])->name('users.comments.status');
+    Route::delete('/users/{user}/comments/{comment}', [App\Http\Controllers\Admin\UserManagementController::class, 'deleteComment'])->name('users.comments.delete');
+    Route::post('/users/{user}/comments/bulk-actions', [App\Http\Controllers\Admin\UserManagementController::class, 'bulkCommentActions'])->name('users.comments.bulk');
+
+    // User Verification Management
+    Route::post('/users/{user}/verify', [App\Http\Controllers\Admin\UserManagementController::class, 'verifyUser'])->name('users.verify');
+    Route::post('/users/{user}/unverify', [App\Http\Controllers\Admin\UserManagementController::class, 'unverifyUser'])->name('users.unverify');
+
+    // ========================================
+    // BAN APPEAL MANAGEMENT (Admin Only)
+    // ========================================
+    Route::prefix('ban-appeals')->name('ban-appeals.')->group(function () {
+        Route::get('/', [App\Http\Controllers\Admin\BanAppealManagementController::class, 'index'])->name('index');
+        Route::get('/{appeal}', [App\Http\Controllers\Admin\BanAppealManagementController::class, 'show'])->name('show');
+        Route::post('/{appeal}/approve', [App\Http\Controllers\Admin\BanAppealManagementController::class, 'approve'])->name('approve');
+        Route::post('/{appeal}/reject', [App\Http\Controllers\Admin\BanAppealManagementController::class, 'reject'])->name('reject');
+        Route::post('/{appeal}/request-info', [App\Http\Controllers\Admin\BanAppealManagementController::class, 'requestInfo'])->name('request-info');
+    });
+
+    // ========================================
+    // USER IMPERSONATION (Admin Only)
+    // ========================================
+    Route::get('/impersonation/sessions', [App\Http\Controllers\Admin\UserImpersonationController::class, 'index'])
+        ->name('impersonation.sessions.index');
+    Route::get('/impersonation/sessions/api', [App\Http\Controllers\Admin\UserImpersonationController::class, 'apiIndex'])
+        ->name('impersonation.sessions.api');
+    Route::delete('/impersonation/sessions/{sessionId}', [App\Http\Controllers\Admin\UserImpersonationController::class, 'forceTerminate'])
+        ->name('impersonation.sessions.terminate');
+    Route::post('/users/{user}/impersonate', [App\Http\Controllers\Admin\UserImpersonationController::class, 'store'])
+        ->middleware('throttle:impersonation')
+        ->name('users.impersonate');
+
+    // ========================================
+    // NEWSLETTER MANAGEMENT (Admin Only)
+    // ========================================
+    Route::get('/newsletter', [App\Http\Controllers\Admin\NewsletterController::class, 'index'])->name('newsletter.index');
+    Route::post('/newsletter/send-campaign', [App\Http\Controllers\Admin\NewsletterController::class, 'sendCampaign'])->name('newsletter.send-campaign');
+    Route::get('/newsletter/export', [App\Http\Controllers\Admin\NewsletterController::class, 'export'])->name('newsletter.export');
+    Route::delete('/newsletter/{newsletter}', [App\Http\Controllers\Admin\NewsletterController::class, 'destroy'])->name('newsletter.destroy');
+    Route::post('/newsletter/bulk-action', [App\Http\Controllers\Admin\NewsletterController::class, 'bulkAction'])
+        ->middleware('throttle:bulk-operations')
+        ->name('newsletter.bulk-action');
+
+    // ========================================
+    // BACKUP MANAGEMENT (Admin Only)
+    // ========================================
+    Route::get('/backup', [App\Http\Controllers\Admin\BackupController::class, 'index'])->name('backup.index');
+    Route::post('/backup/create', [App\Http\Controllers\Admin\BackupController::class, 'create'])->name('backup.create');
+    Route::get('/backup/download/{filename}', [App\Http\Controllers\Admin\BackupController::class, 'download'])->name('backup.download');
+    Route::delete('/backup/{filename}', [App\Http\Controllers\Admin\BackupController::class, 'destroy'])->name('backup.destroy');
+    Route::post('/backup/clean', [App\Http\Controllers\Admin\BackupController::class, 'clean'])->name('backup.clean');
+
+    // ========================================
+    // SETTINGS MANAGEMENT (Admin Only)
+    // ========================================
+    Route::get('/settings', [App\Http\Controllers\Admin\SettingController::class, 'index'])
+        ->name('settings.index');
+    Route::post('/settings', [App\Http\Controllers\Admin\SettingController::class, 'update'])
+        ->name('settings.update');
+    Route::post('/settings/initialize', [App\Http\Controllers\Admin\SettingController::class, 'initializeDefaults'])
+        ->name('settings.initialize');
+    Route::post('/settings/upload', [App\Http\Controllers\Admin\SettingController::class, 'uploadFile'])
+        ->name('settings.upload');
+    Route::get('/settings/history/{key}', [App\Http\Controllers\Admin\SettingController::class, 'getHistory'])
+        ->name('settings.history');
+    Route::post('/settings/revert/{key}', [App\Http\Controllers\Admin\SettingController::class, 'revert'])
+        ->name('settings.revert');
+    Route::get('/settings/export', [App\Http\Controllers\Admin\SettingController::class, 'export'])
+        ->name('settings.export');
+    Route::post('/settings/import', [App\Http\Controllers\Admin\SettingController::class, 'import'])
+        ->name('settings.import');
+    Route::post('/settings/reset-all', [App\Http\Controllers\Admin\SettingController::class, 'resetAll'])
+        ->name('settings.reset-all');
+
+    // ========================================
+    // MAINTENANCE MODE MANAGEMENT (Admin Only)
+    // ========================================
+    Route::post('/maintenance/toggle', [App\Http\Controllers\Admin\MaintenanceModeController::class, 'toggle'])
+        ->name('maintenance.toggle');
+    Route::post('/maintenance/schedule', [App\Http\Controllers\Admin\MaintenanceModeController::class, 'schedule'])
+        ->name('maintenance.schedule');
+    Route::get('/maintenance/preview', [App\Http\Controllers\Admin\MaintenanceModeController::class, 'preview'])
+        ->name('maintenance.preview');
+    Route::post('/maintenance/ip/add', [App\Http\Controllers\Admin\MaintenanceModeController::class, 'addIp'])
+        ->name('maintenance.ip.add');
+    Route::delete('/maintenance/ip/{ip}', [App\Http\Controllers\Admin\MaintenanceModeController::class, 'removeIp'])
+        ->name('maintenance.ip.remove');
+    Route::get('/maintenance/status', [App\Http\Controllers\Admin\MaintenanceModeController::class, 'status'])
+        ->name('maintenance.status');
+
+    // ========================================
     // System Management & Utilities
+    // ========================================
     Route::get('/system/stats', [App\Http\Controllers\Admin\AdminController::class, 'getSystemStats'])
         ->name('system.stats');
     Route::get('/system/activity', [App\Http\Controllers\Admin\AdminController::class, 'getRecentActivity'])

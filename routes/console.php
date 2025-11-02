@@ -3,6 +3,7 @@
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
+use App\Jobs\ProcessScheduledNotifications;
 
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
@@ -23,3 +24,8 @@ Schedule::command('bans:cleanup --force')
 Schedule::command('trusted-devices:prune --days=45')
     ->dailyAt('02:30')
     ->description('Remove expired or stale trusted device entries');
+
+// Schedule processing of scheduled notifications
+Schedule::job(new ProcessScheduledNotifications())
+    ->everyMinute()
+    ->description('Process scheduled user notifications that are due to be sent');

@@ -33,18 +33,96 @@ class TrainMLModelsJob implements ShouldQueue
     public string $modelType;
     public array $options;
 
+    
+    
+    
+    
     /**
-     * Create a new job instance.
+
+    
+    
+    
+     * Handle __construct.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param string $modelType The modelType.
+
+    
+    
+    
+     * @param array $options The options.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function __construct(string $modelType = 'all', array $options = [])
     {
         $this->modelType = $modelType;
         $this->options = $options;
     }
 
+    
+    
+    
+    
     /**
-     * Execute the job.
+
+    
+    
+    
+     * Handle handle.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param ContentAnalysisService $contentAnalysis The contentAnalysis.
+
+    
+    
+    
+     * @param MatrixFactorizationService $matrixFactorization The matrixFactorization.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function handle(
         ContentAnalysisService $contentAnalysis,
         MatrixFactorizationService $matrixFactorization
@@ -92,27 +170,129 @@ class TrainMLModelsJob implements ShouldQueue
         }
     }
 
+    
+    
+    
+    
     /**
-     * Train content vectors
+
+    
+    
+    
+     * Handle train vectors.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param ContentAnalysisService $contentAnalysis The contentAnalysis.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function trainVectors(ContentAnalysisService $contentAnalysis): void
     {
         $chunkSize = $this->options['chunk_size'] ?? 100;
         Log::info('Training content vectors', ['chunk_size' => $chunkSize]);
     }
 
+    
+    
+    
+    
     /**
-     * Train matrix factorization model
+
+    
+    
+    
+     * Handle train matrix factorization.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param MatrixFactorizationService $matrixFactorization The matrixFactorization.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function trainMatrixFactorization(MatrixFactorizationService $matrixFactorization): void
     {
         $iterations = $this->options['iterations'] ?? 10;
         Log::info('Training matrix factorization', ['iterations' => $iterations]);
     }
 
+    
+    
+    
+    
     /**
-     * ✅ Handle job failure
+
+    
+    
+    
+     * Handle failed.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param \Throwable $exception The exception.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function failed(\Throwable $exception): void
     {
         Log::error('ML training job failed permanently', [

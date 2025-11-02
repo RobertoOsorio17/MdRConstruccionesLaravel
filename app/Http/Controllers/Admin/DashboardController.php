@@ -31,14 +31,67 @@ use Inertia\Inertia;
  */
 class DashboardController extends Controller
 {
+    
+    
+    
+    
     /**
-     * Display the admin dashboard.
+
+    
+    
+    
+     * Display a listing of the resource.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function index(Request $request)
     {
-        // 1) Cache dashboard statistics for 5 minutes to reduce database load.
-        $stats = Cache::remember('admin_dashboard_stats', 300, function () {
-            return [
+        /**
+         * ========================================.
+         * ROLE-BASED DASHBOARD FILTERING.
+         * ========================================.
+         */
+        $user = $request->user();
+        $isAdmin = $user->hasRole('admin');
+        $isEditor = $user->hasRole('editor');
+
+        /**
+         * 1) Cache dashboard statistics for 1 hour to reduce database load.
+         * OPTIMIZED: Increased from 5 minutes (300s) to 1 hour (3600s).
+         * Cache is invalidated automatically via Observers when data changes.
+         * Cache key varies by role to prevent data leakage.
+         */
+        $cacheKey = $isAdmin ? 'admin_dashboard_stats' : 'editor_dashboard_stats';
+
+        $stats = Cache::remember($cacheKey, 3600, function () use ($isAdmin) {
+            /**
+             * Base stats available to both admin and editor.
+             */
+            $baseStats = [
                 'posts' => [
                     'total' => Post::count(),
                     'published' => Post::where('status', 'published')->count(),
@@ -59,31 +112,41 @@ class DashboardController extends Controller
                     'total' => Tag::count(),
                     'used' => Tag::has('posts')->count(),
                 ],
-                'users' => [
+            ];
+
+            /**
+             * Admin-only stats.
+             */
+            if ($isAdmin) {
+                $baseStats['users'] = [
                     'total' => User::count(),
                     'active' => User::whereNotNull('email_verified_at')->count(),
-                ],
-                'projects' => [
+                ];
+                $baseStats['projects'] = [
                     'total' => Project::count(),
                     'completed' => Project::where('status', 'completed')->count(),
-                ],
-                'services' => [
+                ];
+                $baseStats['services'] = [
                     'total' => Service::count(),
                     'active' => Service::where('is_active', true)->count(),
                     'favorites' => ServiceFavorite::count(),
-                ],
-                'admin' => [
+                ];
+                $baseStats['admin'] = [
                     'audit_logs' => AdminAuditLog::count(),
                     'notifications' => AdminNotification::unread()->count(),
                     'active_sessions' => User::whereNotNull('last_activity_at')
                         ->where('last_activity_at', '>=', Carbon::now()->subMinutes(30))
                         ->where('role', 'admin')
                         ->count(),
-                ],
-            ];
+                ];
+            }
+
+            return $baseStats;
         });
 
-        // 2) Recent posts displayed in activity cards.
+        /**
+         * 2) Recent posts displayed in activity cards.
+         */
         $recentPosts = Post::with(['author:id,name', 'categories:id,name,color'])
             ->orderBy('created_at', 'desc')
             ->limit(5)
@@ -102,7 +165,9 @@ class DashboardController extends Controller
                 ];
             });
 
-        // 3) Most recent comments requiring attention.
+        /**
+         * 3) Most recent comments requiring attention.
+         */
         $recentComments = Comment::with(['post:id,title,slug', 'user:id,name'])
             ->orderBy('created_at', 'desc')
             ->limit(5)
@@ -110,7 +175,10 @@ class DashboardController extends Controller
             ->map(function ($comment) {
                 return [
                     'id' => $comment->id,
-                    'content' => \Illuminate\Support\Str::limit($comment->body, 100), // ✅ Correct column name
+                    /**
+                     * Provide a concise preview of the comment body.
+                     */
+                    'content' => \Illuminate\Support\Str::limit($comment->body, 100),
                     'author_name' => $comment->author_name,
                     'status' => $comment->status,
                     'post' => $comment->post,
@@ -119,7 +187,9 @@ class DashboardController extends Controller
                 ];
             });
 
-        // 4) Popular posts within the last 30 days by views (filter by published_at).
+        /**
+         * 4) Popular posts within the last 30 days by views (filter by published_at).
+         */
         $popularPosts = Post::published()
             ->whereNotNull('published_at')
             ->where('published_at', '>=', Carbon::now()->subDays(30))
@@ -136,11 +206,18 @@ class DashboardController extends Controller
                 ];
             });
 
-        // 5) Enhanced monthly statistics (last six months) using grouped queries and in-memory merge.
-        $monthlyStats = Cache::remember('admin_dashboard_monthly_stats', 300, function () {
+        /**
+         * 5) Enhanced monthly statistics (last six months) using grouped queries and in-memory merge.
+         * Cache key varies by role.
+         */
+        $monthlyCacheKey = $isAdmin ? 'admin_dashboard_monthly_stats' : 'editor_dashboard_monthly_stats';
+
+        $monthlyStats = Cache::remember($monthlyCacheKey, 300, function () use ($isAdmin) {
             $sixMonthsAgo = Carbon::now()->subMonths(5)->startOfMonth();
 
-            // Get all posts grouped by month
+            /**
+             * Get all posts grouped by month (available to both admin and editor).
+             */
             $postsByMonth = Post::selectRaw('DATE_FORMAT(created_at, "%Y-%m") as month, COUNT(*) as total')
                 ->where('created_at', '>=', $sixMonthsAgo)
                 ->groupBy('month')
@@ -157,114 +234,155 @@ class DashboardController extends Controller
                 ->groupBy('month')
                 ->pluck('total', 'month');
 
-            $usersByMonth = User::selectRaw('DATE_FORMAT(created_at, "%Y-%m") as month, COUNT(*) as total')
-                ->where('created_at', '>=', $sixMonthsAgo)
-                ->groupBy('month')
-                ->pluck('total', 'month');
+            /**
+             * Admin-only monthly stats.
+             */
+            $usersByMonth = [];
+            $projectsByMonth = [];
+            $servicesByMonth = [];
 
-            $projectsByMonth = Project::selectRaw('DATE_FORMAT(created_at, "%Y-%m") as month, COUNT(*) as total')
-                ->where('created_at', '>=', $sixMonthsAgo)
-                ->groupBy('month')
-                ->pluck('total', 'month');
+            if ($isAdmin) {
+                $usersByMonth = User::selectRaw('DATE_FORMAT(created_at, "%Y-%m") as month, COUNT(*) as total')
+                    ->where('created_at', '>=', $sixMonthsAgo)
+                    ->groupBy('month')
+                    ->pluck('total', 'month');
 
-            $servicesByMonth = Service::selectRaw('DATE_FORMAT(created_at, "%Y-%m") as month, COUNT(*) as total')
-                ->where('created_at', '>=', $sixMonthsAgo)
-                ->groupBy('month')
-                ->pluck('total', 'month');
+                $projectsByMonth = Project::selectRaw('DATE_FORMAT(created_at, "%Y-%m") as month, COUNT(*) as total')
+                    ->where('created_at', '>=', $sixMonthsAgo)
+                    ->groupBy('month')
+                    ->pluck('total', 'month');
 
-            // Build the monthly stats array with zero-filled months.
+                $servicesByMonth = Service::selectRaw('DATE_FORMAT(created_at, "%Y-%m") as month, COUNT(*) as total')
+                    ->where('created_at', '>=', $sixMonthsAgo)
+                    ->groupBy('month')
+                    ->pluck('total', 'month');
+            }
+
+            /**
+             * Build the monthly stats array with zero-filled months.
+             */
             $stats = [];
             for ($i = 5; $i >= 0; $i--) {
                 $date = Carbon::now()->subMonths($i);
                 $monthKey = $date->format('Y-m');
 
-                $stats[] = [
+                $monthData = [
                     'month' => $date->format('M Y'),
                     'posts' => $postsByMonth[$monthKey] ?? 0,
                     'published' => $publishedByMonth[$monthKey] ?? 0,
                     'comments' => $commentsByMonth[$monthKey] ?? 0,
-                    'users' => $usersByMonth[$monthKey] ?? 0,
-                    'projects' => $projectsByMonth[$monthKey] ?? 0,
-                    'services' => $servicesByMonth[$monthKey] ?? 0,
                 ];
+
+                /**
+                 * Add admin-only data.
+                 */
+                if ($isAdmin) {
+                    $monthData['users'] = $usersByMonth[$monthKey] ?? 0;
+                    $monthData['projects'] = $projectsByMonth[$monthKey] ?? 0;
+                    $monthData['services'] = $servicesByMonth[$monthKey] ?? 0;
+                }
+
+                $stats[] = $monthData;
             }
 
             return $stats;
         });
 
-        // 6) User growth trends (last 30 days) with grouped queries.
-        $startDate = Carbon::now()->subDays(29)->startOfDay();
-        $endDate = Carbon::now()->endOfDay();
-
-        // Get new users grouped by date
-        $newUsersByDate = User::whereBetween('created_at', [$startDate, $endDate])
-            ->select(DB::raw('DATE(created_at) as date'), DB::raw('COUNT(*) as count'))
-            ->groupBy('date')
-            ->pluck('count', 'date')
-            ->toArray();
-
-        // Get active users grouped by date
-        $activeUsersByDate = User::whereBetween('last_login_at', [$startDate, $endDate])
-            ->select(DB::raw('DATE(last_login_at) as date'), DB::raw('COUNT(*) as count'))
-            ->groupBy('date')
-            ->pluck('count', 'date')
-            ->toArray();
-
-        // Build the stats array with all 30 days
+        /**
+         * 6) User growth trends (last 30 days) - ADMIN ONLY.
+         */
         $userGrowthStats = [];
-        for ($i = 29; $i >= 0; $i--) {
-            $date = Carbon::now()->subDays($i);
-            $dateStr = $date->format('Y-m-d');
+        if ($isAdmin) {
+            $startDate = Carbon::now()->subDays(29)->startOfDay();
+            $endDate = Carbon::now()->endOfDay();
 
-            $userGrowthStats[] = [
-                'date' => $dateStr,
-                'new_users' => $newUsersByDate[$dateStr] ?? 0,
-                'active_users' => $activeUsersByDate[$dateStr] ?? 0,
+            /**
+             * Get new users grouped by date.
+             */
+            $newUsersByDate = User::whereBetween('created_at', [$startDate, $endDate])
+                ->select(DB::raw('DATE(created_at) as date'), DB::raw('COUNT(*) as count'))
+                ->groupBy('date')
+                ->pluck('count', 'date')
+                ->toArray();
+
+            /**
+             * Get active users grouped by date.
+             */
+            $activeUsersByDate = User::whereBetween('last_login_at', [$startDate, $endDate])
+                ->select(DB::raw('DATE(last_login_at) as date'), DB::raw('COUNT(*) as count'))
+                ->groupBy('date')
+                ->pluck('count', 'date')
+                ->toArray();
+
+            /**
+             * Build the stats array with all 30 days.
+             */
+            for ($i = 29; $i >= 0; $i--) {
+                $date = Carbon::now()->subDays($i);
+                $dateStr = $date->format('Y-m-d');
+
+                $userGrowthStats[] = [
+                    'date' => $dateStr,
+                    'new_users' => $newUsersByDate[$dateStr] ?? 0,
+                    'active_users' => $activeUsersByDate[$dateStr] ?? 0,
+                ];
+            }
+        }
+
+        /**
+         * Service performance metrics - ADMIN ONLY.
+         */
+        $serviceStats = [];
+        if ($isAdmin) {
+            $serviceStats = Service::select('id', 'title', 'views_count', 'featured', 'created_at')
+                ->withCount('favorites')
+                ->orderBy('views_count', 'desc')
+                ->limit(10)
+                ->get()
+                ->map(function ($service) {
+                    return [
+                        'id' => $service->id,
+                        'title' => $service->title,
+                        'views' => $service->views_count,
+                        'favorites' => $service->favorites_count,
+                        'featured' => $service->featured,
+                        'created_at' => $service->created_at->format('d/m/Y'),
+                    ];
+                });
+        }
+
+        /**
+         * Project completion rates - ADMIN ONLY.
+         */
+        $projectStats = [];
+        if ($isAdmin) {
+            $projectStats = [
+                'completion_rate' => Project::where('status', 'completed')->count() / max(Project::count(), 1) * 100,
+                'by_status' => Project::select('status', DB::raw('count(*) as count'))
+                    ->groupBy('status')
+                    ->get()
+                    ->mapWithKeys(function ($item) {
+                        return [$item->status => $item->count];
+                    }),
+                'monthly_completions' => Project::where('status', 'completed')
+                    ->where('end_date', '>=', Carbon::now()->subMonths(6))
+                    ->selectRaw('YEAR(end_date) as year, MONTH(end_date) as month, COUNT(*) as count')
+                    ->groupBy('year', 'month')
+                    ->orderBy('year')
+                    ->orderBy('month')
+                    ->get()
+                    ->map(function ($item) {
+                        return [
+                            'month' => Carbon::createFromDate($item->year, $item->month, 1)->format('M Y'),
+                            'completions' => $item->count,
+                        ];
+                    }),
             ];
         }
 
-        // Service performance metrics.
-        $serviceStats = Service::select('id', 'title', 'views_count', 'featured', 'created_at')
-            ->withCount('favorites')
-            ->orderBy('views_count', 'desc')
-            ->limit(10)
-            ->get()
-            ->map(function ($service) {
-                return [
-                    'id' => $service->id,
-                    'title' => $service->title,
-                    'views' => $service->views_count,
-                    'favorites' => $service->favorites_count,
-                    'featured' => $service->featured,
-                    'created_at' => $service->created_at->format('d/m/Y'),
-                ];
-            });
-
-        // Project completion rates.
-        $projectStats = [
-            'completion_rate' => Project::where('status', 'completed')->count() / max(Project::count(), 1) * 100,
-            'by_status' => Project::select('status', DB::raw('count(*) as count'))
-                ->groupBy('status')
-                ->get()
-                ->mapWithKeys(function ($item) {
-                    return [$item->status => $item->count];
-                }),
-            'monthly_completions' => Project::where('status', 'completed')
-                ->where('end_date', '>=', Carbon::now()->subMonths(6))
-                ->selectRaw('YEAR(end_date) as year, MONTH(end_date) as month, COUNT(*) as count')
-                ->groupBy('year', 'month')
-                ->orderBy('year')
-                ->orderBy('month')
-                ->get()
-                ->map(function ($item) {
-                    return [
-                        'month' => Carbon::createFromDate($item->year, $item->month, 1)->format('M Y'),
-                        'completions' => $item->count,
-                    ];
-                }),
-        ];
-
-        // Enhanced category distribution with engagement metrics.
+        /**
+         * Enhanced category distribution with engagement metrics.
+         */
         $categoryStats = Category::withCount(['posts', 'posts as published_posts_count' => function ($query) {
                 $query->where('status', 'published');
             }])
@@ -287,7 +405,9 @@ class DashboardController extends Controller
                 ];
             });
 
-        // Content engagement metrics.
+        /**
+         * Content engagement metrics.
+         */
         $engagementStats = [
             'top_posts_by_views' => Post::published()
                 ->orderBy('views_count', 'desc')
@@ -321,7 +441,9 @@ class DashboardController extends Controller
                 : 0,
         ];
 
-        // System performance statistics.
+        /**
+         * System performance statistics.
+         */
         $performanceStats = [
             'avg_page_load_time' => $this->getAveragePageLoadTime(),
             'database_queries_per_request' => $this->getAverageQueriesPerRequest(),
@@ -330,12 +452,16 @@ class DashboardController extends Controller
             'memory_usage' => $this->getMemoryUsage(),
         ];
 
-        // Recent activity (posts, comments, etc.).
+        /**
+         * Recent activity (posts, comments, etc.).
+         */
         $recentActivity = collect();
 
-        // Temporarily disabled recent activity section until routes are properly configured.
+        /**
+         * Temporarily disabled recent activity section until routes are properly configured.
+         */
         /*
-        // Add recent posts to activity
+        // Add recent posts to activity.
         Post::orderBy('created_at', 'desc')
             ->limit(10)
             ->get()
@@ -350,7 +476,7 @@ class DashboardController extends Controller
                 ]);
             });
 
-        // Add recent comments to activity
+        // Add recent comments to activity.
         Comment::with(['post:id,title', 'user:id,name'])
             ->orderBy('created_at', 'desc')
             ->limit(10)
@@ -367,7 +493,9 @@ class DashboardController extends Controller
             });
         */
 
-        // Sort recent activity by date and limit
+        /**
+         * Sort recent activity by date and limit.
+         */
         $recentActivity = $recentActivity->sortByDesc('created_at')
             ->take(15)
             ->map(function ($activity) {
@@ -376,7 +504,9 @@ class DashboardController extends Controller
             })
             ->values();
 
-        // Quick actions tailored to the administrator role.
+        /**
+         * Quick actions tailored to the administrator role.
+         */
         $quickActions = [];
         /** @var \App\Models\User $user */
         $user = \Illuminate\Support\Facades\Auth::user();
@@ -412,7 +542,9 @@ class DashboardController extends Controller
             ];
         }
 
-        // Temporarily disabled until project management is implemented
+        /**
+         * Temporarily disabled until project management is implemented.
+         */
         /*
         if ($user->canDo('projects.create')) {
             $quickActions[] = [
@@ -425,7 +557,9 @@ class DashboardController extends Controller
         }
         */
 
-        // Get admin notifications
+        /**
+         * Get admin notifications.
+         */
         $notifications = AdminNotification::forUser(auth()->id())
             ->unread()
             ->orderBy('priority', 'desc')
@@ -447,7 +581,9 @@ class DashboardController extends Controller
                 ];
             });
 
-        // Get recent audit logs
+        /**
+         * Get recent audit logs.
+         */
         $auditLogs = AdminAuditLog::with('user:id,name')
             ->orderBy('created_at', 'desc')
             ->limit(10)
@@ -464,7 +600,9 @@ class DashboardController extends Controller
                 ];
             });
 
-        // Get user's dashboard widgets
+        /**
+         * Get user's dashboard widgets.
+         */
         $widgets = AdminDashboardWidget::forUser(auth()->id())
             ->visible()
             ->orderedByPosition()
@@ -485,13 +623,30 @@ class DashboardController extends Controller
             });
 
         return Inertia::render('Admin/DashboardNew', [
+            /**
+             * Flag indicating the authenticated user has administrator privileges.
+             */
+            'isAdmin' => $isAdmin,
+            /**
+             * Flag indicating the authenticated user has editor privileges.
+             */
+            'isEditor' => $isEditor,
             'stats' => $stats,
             'recentPosts' => $recentPosts,
             'recentComments' => $recentComments,
             'popularPosts' => $popularPosts,
             'monthlyStats' => $monthlyStats,
+            /**
+             * Provide user growth metrics for administrators and an empty dataset for editors.
+             */
             'userGrowthStats' => $userGrowthStats,
+            /**
+             * Provide service performance metrics for administrators and an empty dataset for editors.
+             */
             'serviceStats' => $serviceStats,
+            /**
+             * Provide project performance metrics for administrators and an empty dataset for editors.
+             */
             'projectStats' => $projectStats,
             'categoryStats' => $categoryStats,
             'engagementStats' => $engagementStats,
@@ -504,36 +659,158 @@ class DashboardController extends Controller
         ]);
     }
 
+    
+    
+    
+    
     /**
-     * Get average page load time (mock implementation)
+
+    
+    
+    
+     * Get average page load time.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function getAveragePageLoadTime()
     {
-        // In a real implementation, this would come from application performance monitoring
+        /**
+         * In a real implementation, this would come from application performance monitoring.
+         */
         return rand(150, 300) . 'ms';
     }
 
+    
+    
+    
+    
     /**
-     * Get average database queries per request (mock implementation)
+
+    
+    
+    
+     * Get average queries per request.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function getAverageQueriesPerRequest()
     {
-        // In a real implementation, this would come from query logging
+        /**
+         * In a real implementation, this would come from query logging.
+         */
         return rand(8, 15);
     }
 
+    
+    
+    
+    
     /**
-     * Get cache hit rate (mock implementation)
+
+    
+    
+    
+     * Get cache hit rate.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function getCacheHitRate()
     {
-        // In a real implementation, this would come from cache statistics
+        /**
+         * In a real implementation, this would come from cache statistics.
+         */
         return rand(85, 98) . '%';
     }
 
+    
+    
+    
+    
     /**
-     * Get storage usage information
+
+    
+    
+    
+     * Get storage usage.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function getStorageUsage()
     {
         try {
@@ -556,9 +833,38 @@ class DashboardController extends Controller
         }
     }
 
+    
+    
+    
+    
     /**
-     * Get memory usage information
+
+    
+    
+    
+     * Get memory usage.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function getMemoryUsage()
     {
         $memoryUsage = memory_get_usage(true);
@@ -571,9 +877,48 @@ class DashboardController extends Controller
         ];
     }
 
+    
+    
+    
+    
     /**
-     * Format bytes to human readable format
+
+    
+    
+    
+     * Handle format bytes.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param mixed $bytes The bytes.
+
+    
+    
+    
+     * @param mixed $precision The precision.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function formatBytes($bytes, $precision = 2)
     {
         $units = ['B', 'KB', 'MB', 'GB', 'TB'];

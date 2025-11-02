@@ -3,25 +3,101 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\StoreUserRequest;
+use App\Http\Requests\Admin\UpdateUserRequest;
+use App\Http\Requests\Admin\BanUserRequest;
+use App\Http\Requests\Admin\BulkActionRequest;
 use App\Models\User;
 use App\Models\UserBan;
 use App\Models\Role;
 use App\Models\Comment;
-use App\Models\TrustedDevice;
+use App\Services\UserManagementService;
+use App\Services\UserBanService;
+use App\Services\UserStatisticsService;
+use App\Services\UserCommentService;
+use App\Services\UserVerificationService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Validator;
-use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
-use Carbon\Carbon;
 
 /**
- * Orchestrates comprehensive administrative control over user accounts, role assignments, and disciplinary actions.
- * Delivers filtered insights, credential tooling, and ban management so staff can safeguard community integrity.
+ * User Management Controller
+ *
+ * Orchestrates comprehensive administrative control over user accounts, role assignments,
+ * and disciplinary actions. Delivers filtered insights, credential tooling, and ban management
+ * so staff can safeguard community integrity.
+ *
+ * This controller delegates business logic to specialized service classes following SOLID principles:
+ * - UserManagementService: Handles user CRUD operations
+ * - UserBanService: Manages user bans and IP restrictions
+ * - UserStatisticsService: Calculates user and dashboard statistics
+ * - UserCommentService: Manages user comments and moderation
+ * - UserVerificationService: Handles user verification workflows
+ *
+ * @package App\Http\Controllers\Admin
  */
 class UserManagementController extends Controller
 {
+    /**
+     * User management service instance.
+     *
+     * @var UserManagementService
+     */
+    protected UserManagementService $userManagementService;
+
+    /**
+     * User ban service instance.
+     *
+     * @var UserBanService
+     */
+    protected UserBanService $userBanService;
+
+    /**
+     * User statistics service instance.
+     *
+     * @var UserStatisticsService
+     */
+    protected UserStatisticsService $userStatisticsService;
+
+    /**
+     * User comment service instance.
+     *
+     * @var UserCommentService
+     */
+    protected UserCommentService $userCommentService;
+
+    /**
+     * User verification service instance.
+     *
+     * @var UserVerificationService
+     */
+    protected UserVerificationService $userVerificationService;
+
+    /**
+     * Create a new controller instance.
+     *
+     * Injects all required service dependencies for user management operations.
+     *
+     * @param UserManagementService $userManagementService User CRUD service.
+     * @param UserBanService $userBanService Ban management service.
+     * @param UserStatisticsService $userStatisticsService Statistics calculation service.
+     * @param UserCommentService $userCommentService Comment management service.
+     * @param UserVerificationService $userVerificationService Verification service.
+     */
+    public function __construct(
+        UserManagementService $userManagementService,
+        UserBanService $userBanService,
+        UserStatisticsService $userStatisticsService,
+        UserCommentService $userCommentService,
+        UserVerificationService $userVerificationService
+    ) {
+        $this->userManagementService = $userManagementService;
+        $this->userBanService = $userBanService;
+        $this->userStatisticsService = $userStatisticsService;
+        $this->userCommentService = $userCommentService;
+        $this->userVerificationService = $userVerificationService;
+    }
     /**
      * Display a filtered and paginated list of users for the admin panel.
      *
@@ -33,11 +109,12 @@ class UserManagementController extends Controller
      */
     public function index(Request $request)
     {
+        // Build query with eager loading to prevent N+1 queries
         $query = User::with(['roles', 'bans' => function ($q) {
             $q->active()->with('bannedBy:id,name');
         }]);
 
-        // Apply basic search matching against name and email fields.
+        // Apply search filter
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
@@ -46,11 +123,9 @@ class UserManagementController extends Controller
             });
         }
 
-        // Filter by a primary role slug or ensure any custom role assignments.
+        // Apply role filter
         if ($request->filled('role')) {
             if ($request->role === 'simple_role') {
-                // Fix: Use whereHas('roles') to include users with any role.
-                // Note: 'role' column doesn't exist - this should filter users WITH roles
                 $query->whereHas('roles');
             } else {
                 $query->whereHas('roles', function ($q) use ($request) {
@@ -59,7 +134,7 @@ class UserManagementController extends Controller
             }
         }
 
-        // Filter the set based on current ban status requirements.
+        // Apply ban status filter
         if ($request->filled('ban_status')) {
             if ($request->ban_status === 'active') {
                 $query->whereDoesntHave('bans', function ($q) {
@@ -72,7 +147,7 @@ class UserManagementController extends Controller
             }
         }
 
-        // Filter users by legacy email verification status.
+        // Apply email verification status filter
         if ($request->filled('status')) {
             if ($request->status === 'active') {
                 $query->whereNotNull('email_verified_at');
@@ -81,7 +156,7 @@ class UserManagementController extends Controller
             }
         }
 
-        // Constrain results by creation date where a range is supplied.
+        // Apply date range filters
         if ($request->filled('date_from')) {
             $query->whereDate('created_at', '>=', $request->date_from);
         }
@@ -90,30 +165,27 @@ class UserManagementController extends Controller
             $query->whereDate('created_at', '<=', $request->date_to);
         }
 
-        // Apply configurable sorting while guarding against unsupported fields.
+        // Apply sorting with security whitelist
         $sortField = $request->get('sort', 'created_at');
         $sortDirection = $request->get('direction', 'desc');
-
-        // Security: Whitelist both field and direction to prevent SQL injection.
         $allowedSorts = ['name', 'email', 'role', 'created_at', 'last_login_at'];
         $allowedDirections = ['asc', 'desc'];
 
         if (in_array($sortField, $allowedSorts) && in_array(strtolower($sortDirection), $allowedDirections)) {
             $query->orderBy($sortField, $sortDirection);
         } else {
-            // Default safe sorting
             $query->orderBy('created_at', 'desc');
         }
 
-        // Resolve the pagination size, enforcing the supported page sizes.
+        // Paginate results
         $perPage = $request->get('per_page', 15);
         $perPage = in_array($perPage, [10, 15, 25, 50]) ? $perPage : 15;
         $users = $query->paginate($perPage)->withQueryString();
 
-        // Map the paginated collection into a transport-friendly structure.
+        // Transform user data for frontend
         $users->getCollection()->transform(function ($user) {
             $banStatus = $user->getBanStatus();
-            $activeBan = $user->bans->first(); // Get the active ban (already filtered by the query).
+            $activeBan = $user->bans->first();
 
             return [
                 'id' => $user->id,
@@ -141,24 +213,10 @@ class UserManagementController extends Controller
             ];
         });
 
-        // Gather high-level statistics for dashboard summary cards.
-        $stats = [
-            'total' => User::count(),
-            'active' => User::whereDoesntHave('bans', function ($q) {
-                $q->active();
-            })->count(),
-            'banned' => User::whereHas('bans', function ($q) {
-                $q->active();
-            })->count(),
-            'admins' => User::where('role', 'admin')->orWhereHas('roles', function ($q) {
-                $q->where('name', 'admin');
-            })->count(),
-            'new_this_month' => User::whereMonth('created_at', now()->month)
-                ->whereYear('created_at', now()->year)
-                ->count(),
-        ];
+        // Get dashboard statistics using service
+        $stats = $this->userStatisticsService->getOptimizedDashboardStatistics();
 
-        // Include the available roles so admins can filter or assign them.
+        // Get available roles for filtering
         $roles = Role::all(['id', 'name', 'display_name']);
 
         return Inertia::render('Admin/UserManagement', [
@@ -186,89 +244,45 @@ class UserManagementController extends Controller
     /**
      * Store a newly created user account and optional role assignments.
      *
-     * @param Request $request The validated request payload describing the new user.
+     * Uses StoreUserRequest for validation and UserManagementService for business logic.
+     *
+     * @param StoreUserRequest $request The validated request payload describing the new user.
      * @return \Illuminate\Http\RedirectResponse Redirect response after persisting the user.
+     *
+     * @throws \Illuminate\Auth\Access\AuthorizationException If user lacks admin privileges.
      */
-    public function store(Request $request)
+    public function store(StoreUserRequest $request)
     {
-        // Security check: stop non-admins from creating administrative accounts.
-        if ($request->role === 'admin' && !auth()->user()->hasRole('admin')) {
-            abort(403, 'No tienes permisos para crear usuarios administradores.');
+        try {
+            // Security check: prevent non-admins from creating admin accounts
+            if ($request->role === 'admin' && !auth()->user()->hasRole('admin')) {
+                abort(403, 'No tienes permisos para crear usuarios administradores.');
+            }
+
+            $this->guardAdminRoleAssignment($request->input('roles', []));
+
+            // Delegate user creation to service
+            $user = $this->userManagementService->createUser($request->validated());
+
+            session()->flash('success', 'Usuario creado exitosamente.');
+            return redirect()->route('admin.users.index');
+        } catch (\Exception $e) {
+            Log::error('Failed to create user', [
+                'error' => $e->getMessage(),
+                'admin_id' => auth()->id(),
+                'request_data' => $request->except(['password', 'password_confirmation'])
+            ]);
+
+            session()->flash('error', 'Error al crear el usuario: ' . $e->getMessage());
+            return back()->withInput();
         }
-
-        $validator = Validator::make($request->all(), [
-            'name' => 'required|string|max:255|regex:/^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]+$/',
-            // ✅ FIXED: Use email:rfc,dns instead of regex for better international email support
-            'email' => 'required|string|email:rfc,dns|max:255|unique:users',
-            // ✅ SECURITY FIX: Stronger password requirements (12 chars minimum + complexity + breach check)
-            'password' => [
-                'required',
-                'string',
-                'confirmed',
-                \Illuminate\Validation\Rules\Password::min(12)
-                    ->letters()
-                    ->mixedCase()
-                    ->numbers()
-                    ->symbols()
-                    ->uncompromised(), // ✅ Check against HaveIBeenPwned database
-                new \App\Rules\NotCommonPassword(), // Prevent common passwords
-            ],
-            'role' => 'nullable|string|in:admin,editor,user',
-            'roles' => 'nullable|array|max:3',
-            'roles.*' => 'exists:roles,id',
-            'bio' => 'nullable|string|max:1000',
-            'website' => 'nullable|url|max:255',
-            'location' => 'nullable|string|max:255',
-            'send_welcome_email' => 'boolean',
-        ], [
-            'name.regex' => 'El nombre solo puede contener letras y espacios.',
-            'email.email' => 'El formato del email no es válido.',
-            'email.dns' => 'El dominio del email no existe.',
-            'password.regex' => 'La contraseña debe contener al menos: 1 mayúscula, 1 minúscula, 1 número y 1 carácter especial.',
-            'roles.max' => 'Un usuario no puede tener más de 3 roles.',
-        ]);
-
-        if ($validator->fails()) {
-            return back()->withErrors($validator)->withInput();
-        }
-
-        $this->guardAdminRoleAssignment($request->input('roles', []));
-
-        // ✅ SECURITY: Sanitize user input to prevent XSS
-        $user = User::create([
-            'name' => strip_tags($request->name),
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
-            'bio' => strip_tags($request->bio),
-            'website' => filter_var($request->website, FILTER_SANITIZE_URL),
-            'location' => strip_tags($request->location),
-            'email_verified_at' => now(), // Auto-verify admin-created users.
-        ]);
-
-        // Assign role using Spatie method (role is in $guarded)
-        if ($request->filled('role')) {
-            $user->assignRole($request->role);
-        }
-
-        // Assign any additional selected roles once the account has been created.
-        if ($request->filled('roles')) {
-            $user->roles()->sync($request->roles);
-        }
-
-        // Send a welcome email when requested (queued for future implementation).
-        if ($request->send_welcome_email) {
-            // TODO: Implement welcome email.
-        }
-
-        session()->flash('success', 'Usuario creado exitosamente.');
-        return redirect()->route('admin.users.index');
     }
 
-    /**
-     * Display the specified user together with engagement metrics.
-     */
+
     /**
      * Display detailed account information for a specific user.
+     *
+     * Uses UserStatisticsService and UserCommentService to gather user metrics.
      *
      * @param User $user The user model to inspect within the admin panel.
      * @return \Inertia\Response Inertia response with expanded user details.
@@ -277,26 +291,13 @@ class UserManagementController extends Controller
     {
         $user->load(['roles', 'verifiedBy:id,name']);
 
-        // Compile key metrics that describe the user's activity.
-        $userStats = [
-            'posts_count' => $user->posts()->count(),
-            'comments_count' => $user->comments()->count(),
-            'favorite_services_count' => $user->favoriteServices()->count(),
-            'last_login' => $user->last_login_at,
-            'member_since' => $user->created_at,
-            'profile_completion' => $this->calculateProfileCompletion($user),
-        ];
+        // Get user statistics from service
+        $userStats = $this->userStatisticsService->getUserStatistics($user);
 
-        // Provide a breakdown of comment moderation states for the user.
-        $commentStats = [
-            'total' => $user->comments()->count(),
-            'approved' => $user->comments()->where('status', 'approved')->count(),
-            'pending' => $user->comments()->where('status', 'pending')->count(),
-            'rejected' => $user->comments()->where('status', 'rejected')->count(),
-            'spam' => $user->comments()->where('status', 'spam')->count(),
-        ];
+        // Get comment statistics from service
+        $commentStats = $this->userStatisticsService->getCommentStatistics($user);
 
-        // Retrieve recent administrative activity if audit logs are present.
+        // Retrieve recent administrative activity if audit logs are present
         $recentActivity = [];
         if (class_exists('App\Models\AdminAuditLog')) {
             $recentActivity = \App\Models\AdminAuditLog::where('user_id', $user->id)
@@ -331,9 +332,7 @@ class UserManagementController extends Controller
         ]);
     }
 
-    /**
-     * Show the form for editing the specified user profile and roles.
-     */
+    
     /**
      * Show the admin edit form for the specified user.
      *
@@ -361,248 +360,142 @@ class UserManagementController extends Controller
         ]);
     }
 
+    
     /**
-     * Update the specified user profile, credentials, and role assignments.
-     */
-    /**
-     * Persist administrative updates to the specified user record.
+     * Update an existing user account with new profile details and role assignments.
      *
-     * @param Request $request The validated admin update request.
-     * @param User $user The user model being updated.
-     * @return \Illuminate\Http\RedirectResponse Redirect response after applying changes.
+     * Uses UpdateUserRequest for validation and UserManagementService for business logic.
+     * Enforces security checks to prevent self-modification and unauthorized admin changes.
+     *
+     * @param UpdateUserRequest $request The validated request payload with updated user data.
+     * @param User $user The user model instance to update.
+     * @return \Illuminate\Http\RedirectResponse Redirect response after updating the user.
+     *
+     * @throws \Illuminate\Auth\Access\AuthorizationException If user lacks admin privileges.
      */
-    public function update(Request $request, User $user)
+    public function update(UpdateUserRequest $request, User $user)
     {
-        // Security check: prevent administrators from modifying their own record here.
-        if ($user->id === auth()->id()) {
-            return back()->withErrors(['error' => 'No puedes editar tu propia cuenta desde el panel de administraciÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³n.']);
-        }
-
-        // Security check: restrict admin role updates to existing admins.
-        if (($user->hasRole('admin') || $request->role === 'admin') && !auth()->user()->hasRole('admin')) {
-            abort(403, 'No tienes permisos para modificar usuarios administradores.');
-        }
-
-        $validator = Validator::make($request->all(), [
-            'name' => 'required|string|max:255|regex:/^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]+$/',
-            'email' => ['required', 'string', 'email', 'max:255', 'regex:/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/', Rule::unique('users')->ignore($user->id)],
-            'password' => 'nullable|string|min:8|confirmed|regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]+$/',
-            'role' => 'nullable|string|in:admin,editor,user',
-            'roles' => 'nullable|array|max:3',
-            'roles.*' => 'exists:roles,id',
-            'bio' => 'nullable|string|max:1000',
-            'website' => 'nullable|url|max:255',
-            'location' => 'nullable|string|max:255',
-            'email_verified' => 'boolean',
-        ], [
-            'name.regex' => 'El nombre solo puede contener letras y espacios.',
-            'email.regex' => 'El formato del email no es válido.',
-            'password.regex' => 'La contraseña debe contener al menos: 1 mayúscula, 1 minúscula, 1 número y 1 carácter especial.',
-            'roles.max' => 'Un usuario no puede tener más de 3 roles.',
-        ]);
-
-        if ($validator->fails()) {
-            return back()->withErrors($validator)->withInput();
-        }
-
-        if ($request->filled('roles')) {
-            $this->guardAdminRoleAssignment($request->roles);
-        }
-
-        // ✅ SECURITY: Sanitize user input to prevent XSS
-        $updateData = [
-            'name' => strip_tags($request->name),
-            'email' => $request->email,
-            'bio' => strip_tags($request->bio),
-            'website' => filter_var($request->website, FILTER_SANITIZE_URL),
-            'location' => strip_tags($request->location),
-        ];
-
-        // Update the password when a new credential has been supplied.
-        if ($request->filled('password')) {
-            $updateData['password'] = Hash::make($request->password);
-        }
-
-        // Toggle email verification status when explicitly requested.
-        if ($request->has('email_verified')) {
-            $updateData['email_verified_at'] = $request->email_verified ? now() : null;
-        }
-
-        // Remove the obsolete is_active flag because bans control activation.
-        unset($updateData['is_active']);
-
-        // ✅ SECURITY FIX: Track if role is changing for session regeneration
-        $originalRoles = $user->roles->pluck('id')->toArray();
-        $roleChanged = false;
-
-        $user->update($updateData);
-
-        // Update role using Spatie method (role is in $guarded)
-        if ($request->filled('role')) {
-            // Remove all current roles and assign the new one
-            $user->syncRoles([$request->role]);
-            $roleChanged = true;
-        }
-
-        // Sync any additional role selections after the profile details are updated.
-        if ($request->has('roles')) {
-            $newRoles = $request->roles ?? [];
-            $user->roles()->sync($newRoles);
-
-            // Check if roles actually changed
-            if (array_diff($originalRoles, $newRoles) || array_diff($newRoles, $originalRoles)) {
-                $roleChanged = true;
+        try {
+            // Security check: prevent administrators from modifying their own record here.
+            if ($user->id === auth()->id()) {
+                return back()->withErrors(['error' => 'No puedes editar tu propia cuenta desde el panel de administración.']);
             }
+
+            // Security check: restrict admin role updates to existing admins.
+            if (($user->hasRole('admin') || $request->role === 'admin') && !auth()->user()->hasRole('admin')) {
+                abort(403, 'No tienes permisos para modificar usuarios administradores.');
+            }
+
+            $this->guardAdminRoleAssignment($request->input('roles', []));
+
+            // Delegate user update to service
+            $result = $this->userManagementService->updateUser($user, $request->validated());
+
+            $message = 'Usuario actualizado exitosamente.';
+            if ($result['role_changed'] || $result['password_changed']) {
+                $message .= ' Se han cerrado todas sus sesiones activas.';
+            }
+
+            return redirect()->route('admin.users.index')->with('success', $message);
+        } catch (\Exception $e) {
+            Log::error('Failed to update user', [
+                'user_id' => $user->id,
+                'error' => $e->getMessage(),
+                'admin_id' => auth()->id(),
+                'request_data' => $request->except(['password', 'password_confirmation'])
+            ]);
+
+            return back()->withErrors(['error' => 'Error al actualizar el usuario: ' . $e->getMessage()])->withInput();
         }
-
-        // ✅ SECURITY FIX: Force logout on all sessions if role/privileges changed
-        if ($roleChanged || $request->filled('password')) {
-            \DB::table('sessions')
-                ->where('user_id', $user->id)
-                ->delete();
-
-            // Log the security action
-            \App\Services\SecurityLogger::logBulkOperation(
-                'force_logout_privilege_change',
-                1,
-                auth()->user(),
-                [
-                    'target_user_id' => $user->id,
-                    'target_user_email' => $user->email,
-                    'reason' => $roleChanged ? 'role_changed' : 'password_changed',
-                ]
-            );
-        }
-
-        return redirect()->route('admin.users.index')
-            ->with('success', 'Usuario actualizado exitosamente.' . ($roleChanged || $request->filled('password') ? ' Se han cerrado todas sus sesiones activas.' : ''));
     }
 
-    /**
-     * Remove the specified user when permitted.
-     */
     /**
      * Permanently delete the specified user account.
      *
-     * @param User $user The user slated for deletion.
-     * @return \Illuminate\Http\RedirectResponse Redirect response summarizing the result.
+     * Uses UserManagementService for business logic and enforces security checks
+     * to prevent self-deletion and unauthorized admin deletions.
+     *
+     * @param User $user The user model instance to delete.
+     * @return \Illuminate\Http\RedirectResponse Redirect response after deleting the user.
+     *
+     * @throws \Illuminate\Auth\Access\AuthorizationException If user lacks admin privileges.
      */
     public function destroy(User $user)
     {
-        // Security check: do not allow deletion of the acting administrator.
-        if ($user->id === auth()->id()) {
-            return back()->with('error', 'No puedes eliminar tu propia cuenta.');
+        try {
+            // Security check: do not allow deletion of the acting administrator.
+            if ($user->id === auth()->id()) {
+                return back()->with('error', 'No puedes eliminar tu propia cuenta.');
+            }
+
+            // Security check: require admin privileges to delete other admin users.
+            if ($user->hasRole('admin') && !auth()->user()->hasRole('admin')) {
+                abort(403, 'No tienes permisos para eliminar usuarios administradores.');
+            }
+
+            // Delegate user deletion to service
+            $userName = $user->name;
+            $this->userManagementService->deleteUser($user, auth()->user());
+
+            return redirect()->route('admin.users.index')
+                ->with('success', "Usuario '{$userName}' eliminado exitosamente.");
+        } catch (\Exception $e) {
+            Log::error('Failed to delete user', [
+                'user_id' => $user->id,
+                'error' => $e->getMessage(),
+                'admin_id' => auth()->id()
+            ]);
+
+            return back()->with('error', 'Error al eliminar el usuario: ' . $e->getMessage());
         }
-
-        // Security check: require admin privileges to delete other admin users.
-        if ($user->hasRole('admin') && !auth()->user()->hasRole('admin')) {
-            abort(403, 'No tienes permisos para eliminar usuarios administradores.');
-        }
-
-        // Safeguard accounts flagged as super administrators from deletion.
-        if ($user->role === 'super_admin' || $user->hasRole('super_admin')) {
-            return back()->with('error', 'No se puede eliminar una cuenta de super administrador.');
-        }
-
-        $userName = $user->name;
-        $user->delete();
-
-        return redirect()->route('admin.users.index')
-            ->with('success', "Usuario '{$userName}' eliminado exitosamente.");
     }
 
     /**
-     * Execute bulk administrative actions against multiple users.
-     */
-    /**
      * Execute a bulk administrative action against multiple users.
      *
-     * @param Request $request The request describing the bulk action and targets.
+     * Uses BulkActionRequest for validation and UserManagementService for business logic.
+     * Supports delete, activate, deactivate, and assign_role actions.
+     *
+     * @param BulkActionRequest $request The validated request describing the bulk action and targets.
      * @return \Illuminate\Http\RedirectResponse Redirect response confirming the bulk operation.
      */
-    public function bulkAction(Request $request)
+    public function bulkAction(BulkActionRequest $request)
     {
-        $validator = Validator::make($request->all(), [
-            'action' => 'required|string|in:delete,activate,deactivate,assign_role',
-            'user_ids' => 'required|array|min:1',
-            'user_ids.*' => 'exists:users,id',
-            'role_id' => 'required_if:action,assign_role|exists:roles,id',
-        ]);
+        try {
+            $userIds = $request->user_ids;
+            $currentUserId = auth()->id();
 
-        if ($validator->fails()) {
-            return back()->withErrors($validator);
-        }
+            // Remove the acting administrator to avoid self-modification during bulk work.
+            $userIds = array_filter($userIds, fn($id) => $id != $currentUserId);
 
-        $userIds = $request->user_ids;
-        $currentUserId = auth()->id();
+            if (empty($userIds)) {
+                return back()->with('error', 'No se pueden realizar acciones en lote en tu propia cuenta.');
+            }
 
-        // Remove the acting administrator to avoid self-modification during bulk work.
-        $userIds = array_filter($userIds, fn($id) => $id != $currentUserId);
-
-        if (empty($userIds)) {
-            return back()->with('error', 'No se pueden realizar acciones en lote en tu propia cuenta.');
-        }
-
-        $count = 0;
-
-        switch ($request->action) {
-            case 'delete':
-                $count = User::whereIn('id', $userIds)
-                    ->where('role', '!=', 'super_admin')
-                    ->whereDoesntHave('roles', function ($q) {
-                        $q->where('name', 'super_admin');
-                    })
-                    ->delete();
-                $message = "Se eliminaron {$count} usuarios exitosamente.";
-                break;
-
-            case 'activate':
-                $count = User::whereIn('id', $userIds)
-                    ->whereNull('email_verified_at')
-                    ->update(['email_verified_at' => now()]);
-                $message = "Se activaron {$count} usuarios exitosamente.";
-                break;
-
-            case 'deactivate':
-                $count = User::whereIn('id', $userIds)
-                    ->whereNotNull('email_verified_at')
-                    ->update(['email_verified_at' => null]);
-                $message = "Se desactivaron {$count} usuarios exitosamente.";
-                break;
-
-            case 'assign_role':
+            // Guard admin role assignment if applicable
+            if ($request->action === 'assign_role') {
                 $this->guardAdminRoleAssignment([], $request->role_id);
-                // ✅ FIXED: Load role before accessing display_name
-                $role = \Spatie\Permission\Models\Role::findOrFail($request->role_id);
-                $users = User::whereIn('id', $userIds)->get();
+            }
 
-                $count = 0;
-                $skipped = 0;
+            // Delegate bulk action to service
+            $result = $this->userManagementService->bulkAction(
+                $request->action,
+                $userIds,
+                auth()->user(),
+                $request->role_id
+            );
 
-                foreach ($users as $user) {
-                    // ✅ SECURITY: Prevent degrading super-admins
-                    if ($user->hasRole('super_admin') || $user->hasRole('super-admin') || $user->hasRole('superadmin')) {
-                        $skipped++;
-                        \Log::warning('Attempted to change super-admin role via bulk action', [
-                            'admin_id' => auth()->id(),
-                            'target_user_id' => $user->id,
-                            'target_role' => $role->name,
-                        ]);
-                        continue;
-                    }
+            return redirect()->route('admin.users.index')->with('success', $result['message']);
+        } catch (\Exception $e) {
+            Log::error('Failed to execute bulk action', [
+                'action' => $request->action,
+                'user_ids' => $request->user_ids,
+                'error' => $e->getMessage(),
+                'admin_id' => auth()->id()
+            ]);
 
-                    $user->roles()->sync([$request->role_id]);
-                    $count++;
-                }
-                
-                $message = "Se asignó el rol '{$role->display_name}' a {$count} usuarios.";
-                if ($skipped > 0) {
-                    $message .= " ({$skipped} super-admins fueron omitidos por seguridad)";
-                }
-                break;
+            return back()->with('error', 'Error al ejecutar la acción en lote: ' . $e->getMessage());
         }
-
-        return redirect()->route('admin.users.index')->with('success', $message);
     }
 
     /**
@@ -678,171 +571,47 @@ class UserManagementController extends Controller
         return response()->stream($callback, 200, $headers);
     }
 
-    /**
-     * Calculate the user profile completion percentage based on key fields.
-     *
-     * @param User $user The user whose profile completeness is evaluated.
-     * @return int Percentage value representing profile completion.
-     */
-    private function calculateProfileCompletion(User $user): int
-    {
-        $fields = ['name', 'email', 'bio', 'website', 'location', 'avatar'];
-        $completed = 0;
 
-        foreach ($fields as $field) {
-            if (!empty($user->$field)) {
-                $completed++;
-            }
-        }
-
-        if ($user->email_verified_at) {
-            $completed++;
-        }
-
-        return round(($completed / (count($fields) + 1)) * 100);
-    }
 
     /**
      * Ban a user for a configurable duration and reason.
      *
-     * @param Request $request The request containing ban configuration.
+     * Uses BanUserRequest for validation and UserBanService for business logic.
+     *
+     * @param BanUserRequest $request The validated request containing ban configuration.
      * @param User $user The user being banned.
      * @return \Illuminate\Http\RedirectResponse Redirect response indicating the ban result.
+     *
+     * @throws ValidationException If user is already banned or ban creation fails.
      */
-    public function banUser(Request $request, User $user)
+    public function banUser(BanUserRequest $request, User $user)
     {
-        \Log::info('Ban user request started', [
-            'user_id' => $user->id,
-            'banned_by' => auth()->id(),
-            'request_data' => $request->all()
-        ]);
-
-        // Security check: prevent administrators from banning themselves.
-        if ($user->id === auth()->id()) {
-            \Log::warning('Self-ban attempt blocked', ['user_id' => $user->id]);
-            throw ValidationException::withMessages(['error' => 'You cannot ban yourself.']);
-        }
-
-        // Security check: require administrative privileges for ban actions.
-        if (!auth()->user()->hasRole('admin')) {
-            \Log::warning('Unauthorized ban attempt', ['user_id' => auth()->id(), 'target_user' => $user->id]);
-            throw \Illuminate\Validation\ValidationException::withMessages([
-                'error' => 'Unauthorized action.'
-            ]);
-        }
-
-        // Validate the incoming ban request data.
-        $validator = Validator::make($request->all(), [
-            'reason' => 'required|string|max:1000',
-            'duration' => 'nullable|string|in:1_hour,1_day,1_week,1_month,3_months,6_months,1_year,permanent,custom',
-            'custom_expires_at' => 'nullable|required_if:duration,custom|date|after:now',
-            'expires_at' => 'nullable|date|after:now',
-            'ip_ban' => 'nullable|boolean',
-            'admin_notes' => 'nullable|string|max:1000',
-        ]);
-
-        if ($validator->fails()) {
-            \Log::error('Ban validation failed', ['errors' => $validator->errors()->toArray()]);
-            throw \Illuminate\Validation\ValidationException::withMessages($validator->errors()->toArray());
-        }
-
-        // Abort if the target user already has an active ban.
-        if ($user->isBanned()) {
-            \Log::warning('User already banned', ['user_id' => $user->id]);
-            return back()->withErrors(['error' => 'User is already banned.']);
-        }
-
-        // Calculate the ban expiration timestamp from the provided duration.
-        $expiresAt = null;
-        if ($request->duration && $request->duration !== 'permanent') {
-            if ($request->duration === 'custom') {
-                $custom = $request->custom_expires_at ?? $request->expires_at;
-                $expiresAt = $custom ? \Carbon\Carbon::parse($custom) : null;
-            } else {
-                $expiresAt = match($request->duration) {
-                    '1_hour' => now()->addHour(),
-                    '1_day' => now()->addDay(),
-                    '1_week' => now()->addWeek(),
-                    '1_month' => now()->addMonth(),
-                    '3_months' => now()->addMonths(3),
-                    '6_months' => now()->addMonths(6),
-                    '1_year' => now()->addYear(),
-                    default => null,
-                };
-            }
-        }
-
-        // Create a ban record while logging the administrative action.
         try {
-            $ban = UserBan::create([
-                'user_id' => $user->id,
-                'banned_by' => auth()->id(),
-                'reason' => $request->reason,
-                'admin_notes' => $request->admin_notes,
-                'ip_ban' => $request->ip_ban ?? false,
-                'banned_at' => now(),
-                'expires_at' => $expiresAt,
-                'is_active' => true,
-            ]);
-
-            // Revoke trusted devices for the banned user to prevent bypass
-            TrustedDevice::where('user_id', $user->id)->delete();
-
-            // If IP ban is requested, also ban the user's IP address
-            if ($request->ip_ban && $user->last_login_ip) {
-                \App\Models\IpBan::banIp(
-                    $user->last_login_ip,
-                    "IP banned due to user ban: {$request->reason}",
-                    'manual',
-                    $expiresAt ? now()->diffInDays($expiresAt) : null,
-                    auth()->id()
-                );
+            // Security check: prevent administrators from banning themselves
+            if ($user->id === auth()->id()) {
+                throw ValidationException::withMessages(['error' => 'You cannot ban yourself.']);
             }
 
-            // Revoke Sanctum tokens if present
-            try {
-                if (method_exists($user, 'tokens')) {
-                    $user->tokens()->delete();
-                }
-            } catch (\Throwable $e) {
-                \Log::warning('Failed to revoke API tokens after ban', ['user_id' => $user->id, 'error' => $e->getMessage()]);
+            // Check if user is already banned
+            if ($user->isBanned()) {
+                return back()->withErrors(['error' => 'User is already banned.']);
             }
 
-            // Log to admin audit log
-            \App\Models\AdminAuditLog::logAction([
-                'action' => 'ban.user',
-                'severity' => 'high',
-                'model_type' => \App\Models\User::class,
-                'model_id' => $user->id,
-                'description' => 'User banned by administrator',
-                'request_data' => [
-                    'user_email' => $user->email,
-                    'user_name' => $user->name,
-                    'reason' => $request->reason,
-                    'duration' => $request->duration,
-                    'expires_at' => $expiresAt?->toDateTimeString(),
-                    'ip_ban' => $request->ip_ban ?? false,
-                    'ip_address' => $user->last_login_ip,
-                ],
-            ]);
-
-            \Log::info('User banned successfully', [
-                'ban_id' => $ban->id,
-                'user_id' => $user->id,
-                'banned_by' => auth()->id(),
-                'expires_at' => $expiresAt,
-                'ip_ban' => $request->ip_ban ?? false
-            ]);
+            // Delegate ban creation to service
+            $this->userBanService->banUser($user, $request->validated(), auth()->user());
 
             session()->flash('success', 'User has been banned successfully.');
             return redirect()->back();
+        } catch (ValidationException $e) {
+            throw $e;
         } catch (\Exception $e) {
-            \Log::error('Failed to create ban record', [
+            Log::error('Failed to ban user', [
                 'user_id' => $user->id,
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'admin_id' => auth()->id()
             ]);
-            throw \Illuminate\Validation\ValidationException::withMessages([
+
+            throw ValidationException::withMessages([
                 'error' => 'Failed to ban user: ' . $e->getMessage()
             ]);
         }
@@ -851,225 +620,80 @@ class UserManagementController extends Controller
     /**
      * Modify an existing ban for a user.
      *
-     * @param Request $request The request containing updated ban configuration.
+     * Uses BanUserRequest for validation and UserBanService for business logic.
+     *
+     * @param BanUserRequest $request The validated request containing updated ban configuration.
      * @param User $user The user whose ban is being modified.
      * @return \Illuminate\Http\RedirectResponse Redirect response indicating the modification result.
      */
-    public function modifyBan(Request $request, User $user)
+    public function modifyBan(BanUserRequest $request, User $user)
     {
-        \Log::info('Modify ban request started', [
-            'user_id' => $user->id,
-            'modified_by' => auth()->id(),
-            'request_data' => $request->all()
-        ]);
-
-        // Security check: require administrative privileges.
-        if (!auth()->user()->hasRole('admin')) {
-            \Log::warning('Unauthorized modify ban attempt', ['user_id' => auth()->id(), 'target_user' => $user->id]);
-            return back()->withErrors(['error' => 'Unauthorized action.']);
-        }
-
-        // Check if user has an active ban
-        if (!$user->isBanned()) {
-            \Log::warning('Attempted to modify non-existent ban', ['user_id' => $user->id]);
-            return back()->withErrors(['error' => 'User is not currently banned.']);
-        }
-
-        // Validate the incoming modification request data.
-        $validator = Validator::make($request->all(), [
-            'reason' => 'required|string|max:1000',
-            'duration' => 'nullable|string|in:1_hour,1_day,1_week,1_month,3_months,6_months,1_year,permanent,custom',
-            'custom_expires_at' => 'nullable|required_if:duration,custom|date|after:now',
-            'expires_at' => 'nullable|date|after:now',
-            'ip_ban' => 'nullable|boolean',
-            'admin_notes' => 'nullable|string|max:1000',
-        ]);
-
-        if ($validator->fails()) {
-            \Log::error('Modify ban validation failed', ['errors' => $validator->errors()->toArray()]);
-            return back()->withErrors($validator->errors());
-        }
-
-        // Calculate the new ban expiration timestamp.
-        $expiresAt = null;
-        if ($request->duration && $request->duration !== 'permanent') {
-            if ($request->duration === 'custom') {
-                $custom = $request->custom_expires_at ?? $request->expires_at;
-                $expiresAt = $custom ? \Carbon\Carbon::parse($custom) : null;
-            } else {
-                $expiresAt = match($request->duration) {
-                    '1_hour' => now()->addHour(),
-                    '1_day' => now()->addDay(),
-                    '1_week' => now()->addWeek(),
-                    '1_month' => now()->addMonth(),
-                    '3_months' => now()->addMonths(3),
-                    '6_months' => now()->addMonths(6),
-                    '1_year' => now()->addYear(),
-                    default => null,
-                };
-            }
-        }
-
-        // Update the active ban record.
         try {
-            $ban = UserBan::where('user_id', $user->id)
-                ->where('is_active', true)
-                ->first();
-
-            if (!$ban) {
-                \Log::error('Active ban not found for user', ['user_id' => $user->id]);
-                return back()->withErrors(['error' => 'Active ban record not found.']);
+            // Check if user has an active ban
+            if (!$user->isBanned()) {
+                return back()->withErrors(['error' => 'User is not currently banned.']);
             }
 
-            $oldIpBan = $ban->ip_ban;
-
-            $ban->update([
-                'reason' => $request->reason,
-                'expires_at' => $expiresAt,
-                'admin_notes' => $request->admin_notes,
-                'ip_ban' => $request->ip_ban ?? false,
-            ]);
-
-            // Handle IP ban changes
-            if ($request->ip_ban && !$oldIpBan && $user->last_login_ip) {
-                // IP ban was just enabled
-                \App\Models\IpBan::banIp(
-                    $user->last_login_ip,
-                    "IP banned due to user ban modification: {$request->reason}",
-                    'manual',
-                    $expiresAt ? now()->diffInDays($expiresAt) : null,
-                    auth()->id()
-                );
-            } elseif (!$request->ip_ban && $oldIpBan && $user->last_login_ip) {
-                // IP ban was just disabled
-                \App\Models\IpBan::where('ip_address', $user->last_login_ip)
-                    ->where('is_active', true)
-                    ->update(['is_active' => false]);
-            }
-
-            // Log to admin audit log
-            \App\Models\AdminAuditLog::logAction([
-                'action' => 'ban.modify',
-                'severity' => 'medium',
-                'model_type' => \App\Models\User::class,
-                'model_id' => $user->id,
-                'description' => 'User ban modified by administrator',
-                'request_data' => [
-                    'user_email' => $user->email,
-                    'user_name' => $user->name,
-                    'reason' => $request->reason,
-                    'duration' => $request->duration,
-                    'expires_at' => $expiresAt?->toDateTimeString(),
-                    'ip_ban' => $request->ip_ban ?? false,
-                ],
-            ]);
-
-            \Log::info('Ban modified successfully', [
-                'ban_id' => $ban->id,
-                'user_id' => $user->id,
-                'modified_by' => auth()->id(),
-                'new_expires_at' => $expiresAt,
-                'ip_ban' => $request->ip_ban ?? false
-            ]);
+            // Delegate ban modification to service
+            $this->userBanService->modifyBan($user, $request->validated(), auth()->user());
 
             return back()->with('success', 'Ban has been modified successfully.');
         } catch (\Exception $e) {
-            \Log::error('Failed to modify ban record', [
+            Log::error('Failed to modify ban', [
                 'user_id' => $user->id,
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'admin_id' => auth()->id()
             ]);
+
             return back()->withErrors(['error' => 'Failed to modify ban: ' . $e->getMessage()]);
         }
     }
 
-    /**
-     * Remove the active ban from a user account.
-     */
+
     /**
      * Remove any active bans from the specified user.
+     *
+     * Uses UserBanService for business logic.
      *
      * @param User $user The user whose ban is being lifted.
      * @return \Illuminate\Http\RedirectResponse Redirect response summarizing the action.
      */
     public function unbanUser(User $user)
     {
-        // Security check: only administrators may lift bans.
+        // Security check: only administrators may lift bans
         if (!auth()->user()->hasRole('admin')) {
             return back()->withErrors(['error' => 'Unauthorized action.']);
         }
 
-        // Ensure the target account currently has an active ban record.
+        // Ensure the target account currently has an active ban record
         if (!$user->isBanned()) {
             return back()->withErrors(['error' => 'User is not currently banned.']);
         }
 
-        // Get the active ban before deactivating
-        $activeBan = $user->bans()->active()->first();
-
-        // Deactivate the active ban entries instead of deleting their history.
-        $user->bans()->active()->update(['is_active' => false]);
-
-        // If the ban had IP ban enabled, also deactivate the IP ban
-        if ($activeBan && $activeBan->ip_ban && $user->last_login_ip) {
-            \App\Models\IpBan::where('ip_address', $user->last_login_ip)
-                ->where('is_active', true)
-                ->update(['is_active' => false]);
-        }
-
-        // Clear trusted devices so the user must re-verify upon reinstatement
-        TrustedDevice::where('user_id', $user->id)->delete();
-
-        // Log to admin audit log
-        \App\Models\AdminAuditLog::logAction([
-            'action' => 'ban.remove',
-            'severity' => 'medium',
-            'model_type' => \App\Models\User::class,
-            'model_id' => $user->id,
-            'description' => 'User unbanned by administrator',
-            'request_data' => [
-                'user_email' => $user->email,
-                'user_name' => $user->name,
-                'had_ip_ban' => $activeBan?->ip_ban ?? false,
-            ],
-        ]);
+        // Delegate unban to service
+        $this->userBanService->unbanUser($user, auth()->user());
 
         session()->flash('success', 'User has been unbanned successfully.');
         return redirect()->back();
     }
 
     /**
-     * Retrieve the complete ban history for a user.
-     */
-    /**
      * Retrieve the full ban history for a given user.
+     *
+     * Uses UserBanService for business logic.
      *
      * @param User $user The user whose ban history is requested.
      * @return \Illuminate\Http\JsonResponse JSON response listing ban records.
      */
     public function getBanHistory(User $user)
     {
-        // Security check: restrict ban history access to administrators.
+        // Security check: restrict ban history access to administrators
         if (!auth()->user()->hasRole('admin')) {
             return response()->json(['error' => 'Unauthorized'], 403);
         }
 
-        $bans = $user->bans()
-            ->with('bannedBy:id,name')
-            ->orderBy('created_at', 'desc')
-            ->get()
-            ->map(function ($ban) {
-                return [
-                    'id' => $ban->id,
-                    'reason' => $ban->reason,
-                    'banned_at' => $ban->banned_at,
-                    'expires_at' => $ban->expires_at,
-                    'is_active' => $ban->is_active,
-                    'is_permanent' => $ban->isPermanent(),
-                    'remaining_time' => $ban->getRemainingTime(),
-                    'banned_by' => $ban->bannedBy->name ?? 'System',
-                ];
-            });
+        // Delegate to service
+        $bans = $this->userBanService->getBanHistory($user);
 
         return response()->json(['bans' => $bans]);
     }
@@ -1077,79 +701,34 @@ class UserManagementController extends Controller
     /**
      * Retrieve a paginated set of user comments with search and filters.
      *
+     * Uses UserCommentService for business logic.
+     *
      * @param Request $request The current HTTP request containing filter inputs.
      * @param User $user The user whose comments are being retrieved.
      * @return \Illuminate\Http\JsonResponse JSON response containing paginated comments.
      */
     public function getUserComments(Request $request, User $user)
     {
-        // Security check: restrict comment visibility to administrators.
+        // Security check: restrict comment visibility to administrators
         if (!auth()->user()->hasRole('admin')) {
             return response()->json(['error' => 'Unauthorized'], 403);
         }
 
-        $query = $user->comments()->with(['post:id,title,slug']);
+        // Build filters from request
+        $filters = [
+            'search' => $request->get('search'),
+            'status' => $request->get('status'),
+            'date_from' => $request->get('date_from'),
+            'date_to' => $request->get('date_to'),
+            'sort' => $request->get('sort', 'created_at'),
+            'direction' => $request->get('direction', 'desc'),
+        ];
 
-        // Apply full-text search against comment content and related post title.
-        if ($request->filled('search')) {
-            $search = $request->search;
-            $query->where(function ($q) use ($search) {
-                $q->where('body', 'like', "%{$search}%")
-                  ->orWhereHas('post', function ($postQuery) use ($search) {
-                      $postQuery->where('title', 'like', "%{$search}%");
-                  });
-            });
-        }
-
-        // Apply a moderation status filter when provided.
-        if ($request->filled('status')) {
-            $query->where('status', $request->status);
-        }
-
-        // Restrict results to a specific creation date range.
-        if ($request->filled('date_from')) {
-            $query->whereDate('created_at', '>=', $request->date_from);
-        }
-
-        if ($request->filled('date_to')) {
-            $query->whereDate('created_at', '<=', $request->date_to);
-        }
-
-        // Sort by an allowed column and direction.
-        $sortField = $request->get('sort', 'created_at');
-        $sortDirection = $request->get('direction', 'desc');
-
-        $allowedSorts = ['created_at', 'status', 'body'];
-        if (in_array($sortField, $allowedSorts)) {
-            $query->orderBy($sortField, $sortDirection);
-        }
-
-        // Resolve the pagination size while enforcing the permitted options.
         $perPage = $request->get('per_page', 10);
         $perPage = in_array($perPage, [5, 10, 15, 25]) ? $perPage : 10;
 
-        $comments = $query->paginate($perPage)->withQueryString();
-
-        // Normalize the comment payload for front-end consumption.
-        $comments->getCollection()->transform(function ($comment) {
-            return [
-                'id' => $comment->id,
-                'body' => $comment->body,
-                'status' => $comment->status,
-                'created_at' => $comment->created_at,
-                'updated_at' => $comment->updated_at,
-                'post' => $comment->post ? [
-                    'id' => $comment->post->id,
-                    'title' => $comment->post->title,
-                    'slug' => $comment->post->slug,
-                ] : null,
-                'author_name' => $comment->author_name,
-                'author_email' => $comment->author_email,
-                'is_guest' => $comment->isGuest(),
-                'reports_count' => $comment->reports()->count(),
-                'interactions_count' => $comment->interactions()->count(),
-            ];
-        });
+        // Delegate to service
+        $comments = $this->userCommentService->getUserComments($user, $filters, $perPage);
 
         return response()->json([
             'success' => true,
@@ -1158,10 +737,9 @@ class UserManagementController extends Controller
     }
 
     /**
-     * Update a comment status from the user management interface.
-     */
-    /**
      * Update the moderation status of a user's comment.
+     *
+     * Uses UserCommentService for business logic.
      *
      * @param Request $request The request containing the new status.
      * @param User $user The comment author.
@@ -1170,7 +748,7 @@ class UserManagementController extends Controller
      */
     public function updateCommentStatus(Request $request, User $user, $commentId)
     {
-        // Security check: only administrators may adjust comment statuses.
+        // Security check: only administrators may adjust comment statuses
         if (!auth()->user()->hasRole('admin')) {
             return response()->json(['error' => 'Unauthorized'], 403);
         }
@@ -1179,18 +757,19 @@ class UserManagementController extends Controller
             'status' => 'required|in:approved,pending,rejected,spam'
         ]);
 
-        $comment = $user->comments()->findOrFail($commentId);
-        $comment->update(['status' => $request->status]);
+        try {
+            // Delegate to service
+            $this->userCommentService->updateCommentStatus(
+                $user,
+                $commentId,
+                $request->status,
+                auth()->user()
+            );
 
-        \Log::info('Comment status updated from user management', [
-            'comment_id' => $comment->id,
-            'user_id' => $user->id,
-            'old_status' => $comment->getOriginal('status'),
-            'new_status' => $request->status,
-            'updated_by' => auth()->id(),
-        ]);
-
-        return response()->noContent();
+            return response()->noContent();
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 400);
+        }
     }
 
     /**
@@ -1203,6 +782,15 @@ class UserManagementController extends Controller
      * @param int $commentId The identifier of the comment being removed.
      * @return \Illuminate\Http\RedirectResponse Redirect response with the deletion result.
      */
+    /**
+     * Delete a specific comment from a user's comment history.
+     *
+     * Uses UserCommentService for business logic and enforces admin-only access.
+     *
+     * @param User $user The user who owns the comment.
+     * @param int $commentId The ID of the comment to delete.
+     * @return \Illuminate\Http\RedirectResponse Redirect response after deleting the comment.
+     */
     public function deleteComment(User $user, $commentId)
     {
         try {
@@ -1211,72 +799,29 @@ class UserManagementController extends Controller
                 return back()->withErrors(['error' => 'No tienes permisos para eliminar comentarios.']);
             }
 
-            // Log the attempted comment deletion for auditing.
-            \Log::info('Attempting to delete comment', [
-                'comment_id' => $commentId,
-                'user_id' => $user->id,
-                'admin_id' => auth()->id(),
-            ]);
-
-            // Locate the comment and ensure it belongs to the selected user.
-            $comment = $user->comments()->findOrFail($commentId);
-
-            // Double-check the comment ownership for defense in depth.
-            if ($comment->user_id !== $user->id) {
-                \Log::warning('Attempt to delete comment that does not belong to user', [
-                    'comment_id' => $commentId,
-                    'comment_user_id' => $comment->user_id,
-                    'expected_user_id' => $user->id,
-                    'admin_id' => auth()->id(),
-                ]);
-                return back()->withErrors(['error' => 'Este comentario no pertenece al usuario especificado.']);
-            }
-
-            // Remove nested replies to maintain referential integrity.
-            if ($comment->replies()->exists()) {
-                $repliesCount = $comment->replies()->count();
-                $comment->replies()->delete();
-                \Log::info('Deleted comment replies', [
-                    'comment_id' => $commentId,
-                    'replies_deleted' => $repliesCount,
-                ]);
-            }
-
-            $comment->delete();
-
-            \Log::info('Comment deleted successfully from user management', [
-                'comment_id' => $commentId,
-                'user_id' => $user->id,
-                'user_name' => $user->name,
-                'deleted_by' => auth()->id(),
-                'admin_name' => auth()->user()->name,
-            ]);
+            // Delegate comment deletion to service
+            $this->userCommentService->deleteComment($user, $commentId, auth()->user());
 
             return back()->with('success', 'Comentario eliminado exitosamente.');
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
-            \Log::warning('Comment not found for deletion', [
-                'comment_id' => $commentId,
-                'user_id' => $user->id,
-                'admin_id' => auth()->id(),
-            ]);
             return back()->withErrors(['error' => 'El comentario no existe o no pertenece a este usuario.']);
         } catch (\Exception $e) {
-            \Log::error('Error deleting comment from user management', [
+            Log::error('Failed to delete comment', [
                 'comment_id' => $commentId,
                 'user_id' => $user->id,
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'admin_id' => auth()->id()
             ]);
 
-            return back()->withErrors(['error' => 'Error al eliminar comentario. Por favor, intÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©ntalo de nuevo.']);
+            return back()->withErrors(['error' => 'Error al eliminar comentario. Por favor, inténtalo de nuevo.']);
         }
     }
 
     /**
-     * Execute bulk moderation actions on user comments.
-     */
-    /**
      * Execute bulk moderation actions against a user's comments.
+     *
+     * Uses UserCommentService for business logic and enforces admin-only access.
+     * Supports approve, reject, delete, and mark_spam actions.
      *
      * @param Request $request The request containing action details.
      * @param User $user The user whose comments are targeted.
@@ -1284,51 +829,38 @@ class UserManagementController extends Controller
      */
     public function bulkCommentActions(Request $request, User $user)
     {
-        // Security check: only administrators may run bulk comment operations.
-        if (!auth()->user()->hasRole('admin')) {
-            return response()->json(['error' => 'Unauthorized'], 403);
-        }
-
-        $request->validate([
-            'action' => 'required|in:approve,reject,delete,mark_spam',
-            'comment_ids' => 'required|array|min:1',
-            'comment_ids.*' => 'integer|exists:comments,id',
-        ]);
-
-        $comments = $user->comments()->whereIn('id', $request->comment_ids)->get();
-        $processedCount = 0;
-
-        foreach ($comments as $comment) {
-            switch ($request->action) {
-                case 'approve':
-                    $comment->update(['status' => 'approved']);
-                    $processedCount++;
-                    break;
-                case 'reject':
-                    $comment->update(['status' => 'rejected']);
-                    $processedCount++;
-                    break;
-                case 'mark_spam':
-                    $comment->update(['status' => 'spam']);
-                    $processedCount++;
-                    break;
-                case 'delete':
-                    $comment->replies()->delete();
-                    $comment->delete();
-                    $processedCount++;
-                    break;
+        try {
+            // Security check: only administrators may run bulk comment operations.
+            if (!auth()->user()->hasRole('admin')) {
+                return response()->json(['error' => 'Unauthorized'], 403);
             }
+
+            $request->validate([
+                'action' => 'required|in:approve,reject,delete,mark_spam',
+                'comment_ids' => 'required|array|min:1',
+                'comment_ids.*' => 'integer|exists:comments,id',
+            ]);
+
+            // Delegate bulk comment action to service
+            $processedCount = $this->userCommentService->bulkCommentActions(
+                $user,
+                $request->action,
+                $request->comment_ids,
+                auth()->user()
+            );
+
+            return response()->noContent();
+        } catch (\Exception $e) {
+            Log::error('Failed to execute bulk comment action', [
+                'action' => $request->action,
+                'user_id' => $user->id,
+                'comment_ids' => $request->comment_ids,
+                'error' => $e->getMessage(),
+                'admin_id' => auth()->id()
+            ]);
+
+            return response()->json(['error' => 'Error al ejecutar la acción en lote'], 500);
         }
-
-        \Log::info('Bulk comment action performed from user management', [
-            'action' => $request->action,
-            'user_id' => $user->id,
-            'comment_ids' => $request->comment_ids,
-            'processed_count' => $processedCount,
-            'performed_by' => auth()->id(),
-        ]);
-
-        return response()->noContent();
     }
 
     /**
@@ -1376,56 +908,48 @@ class UserManagementController extends Controller
     /**
      * Mark a user account as verified and log the action.
      *
+     * Uses UserVerificationService for business logic and enforces admin-only access.
+     *
      * @param Request $request The request containing optional verification metadata.
      * @param User $user The user being verified.
      * @return \Illuminate\Http\RedirectResponse Redirect response reflecting verification outcome.
      */
     public function verifyUser(Request $request, User $user)
     {
-        // Security check: only administrators may verify accounts.
-        if (!auth()->user()->hasRole('admin')) {
-            return back()->withErrors(['error' => 'No tienes permisos para verificar usuarios.']);
-        }
-
-        // Prevent administrators from verifying their own accounts here.
-        if ($user->id === auth()->id()) {
-            return back()->withErrors(['error' => 'No puedes verificarte a ti mismo.']);
-        }
-
-        $request->validate([
-            'verification_notes' => 'nullable|string|max:1000',
-        ]);
-
         try {
-            $success = $user->verify(auth()->user(), $request->verification_notes);
-
-            if ($success) {
-                // Log the verification action for auditing purposes.
-                \Log::info('User verified', [
-                    'user_id' => $user->id,
-                    'user_email' => $user->email,
-                    'verified_by' => auth()->id(),
-                    'verification_notes' => $request->verification_notes,
-                    'timestamp' => now()->toISOString()
-                ]);
-
-                return back()->with('success', "Usuario {$user->name} verificado exitosamente.");
-            } else {
-                return back()->withErrors(['error' => 'Error al verificar el usuario. IntÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©ntalo de nuevo.']);
+            // Security check: only administrators may verify accounts.
+            if (!auth()->user()->hasRole('admin')) {
+                return back()->withErrors(['error' => 'No tienes permisos para verificar usuarios.']);
             }
-        } catch (\Exception $e) {
-            \Log::error('Error verifying user', [
-                'user_id' => $user->id,
-                'error' => $e->getMessage(),
-                'verified_by' => auth()->id()
+
+            // Prevent administrators from verifying their own accounts here.
+            if ($user->id === auth()->id()) {
+                return back()->withErrors(['error' => 'No puedes verificarte a ti mismo.']);
+            }
+
+            $request->validate([
+                'verification_notes' => 'nullable|string|max:1000',
             ]);
 
-            return back()->withErrors(['error' => 'Error al verificar el usuario. IntÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©ntalo de nuevo.']);
+            // Delegate verification to service
+            $this->userVerificationService->verifyUser($user, auth()->user(), $request->verification_notes);
+
+            return back()->with('success', "Usuario {$user->name} verificado exitosamente.");
+        } catch (\Exception $e) {
+            Log::error('Failed to verify user', [
+                'user_id' => $user->id,
+                'error' => $e->getMessage(),
+                'admin_id' => auth()->id()
+            ]);
+
+            return back()->withErrors(['error' => 'Error al verificar el usuario. Inténtalo de nuevo.']);
         }
     }
 
     /**
      * Remove verification from a user account and log the change.
+     *
+     * Uses UserVerificationService for business logic and enforces admin-only access.
      *
      * @param Request $request The request containing optional notes.
      * @param User $user The user being unverified.
@@ -1433,49 +957,36 @@ class UserManagementController extends Controller
      */
     public function unverifyUser(Request $request, User $user)
     {
-        // Security check: only administrators may remove verification.
-        if (!auth()->user()->hasRole('admin')) {
-            return back()->withErrors(['error' => 'No tienes permisos para desverificar usuarios.']);
-        }
-
-        // Prevent administrators from modifying their own verification flag here.
-        if ($user->id === auth()->id()) {
-            return back()->withErrors(['error' => 'No puedes desverificarte a ti mismo.']);
-        }
-
-        $request->validate([
-            'verification_notes' => 'nullable|string|max:1000',
-        ]);
-
         try {
-            $success = $user->unverify(auth()->user(), $request->verification_notes);
-
-            if ($success) {
-                // Log the unverification action for auditing purposes.
-                \Log::info('User unverified', [
-                    'user_id' => $user->id,
-                    'user_email' => $user->email,
-                    'unverified_by' => auth()->id(),
-                    'verification_notes' => $request->verification_notes,
-                    'timestamp' => now()->toISOString()
-                ]);
-
-                return back()->with('success', "VerificaciÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³n de {$user->name} removida exitosamente.");
-            } else {
-                return back()->withErrors(['error' => 'Error al desverificar el usuario. IntÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©ntalo de nuevo.']);
+            // Security check: only administrators may remove verification.
+            if (!auth()->user()->hasRole('admin')) {
+                return back()->withErrors(['error' => 'No tienes permisos para desverificar usuarios.']);
             }
-        } catch (\Exception $e) {
-            \Log::error('Error unverifying user', [
-                'user_id' => $user->id,
-                'error' => $e->getMessage(),
-                'unverified_by' => auth()->id()
+
+            // Prevent administrators from modifying their own verification flag here.
+            if ($user->id === auth()->id()) {
+                return back()->withErrors(['error' => 'No puedes desverificarte a ti mismo.']);
+            }
+
+            $request->validate([
+                'verification_notes' => 'nullable|string|max:1000',
             ]);
 
-            return back()->withErrors(['error' => 'Error al desverificar el usuario. IntÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©ntalo de nuevo.']);
+            // Delegate unverification to service
+            $this->userVerificationService->unverifyUser($user, auth()->user(), $request->verification_notes);
+
+            return back()->with('success', "Verificación de {$user->name} removida exitosamente.");
+        } catch (\Exception $e) {
+            Log::error('Failed to unverify user', [
+                'user_id' => $user->id,
+                'error' => $e->getMessage(),
+                'admin_id' => auth()->id()
+            ]);
+
+            return back()->withErrors(['error' => 'Error al desverificar el usuario. Inténtalo de nuevo.']);
         }
     }
 }
-
 
 
 

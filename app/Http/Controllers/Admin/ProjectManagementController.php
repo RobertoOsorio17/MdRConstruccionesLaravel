@@ -18,15 +18,53 @@ use Carbon\Carbon;
 class ProjectManagementController extends Controller
 {
     use GeneratesUniqueSlug;
+    
+    
+    
+    
     /**
-     * Display a listing of projects.
+
+    
+    
+    
+     * Display a listing of the resource.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function index(Request $request)
     {
-        // Build query with filters.
+        /**
+         * Build query with filters.
+         */
         $query = Project::query();
 
-        // Search filter.
+        /**
+         * Search filter.
+         */
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
@@ -36,18 +74,24 @@ class ProjectManagementController extends Controller
             });
         }
 
-        // Status filter.
+        /**
+         * Status filter.
+         */
         if ($request->filled('status')) {
             $query->where('status', $request->status);
         }
 
-        // Featured filter.
+        /**
+         * Featured filter.
+         */
         if ($request->filled('featured')) {
             $featured = $request->featured === 'true';
             $query->where('featured', $featured);
         }
 
-        // Date range filter.
+        /**
+         * Date range filter.
+         */
         if ($request->filled('date_from')) {
             $query->whereDate('start_date', '>=', $request->date_from);
         }
@@ -55,7 +99,9 @@ class ProjectManagementController extends Controller
             $query->whereDate('end_date', '<=', $request->date_to);
         }
 
-        // Budget range filter.
+        /**
+         * Budget range filter.
+         */
         if ($request->filled('budget_min')) {
             $query->where('budget_estimate', '>=', $request->budget_min);
         }
@@ -63,11 +109,15 @@ class ProjectManagementController extends Controller
             $query->where('budget_estimate', '<=', $request->budget_max);
         }
 
-        // Sorting with whitelist validation to prevent SQL injection
+        /**
+         * Sorting with whitelist validation to prevent SQL injection.
+         */
         $sortField = $request->get('sort', 'created_at');
         $sortDirection = $request->get('direction', 'desc');
 
-        // ✅ SECURITY: Whitelist allowed sort fields and directions
+        /**
+         * SECURITY: Whitelist allowed sort fields and directions.
+         */
         $allowedSorts = ['title', 'status', 'featured', 'start_date', 'end_date', 'budget_estimate', 'created_at', 'views_count'];
         $allowedDirections = ['asc', 'desc'];
 
@@ -77,10 +127,14 @@ class ProjectManagementController extends Controller
             $query->orderBy('created_at', 'desc');
         }
 
-        // Paginate results.
+        /**
+         * Paginate results.
+         */
         $projects = $query->paginate($request->get('per_page', 15))->withQueryString();
 
-        // Transform projects for the frontend payload.
+        /**
+         * Transform projects for the frontend payload.
+         */
         $projects->getCollection()->transform(function ($project) {
             return [
                 'id' => $project->id,
@@ -101,13 +155,18 @@ class ProjectManagementController extends Controller
                     ? $project->start_date->diffInDays($project->end_date)
                     : null,
                 'status_label' => $this->getStatusLabel($project->status),
+                /**
+                 * Format the project budget using European number formatting.
+                 */
                 'budget_formatted' => $project->budget_estimate
-                    ? '€' . number_format($project->budget_estimate, 2, ',', '.') // ✅ Fixed encoding
+                    ? 'â‚¬' . number_format($project->budget_estimate, 2, ',', '.')
                     : 'No especificado',
             ];
         });
 
-        // Build high-level statistics.
+        /**
+         * Build high-level statistics.
+         */
         $stats = [
             'total_projects' => Project::count(),
             'draft_projects' => Project::where('status', 'draft')->count(),
@@ -126,9 +185,38 @@ class ProjectManagementController extends Controller
         ]);
     }
 
+    
+    
+    
+    
     /**
-     * Show the form for creating a new project.
+
+    
+    
+    
+     * Show the form for creating a new resource.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function create()
     {
         return Inertia::render('Admin/Projects/Create', [
@@ -136,9 +224,43 @@ class ProjectManagementController extends Controller
         ]);
     }
 
+    
+    
+    
+    
     /**
-     * Store a newly created project.
+
+    
+    
+    
+     * Store a newly created resource.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function store(Request $request)
     {
         $validated = $request->validate([
@@ -152,10 +274,15 @@ class ProjectManagementController extends Controller
             'status' => 'required|in:draft,published,completed',
             'featured' => 'boolean',
             'gallery' => 'nullable|array',
-            'gallery.*' => 'string', // URLs or file paths
+            /**
+             * Accept gallery entries as URL or file path strings.
+             */
+            'gallery.*' => 'string',
         ]);
 
-        // ✅ SECURITY: Ensure slug uniqueness using trait
+        /**
+         * SECURITY: Ensure slug uniqueness using trait.
+         */
         $validated['slug'] = $this->generateUniqueSlug($validated['title'], Project::class);
         $validated['featured'] = $request->boolean('featured');
 
@@ -164,9 +291,43 @@ class ProjectManagementController extends Controller
         return redirect()->back()->with('success', 'Project created successfully.');
     }
 
+    
+    
+    
+    
     /**
-     * Show the form for editing the specified project.
+
+    
+    
+    
+     * Show the form for editing the specified resource.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Project $project The project.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function edit(Project $project)
     {
         return Inertia::render('Admin/Projects/Edit', [
@@ -187,9 +348,48 @@ class ProjectManagementController extends Controller
         ]);
     }
 
+    
+    
+    
+    
     /**
-     * Update the specified project.
+
+    
+    
+    
+     * Update the specified resource.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @param Project $project The project.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function update(Request $request, Project $project)
     {
         $validated = $request->validate([
@@ -206,7 +406,9 @@ class ProjectManagementController extends Controller
             'gallery.*' => 'string',
         ]);
 
-        // ✅ SECURITY: Ensure slug uniqueness (exclude current project) using trait
+        /**
+         * SECURITY: Ensure slug uniqueness (exclude current project) using trait.
+         */
         $validated['slug'] = $this->generateUniqueSlug($validated['title'], Project::class, $project->id);
         $validated['featured'] = $request->boolean('featured');
 
@@ -215,12 +417,48 @@ class ProjectManagementController extends Controller
         return redirect()->back()->with('success', 'Project updated successfully.');
     }
 
+    
+    
+    
+    
     /**
-     * Remove the specified project.
+
+    
+    
+    
+     * Remove the specified resource.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Project $project The project.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function destroy(Project $project)
     {
-        // Delete gallery images if they exist.
+        /**
+         * Delete gallery images if they exist.
+         */
         if ($project->gallery && is_array($project->gallery)) {
             foreach ($project->gallery as $imagePath) {
                 if (Storage::disk('public')->exists($imagePath)) {
@@ -234,9 +472,43 @@ class ProjectManagementController extends Controller
         return redirect()->back()->with('success', 'Project deleted successfully.');
     }
 
+    
+    
+    
+    
     /**
-     * Handle bulk actions on projects.
+
+    
+    
+    
+     * Handle bulk action.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function bulkAction(Request $request)
     {
         $validated = $request->validate([
@@ -269,7 +541,9 @@ class ProjectManagementController extends Controller
                 $message = 'Projects unmarked as featured successfully.';
                 break;
             case 'delete':
-                // Delete gallery images for each project
+                /**
+                 * Delete gallery images for each project.
+                 */
                 $projectsToDelete = $projects->get();
                 foreach ($projectsToDelete as $project) {
                     if ($project->gallery && is_array($project->gallery)) {
@@ -288,9 +562,43 @@ class ProjectManagementController extends Controller
         return redirect()->back()->with('success', $message);
     }
 
+    
+    
+    
+    
     /**
-     * Export projects to Excel/CSV using Laravel Excel.
+
+    
+    
+    
+     * Handle export.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function export(Request $request)
     {
         $filters = [
@@ -299,7 +607,10 @@ class ProjectManagementController extends Controller
             'featured' => $request->get('featured'),
         ];
 
-        $format = $request->get('format', 'xlsx'); // xlsx, csv
+        /**
+         * Determine the requested export format (xlsx or csv).
+         */
+        $format = $request->get('format', 'xlsx');
         $filename = 'proyectos_' . now()->format('Y-m-d_H-i-s');
 
         try {
@@ -317,12 +628,48 @@ class ProjectManagementController extends Controller
         }
     }
 
+    
+    
+    
+    
     /**
-     * Display the specified project.
+
+    
+    
+    
+     * Display the specified resource.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Project $project The project.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function show(Project $project)
     {
-        // Get project timeline/milestones (mock data for now).
+        /**
+         * Get project timeline/milestones (mock data for now).
+         */
         $timeline = [
             [
                 'title' => 'Project Started',
@@ -355,9 +702,15 @@ class ProjectManagementController extends Controller
                 'id' => $project->id,
                 'title' => $project->title,
                 'summary' => $project->summary,
-                'body' => $project->body, // ✅ Correct column name
+                /**
+                 * Expose the full project body content for the detail view.
+                 */
+                'body' => $project->body,
                 'location' => $project->location,
-                'budget_estimate' => $project->budget_estimate, // ✅ Correct column name
+                /**
+                 * Provide the stored budget estimate using the correct column.
+                 */
+                'budget_estimate' => $project->budget_estimate,
                 'status' => $project->status,
                 'featured' => $project->featured,
                 'start_date' => $project->start_date,
@@ -372,15 +725,51 @@ class ProjectManagementController extends Controller
         ]);
     }
 
+    
+    
+    
+    
     /**
-     * Show project analytics.
+
+    
+    
+    
+     * Handle analytics.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param Request $request The request.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     public function analytics(Request $request)
     {
         $period = $request->get('period', 30);
         $startDate = now()->subDays($period);
 
-        // Get analytics data
+        /**
+         * Get analytics data.
+         */
         $analyticsData = [
             'timeline_analysis' => [
                 'total_projects' => Project::where('created_at', '>=', $startDate)->count(),
@@ -401,10 +790,18 @@ class ProjectManagementController extends Controller
                 'total_completed' => Project::where('status', 'completed')
                     ->where('end_date', '>=', $startDate)
                     ->count(),
-                // ✅ Note: There is no expected_end_date column, only end_date
-                // This metric would need a separate expected_end_date column to work properly
-                'completed_on_time' => 0, // Disabled until expected_end_date column is added
-                'on_time_completion_rate' => 0, // Will be calculated below
+                /**
+                 * Note: There is no expected_end_date column, only end_date.
+                 * This metric would need a separate expected_end_date column to work properly.
+                 */
+                /**
+                 * Placeholder until an expected_end_date column is introduced.
+                 */
+                'completed_on_time' => 0,
+                /**
+                 * Placeholder for calculated completion rates once data supports it.
+                 */
+                'on_time_completion_rate' => 0,
             ],
             'completion_trends' => Project::where('status', 'completed')
                 ->where('end_date', '>=', now()->subMonths(6))
@@ -424,7 +821,9 @@ class ProjectManagementController extends Controller
                 ->sum('budget'),
         ];
 
-        // Calculate on-time completion rate
+        /**
+         * Calculate on-time completion rate.
+         */
         if ($analyticsData['performance_metrics']['total_completed'] > 0) {
             $analyticsData['performance_metrics']['on_time_completion_rate'] =
                 ($analyticsData['performance_metrics']['completed_on_time'] /
@@ -436,9 +835,43 @@ class ProjectManagementController extends Controller
         ]);
     }
 
+    
+    
+    
+    
     /**
-     * Get status label for display.
+
+    
+    
+    
+     * Get status label.
+
+    
+    
+    
+     *
+
+    
+    
+    
+     * @param mixed $status The status.
+
+    
+    
+    
+     * @return void
+
+    
+    
+    
      */
+    
+    
+    
+    
+    
+    
+    
     private function getStatusLabel($status)
     {
         return match($status) {

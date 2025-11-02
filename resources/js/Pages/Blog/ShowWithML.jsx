@@ -5,7 +5,7 @@ import GuestLayout from '@/Layouts/GuestLayout';
 import InteractionTracker from '@/Components/ML/InteractionTracker';
 import RecommendationsWidget from '@/Components/ML/RecommendationsWidget';
 import MLInsights from '@/Components/ML/MLInsights';
-import { sanitizeHtml } from '@/utils/sanitize';
+import { sanitizeHtml } from '@/Utils/sanitize';
 
 /**
  * Ejemplo de página de blog con integración completa de ML

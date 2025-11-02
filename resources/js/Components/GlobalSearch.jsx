@@ -27,7 +27,7 @@ import {
 import { router } from '@inertiajs/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import axios from 'axios';
-import { sanitizeHtmlStrict } from '@/utils/sanitize';
+import { sanitizeHtmlStrict } from '@/Utils/sanitize';
 
 const GlobalSearch = ({ open, onClose }) => {
     const [query, setQuery] = useState('');

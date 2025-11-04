@@ -215,10 +215,25 @@ export default function DevicesTab({ initialDevices = [], initialStats = {} }) {
 
             <Typography variant="overline" sx={{ color: 'text.secondary', mb: 1 }}>Resumen</Typography>
 
+            {/* ✅ UPDATED: Session limit warning */}
+            {stats.exceeds_limit && stats.session_limit && (
+                <Alert severity="warning" sx={{ mb: 3 }} icon={<WarningIcon />}>
+                    <Typography variant="body2" fontWeight="600">
+                        Has excedido el límite de sesiones para tu rol
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                        Tu rol permite un máximo de <strong>{stats.session_limit}</strong> sesión(es) simultánea(s).
+                        Actualmente tienes <strong>{stats.total}</strong> sesión(es) activa(s).
+                        Las sesiones más antiguas se cerrarán automáticamente en tu próximo inicio de sesión.
+                    </Typography>
+                </Alert>
+            )}
+
             {/* Stats Cards */}
+            {/* ✅ UPDATED: Added session limit card */}
             <Box sx={{
                 display: 'grid',
-                gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' },
+                gridTemplateColumns: { xs: '1fr', sm: 'repeat(4, 1fr)' },
                 gap: 3,
                 mb: 4
             }}>
@@ -244,6 +259,14 @@ export default function DevicesTab({ initialDevices = [], initialStats = {} }) {
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
                         Confiables
+                    </Typography>
+                </Paper>
+                <Paper variant="outlined" sx={{ p: 3, textAlign: 'center', bgcolor: stats.exceeds_limit ? 'warning.light' : 'background.paper' }}>
+                    <Typography variant="h3" color={stats.exceeds_limit ? 'warning.dark' : 'text.primary'} fontWeight="700">
+                        {stats.session_limit || 3}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                        Límite de Sesiones
                     </Typography>
                 </Paper>
             </Box>
@@ -349,19 +372,36 @@ export default function DevicesTab({ initialDevices = [], initialStats = {} }) {
                                             <strong>{device.browser}</strong> {device.browser_version} • <strong>{device.platform}</strong> {device.platform_version}
                                         </Typography>
                                         <Divider sx={{ my: 1.5 }} />
+                                        {/* ✅ UPDATED: Added initial_ip and created_at */}
                                         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mt: 1 }}>
                                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                                                 <LocationIcon fontSize="small" color="action" />
                                                 <Typography variant="body2" color="text.secondary">
-                                                    <strong>IP:</strong> {device.ip_address}
+                                                    <strong>IP actual:</strong> {device.ip_address}
                                                 </Typography>
                                             </Box>
+                                            {device.initial_ip && device.initial_ip !== device.ip_address && (
+                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                                    <LocationIcon fontSize="small" color="warning" />
+                                                    <Typography variant="body2" color="warning.main">
+                                                        <strong>IP inicial:</strong> {device.initial_ip}
+                                                    </Typography>
+                                                </Box>
+                                            )}
                                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                                                 <AccessTimeIcon fontSize="small" color="action" />
                                                 <Typography variant="body2" color="text.secondary">
                                                     <strong>Última actividad:</strong> {device.last_used_at}
                                                 </Typography>
                                             </Box>
+                                            {device.created_at && (
+                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                                    <AccessTimeIcon fontSize="small" color="action" />
+                                                    <Typography variant="body2" color="text.secondary">
+                                                        <strong>Creada:</strong> {device.created_at}
+                                                    </Typography>
+                                                </Box>
+                                            )}
                                         </Box>
                                     </Box>
                                     <Stack direction="row" spacing={1}>

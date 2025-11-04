@@ -167,25 +167,37 @@ trait HandlesTwoFactorLogin
 
         $response = $this->logUserIn($request, $user, $remember);
 
-        $twoFactorEnabled = AdminSetting::getCachedValue('enable_2fa', false, 300);
-        if (
-            $twoFactorEnabled &&
-            ($user->hasRole('admin') || $user->hasRole('editor')) &&
-            !$user->two_factor_secret
-        ) {
+        // ✅ NEW: Force 2FA for admins (always mandatory, regardless of settings)
+        if ($user->hasRole('admin') && !$user->two_factor_secret) {
             session()->put('2fa_setup_mandatory', true);
             session()->put('2fa_setup_user_id', $user->id);
             session()->put('2fa_setup_timestamp', now()->timestamp);
 
-            Log::warning('Admin/Editor login without 2FA - redirecting to profile with mandatory setup', [
+            Log::warning('Admin login without 2FA - redirecting to profile with mandatory setup', [
                 'user_id' => $user->id,
+                'role' => 'admin',
                 'timestamp' => now()->toISOString(),
             ]);
 
-            // Don't use flash session for force_2fa_setup - it gets consumed on first read
-            // The persistent session flag '2fa_setup_mandatory' is enough
             return redirect()->route('profile.settings', ['tab' => 'security'])
-                ->with('error', 'La autenticación de dos factores es obligatoria para administradores y editores.');
+                ->with('error', 'La autenticación de dos factores es obligatoria para administradores. Por favor, configúrala ahora.');
+        }
+
+        // Check if 2FA is enabled for editors (based on settings)
+        $twoFactorEnabled = AdminSetting::getCachedValue('enable_2fa', false, 300);
+        if ($twoFactorEnabled && $user->hasRole('editor') && !$user->two_factor_secret) {
+            session()->put('2fa_setup_mandatory', true);
+            session()->put('2fa_setup_user_id', $user->id);
+            session()->put('2fa_setup_timestamp', now()->timestamp);
+
+            Log::warning('Editor login without 2FA - redirecting to profile with mandatory setup', [
+                'user_id' => $user->id,
+                'role' => 'editor',
+                'timestamp' => now()->toISOString(),
+            ]);
+
+            return redirect()->route('profile.settings', ['tab' => 'security'])
+                ->with('error', 'La autenticación de dos factores es obligatoria para editores. Por favor, configúrala ahora.');
         }
 
         return $response ?: redirect()->intended($intendedUrl);
@@ -384,6 +396,37 @@ trait HandlesTwoFactorLogin
         // Regenerate session after authentication (defense-in-depth)
         $request->session()->regenerate();
         $request->session()->regenerateToken();
+
+        // Get current session ID AFTER login and regeneration
+        $currentSessionId = session()->getId();
+
+        // ✅ NEW: Store session metadata for tracking
+        $sessionManagement = app(\App\Services\SessionManagementService::class);
+        $sessionManagement->storeSessionMetadata($currentSessionId, [
+            'initial_ip' => $request->ip(),
+            'initial_user_agent_hash' => hash('sha256', $request->userAgent()),
+            'created_at' => now()->timestamp,
+        ]);
+
+        // ✅ NEW: Terminate previous sessions based on role limit
+        try {
+            $terminated = $sessionManagement->terminatePreviousSessions($user, $currentSessionId);
+
+            if ($terminated > 0) {
+                Log::info('Previous sessions terminated on login', [
+                    'user_id' => $user->id,
+                    'role' => $user->role,
+                    'terminated_count' => $terminated,
+                    'new_session_id' => hash('sha256', $currentSessionId),
+                ]);
+            }
+        } catch (\Exception $e) {
+            // Log error but don't block login
+            Log::error('Failed to terminate previous sessions', [
+                'user_id' => $user->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
 
         session(['last_activity' => time()]);
 

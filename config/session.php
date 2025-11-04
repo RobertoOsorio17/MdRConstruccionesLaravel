@@ -254,4 +254,55 @@ return [
 
     'validate_integrity' => env('SESSION_VALIDATE_INTEGRITY', true),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Concurrent Sessions Limits
+    |--------------------------------------------------------------------------
+    |
+    | Define the maximum number of concurrent sessions allowed per user role.
+    | When a user exceeds this limit, the oldest sessions will be terminated.
+    |
+    | - admin: 1 session (highest security)
+    | - editor/moderator: 2 sessions
+    | - user: 3 sessions (default)
+    |
+    */
+
+    'concurrent_sessions' => [
+        'admin' => env('SESSION_LIMIT_ADMIN', 1),
+        'editor' => env('SESSION_LIMIT_EDITOR', 2),
+        'moderator' => env('SESSION_LIMIT_MODERATOR', 2),
+        'user' => env('SESSION_LIMIT_USER', 3),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Session Timeouts by Role
+    |--------------------------------------------------------------------------
+    |
+    | Define session timeout (in minutes) for different user roles.
+    | After this period of inactivity, the session will be terminated.
+    |
+    */
+
+    'role_timeouts' => [
+        'admin' => env('SESSION_TIMEOUT_ADMIN', 15),
+        'editor' => env('SESSION_TIMEOUT_EDITOR', 30),
+        'moderator' => env('SESSION_TIMEOUT_MODERATOR', 30),
+        'user' => env('SESSION_TIMEOUT_USER', 60),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Session Structure Version
+    |--------------------------------------------------------------------------
+    |
+    | This version number is used to track the structure of session data.
+    | If the structure changes (e.g., during an update), sessions with
+    | mismatched versions will be invalidated for security.
+    |
+    */
+
+    'structure_version' => env('SESSION_STRUCTURE_VERSION', '1.0.0'),
+
 ];

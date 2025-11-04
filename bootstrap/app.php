@@ -50,6 +50,7 @@ return Application::configure(basePath: dirname(__DIR__))
             \App\Http\Middleware\ForcePasswordChange::class,
             \App\Http\Middleware\Require2FAVerification::class,
             \App\Http\Middleware\ValidateSessionIntegrity::class,
+            \App\Http\Middleware\EnforceSessionLimit::class, // ✅ NEW: Enforce session limits
 
             // Performance optimizations (at the end)
             \App\Http\Middleware\CompressResponse::class,

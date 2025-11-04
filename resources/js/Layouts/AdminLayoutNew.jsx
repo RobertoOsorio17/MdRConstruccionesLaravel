@@ -60,6 +60,7 @@ import {
 import NotificationCenter from '@/Components/Admin/NotificationCenter';
 import BreadcrumbsWithFilters from '@/Components/Admin/BreadcrumbsWithFilters';
 import ImpersonationBanner from '@/Components/Security/ImpersonationBanner';
+import SessionExpiredModal from '@/Components/SessionExpiredModal';
 
 const drawerWidth = 280;
 const drawerWidthCollapsed = 72;
@@ -162,10 +163,26 @@ const AdminLayoutNew = ({
     const isMobile = useMediaQuery(theme.breakpoints.down('lg'));
     const isMedium = useMediaQuery(theme.breakpoints.between('md', 'lg'));
 
+    // ✅ NEW: Session expired modal state
+    const [sessionExpiredModal, setSessionExpiredModal] = useState({
+        open: false,
+        reason: null
+    });
+
     // Handle flash messages
     useEffect(() => {
         if (flash?.success || flash?.error || flash?.info) {
             setFlashMessage(flash);
+        }
+    }, [flash]);
+
+    // ✅ NEW: Detect session termination from flash message
+    useEffect(() => {
+        if (flash?.session_terminated) {
+            setSessionExpiredModal({
+                open: true,
+                reason: flash.session_terminated
+            });
         }
     }, [flash]);
 
@@ -989,6 +1006,19 @@ const AdminLayoutNew = ({
                     debug={true} // Cambiar a false para desactivar logs en consola
                 />
             )}
+
+            {/* ✅ NEW: Session Expired Modal */}
+            <SessionExpiredModal
+                open={sessionExpiredModal.open}
+                reason={sessionExpiredModal.reason}
+                onClose={() => {
+                    setSessionExpiredModal({ open: false, reason: null });
+                    // Redirect to login if not already there
+                    if (window.location.pathname !== '/login') {
+                        window.location.href = '/login';
+                    }
+                }}
+            />
         </Box>
         </InactivityProvider>
     );

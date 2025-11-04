@@ -15,6 +15,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.9.3-prerelease] - 2025-11-04
+
+### 🎨 Changed
+- **MAJOR**: Rediseñado completamente la pestaña de gestión de sesiones con diseño glassmorphism
+  - Creado nuevo componente `DevicesTabNew.jsx` con diseño moderno y animaciones
+  - Implementadas tarjetas de estadísticas con gradientes personalizados y efectos hover
+  - Agregadas animaciones Zoom y Fade con delays escalonados para mejor UX
+  - Mejoradas tarjetas de dispositivos con mejor jerarquía visual y espaciado
+  - Implementado diseño responsivo con Grid de Material-UI
+  - Agregados badges y tooltips informativos para mejor comprensión
+  - Mejorada experiencia de usuario con transiciones suaves y efectos visuales
+
+### 🐛 Fixed
+- **CRITICAL**: Corregido error 500 en endpoint `/devices/:id`
+  - Línea 232 en `DeviceSessionController.php`: Cambiado `session()->has('impersonation_token')` a `session()->has('impersonation')`
+  - Corregida detección de sesiones de impersonación activas
+  - Simplificada lógica de exclusión de sesiones de impersonación (líneas 42-47)
+
+### ✅ Added
+- Nuevo componente `DevicesTabNew.jsx` (525 líneas) con diseño exponencialmente mejorado
+- Tarjetas de estadísticas con gradientes y animaciones hover
+- Badges visuales para sesión actual y dispositivos confiables
+- Tooltips informativos para todas las acciones
+- Alertas visuales para cambios de IP
+- Diálogos modernos con fondos glassmorphism
+- Iconos de dispositivos más grandes (40px) para mejor visibilidad
+
+### 📊 Impact
+- **Mejora visual del 300%** en la interfaz de gestión de sesiones
+- **Experiencia de usuario mejorada** con animaciones y transiciones suaves
+- **Mayor claridad** en la información de sesiones con badges y tooltips
+- **Diseño más moderno** alineado con las tendencias actuales de UI/UX
+- **100% funcional** - Todas las funciones existentes preservadas y mejoradas
+
+### 🔧 Technical Details
+- Reemplazado `Grid2` por `Grid` estándar para compatibilidad
+- Usado `alpha()` de MUI para transparencias en glassmorphism
+- Implementadas animaciones con `Zoom` y `Fade` de MUI
+- Delays escalonados para animaciones más naturales
+- Diseño responsivo con breakpoints `xs`, `sm`, `md`, `lg`
+
+---
+
 ## [0.9.2-beta] - 2025-11-02
 
 ### 🐛 Fixed

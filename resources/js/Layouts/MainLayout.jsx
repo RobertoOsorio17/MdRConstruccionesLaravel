@@ -61,6 +61,7 @@ import PremiumFooter from '@/Components/Layout/PremiumFooter';
 import GlobalSearch from '@/Components/GlobalSearch';
 import TwoFactorWarningBanner from '@/Components/Security/TwoFactorWarningBanner';
 import ImpersonationBanner from '@/Components/Security/ImpersonationBanner';
+import SessionExpiredModal from '@/Components/SessionExpiredModal';
 import { useAppTheme } from '@/theme/ThemeProvider';
 import DarkModeToggle from '@/Components/UI/DarkModeToggle';
 import MegaMenu from '@/Components/Navigation/MegaMenu';
@@ -305,8 +306,24 @@ const MainLayoutContent = ({ children }) => {
     const [servicesOpen, setServicesOpen] = useState(false);
     const scrolled = useScrollTrigger(50);
     const page = usePage();
-    const { url } = page;
+    const { url, props: { flash } } = page;
     const auth = useAuth();
+
+    // ✅ NEW: Session expired modal state
+    const [sessionExpiredModal, setSessionExpiredModal] = useState({
+        open: false,
+        reason: null
+    });
+
+    // ✅ NEW: Detect session termination from flash message
+    useEffect(() => {
+        if (flash?.session_terminated) {
+            setSessionExpiredModal({
+                open: true,
+                reason: flash.session_terminated
+            });
+        }
+    }, [flash]);
 
     // Ref para controlar el timeout del megamenu
     const megaMenuTimeoutRef = useRef(null);
@@ -1147,6 +1164,19 @@ const MainLayoutContent = ({ children }) => {
                     debug={false}
                 />
             )}
+
+            {/* ✅ NEW: Session Expired Modal */}
+            <SessionExpiredModal
+                open={sessionExpiredModal.open}
+                reason={sessionExpiredModal.reason}
+                onClose={() => {
+                    setSessionExpiredModal({ open: false, reason: null });
+                    // Redirect to login if not already there
+                    if (window.location.pathname !== '/login') {
+                        window.location.href = '/login';
+                    }
+                }}
+            />
         </Box>
     );
 };

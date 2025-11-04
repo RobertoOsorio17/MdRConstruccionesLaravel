@@ -24,7 +24,7 @@ import {
 // Import tab components
 import PersonalInfoTab from '@/Components/Profile/PersonalInfoTab';
 import SecurityTab from '@/Components/Profile/SecurityTab';
-import DevicesTab from '@/Components/Profile/DevicesTab';
+import DevicesTab from '@/Components/Profile/DevicesTabNew';
 import ConnectedAccountsTab from '@/Components/Profile/ConnectedAccountsTab';
 import NotificationsTab from '@/Components/Profile/NotificationsTab';
 import PrivacyTab from '@/Components/Profile/PrivacyTab';

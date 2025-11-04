@@ -19,7 +19,7 @@ return [
     |
     */
 
-    'version' => env('APP_VERSION', '0.9.2-beta'),
+    'version' => env('APP_VERSION', '0.9.3-prerelease'),
 
     /*
     |--------------------------------------------------------------------------
@@ -29,8 +29,8 @@ return [
 
     'major' => 0,
     'minor' => 9,
-    'patch' => 2,
-    'prerelease' => 'beta',
+    'patch' => 3,
+    'prerelease' => 'prerelease',
     'build' => null,
 
     /*
@@ -39,8 +39,8 @@ return [
     |--------------------------------------------------------------------------
     */
 
-    'release_date' => '2025-11-02',
-    'release_name' => 'Console Cleanup Release',
+    'release_date' => '2025-11-04',
+    'release_name' => 'Session Management Enhancement',
 
     /*
     |--------------------------------------------------------------------------
@@ -52,6 +52,20 @@ return [
     */
 
     'history' => [
+        '0.9.3-prerelease' => [
+            'date' => '2025-11-04',
+            'name' => 'Session Management Enhancement',
+            'highlights' => [
+                'Rediseñado completamente la pestaña de gestión de sesiones con glassmorphism',
+                'Corregido error 500 en endpoint /devices/:id (detección de impersonación)',
+                'Agregadas animaciones Zoom y Fade con delays escalonados',
+                'Implementadas tarjetas de estadísticas con gradientes y efectos hover',
+                'Mejoradas tarjetas de dispositivos con mejor jerarquía visual',
+                'Agregados badges y tooltips informativos',
+                'Implementado diseño responsivo con Grid',
+                'Mejorada experiencia de usuario con transiciones suaves',
+            ],
+        ],
         '0.9.2-beta' => [
             'date' => '2025-11-02',
             'name' => 'Console Cleanup Release',
